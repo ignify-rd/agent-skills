@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Test Design Generator - BM25 Search Engine for Test Design Catalogs
+Searches .md example files and .csv rule files using BM25 ranking.
+
+Usage:
+  python search.py "<query>" --domain api          # Search API examples
+  python search.py "<query>" --domain frontend     # Search Frontend examples
+  python search.py "<query>" --domain rules        # Search format rules
+  python search.py "<query>" --catalog other-proj   # Use different catalog
+  python search.py --list                           # List all available examples
+"""
+
+import argparse
+import sys
+import io
+import csv
+import re
+from pathlib import Path
+from math import log
+from collections import defaultdict
+
+# Force UTF-8 for Windows
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.stderr.encoding and sys.stderr.encoding.lower() != 'utf-8':
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+DATA_DIR = Path(__file__).parent.parent / "data"
+DEFAULT_CATALOG = "default"
+MAX_RESULTS = 3
+
+
+# ============ BM25 ============
+class BM25:
+    def __init__(self, k1=1.5, b=0.75):
+        self.k1, self.b = k1, b
+        self.corpus, self.doc_lengths = [], []
+        self.avgdl, self.N = 0, 0
+        self.idf, self.doc_freqs = {}, defaultdict(int)
+
+    def tokenize(self, text):
+        text = re.sub(r'[^\w\s]', ' ', str(text).lower())
+        return [w for w in text.split() if len(w) > 1]
+
+    def fit(self, documents):
+        self.corpus = [self.tokenize(doc) for doc in documents]
+        self.N = len(self.corpus)
+        if self.N == 0: return
+        self.doc_lengths = [len(doc) for doc in self.corpus]
+        self.avgdl = sum(self.doc_lengths) / self.N
+        for doc in self.corpus:
+            for word in set(doc):
+                self.doc_freqs[word] += 1
+        for word, freq in self.doc_freqs.items():
+            self.idf[word] = log((self.N - freq + 0.5) / (freq + 0.5) + 1)
+
+    def score(self, query):
+        tokens = self.tokenize(query)
+        scores = []
+        for idx, doc in enumerate(self.corpus):
+            s = 0
+            tf = defaultdict(int)
+            for w in doc: tf[w] += 1
+            for t in tokens:
+                if t in self.idf:
+                    n = tf[t] * (self.k1 + 1)
+                    d = tf[t] + self.k1 * (1 - self.b + self.b * self.doc_lengths[idx] / self.avgdl)
+                    s += self.idf[t] * n / d
+            scores.append((idx, s))
+        return sorted(scores, key=lambda x: x[1], reverse=True)
+
+
+# ============ SEARCH ============
+def search_md_files(query, directory, max_results=MAX_RESULTS):
+    """Search .md files in directory using BM25"""
+    if not directory.exists():
+        return {"error": f"Directory not found: {directory}", "results": []}
+
+    md_files = sorted(directory.glob("*.md"))
+    if not md_files:
+        return {"error": f"No .md files in {directory}", "results": []}
+
+    documents, file_names = [], []
+    for f in md_files:
+        content = f.read_text(encoding='utf-8')
+        documents.append(content)
+        file_names.append(f.name)
+
+    bm25 = BM25()
+    bm25.fit(documents)
+    ranked = bm25.score(query)
+
+    results = []
+    for idx, score in ranked[:max_results]:
+        if score > 0:
+            content = documents[idx]
+            # Extract first heading as title
+            title_match = re.match(r'^#\s+(.+)', content, re.MULTILINE)
+            title = title_match.group(1).strip() if title_match else file_names[idx]
+            # Show preview (first 500 chars after title)
+            preview = content[:800].strip()
+            results.append({
+                "file": file_names[idx],
+                "title": title,
+                "score": round(score, 2),
+                "preview": preview,
+                "full_path": str(md_files[idx])
+            })
+
+    return {
+        "query": query,
+        "directory": str(directory),
+        "count": len(results),
+        "results": results
+    }
+
+
+def search_csv_rules(query, rules_dir, max_results=MAX_RESULTS):
+    """Search .csv rule files using BM25"""
+    if not rules_dir.exists():
+        return {"error": f"Rules directory not found: {rules_dir}", "results": []}
+
+    csv_files = sorted(rules_dir.glob("*.csv"))
+    if not csv_files:
+        return {"error": f"No .csv files in {rules_dir}", "results": []}
+
+    all_rows, documents = [], []
+    for f in csv_files:
+        with open(f, 'r', encoding='utf-8') as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                row['_source_file'] = f.name
+                all_rows.append(row)
+                documents.append(' '.join(str(v) for v in row.values()))
+
+    bm25 = BM25()
+    bm25.fit(documents)
+    ranked = bm25.score(query)
+
+    results = []
+    for idx, score in ranked[:max_results]:
+        if score > 0:
+            results.append({**all_rows[idx], "_score": round(score, 2)})
+
+    return {
+        "query": query,
+        "count": len(results),
+        "results": results
+    }
+
+
+def list_catalog(catalog_dir):
+    """List all .md files in a catalog (api/ and frontend/ subdirs)"""
+    if not catalog_dir.exists():
+        return f"Catalog not found: {catalog_dir}"
+
+    lines = [f"📁 Catalog: {catalog_dir.name}", ""]
+
+    for subdir in ["api", "frontend"]:
+        sub_path = catalog_dir / subdir
+        if not sub_path.exists():
+            continue
+        md_files = sorted(sub_path.glob("*.md"))
+        lines.append(f"  📂 {subdir}/ ({len(md_files)} files)")
+        for f in md_files:
+            content = f.read_text(encoding='utf-8')
+            title_match = re.match(r'^#\s+(.+)', content, re.MULTILINE)
+            title = title_match.group(1).strip() if title_match else f.name
+            lines.append(f"    • {f.name} — {title}")
+        lines.append("")
+
+    # List other catalogs
+    catalogs_root = catalog_dir.parent
+    other_catalogs = [d.name for d in catalogs_root.iterdir() if d.is_dir() and d.name != catalog_dir.name]
+    if other_catalogs:
+        lines.extend(["📂 Other catalogs available:", ""])
+        for c in other_catalogs:
+            sub = catalogs_root / c
+            count = len(list(sub.rglob("*.md")))
+            lines.append(f"  • {c} ({count} examples)")
+
+    return "\n".join(lines)
+
+
+def format_output(result):
+    """Format search results for LLM consumption"""
+    if "error" in result:
+        return f"Error: {result['error']}"
+
+    lines = [f"## Search Results", f"**Query:** {result['query']} | **Found:** {result['count']}", ""]
+
+    for i, r in enumerate(result['results'], 1):
+        if 'file' in r:
+            # MD file result
+            lines.append(f"### Result {i}: {r['title']}")
+            lines.append(f"**File:** {r['file']} | **Score:** {r['score']}")
+            lines.append(f"**Path:** {r['full_path']}")
+            lines.append(f"\n```markdown\n{r['preview']}\n```\n")
+        else:
+            # CSV rule result
+            lines.append(f"### Rule {i} (score: {r.get('_score', '?')})")
+            for k, v in r.items():
+                if not k.startswith('_') and v:
+                    lines.append(f"- **{k}:** {v}")
+            lines.append("")
+
+    if result['count'] > 0:
+        lines.append("---")
+        lines.append("💡 To read full file: use `view_file` on the path above")
+
+    return "\n".join(lines)
+
+
+# ============ CLI ============
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Test Design Catalog Search")
+    parser.add_argument("query", nargs="?", default="", help="Search query")
+    parser.add_argument("--domain", "-d", choices=["api", "frontend", "rules"], help="Search domain")
+    parser.add_argument("--catalog", "-c", default=DEFAULT_CATALOG, help="Catalog name (default: default)")
+    parser.add_argument("--max-results", "-n", type=int, default=MAX_RESULTS, help="Max results")
+    parser.add_argument("--list", "-l", action="store_true", help="List available examples")
+    parser.add_argument("--full", "-f", action="store_true", help="Show full file content instead of preview")
+
+    args = parser.parse_args()
+    catalog_dir = DATA_DIR / "catalogs" / args.catalog
+
+    if args.list:
+        print(list_catalog(catalog_dir))
+        sys.exit(0)
+
+    if not args.query:
+        parser.print_help()
+        sys.exit(1)
+
+    if args.domain == "rules":
+        result = search_csv_rules(args.query, DATA_DIR / "rules", args.max_results)
+    elif args.domain == "frontend":
+        result = search_md_files(args.query, catalog_dir / "frontend", args.max_results)
+    elif args.domain == "api":
+        result = search_md_files(args.query, catalog_dir / "api", args.max_results)
+    else:
+        # Auto: search both api + frontend, merge by score
+        r_api = search_md_files(args.query, catalog_dir / "api", args.max_results)
+        r_fe = search_md_files(args.query, catalog_dir / "frontend", args.max_results)
+        all_results = r_api.get("results", []) + r_fe.get("results", [])
+        all_results.sort(key=lambda x: x.get("score", 0), reverse=True)
+        result = {"query": args.query, "count": len(all_results[:args.max_results]), "results": all_results[:args.max_results]}
+
+    if args.full and result.get("results"):
+        # Show full content of top result
+        top = result["results"][0]
+        if "full_path" in top:
+            content = Path(top["full_path"]).read_text(encoding='utf-8')
+            print(f"# Full content: {top['file']}\n")
+            print(content)
+        else:
+            print(format_output(result))
+    else:
+        print(format_output(result))

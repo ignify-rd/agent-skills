@@ -498,29 +498,3 @@
       ORDER BY PAR_TYPE ASC, PAR_CODE ASC;
 ```
 
-## Ví dụ 3: API Test Case (định dạng JSON cho sinh test cases tương lai)
-
-```json
-[
-  {
-    "externalId": "",
-    "testSuiteName": "Kiểm tra các case common",
-    "testCaseName": "Method_Kiểm tra khi nhập sai method",
-    "summary": "Method_Kiểm tra khi nhập sai method",
-    "preConditions": "1. Send API login thành công\n2. Chuẩn bị request hợp lệ \n 2.1 Endpoint : GET {{BASE_URL}}/v1/dropdown/cat-custype/active\n 2.2 Header :\n{\n  \"Authorization\": \"Bearer {JWT_TOKEN}\",\n  \"Content-Type\": \"application/json\"\n}\n 2.3 Body {\n\n}",
-    "step": "1. Nhập inValid Method: POST\n2. Send API",
-    "expectedResult": "1. Check api trả về:\n 1.1.Status: 107\n 1.2.Response: \n {\n\"message\" : \"Error retrieving AuthorInfo\"\n}",
-    "importance": "Low"
-  },
-  {
-    "externalId": "",
-    "testSuiteName": "Kiểm tra validate",
-    "testCaseName": "regChannel_Bỏ trống field bắt buộc",
-    "summary": "regChannel_Bỏ trống field bắt buộc",
-    "preConditions": "1. Send API login thành công\n2. Chuẩn bị request hợp lệ \n 2.1 Endpoint : POST {{BASE_URL}}/v1/fee/search\n 2.2 Header :\n{\n  \"Authorization\": \"Bearer {JWT_TOKEN}\",\n  \"Content-Type\": \"application/json\"\n}\n 2.3 Body {\n  \"regChannel\": \"\"\n}",
-    "step": "1. Bỏ trống regChannel (bắt buộc)\n2. Send API",
-    "expectedResult": "1. Check api trả về:\n 1.1.Status: 400\n 1.2.Response: \n {\n\"message\" : \"regChannel is required\"\n}",
-    "importance": "High"
-  }
-]
-```

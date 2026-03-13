@@ -1,0 +1,1528 @@
+Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Actual Result,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,"StepExec
+Type",Spec Title,Document ID,Estimated exec. Duration,,,,,,WEB
+Kiểm tra các case common,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_1,Method_Kiểm tra truyền sai method (GET/PUT/DELETE),Method_Kiểm tra truyền sai method (GET/PUT/DELETE),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Low,,,,,"1. Nhập invalid method : GET /v1/segment-manager/segment-config/update-priority
+2. Send API","1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""2"",
+    ""poErrorDesc"": ""Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại."",
+    ""traceId"": null,
+    ""responseTime"": null
+}",,,,,PASS,,,,,
+,,API_2,URL_Kiểm tra truyền sai url,URL_Kiểm tra truyền sai url,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Low,,,,,"1. Nhập sai endpoint : POST /v1/segment-manager/segment-config/update-priority/
+2. Send API","1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""500"",
+    ""poErrorDesc"": ""Access denied"",
+    ""traceId"": ""1773384255318-37c0b188-a453-4c1f-859b-5bd8805739bc"",
+    ""responseTime"": ""2026-03-13T13:44:15.319+07:00""
+}",,,,,PASS,,,,,
+,,API_3,Token_Kiểm tra token hết hạn,Token_Kiểm tra token hết hạn,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Low,,,,,"1. Truyền Token hết hạn
+2. Send API","1. Check api trả về:
+ 1.1.Status: 401
+ 1.2.Response: 
+{}",,,,,,,,,,
+,,API_4,Token_Kiểm tra token không hợp lệ,Token_Kiểm tra token không hợp lệ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Low,,,,,"1. Truyền token không hợp lệ
+2. Send API","1. Check api trả về:
+ 1.1.Status: 401
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""107"",
+    ""poErrorDesc"": ""Error retrieving AuthorInfo for token from TokenLib: Token can't be decoded"",
+    ""traceId"": ""1773384297557-fd120f16-867c-406e-94a3-956e42810983"",
+    ""responseTime"": ""2026-03-13T13:44:57.558+07:00""
+}",,,,,PASS,,,,,
+Kiểm tra phân quyền ,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_5,Phân quyền_Kiểm tra không có quyền,Phân quyền_Kiểm tra không có quyền,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,1. Send API,"1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+  ""message"": ""Access denied""
+}",,,,,PENDING,,,,,
+,,API_6,Phân quyền_Kiểm tra được phân quyền,Phân quyền_Kiểm tra được phân quyền,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,1. Send API,"1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,PENDING,,,,,
+Kiểm tra validate,,,,,,,,,,,,,,,,,,,,,,,,
+String : id,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_7,Validate_Kiểm tra để trống id,Validate_Kiểm tra để trống id,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "":"""",
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 400
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""1"",
+    ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+    ""traceId"": null,
+    ""responseTime"": null
+}",,,,,PASS,,,,,
+,,API_8,Validate_Kiểm tra không truyền id,Validate_Kiểm tra không truyền id,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 400
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""1"",
+    ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+    ""traceId"": null,
+    ""responseTime"": null
+}",,,,,PASS,,,,,
+,,API_9,Validate_Kiểm tra truyền id là ký tự số,Validate_Kiểm tra truyền id là ký tự số,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": 2907 ,
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_10,Validate_Kiểm tra truyền id là chữ (thường/hoa),Validate_Kiểm tra truyền id là chữ (thường/hoa),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""UET001"" ,
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_11,Validate_Kiểm tra truyền id là ký tự đặc biệt,Validate_Kiểm tra truyền id là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""!@#$%^"" ,
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_12,Validate_Kiểm tra truyền id là all space,Validate_Kiểm tra truyền id là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""               "" ,
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_13,Validate_Kiểm tra truyền id có space đầu/cuối,Validate_Kiểm tra truyền id có space đầu/cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": "" ""MID2026030400000267""  "" ,
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_14,Validate_Kiểm tra truyền id là object,Validate_Kiểm tra truyền id là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": { ""id"":1},
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_15,Validate_Kiểm tra truyền id là mảng,Validate_Kiểm tra truyền id là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": [1,2,3]
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+Integer : isPriority ,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_16,Validate_Kiểm tra để trống isPriority ,Validate_Kiểm tra để trống isPriority ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": """" , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 400
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""1"",
+    ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+    ""traceId"": null,
+    ""responseTime"": null
+}",,,,,,,,,,
+,,API_17,Validate_Kiểm tra không truyền isPriority ,Validate_Kiểm tra không truyền isPriority ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_18,Validate_Kiểm tra truyền isPriority  là ký tự số hợp lệ ,Validate_Kiểm tra truyền isPriority  là ký tự số hợp lệ ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_19,Validate_Kiểm tra truyền isPriority là chữ cái (thường/hoa) ,Validate_Kiểm tra truyền isPriority là chữ cái (thường/hoa) ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": ""Abc"" , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_20,Validate_Kiểm tra truyền isPriority  là ký tự đặc biệt,Validate_Kiểm tra truyền isPriority  là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": ""!@#$%"" , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_21,Validate_Kiểm tra truyền isPriority  là all space,Validate_Kiểm tra truyền isPriority  là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": ""            "" , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_22,Validate_Kiểm tra truyền isPriority  có space đầu/cuối,Validate_Kiểm tra truyền isPriority  có space đầu/cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": ""      1      "" , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_23,Validate_Kiểm tra truyền isPriority là số âm,Validate_Kiểm tra truyền isPriority là số âm,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"":  -1 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_24,Validate_Kiểm tra truyền isPriority là số thập phân ,Validate_Kiểm tra truyền isPriority là số thập phân ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"":  1.5 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_25,Validate_Kiểm tra truyền isPriority  là object,Validate_Kiểm tra truyền isPriority  là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"":  {""value"":""1""} , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_26,Validate_Kiểm tra truyền isPriority  là mảng,Validate_Kiểm tra truyền isPriority  là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"":  [1,2,3] , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+List listPriorityLevel ,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_27,Validate_Kiểm tra để trống listPriorityLevel (isPriority = 0),Validate_Kiểm tra để trống listPriorityLevel (isPriority = 0),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 0 , 
+""listPriorityLevel"": [],
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_28,Validate_Kiểm tra để trống listPriorityLevel (isPriority = 1),Validate_Kiểm tra để trống listPriorityLevel (isPriority = 1),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 1 , 
+""listPriorityLevel"": [],
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_29,Validate_Kiểm tra không truyền listPriorityLevel ,Validate_Kiểm tra không truyền listPriorityLevel ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 0 , 
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_30,Validate_Kiểm tra truyền listPriorityLevel là 1 object hợp lệ,Validate_Kiểm tra truyền listPriorityLevel là 1 object hợp lệ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 1 , 
+""listPriorityLevel"": [{""segmentCode"":""VIP"",""priorityLevel"":1}],
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_31,Validate_Kiểm tra truyền listPriorityLevel nhiều object hợp lệ (isPriority = 0),Validate_Kiểm tra truyền listPriorityLevel nhiều object hợp lệ (isPriority = 0),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 0 , 
+""listPriorityLevel"": [{""segmentCode"":""VIP"",""priorityLevel"":1},{""segmentCode"":""NOR"",""priorityLevel"":2}],
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_32,Validate_Kiểm tra truyền listPriorityLevel nhiều object hợp lệ (isPriority = 1),Validate_Kiểm tra truyền listPriorityLevel nhiều object hợp lệ (isPriority = 1),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 1 , 
+""listPriorityLevel"": [{""segmentCode"":""VIP"",""priorityLevel"":1},{""segmentCode"":""NOR"",""priorityLevel"":2}],
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_33,Validate_Kiểm tra priorityLevel của từng segment = null/empty,Validate_Kiểm tra priorityLevel của từng segment = null/empty,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+""id "": ""MID2026030400000267"",
+""isPriority"": 1 , 
+""listPriorityLevel"": [
+  {
+    ""segmentCode"": ""VIP"",
+    ""priorityLevel"": """"
+  }
+],
+""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_34,Validate_Kiểm tra truyền listPriorityLevel sai format list,Validate_Kiểm tra truyền listPriorityLevel sai format list,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 1,
+  ""listPriorityLevel"": {
+    ""segmentCode"":""VIP"",
+    ""priorityLevel"":1
+  },
+  ""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_35,Validate_Kiểm tra truyền listPriorityLevel là số,Validate_Kiểm tra truyền listPriorityLevel là số,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 1,
+  ""listPriorityLevel"": 123,
+  ""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_36,Validate_Kiểm tra truyền listPriorityLevel là chuỗi string ,Validate_Kiểm tra truyền listPriorityLevel là chuỗi string ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 1,
+  ""listPriorityLevel"": ""Duong"",
+  ""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+String user,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_37,Validate_Kiểm tra để trống user,Validate_Kiểm tra để trống user,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"":""""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_37,Validate_Kiểm tra user truyền ở body khác user ở authen header,Validate_Kiểm tra user truyền ở body khác user ở authen header,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"": ""1234""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_38,Validate_Kiểm tra khi không truyền user,Validate_Kiểm tra khi không truyền user,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_39,Validate_Kiểm tra truyền user là ký tự số,Validate_Kiểm tra truyền user là ký tự số,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"":""143853""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_40,Validate_Kiểm tra truyền user là chữ cái (thường/hoa),Validate_Kiểm tra truyền user là chữ cái (thường/hoa),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"":""Admin""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_41,Validate_Kiểm tra truyền user là ký tự đặc biệt,Validate_Kiểm tra truyền user là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"":""!@#$%""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_42,Validate_Kiểm tra truyền user là all space,Validate_Kiểm tra truyền user là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"":""           ""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_43,Validate_Kiểm tra truyền user có space đầu/cuối,Validate_Kiểm tra truyền user có space đầu/cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"":""   14853        ""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_44,Validate_Kiểm tra truyền user là object,Validate_Kiểm tra truyền user là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"": {""value"":1}
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_45,Validate_Kiểm tra truyền user là mảng,Validate_Kiểm tra truyền user là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Medium,,,,,"1. Body
+{
+  ""id"": ""MID2026030400000267"",
+  ""isPriority"": 0,
+  ""user"": [1,2,3]
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Dữ liệu không hợp lệ"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+Kiểm tra chức năng chính,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_46,Kiểm tra response khi id không tồn tại trong DB,Kiểm tra response khi id không tồn tại trong DB,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,High,,,,,"1. Body
+{
+  ""id"": ""MID20206"",
+  ""isPriority"": 1,
+  ""user"": ""14583""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Bản ghi không tồn tại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_47,Kiểm tra response khi id tồn tại với trạng thái bản ghi master = 5 (Chờ duyệt khoá),Kiểm tra response khi id tồn tại với trạng thái bản ghi master = 5 (Chờ duyệt khoá),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,High,,,,,"1. Body
+{
+  ""id"": ""DID2026022600000205"",
+  ""isPriority"": 1,
+  ""user"": ""14583""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": “Không thêm mới chỉnh sửa segment khi trạng thái bộ lọc của dịch vụ thu phí là Chờ duyệt khoá”,
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_48,Kiểm tra chỉnh sửa cài đặt thành công khi id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=0),Kiểm tra chỉnh sửa cài đặt thành công khi id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=0),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,High,,,,,"1. Body
+{
+  ""id"": ""MID2026031100000415"",
+  ""isPriority"": 0,
+  ""user"": ""14583""
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}
+
+- Check ACTION_LOG:
+SELECT ID , STATUS 
+MASTER_ID, SEGMENT_ID
+FROM ACTION_LOG, CREATED_BY, CREATED_TIME
+WHERE TABLE_NAME = 'SEGMENT_CONFIG'
+AND MASTER_ID = :MASTER_ID
+ORDER BY CREATED_TIME DESC;
+
+- Check SEGMENT_CONFIG: 
+SELECT ID, STATUS, IS_PRIORITY, UPDATED_USER, UPDATED_TIME
+FROM SEGMENT_CONFIG
+WHERE ID = :id_input;
+
+- Nếu trạng thái bản ghi master = 0/1 (ACTIVE hoặc INACTIVE)
+SELECT *
+FROM SEGMENT_CONFIG_HIS
+WHERE ID = :id_input
+   OR MASTER_ID = :id_input;
+
+- Toàn bộ các bản ghi có MASTER_ID = id truyền ở input
++ PRIORITY_LEVEL: (null)
++ UPDATED_USER: mã cán bộ thực hiện, thông tin ở authen
++ UPDATED_TIME: localDateTime Ngày giờ hiện tại theo định dạng của hệ thống",,,,,,,,,,
+,,API_49,Kiểm tra id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=1) với số lượng segment truyền ở input không khớp số lượng segment,Kiểm tra id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=1) với số lượng segment truyền ở input không khớp số lượng segment,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,High,,,,,"1. Body 
+{
+""id"":""DID2026031100000418"",
+""isPriority"":1,
+""listPriorityLevel"":[
+ {""segmentCode"":""VIP"",""priorityLevel"":1},
+ {""segmentCode"":""NOR"",""priorityLevel"":2}
+]
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": “Danh sách segment cần cài đặt mức ưu tiên chưa đầy đủ”,
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_50,Kiểm tra id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=1) khi tồn tại nhiều hơn 1 bản ghi có cùng mức ưu tiên,Kiểm tra id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=1) khi tồn tại nhiều hơn 1 bản ghi có cùng mức ưu tiên,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,High,,,,,"1. Body 
+{
+""id"":""DID2026031100000418"",
+""isPriority"":1,
+""listPriorityLevel"":[
+ {""segmentCode"":""VIP"",""priorityLevel"":1},
+ {""segmentCode"":""NOR"",""priorityLevel"":1},
+ {""segmentCode"":""PRE"",""priorityLevel"":2}
+]
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": “Tồn tại segment có trùng mức ưu tiên. Vui lòng kiểm tra lại”,
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,
+,,API_51,Kiểm tra chỉnh sửa cài đặt thành côngkhi id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=1) ,Kiểm tra chỉnh sửa cài đặt thành côngkhi id tồn tại với trạng thái bản ghi master != 5 (Chờ duyệt khoá) (isPriority=1) ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,High,,,,,"1. Body 
+{
+""id"":""DID2026031100000418"",
+""isPriority"":1,
+""listPriorityLevel"":[
+ {""segmentCode"":""VIP"",""priorityLevel"":1}
+]
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""SUCCESS"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}
+
+- Check ACTION_LOG:
+SELECT ID , STATUS 
+MASTER_ID, SEGMENT_ID
+FROM ACTION_LOG, CREATED_BY, CREATED_TIME
+WHERE TABLE_NAME = 'SEGMENT_CONFIG'
+AND MASTER_ID = :MASTER_ID
+ORDER BY CREATED_TIME DESC;
+
+- Check SEGMENT_CONFIG: 
+SELECT ID, STATUS, IS_PRIORITY, UPDATED_USER, UPDATED_TIME
+FROM SEGMENT_CONFIG
+WHERE ID = :id_input;
+
+- Nếu trạng thái bản ghi master = 0/1 (ACTIVE hoặc INACTIVE)
+SELECT *
+FROM SEGMENT_CONFIG_HIS
+WHERE ID = :id_input
+   OR MASTER_ID = :id_input;
+
+- Xử lý thêm cập nhật các bản ghi segment được truyền ở input listPriorityLevel
++ PRIORITY_LEVEL: ""priorityLevel truyền ở input tương ứng của id bản ghi segment""
+ + UPDATED_USER: mã cán bộ thực hiện, thông tin ở authen
+ + UPDATED_TIME: localDateTime Ngày giờ hiện tại theo định dạng của hệ thống
+",,,,,,,,,,
+Kiểm tra khi bị timeout,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_52,Timeout_Kiểm tra khi lấy dữ liệu DB không thành công do lỗi DB,Timeout_Kiểm tra khi lấy dữ liệu DB không thành công do lỗi DB,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : POST {{BASE_URL}}/v1/segment-manager/segment-config/update-priority
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body {
+""id "":"""",
+""isPriority"":"""", 
+""listPriorityLevel "":"""",
+""user"":""""
+}",,,Low,,,,,"1. Body 
+{
+""id"":""DID2026031100000418"",
+""isPriority"":1,
+""listPriorityLevel"":[
+ {""segmentCode"":""VIP"",""priorityLevel"":1}
+]
+}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+  ""message"": ""Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.""
+}",,,,,,,,,,

@@ -3,6 +3,7 @@
 ## Pipeline tổng thể
 
 ```
+Phase -1: Phân tích hình ảnh (nếu có) → consolidate → bổ sung vào UI structure
 Phase 0:  Extract UI structure từ RSD → JSON (screenName, fields[], grid, pagination, permissions)
 Phase 0b: Extract fields từ PTTK (if available) → merge vào UI structure (PTTK wins)
 Phase 1:  Generate validate section (per-field templates + LLM extra business cases)
@@ -35,6 +36,99 @@ Phase 4:  Validate and fix markdown
 ```
 
 **DETAIL screen:** Rename `## Kiểm tra validate` → `## Kiểm tra dữ liệu hiển thị`
+
+## Phase -1: Phân tích hình ảnh (nếu có screenshots/wireframes)
+
+Tương ứng với logic trong ứng dụng tại `rsd-to-mindmap-frontend.vue` — service `preImageAnalysisService`.
+
+### Khi nào áp dụng
+
+Áp dụng khi user cung cấp hình ảnh (screenshots, wireframes, figma exports) cùng với RSD.
+
+### Bước 1: Phân tích từng hình ảnh độc lập
+
+Với **mỗi hình ảnh**, phân tích và trích xuất:
+
+```json
+{
+  "imageIndex": 0,
+  "platform": "web",
+  "screenType": "LIST | FORM | POPUP | DETAIL | UNKNOWN",
+  "screenName": "Tên màn hình đoán từ hình",
+  "buttons": ["Tìm kiếm", "Thêm mới", "Xuất Excel"],
+  "inputFields": [
+    {"label": "Tên trường", "type": "textbox | dropdown | combobox | toggle | checkbox", "placeholder": "...", "location": "form | filter | popup | grid"}
+  ],
+  "gridColumns": ["STT", "Tên cột 1", "Tên cột 2"],
+  "hasPagination": true,
+  "navigationElements": ["breadcrumb path", "tab names"],
+  "uiComponents": ["table", "modal", "tabs", "accordion"],
+  "confidence": 0.85,
+  "notes": "Ghi chú về những phần không rõ"
+}
+```
+
+### Bước 2: Consolidate tất cả phân tích hình ảnh
+
+Sau khi phân tích từng ảnh, tổng hợp lại thành một cấu trúc duy nhất:
+
+1. **Gộp** các field/button trùng nhau từ nhiều ảnh
+2. **Lọc bỏ** các UI component không liên quan đến yêu cầu trong RSD
+3. **Ưu tiên RSD** nếu có conflict với hình ảnh (hình ảnh chỉ là bổ sung)
+4. Kết quả consolidate là **input bổ sung** cho Phase 0
+
+```json
+{
+  "consolidatedScreens": [
+    {
+      "screenName": "Tên màn hình chính",
+      "screenType": "LIST | FORM | POPUP | DETAIL",
+      "inputFields": [...],
+      "buttons": [...],
+      "gridColumns": [...],
+      "hasPagination": true,
+      "navigationElements": [...]
+    }
+  ],
+  "additionalUIDetails": [
+    "Placeholder thực tế: 'Nhập tên...'",
+    "Button Xóa chỉ hiện khi có quyền DELETE",
+    "Dropdown có icon X để clear"
+  ],
+  "confidence": 0.9
+}
+```
+
+### Bước 3: Merge với RSD extraction (Phase 0)
+
+**Nguyên tắc merge hình ảnh + RSD:**
+
+| Nguồn | Ưu tiên | Dùng khi |
+|-------|---------|----------|
+| RSD | **Cao nhất** | Field names chính xác, business rules, required/optional |
+| PTTK | **Cao** | DB mappings, API endpoints, enum values |
+| Hình ảnh | **Bổ sung** | Placeholder text, field positions, UI layout hints, icon X, button labels thực tế |
+
+**Merge rules:**
+- Hình ảnh **KHÔNG** override field names từ RSD
+- Hình ảnh **CÓ THỂ** bổ sung: placeholder thực tế, hasIconX, button labels
+- Hình ảnh **CÓ THỂ** phát hiện thêm: fields hoặc buttons không được đề cập trong RSD → **hỏi user trước khi thêm**
+- Nếu hình ảnh hiện field không có trong RSD → note lại trong `additionalFeatures`, KHÔNG tự ý thêm vào test design
+
+### Ví dụ: Hình ảnh bổ sung gì cho RSD
+
+```
+RSD nói: "Dropdown Trạng thái"
+→ Hình ảnh xác nhận thêm: hasIconX=true, placeholder="Chọn trạng thái", position=filter
+
+RSD nói: "Textbox Tên dịch vụ, maxLength=100"
+→ Hình ảnh xác nhận thêm: placeholder="Nhập tên dịch vụ", hasIconX=true
+
+RSD không đề cập button "Xuất Excel"
+→ Hình ảnh thấy button "Xuất Excel" → NOTE lại, KHÔNG tự thêm vào test design
+```
+
+---
 
 ## Phase 0: Trích xuất cấu trúc UI từ RSD
 

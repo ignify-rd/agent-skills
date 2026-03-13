@@ -1,0 +1,1655 @@
+Test Suite,,Test Case,,,,,,,,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Actual Result,,,,MÃ,
+Name,Details,External ID,Name,Summary,PreConditions,,,,,,,,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,"StepExec
+Type",Spec Title,Document ID,Estimated exec. Duration,,,,,,WEB,
+Kiểm tra các case common,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_1,Method_Kiểm tra truyền sai method,Method_Kiểm tra truyền sai method,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. Nhập invalid method : POST
+2. Send API","1. Check api trả về:
+ 1.1.Status: 107
+ 1.2.Response: 
+{
+
+""message"" : ""Error retrieving AuthorInfo for token from TokenLib: Token is invalid signature""
+
+}",,,,,,,,,,,PTTK: https://bidv-vn.atlassian.net/wiki/spaces/PS0112025/pages/2116388357/API+Xu+t+excel+4+API+-+Sprint+6
+,,WEB_2,URL_Kiểm tra truyền sai url,URL_Kiểm tra truyền sai url,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. Nhập sai endpoint :/v1/category/fee-standard-config/export/++1
+2. Send API","1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+""message"": ""Access denied""
+}",,,,,,,,,,,
+,,WEB_3,Token_Kiểm tra token hết hạn,Token_Kiểm tra token hết hạn,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. Truyền Token hết hạn
+2. Send API","1. Check api trả về:
+ 1.1.Status: 107
+ 1.2.Response: 
+{
+
+""message"" : ""Error retrieving AuthorInfo for token from TokenLib: Token is invalid signature""
+
+}",,,,,,,,,,,
+,,WEB_4,Token_Kiểm tra token không hợp lệ,Token_Kiểm tra token không hợp lệ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. Truyền token không hợp lệ
+2. Send API","1. Check api trả về:
+ 1.1.Status: 107
+ 1.2.Response: 
+{
+
+""message"" : ""Error retrieving AuthorInfo for token from TokenLib: Token is invalid signature""
+
+}",,,,,,,,,,,
+Kiểm tra phân quyền,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_5,Phân quyền_Kiểm tra user không có quyền,Phân quyền_Kiểm tra user không có quyền,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,1. Send API,"1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+""message"": ""Access denied""
+}",,,,,,,,,,,
+,,WEB_6,Phân quyền_Kiểm tra user được phân quyền,Phân quyền_Kiểm tra user được phân quyền,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,1. Send API,"- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+Kiểm tra validate,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+domainType,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_7,Validate_Kiểm tra để trống domainType,Validate_Kiểm tra để trống domainType,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": """"
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_8,Validate_Kiểm tra không truyền domainType,Validate_Kiểm tra không truyền domainType,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Xóa ""domainType""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_9,Validate_Kiểm tra truyền domainType là ký tự số,Validate_Kiểm tra truyền domainType là ký tự số,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""1""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_10,Validate_Kiểm tra truyền domainType là chữ,Validate_Kiểm tra truyền domainType là chữ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""a""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_11,Validate_Kiểm tra truyền domainType là ký tự đặc biệt,Validate_Kiểm tra truyền domainType là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""@""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_12,Validate_Kiểm tra truyền domainType là all space,Validate_Kiểm tra truyền domainType là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""     ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_13,Validate_Kiểm tra truyền domainType có space ở giữa,Validate_Kiểm tra truyền domainType có space ở giữa,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""1    2""      
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_14,Validate_Kiểm tra truyền domainType có space đầu / cuối,Validate_Kiểm tra truyền domainType có space đầu / cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""    1    ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_15,Validate_Kiểm tra truyền domainType =  1,Validate_Kiểm tra truyền domainType =  1,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""1""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_16,Validate_Kiểm tra truyền domainType =  2,Validate_Kiểm tra truyền domainType =  2,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""domainType"": ""2 ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_17,Validate_Kiểm tra truyền domainType là object,Validate_Kiểm tra truyền domainType là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""domainType"": {""id"": ""1""}
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{{
+  ""poErrorCode"": ""2"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+,,WEB_18,Validate_Kiểm tra truyền domainType là mảng,Validate_Kiểm tra truyền domainType là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""domainType"": [""MID1""]
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{
+  ""poErrorCode"": ""2"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+feeService,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_19,Validate_Kiểm tra để trống feeService,Validate_Kiểm tra để trống feeService,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeService"": """"
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_20,Validate_Kiểm tra không truyền feeService,Validate_Kiểm tra không truyền feeService,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Xóa ""feeService""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_21,Validate_Kiểm tra truyền feeService là ký tự số,Validate_Kiểm tra truyền feeService là ký tự số,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeService"": ""123""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_22,Validate_Kiểm tra truyền feeService là chữ,Validate_Kiểm tra truyền feeService là chữ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeService"": ""abcd""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_23,Validate_Kiểm tra truyền feeService là ký tự đặc biệt,Validate_Kiểm tra truyền feeService là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeService"": ""@#$%""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_24,Validate_Kiểm tra truyền feeService là all space,Validate_Kiểm tra truyền feeService là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeService"": ""     ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_25,Validate_Kiểm tra truyền feeService có space ở giữa,Validate_Kiểm tra truyền feeService có space ở giữa,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeService"": ""FEE  123""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_26,Validate_Kiểm tra truyền feeService có space đầu / cuối,Validate_Kiểm tra truyền feeService có space đầu / cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeService"": ""   FEE001   ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_27,Validate_Kiểm tra truyền feeService là object,Validate_Kiểm tra truyền feeService là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""feeService"": {""id"": ""1""}
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+,,WEB_28,Validate_Kiểm tra truyền feeService là mảng,Validate_Kiểm tra truyền feeService là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""feeService"": [""MID1""]
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+feeCode,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_29,Validate_Kiểm tra để trống feeCode,Validate_Kiểm tra để trống feeCode,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeCode"": """"
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_30,Validate_Kiểm tra không truyền feeCode,Validate_Kiểm tra không truyền feeCode,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Xóa ""feeCode"": """"
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_31,Validate_Kiểm tra truyền feeCode là ký tự số,Validate_Kiểm tra truyền feeCode là ký tự số,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeCode"": ""123""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_32,Validate_Kiểm tra truyền feeCode là chữ,Validate_Kiểm tra truyền feeCode là chữ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeCode"": ""abcd""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_33,Validate_Kiểm tra truyền feeCode là ký tự đặc biệt,Validate_Kiểm tra truyền feeCode là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeCode"": ""@#$%""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_34,Validate_Kiểm tra truyền feeCode là all space,Validate_Kiểm tra truyền feeCode là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeCode"": ""     ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_35,Validate_Kiểm tra truyền feeCode có space ở giữa,Validate_Kiểm tra truyền feeCode có space ở giữa,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeCode"": ""FEE  123""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_36,Validate_Kiểm tra truyền feeCode có space đầu / cuối,Validate_Kiểm tra truyền feeCode có space đầu / cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""feeCode"": ""   FEE001   ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_37,Validate_Kiểm tra truyền feeCode là object,Validate_Kiểm tra truyền feeCode là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""feeCode"": {""id"": ""1""}
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+,,WEB_38,Validate_Kiểm tra truyền feeCode là mảng,Validate_Kiểm tra truyền feeCode là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""feeCode"": [""MID1""]
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+status,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_39,Validate_Kiểm tra để trống status,Validate_Kiểm tra để trống status,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""status"": """"
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_40,Validate_Kiểm tra không truyền status,Validate_Kiểm tra không truyền status,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Xóa ""status""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_41,Validate_Kiểm tra truyền status là chữ,Validate_Kiểm tra truyền status là chữ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""status"": ""abcd""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_42,Validate_Kiểm tra truyền status là ký tự đặc biệt,Validate_Kiểm tra truyền status là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""status"": ""@#$%""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_43,Validate_Kiểm tra truyền status là all space,Validate_Kiểm tra truyền status là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""status"": ""     ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_44,Validate_Kiểm tra truyền status có space ở giữa,Validate_Kiểm tra truyền status có space ở giữa,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""status"": ""1   2""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_45,Validate_Kiểm tra truyền status có space đầu / cuối,Validate_Kiểm tra truyền status có space đầu / cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. ""status"": ""    1    ""
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_46,Validate_Kiểm tra truyền status là object,Validate_Kiểm tra truyền status là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""status"": {""id"": ""1""}
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+,,WEB_47,Validate_Kiểm tra truyền status là mảng,Validate_Kiểm tra truyền status là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,"1. ""status"": [""MID1""]
+2. Send API","1. Check api trả về:
+ 1.1. Status: 200
+ 1.2. Response:
+{
+  ""poErrorCode"": ""1"",
+  ""poErrorDesc"": ""Thất bại"",
+  ""traceId"": ""abc-123-def"",
+  ""responseTime"": ""2024-03-26T09:39:24.648+07:00""
+}",,,,,,,,,,,
+Kiểm tra luồng chính,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_48,Kiểm tra hệ thống xuất Excel thành công,Kiểm tra hệ thống xuất Excel thành công,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_49,Kiểm tra Danh sách trả về Sắp xếp (ORDER BY),Kiểm tra Danh sách trả về Sắp xếp (ORDER BY),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"
+2. Send API","Danh sách trả về Sắp xếp (ORDER BY): thứ tự ưu tiên sau:
+
+DOMAIN_TYPE: tăng dần
+
+FEE_SERVICE: tăng dần
+
+FEE_TYPE: tăng dần
+
+FEE_CODE: tăng dần (CAT_FEECODE.FEE_CODE không phải CAT_FEECODE.ID)
+
+CREATED_DATE: từ gần nhất tới xa nhất",,,,,,,,,,,
+,,WEB_50,Kiểm tra xuất Excel khi tìm kiếm theo domainType hợp lệ,Kiểm tra xuất Excel khi tìm kiếm theo domainType hợp lệ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+""domainType"" = 1
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_51,Kiểm tra xuất Excel khi tìm kiếm theo domainType không tồn tại,Kiểm tra xuất Excel khi tìm kiếm theo domainType không tồn tại,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+""domainType"" = 999
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được nhưng không chứa dữ liệu.",,,,,,,,,,,
+,,WEB_52,Kiểm tra xuất Excel khi tìm kiếm theo feeServicehợp lệ,Kiểm tra xuất Excel khi tìm kiếm theo feeServicehợp lệ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+""feeService"" = ""FEE001""
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_53,Kiểm tra xuất Excel khi tìm kiếm theo feeService không tồn tại,Kiểm tra xuất Excel khi tìm kiếm theo feeService không tồn tại,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+""feeService"" = ""FEE9999""
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được nhưng không chứa dữ liệu.",,,,,,,,,,,
+,,WEB_54,Kiểm tra xuất Excel khi tìm kiếm theo feeCode hợp lệ,Kiểm tra xuất Excel khi tìm kiếm theo feeCode hợp lệ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+""feeCode"" = 1
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_55,Kiểm tra xuất Excel khi feeCode không tồn tại,Kiểm tra xuất Excel khi feeCode không tồn tại,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+""feeCode"" = 99999
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được nhưng không chứa dữ liệu.",,,,,,,,,,,
+,,WEB_56,Kiểm tra xuất Excel khi tìm kiếm theo status tồn tại,Kiểm tra xuất Excel khi tìm kiếm theo status tồn tại,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+ ""status"": ""1""
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_57,Kiểm tra xuất Excel khi tìm kiếm theo status không tồn tại,Kiểm tra xuất Excel khi tìm kiếm theo status không tồn tại,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+ ""status"": ""1111""
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được nhưng không chứa dữ liệu.",,,,,,,,,,,
+,,WEB_58,Kiểm tra xuất Excel khi tìm kiếm theo nhiều điều kiện,Kiểm tra xuất Excel khi tìm kiếm theo nhiều điều kiện,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+ ""domainType""=1,
+ ""status"": 1
+}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được và chứa danh sách cấu hình phí chuẩn theo điều kiện tìm kiếm",,,,,,,,,,,
+,,WEB_59,Kiểm tra xuất Excel khi không có dữ liệu thỏa mãn điều kiện tìm kiếm,Kiểm tra xuất Excel khi không có dữ liệu thỏa mãn điều kiện tìm kiếm,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": ""1"",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,High,,,,,"1. {
+ ""domainType"" =99999999
+}}
+2. Send API","- Status code: 200
+- Response header:
+   Content-Type = application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   Content-Disposition = attachment; filename=DANH_SACH_PHI_CHUAN_{dateTime}.xlsx
+- Client tải được file Excel
+- File mở được nhưng không chứa dữ liệu.",,,,,,,,,,,
+Kiểm tra dữ liệu file excel map với DB,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_60,Kiểm tra dữ liệu STT,Kiểm tra dữ liệu STT,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB",Tự sinh tăng dần từ 1 đến hết,,,,,,,,,,,
+,,WEB_61,Kiểm tra dữ liệu Đối tượng khai báo,Kiểm tra dữ liệu Đối tượng khai báo,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","Lấy tên của domainType từ bảng PAR_COMMON
+
+Từ FEE_STANDARD_CONFIG.DOMAIN_TYPE tại PAR_COMMON lấy PAR_COMMON.PAR_NAME của bản ghi có:
+
+PAR_COMMON.PAR_CODE = FEE_STANDARD_CONFIG.DOMAIN_TYPE
+
+PAR_COMMON.PAR_TYPE = DOMAIN_TYPE
+
+
+
+
+SELECT pc.PAR_NAME
+FROM FEE_STANDARD_CONFIG fsc
+LEFT JOIN PAR_COMMON pc
+     ON pc.PAR_TYPE = 'DOMAIN_TYPE'
+    AND pc.PAR_CODE = fsc.DOMAIN_TYPE;",,,,,,,,,,,
+,,WEB_62,Kiểm tra dữ liệu Dịch vụ thu phí/ Gói SPDV,Kiểm tra dữ liệu Dịch vụ thu phí/ Gói SPDV,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","Với FEE_STANDARD_CONFIG.DOMAIN_TYPE = 1: lấy giá trị CAT_FEESERVICE.SRV_NAME của bản ghi có
+
+CAT_FEESERVICE.SRV_CODE = FEE_STANDARD_CONFIG.FEE_SERVICE
+
+Với FEE_STANDARD_CONFIG.DOMAIN_TYPE = 2: lấy giá trị
+
+CAT_PKG_GRP.GRP_NAME của bản ghi có
+
+CAT_PKG_GRP.GRP_CODE = FEE_STANDARD_CONFIG.FEE_SERVICE
+
+
+
+SELECT 
+CASE 
+    WHEN fsc.DOMAIN_TYPE = '1' THEN cfs.SRV_NAME
+    WHEN fsc.DOMAIN_TYPE = '2' THEN cpg.GRP_NAME
+    ELSE NULL
+END AS SERVICE_NAME
+FROM FEE_STANDARD_CONFIG fsc
+LEFT JOIN CAT_FEESERVICE cfs
+       ON fsc.DOMAIN_TYPE = '1'
+      AND cfs.SRV_CODE = fsc.FEE_SERVICE
+LEFT JOIN CAT_PKG_GRP cpg
+       ON fsc.DOMAIN_TYPE = '2'
+      AND cpg.GRP_CODE = fsc.FEE_SERVICE;",,,,,,,,,,,
+,,WEB_63,Kiểm tra dữ liệu Mã phí/ mã gói,Kiểm tra dữ liệu Mã phí/ mã gói,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","{Mã phí hoặc mã gói}- {Tên mã phí và tên mã gói tương ứng}
+
+Mã phí hoặc mã gói lấy như sau:
+
+Với FEE_STANDARD_CONFIG.DOMAIN_TYPE = 1: Lấy CAT_FEECODE.FEE_CODE của bản ghi có CAT_FEECODE.ID = FEE_STANDARD_CONFIG.FEE_CODE
+
+Với FEE_STANDARD_CONFIG.DOMAIN_TYPE = 2: Lấy giá trị FEE_STANDARD_CONFIG.FEE_CODE
+
+Tên mã phí và tên mã gói tương ứng lấy như sau:
+
+Với FEE_STANDARD_CONFIG.DOMAIN_TYPE = 1: lấy giá trị CAT_FEECODE.FEE_NAME của bản ghi có
+
+CAT_FEECODE.ID = FEE_STANDARD_CONFIG.FEE_CODE
+
+Với FEE_STANDARD_CONFIG.DOMAIN_TYPE = 2: lấy giá trị CAT_PKG.PKG_NAME của bản ghi có
+
+CAT_PKG.PKG_CODE = FEE_STANDARD_CONFIG.FEE_CODE
+
+
+
+
+SELECT 
+CASE 
+    WHEN fsc.DOMAIN_TYPE = '1' 
+        THEN cfc.FEE_CODE || ' - ' || cfc.FEE_NAME
+    WHEN fsc.DOMAIN_TYPE = '2' 
+        THEN fsc.FEE_CODE || ' - ' || cp.PKG_NAME
+END AS FEE_OR_PACKAGE
+FROM FEE_STANDARD_CONFIG fsc
+LEFT JOIN CAT_FEECODE cfc
+       ON fsc.DOMAIN_TYPE = '1'
+      AND cfc.ID = fsc.FEE_CODE
+LEFT JOIN CAT_PKG cp
+       ON fsc.DOMAIN_TYPE = '2'
+      AND cp.PKG_CODE = fsc.FEE_CODE;",,,,,,,,,,,
+,,WEB_64,Kiểm tra dữ liệu Loại giá phí VND,Kiểm tra dữ liệu Loại giá phí VND,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","Tại PAR_COMMON lấy PAR_COMMON.PAR_NAME của bản ghi có:
+
+PAR_COMMON.PAR_CODE = FEE_STANDARD_CONFIG.PRICE_TYPE_VND
+
+PAR_COMMON.PAR_TYPE = PRICE_TYPE
+
+
+SELECT pc.PAR_NAME
+FROM FEE_STANDARD_CONFIG fsc
+LEFT JOIN PAR_COMMON pc
+     ON pc.PAR_TYPE = 'PRICE_TYPE'
+    AND pc.PAR_CODE = fsc.PRICE_TYPE_VND;",,,,,,,,,,,
+,,WEB_65,Kiểm tra dữ liệu Mức giá VND,Kiểm tra dữ liệu Mức giá VND,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","SELECT PRICE_VND
+FROM FEE_STANDARD_CONFIG;
+",,,,,,,,,,,
+,,WEB_66,Kiểm tra dữ liệu Loại giá phí USD,Kiểm tra dữ liệu Loại giá phí USD,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","Tại PAR_COMMON lấy PAR_COMMON.PAR_NAME của bản ghi có:
+
+PAR_COMMON.PAR_CODE = FEE_STANDARD_CONFIG.PRICE_TYPE_USD
+
+PAR_COMMON.PAR_TYPE = PRICE_TYPE
+
+
+
+
+
+SELECT pc.PAR_NAME
+FROM FEE_STANDARD_CONFIG fsc
+LEFT JOIN PAR_COMMON pc
+     ON pc.PAR_TYPE = 'PRICE_TYPE'
+    AND pc.PAR_CODE = fsc.PRICE_TYPE_USD;",,,,,,,,,,,
+,,WEB_67,Kiểm tra dữ liệu Mức giá USD,Kiểm tra dữ liệu Mức giá USD,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","SELECT PRICE_USD
+FROM FEE_STANDARD_CONFIG;
+",,,,,,,,,,,
+,,WEB_68,Kiểm tra dữ liệu Trạng thái,Kiểm tra dữ liệu Trạng thái,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","Căn cứ FEE_STANDARD_CONFIG.STATUS
+
+FEE_STANDARD_CONFIG.STATUS = 1: Fill “Hoạt động”
+
+FEE_STANDARD_CONFIG.STATUS = 0: Fill “Không hoạt động”
+
+
+
+SELECT 
+CASE 
+    WHEN fsc.STATUS = 1 THEN 'Hoạt động'
+    WHEN fsc.STATUS = 0 THEN 'Không hoạt động'
+END AS STATUS_NAME
+FROM FEE_STANDARD_CONFIG fsc;",,,,,,,,,,,
+,,WEB_69,Kiểm tra dữ liệu Người tạo,Kiểm tra dữ liệu Người tạo,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","SELECT CREATED_USER
+FROM FEE_STANDARD_CONFIG;",,,,,,,,,,,
+,,WEB_70,Kiểm tra dữ liệu Ngày tạo,Kiểm tra dữ liệu Ngày tạo,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","SELECT CREATED_TIME
+FROM FEE_STANDARD_CONFIG;
+Theo định dạng DD/MM/YYYY HH:mm:ss",,,,,,,,,,,
+,,WEB_71,Kiểm tra dữ liệu Người cập nhật,Kiểm tra dữ liệu Người cập nhật,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","SELECT UPDATED_USER
+FROM FEE_STANDARD_CONFIG;",,,,,,,,,,,
+,,WEB_72,Kiểm tra dữ liệu Ngày cập nhật,Kiểm tra dữ liệu Ngày cập nhật,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Medium,,,,,"1. Export file Excel.
+2.Quan sát so sánh với dữ liệu DB","SELECT UPDATED_TIME
+FROM FEE_STANDARD_CONFIG;
+Theo định dạng DD/MM/YYYY HH:mm:ss",,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_73,Timeout_Kiểm tra khi lấy dữ liệu DB không thành công do lỗi DB,Timeout_Kiểm tra khi lấy dữ liệu DB không thành công do lỗi DB,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET /v1/category/fee-standard-config/export
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Body 
+{
+  ""domainType"": """",
+  ""feeService"": """",
+  ""feeCode"": """",
+  ""status"": """"
+}",,,,,,,,,,Low,,,,,1. Send API,"1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+  ""message"": ""Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.""
+}",,,,,,,,,,,
