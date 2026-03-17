@@ -35,11 +35,23 @@ python3 --version || python --version
 | RSD describes an API endpoint | API | Markdown test design for API |
 | RSD describes a UI screen | Frontend | Markdown test design for Frontend |
 
-### Step 2: Search Catalog for Reference Examples
+### Step 2: Load References & Search Catalog
 
-**Always search for relevant examples first** to understand the expected output format:
+**Always load the project-specific references first**, then search for examples:
 
 ```bash
+# Read reference files (auto-resolves: catalog-specific → shared fallback)
+python .claude/skills/test-design-generator/scripts/search.py --ref api-test-design
+python .claude/skills/test-design-generator/scripts/search.py --ref frontend-test-design
+python .claude/skills/test-design-generator/scripts/search.py --ref field-templates
+
+# For a specific project catalog
+python .claude/skills/test-design-generator/scripts/search.py --ref api-test-design --catalog project-x
+
+# List all available references (shows which are overridden)
+python .claude/skills/test-design-generator/scripts/search.py --list-refs
+python .claude/skills/test-design-generator/scripts/search.py --list-refs --catalog project-x
+
 # Search API examples by keyword
 python .claude/skills/test-design-generator/scripts/search.py "search list api" --domain api
 
@@ -66,7 +78,8 @@ After search returns results, **read the full example file** to understand the e
 
 ### Step 4: Generate Test Design Following the Example
 
-Generate the test design following the exact format of the reference example:
+Generate the test design following the references loaded via `--ref` and the format of the catalog examples.
+References are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
 #### API Mode
 1. Read RSD → extract fields (name, type, required, maxLength, enum values)
@@ -80,8 +93,12 @@ Generate the test design following the exact format of the reference example:
 
 ### Step 5: Apply Format Rules
 
-Search and verify against rules:
+Load quality rules and verify:
 ```bash
+# Load quality rules (per-catalog with fallback)
+python .claude/skills/test-design-generator/scripts/search.py --ref quality-rules
+
+# Search format rules in CSV
 python .claude/skills/test-design-generator/scripts/search.py "format status response" --domain rules
 ```
 
@@ -112,24 +129,70 @@ To add new reference examples:
 # Create new catalog folder
 mkdir -p .claude/skills/test-design-generator/data/catalogs/new-project/api
 mkdir -p .claude/skills/test-design-generator/data/catalogs/new-project/frontend
+mkdir -p .claude/skills/test-design-generator/data/catalogs/new-project/references
 
 # Copy relevant examples
 cp reference-test-design.md .claude/skills/test-design-generator/data/catalogs/new-project/api/
+
+# Optionally override references for this project
+cp references/api-test-design.md data/catalogs/new-project/references/
+cp references/field-templates.md data/catalogs/new-project/references/
+# Edit the copied files to match the new project's format
+```
+
+## References per-Catalog
+
+References (rules, templates, format specs) support **per-catalog overrides** with shared fallback:
+
+### Resolution Order
+
+1. `data/catalogs/{catalog}/references/{file}.md` — catalog-specific (highest priority)
+2. `references/{file}.md` — shared fallback (default)
+
+### How to Override References for a Project
+
+```bash
+# 1. Copy the shared reference you want to customize
+cp references/api-test-design.md data/catalogs/my-project/references/api-test-design.md
+
+# 2. Edit to match project-specific format (e.g., different base template, field templates, quality rules)
+# 3. When using --catalog my-project, the overridden file will be loaded automatically
+```
+
+### Check Which References Are Active
+
+```bash
+python .claude/skills/test-design-generator/scripts/search.py --list-refs --catalog my-project
+# Output shows: OVERRIDE (catalog-specific), shared (fallback), or catalog-only
 ```
 
 ## Data Structure
 
 ```
-data/
-├── catalogs/
-│   ├── default/           ← Current project's examples
-│   │   ├── api/           ← API test design .md files
-│   │   └── frontend/      ← Frontend test design .md files
-│   └── {other-project}/   ← Another project's examples
-│       ├── api/
-│       └── frontend/
-└── rules/
-    └── api-rules.csv      ← Format rules (shared across projects)
+test-design-generator/
+├── references/            ← Shared references (fallback for all catalogs)
+│   ├── api-test-design.md
+│   ├── frontend-test-design.md
+│   ├── field-templates.md
+│   ├── output-examples.md
+│   └── quality-rules.md
+├── data/
+│   ├── catalogs/
+│   │   ├── default/
+│   │   │   ├── api/           ← API test design .md examples
+│   │   │   ├── frontend/      ← Frontend test design .md examples
+│   │   │   └── references/    ← Override references for default catalog (optional)
+│   │   └── {other-project}/
+│   │       ├── api/
+│   │       ├── frontend/
+│   │       └── references/    ← Override references for this project
+│   │           ├── api-test-design.md     ← Custom base template
+│   │           ├── field-templates.md     ← Custom field templates
+│   │           └── quality-rules.md       ← Custom quality rules
+│   └── rules/
+│       └── api-rules.csv     ← Format rules (shared across projects)
+└── scripts/
+    └── search.py
 ```
 
 ## Key Format Rules (Quick Reference)

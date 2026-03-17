@@ -1,6 +1,5 @@
-Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,,Actual Result,,,,MÃ
-Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,"StepExec
-Type",Spec Title,Document ID,Estimated exec. Duration,,,,,,WEB
+Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Note,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,StepExecType,Spec Title,Document ID,Estimated exec. Duration,,,,,
 Kiểm tra giao diện chung,,,,,,,,,,,,,,,,,,,,,,,,
 ,,WEB_1,"Kiểm tra điều hướng đến popup Chi tiết bản ghi giảm, tăng phí đang hiệu lực","Kiểm tra điều hướng đến popup Chi tiết bản ghi giảm, tăng phí đang hiệu lực","Đ/k1: Vào màn hình:
 1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369

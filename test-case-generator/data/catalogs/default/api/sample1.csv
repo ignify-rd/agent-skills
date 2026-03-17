@@ -1,6 +1,5 @@
-Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Actual Result,,,,MÃ
-Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,"StepExec
-Type",Spec Title,Document ID,Estimated exec. Duration,,,,,,WEB
+Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Note,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,StepExecType,Spec Title,Document ID,Estimated exec. Duration,,,,,
 Kiểm tra các case common,,,,,,,,,,,,,,,,,,,,,,,,
 ,,API_1,Method_Kiểm tra truyền sai method (GET/PUT/DELETE),Method_Kiểm tra truyền sai method (GET/PUT/DELETE),"1. Send API login thành công
 2. Chuẩn bị request hợp lệ 

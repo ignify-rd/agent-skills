@@ -39,11 +39,22 @@ python3 --version || python --version
 
 **Clues for Frontend mode:** First line is screen name (e.g., "WEB_BO_Danh mục > ..."), sections include "giao diện chung", "phân quyền", "validate", "lưới dữ liệu", "chức năng".
 
-### Step 2: Search Catalog for Reference Examples
+### Step 2: Load References & Search Catalog
 
-**Always search for relevant examples first** to understand the expected output format for this project:
+**Always load the project-specific references first**, then search for examples:
 
 ```bash
+# Read reference files (auto-resolves: catalog-specific → shared fallback)
+python .claude/skills/test-case-generator/scripts/search.py --ref api-test-case
+python .claude/skills/test-case-generator/scripts/search.py --ref output-format
+
+# For a specific project catalog
+python .claude/skills/test-case-generator/scripts/search.py --ref api-test-case --catalog project-x
+
+# List all available references (shows which are overridden)
+python .claude/skills/test-case-generator/scripts/search.py --list-refs
+python .claude/skills/test-case-generator/scripts/search.py --list-refs --catalog project-x
+
 # Search API examples
 python .claude/skills/test-case-generator/scripts/search.py "search list validate" --domain api
 
@@ -80,11 +91,12 @@ Follow the 3-batch strategy defined in the reference files:
 - **BATCH 2**: Validate section — one sub-batch PER FIELD (### heading)
 - **BATCH 3**: Post-validate sections (grid, pagination, functionality, timeout)
 
-Generate following rules in `references/api-test-case.md` (API) or `references/fe-test-case.md` (Frontend).
+Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
+These references are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
 ### Step 6: Output JSON
 
-Output a JSON array. Each element is one test case object following the schema in `references/output-format.md`.
+Output a JSON array. Each element is one test case object following the schema loaded via `--ref output-format`.
 
 ```json
 [
@@ -135,21 +147,64 @@ python .claude/skills/test-case-generator/scripts/search.py "keyword" --catalog 
 ```bash
 mkdir -p .claude/skills/test-case-generator/data/catalogs/new-project/api
 mkdir -p .claude/skills/test-case-generator/data/catalogs/new-project/frontend
+mkdir -p .claude/skills/test-case-generator/data/catalogs/new-project/references
 # Copy relevant CSV files
 cp exported-test-cases.csv .claude/skills/test-case-generator/data/catalogs/new-project/api/
+# Optionally override references for this project
+cp .claude/skills/test-case-generator/references/output-format.md .claude/skills/test-case-generator/data/catalogs/new-project/references/
+# Edit the copied file to match the new project's format
+```
+
+## References per-Catalog
+
+References (rules, format specs, quality checks) support **per-catalog overrides** with shared fallback:
+
+### Resolution Order
+
+1. `data/catalogs/{catalog}/references/{file}.md` — catalog-specific (highest priority)
+2. `references/{file}.md` — shared fallback (default)
+
+### How to Override References for a Project
+
+```bash
+# 1. Copy the shared reference you want to customize
+cp references/output-format.md data/catalogs/my-project/references/output-format.md
+
+# 2. Edit to match project-specific format (e.g., different JSON schema, importance mapping)
+# 3. When using --catalog my-project, the overridden file will be loaded automatically
+```
+
+### Check Which References Are Active
+
+```bash
+python .claude/skills/test-case-generator/scripts/search.py --list-refs --catalog my-project
+# Output shows: OVERRIDE (catalog-specific), shared (fallback), or catalog-only
 ```
 
 ## Data Structure
 
 ```
-data/
-└── catalogs/
-    ├── default/           ← Current project's examples (CSV from spreadsheet)
-    │   ├── api/           ← API test case .csv files
-    │   └── frontend/      ← Frontend test case .csv files
-    └── {other-project}/   ← Another project's examples
-        ├── api/
-        └── frontend/
+test-case-generator/
+├── references/            ← Shared references (fallback for all catalogs)
+│   ├── api-test-case.md
+│   ├── fe-test-case.md
+│   ├── output-format.md
+│   └── quality-rules.md
+├── data/
+│   └── catalogs/
+│       ├── default/
+│       │   ├── api/           ← API test case .csv examples
+│       │   ├── frontend/      ← Frontend test case .csv examples
+│       │   └── references/    ← Override references for default catalog (optional)
+│       └── {other-project}/
+│           ├── api/
+│           ├── frontend/
+│           └── references/    ← Override references for this project
+│               ├── output-format.md   ← Custom JSON schema
+│               └── quality-rules.md   ← Custom quality rules
+├── scripts/
+│   └── search.py
+└── SKILL.md
 ```
 
 ## Key Format Differences: API vs Frontend
