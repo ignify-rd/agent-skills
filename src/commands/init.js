@@ -37,8 +37,8 @@ const SKILLS = [
   'test-design-generator',
 ];
 
-// Maps skill directory name → slash command name + description (Claude-specific)
-const CLAUDE_COMMANDS = [
+// Maps skill directory name → slash command name + description
+const COMMANDS = [
   {
     skill: 'test-case-generator',
     command: 'generate-test-case',
@@ -50,6 +50,9 @@ const CLAUDE_COMMANDS = [
     description: 'Generate a test design mindmap (.md) from RSD/PTTK documents',
   },
 ];
+
+// Alias for backwards compatibility
+const CLAUDE_COMMANDS = COMMANDS;
 
 export async function initCommand(options = {}) {
   const ai = options.ai || 'claude';
@@ -63,6 +66,7 @@ export async function initCommand(options = {}) {
       await installForAI(aiType, configDir);
     }
     installClaudeCommands();
+    installCursorCommands();
   } else {
     const configDir = AI_CONFIG[ai];
     if (!configDir) {
@@ -72,6 +76,9 @@ export async function initCommand(options = {}) {
     await installForAI(ai, configDir);
     if (ai === 'claude') {
       installClaudeCommands();
+    }
+    if (ai === 'cursor') {
+      installCursorCommands();
     }
   }
 
@@ -117,8 +124,22 @@ function installClaudeCommands() {
   const commandsDir = join(process.cwd(), '.claude', 'commands');
   mkdirSync(commandsDir, { recursive: true });
 
-  for (const { command, description } of CLAUDE_COMMANDS) {
+  for (const { command, description } of COMMANDS) {
     const dest = join(commandsDir, `${command}.md`);
+    const content = `---\ndescription: ${description}\n---\n\n$ARGUMENTS\n`;
+    writeFileSync(dest, content, 'utf8');
+    logger.success(`Installed slash command: /${command}`);
+  }
+
+  console.log();
+}
+
+function installCursorCommands() {
+  const commandsDir = join(process.cwd(), '.cursor', 'commands');
+  mkdirSync(commandsDir, { recursive: true });
+
+  for (const { command, description } of COMMANDS) {
+    const dest = join(commandsDir, `${command}.mdc`);
     const content = `---\ndescription: ${description}\n---\n\n$ARGUMENTS\n`;
     writeFileSync(dest, content, 'utf8');
     logger.success(`Installed slash command: /${command}`);
