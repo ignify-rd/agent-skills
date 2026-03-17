@@ -36,16 +36,79 @@ jobs:
       - name: Run npm test
         run: npm test
 
-      - name: Test init --ai claude (installs skills)
+      - name: Test init --ai claude
         run: |
-          mkdir -p /tmp/test-install
-          cd /tmp/test-install
+          mkdir -p /tmp/test-claude
+          cd /tmp/test-claude
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai claude
           test -d .claude/skills/test-case-generator
           test -f .claude/skills/test-case-generator/SKILL.md
           test -d .claude/skills/test-design-generator
           test -f .claude/skills/test-design-generator/SKILL.md
-          echo "✔ Skills installed correctly"
+          echo "✔ claude: skills installed correctly"
+
+      - name: Test init --ai cursor
+        run: |
+          mkdir -p /tmp/test-cursor
+          cd /tmp/test-cursor
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai cursor
+          test -d .cursor/rules/test-case-generator
+          test -f .cursor/rules/test-case-generator/SKILL.md
+          test -d .cursor/rules/test-design-generator
+          echo "✔ cursor: skills installed correctly"
+
+      - name: Test init --ai windsurf
+        run: |
+          mkdir -p /tmp/test-windsurf
+          cd /tmp/test-windsurf
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai windsurf
+          test -d .windsurf/rules/test-case-generator
+          test -f .windsurf/rules/test-case-generator/SKILL.md
+          echo "✔ windsurf: skills installed correctly"
+
+      - name: Test init --ai roocode
+        run: |
+          mkdir -p /tmp/test-roocode
+          cd /tmp/test-roocode
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai roocode
+          test -d .roo/rules/test-case-generator
+          test -f .roo/rules/test-case-generator/SKILL.md
+          echo "✔ roocode: skills installed correctly"
+
+      - name: Test init --ai copilot
+        run: |
+          mkdir -p /tmp/test-copilot
+          cd /tmp/test-copilot
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai copilot
+          test -d .github/copilot-skills/test-case-generator
+          test -f .github/copilot-skills/test-case-generator/SKILL.md
+          echo "✔ copilot: skills installed correctly"
+
+      - name: Test init --ai all
+        run: |
+          mkdir -p /tmp/test-all
+          cd /tmp/test-all
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai all
+          test -d .claude/skills/test-case-generator
+          test -d .cursor/rules/test-case-generator
+          test -d .windsurf/rules/test-case-generator
+          test -d .roo/rules/test-case-generator
+          test -d .github/copilot-skills/test-case-generator
+          test -d .kiro/rules/test-case-generator
+          test -d .gemini/skills/test-case-generator
+          test -d .agent/skills/test-case-generator
+          test -d .codex/skills/test-case-generator
+          test -d .qoder/rules/test-case-generator
+          test -d .trae/rules/test-case-generator
+          test -d .opencode/skills/test-case-generator
+          test -d .continue/skills/test-case-generator
+          test -d .codebuddy/skills/test-case-generator
+          test -d .factory/skills/test-case-generator
+          echo "✔ all: skills installed for all assistants"
+
+      - name: Test unsupported AI type exits with error
+        run: |
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai unknown 2>&1 && exit 1 || echo "✔ unknown AI type correctly rejected"
 
   install-from-git:
     runs-on: ubuntu-latest
@@ -72,3 +135,15 @@ jobs:
           test -d .claude/skills/test-design-generator
           test -f .claude/skills/test-design-generator/SKILL.md
           echo "✔ npm install and test-genie command work"
+
+      - name: Test init --ai all via installed package
+        run: |
+          mkdir -p /tmp/consumer-all
+          cd /tmp/consumer-all
+          TARBALL=$(ls $GITHUB_WORKSPACE/test-genie-*.tgz 2>/dev/null | head -1)
+          npm install $TARBALL
+          ./node_modules/.bin/test-genie init --ai all
+          test -d .claude/skills/test-case-generator
+          test -d .cursor/rules/test-case-generator
+          test -d .windsurf/rules/test-case-generator
+          echo "✔ init --ai all works via installed package"

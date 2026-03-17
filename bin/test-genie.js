@@ -22,7 +22,7 @@ program
 program
   .command('init')
   .description('Install test-genie skills into your AI assistant configuration')
-  .option('--ai <type>', 'AI assistant type (claude)', 'claude')
+  .option('--ai <type>', 'AI assistant type (claude|cursor|windsurf|antigravity|copilot|kiro|codex|qoder|roocode|gemini|trae|opencode|continue|codebuddy|droid|all)', 'claude')
   .action((options) => initCommand(options));
 
 program
@@ -33,7 +33,7 @@ program
 program
   .command('update')
   .description('Update skills to the latest version')
-  .option('--ai <type>', 'AI assistant type (claude)', 'claude')
+  .option('--ai <type>', 'AI assistant type (claude|cursor|windsurf|antigravity|copilot|kiro|codex|qoder|roocode|gemini|trae|opencode|continue|codebuddy|droid|all)', 'claude')
   .action((options) => updateCommand(options));
 
 program.parse();
