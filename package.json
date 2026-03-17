@@ -1,7 +1,7 @@
 {
   "name": "test-genie",
   "version": "1.0.0",
-  "description": "AI skills for test case and test design generation",
+  "description": "test-genie: AI skills for test case and test design generation",
   "type": "module",
   "bin": {
     "test-genie": "./bin/test-genie.js"

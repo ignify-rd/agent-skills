@@ -1,31 +1,27 @@
-# test-genie
+# agent-skills
 
-AI skills for test case and test design generation.
+[![CI](https://github.com/ignify-rd/agent-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/ignify-rd/agent-skills/actions/workflows/ci.yml)
 
-## Skills
+A collection of AI skill apps. Each app ships one or more skills that extend your AI assistant's capabilities.
+
+## Apps
+
+### test-genie
+
+Skills for software testing workflows.
 
 | Skill | Description |
 |-------|-------------|
 | `test-case-generator` | Generate test case JSON arrays from mindmap files |
 | `test-design-generator` | Generate test design documents (mindmap .md) from RSD/PTTK |
 
-## Installation
-
-### Install via npm
+#### Installation
 
 ```bash
 npm install -g git+https://github.com/ignify-rd/agent-skills.git
 ```
 
-Or install locally in a project:
-
-```bash
-npm install git+https://github.com/ignify-rd/agent-skills.git
-```
-
-## Setup
-
-After installing, run the init command to install skills into your AI assistant:
+#### Setup
 
 ```bash
 # Install for Claude Code
@@ -34,7 +30,7 @@ test-genie init --ai claude
 
 This copies the skills into `.claude/skills/` in your current directory. Claude will automatically load them.
 
-## Commands
+#### Commands
 
 ```bash
 # Install skills for your AI assistant
@@ -47,7 +43,7 @@ test-genie versions
 test-genie update --ai claude
 ```
 
-## How it works
+#### How it works
 
 Running `test-genie init --ai claude` installs the following into your project:
 
@@ -59,7 +55,3 @@ Running `test-genie init --ai claude` installs the following into your project:
 ```
 
 Once installed, activate a skill in Claude by describing your task — Claude will automatically apply the appropriate skill.
-
-## CI Status
-
-[![CI](https://github.com/ignify-rd/agent-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/ignify-rd/agent-skills/actions/workflows/ci.yml)
