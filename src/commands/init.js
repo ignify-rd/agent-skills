@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { cpSync, existsSync, mkdirSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, rmSync } from 'fs';
+import os from 'os';
 import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +26,11 @@ export const AI_CONFIG = {
   codebuddy:   '.codebuddy/skills',
   droid:       '.factory/skills',
 };
+
+function codexSkillsDir() {
+  const codexHome = process.env.CODEX_HOME || join(os.homedir(), '.codex');
+  return join(codexHome, 'skills');
+}
 
 const SKILLS = [
   'test-case-generator',
@@ -56,13 +62,14 @@ export async function initCommand(options = {}) {
   if (ai === 'all') {
     logger.dim('Skills installed for all supported AI assistants.');
   } else {
-    logger.dim(`Your skills are now in: ${AI_CONFIG[ai]}/`);
+    const installedPath = ai === 'codex' ? codexSkillsDir() : join(process.cwd(), AI_CONFIG[ai]);
+    logger.dim(`Your skills are now in: ${installedPath}`);
   }
   console.log();
 }
 
 async function installForAI(ai, configDir) {
-  const targetBase = join(process.cwd(), configDir);
+  const targetBase = ai === 'codex' ? codexSkillsDir() : join(process.cwd(), configDir);
 
   logger.info(`Installing skills for ${ai}...`);
   logger.dim(`Target: ${targetBase}`);
@@ -79,6 +86,8 @@ async function installForAI(ai, configDir) {
       continue;
     }
 
+    // Reinstall cleanly so repeated init runs stay idempotent.
+    rmSync(dest, { recursive: true, force: true });
     cpSync(src, dest, { recursive: true });
     logger.success(`Installed: ${skill}`);
   }

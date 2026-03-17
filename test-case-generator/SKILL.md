@@ -1,6 +1,6 @@
 ---
 name: generate-test-case
-description: Generate test case JSON from mindmap + RSD/PTTK. Use when user says "sinh test cases", "generate test cases", "tạo test cases", "xuất json test", or provides a mindmap file (.txt/.md) for test case generation.
+description: Generate test case JSON from mindmap + RSD/PTTK. Use when user says "sinh test case", "sinh test cases", "generate test case", "generate test cases", "tạo test case", "tạo test cases", "xuất json test", or provides a mindmap file (.txt/.md) for test case generation.
 ---
 
 # Test Case Generator
@@ -16,7 +16,7 @@ Generate test case JSON arrays from a parsed mindmap file (exported from `.gmind
 ## When to Apply
 
 - User provides a mindmap file (.txt or .md exported from .gmind) and asks to generate test cases
-- User says "sinh test cases", "tạo test cases", "generate test cases", "xuất json"
+- User says "sinh test case", "sinh test cases", "tạo test case", "tạo test cases", "generate test case", "generate test cases", "xuất json"
 - User uploads mindmap + optional RSD/PTTK for test case generation
 
 ## Prerequisites
@@ -43,29 +43,33 @@ python3 --version || python --version
 
 **Always load the project-specific references first**, then search for examples:
 
+Use the installed skill path for your assistant:
+- Claude: `.claude/skills/test-case-generator/scripts/search.py`
+- Codex: `${CODEX_HOME:-~/.codex}/skills/test-case-generator/scripts/search.py`
+
 ```bash
 # Read reference files (auto-resolves: catalog-specific → shared fallback)
-python .claude/skills/test-case-generator/scripts/search.py --ref api-test-case
-python .claude/skills/test-case-generator/scripts/search.py --ref output-format
+python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case
+python <skills-root>/test-case-generator/scripts/search.py --ref output-format
 
 # For a specific project catalog
-python .claude/skills/test-case-generator/scripts/search.py --ref api-test-case --catalog project-x
+python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case --catalog project-x
 
 # List all available references (shows which are overridden)
-python .claude/skills/test-case-generator/scripts/search.py --list-refs
-python .claude/skills/test-case-generator/scripts/search.py --list-refs --catalog project-x
+python <skills-root>/test-case-generator/scripts/search.py --list-refs
+python <skills-root>/test-case-generator/scripts/search.py --list-refs --catalog project-x
 
 # Search API examples
-python .claude/skills/test-case-generator/scripts/search.py "search list validate" --domain api
+python <skills-root>/test-case-generator/scripts/search.py "search list validate" --domain api
 
 # Search Frontend examples
-python .claude/skills/test-case-generator/scripts/search.py "giao dien chung phan quyen" --domain frontend
+python <skills-root>/test-case-generator/scripts/search.py "giao dien chung phan quyen" --domain frontend
 
 # List all available examples
-python .claude/skills/test-case-generator/scripts/search.py --list
+python <skills-root>/test-case-generator/scripts/search.py --list
 
 # Read full content of top match
-python .claude/skills/test-case-generator/scripts/search.py "validate string field" --domain api --full
+python <skills-root>/test-case-generator/scripts/search.py "validate string field" --domain api --full
 ```
 
 ### Step 3: Read the Mindmap
@@ -139,19 +143,19 @@ externalId,testSuiteName,testCaseName,preConditions,step,expectedResult,importan
 ### Switch Catalog (per-project)
 
 ```bash
-python .claude/skills/test-case-generator/scripts/search.py "keyword" --catalog other-project
+python <skills-root>/test-case-generator/scripts/search.py "keyword" --catalog other-project
 ```
 
 ### Create a New Catalog for Another Project
 
 ```bash
-mkdir -p .claude/skills/test-case-generator/data/catalogs/new-project/api
-mkdir -p .claude/skills/test-case-generator/data/catalogs/new-project/frontend
-mkdir -p .claude/skills/test-case-generator/data/catalogs/new-project/references
+mkdir -p <skills-root>/test-case-generator/data/catalogs/new-project/api
+mkdir -p <skills-root>/test-case-generator/data/catalogs/new-project/frontend
+mkdir -p <skills-root>/test-case-generator/data/catalogs/new-project/references
 # Copy relevant CSV files
-cp exported-test-cases.csv .claude/skills/test-case-generator/data/catalogs/new-project/api/
+cp exported-test-cases.csv <skills-root>/test-case-generator/data/catalogs/new-project/api/
 # Optionally override references for this project
-cp .claude/skills/test-case-generator/references/output-format.md .claude/skills/test-case-generator/data/catalogs/new-project/references/
+cp <skills-root>/test-case-generator/references/output-format.md <skills-root>/test-case-generator/data/catalogs/new-project/references/
 # Edit the copied file to match the new project's format
 ```
 
@@ -177,7 +181,7 @@ cp references/output-format.md data/catalogs/my-project/references/output-format
 ### Check Which References Are Active
 
 ```bash
-python .claude/skills/test-case-generator/scripts/search.py --list-refs --catalog my-project
+python <skills-root>/test-case-generator/scripts/search.py --list-refs --catalog my-project
 # Output shows: OVERRIDE (catalog-specific), shared (fallback), or catalog-only
 ```
 

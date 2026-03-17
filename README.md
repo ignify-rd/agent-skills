@@ -31,7 +31,7 @@ test-genie init --ai windsurf    # Windsurf       → .windsurf/rules/
 test-genie init --ai antigravity # Antigravity    → .agent/skills/
 test-genie init --ai copilot     # GitHub Copilot → .github/copilot-skills/
 test-genie init --ai kiro        # Kiro           → .kiro/rules/
-test-genie init --ai codex       # Codex CLI      → .codex/skills/
+test-genie init --ai codex       # Codex CLI      → $CODEX_HOME/skills or ~/.codex/skills/
 test-genie init --ai qoder       # Qoder          → .qoder/rules/
 test-genie init --ai roocode     # Roo Code       → .roo/rules/
 test-genie init --ai gemini      # Gemini CLI     → .gemini/skills/
@@ -58,7 +58,13 @@ test-genie update --ai <type>
 
 #### Usage
 
-After running `test-genie init`, use these slash commands in your AI assistant:
+After running `test-genie init`, use these commands in your AI assistant:
 
 - `/generate-test-case` — generate test case JSON from a mindmap file
 - `/generate-test-design` — generate a test design mindmap from RSD/PTTK
+
+For Codex, these are skills, not slash commands. Ask naturally instead:
+
+- `Generate test cases from this mindmap`
+- `Use the generate-test-case skill on this file`
+- `Generate a test design from this RSD`

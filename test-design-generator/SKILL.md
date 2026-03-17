@@ -1,6 +1,6 @@
 ---
 name: generate-test-design
-description: Generate test design documents (mindmap .md) from RSD/PTTK. Searches catalog of real examples by keyword to find matching reference. Use when user says "generate test design", "sinh test design", "tao mindmap", "tạo test design", or provides RSD/PTTK documents for mindmap generation.
+description: Generate test design documents (mindmap .md) from RSD/PTTK. Searches catalog of real examples by keyword to find matching reference. Use when user says "generate test design", "generate mindmap", "sinh test design", "tao mindmap", "tạo test design", "tạo mindmap", or provides RSD/PTTK documents for mindmap generation.
 ---
 
 # Test Design Generator
@@ -39,33 +39,37 @@ python3 --version || python --version
 
 **Always load the project-specific references first**, then search for examples:
 
+Use the installed skill path for your assistant:
+- Claude: `.claude/skills/test-design-generator/scripts/search.py`
+- Codex: `${CODEX_HOME:-~/.codex}/skills/test-design-generator/scripts/search.py`
+
 ```bash
 # Read reference files (auto-resolves: catalog-specific → shared fallback)
-python .claude/skills/test-design-generator/scripts/search.py --ref api-test-design
-python .claude/skills/test-design-generator/scripts/search.py --ref frontend-test-design
-python .claude/skills/test-design-generator/scripts/search.py --ref field-templates
+python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design
+python <skills-root>/test-design-generator/scripts/search.py --ref frontend-test-design
+python <skills-root>/test-design-generator/scripts/search.py --ref field-templates
 
 # For a specific project catalog
-python .claude/skills/test-design-generator/scripts/search.py --ref api-test-design --catalog project-x
+python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design --catalog project-x
 
 # List all available references (shows which are overridden)
-python .claude/skills/test-design-generator/scripts/search.py --list-refs
-python .claude/skills/test-design-generator/scripts/search.py --list-refs --catalog project-x
+python <skills-root>/test-design-generator/scripts/search.py --list-refs
+python <skills-root>/test-design-generator/scripts/search.py --list-refs --catalog project-x
 
 # Search API examples by keyword
-python .claude/skills/test-design-generator/scripts/search.py "search list api" --domain api
+python <skills-root>/test-design-generator/scripts/search.py "search list api" --domain api
 
 # Search Frontend examples
-python .claude/skills/test-design-generator/scripts/search.py "danh sach list screen" --domain frontend
+python <skills-root>/test-design-generator/scripts/search.py "danh sach list screen" --domain frontend
 
 # Search format rules
-python .claude/skills/test-design-generator/scripts/search.py "common section status" --domain rules
+python <skills-root>/test-design-generator/scripts/search.py "common section status" --domain rules
 
 # List all available examples
-python .claude/skills/test-design-generator/scripts/search.py --list
+python <skills-root>/test-design-generator/scripts/search.py --list
 
 # Read full content of top match
-python .claude/skills/test-design-generator/scripts/search.py "export excel" --domain api --full
+python <skills-root>/test-design-generator/scripts/search.py "export excel" --domain api --full
 ```
 
 ### Step 3: Read the Top-Matching Example
@@ -96,10 +100,10 @@ References are resolved per-catalog: if the catalog has its own `references/` fo
 Load quality rules and verify:
 ```bash
 # Load quality rules (per-catalog with fallback)
-python .claude/skills/test-design-generator/scripts/search.py --ref quality-rules
+python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
 
 # Search format rules in CSV
-python .claude/skills/test-design-generator/scripts/search.py "format status response" --domain rules
+python <skills-root>/test-design-generator/scripts/search.py "format status response" --domain rules
 ```
 
 ## Catalog Management
@@ -110,10 +114,10 @@ Each project can have its own catalog of reference examples:
 
 ```bash
 # Use a different project's catalog
-python .claude/skills/test-design-generator/scripts/search.py "keyword" --catalog other-project
+python <skills-root>/test-design-generator/scripts/search.py "keyword" --catalog other-project
 
 # List examples in a specific catalog
-python .claude/skills/test-design-generator/scripts/search.py --list --catalog other-project
+python <skills-root>/test-design-generator/scripts/search.py --list --catalog other-project
 ```
 
 ### Add Examples to Catalog
@@ -127,16 +131,16 @@ To add new reference examples:
 
 ```bash
 # Create new catalog folder
-mkdir -p .claude/skills/test-design-generator/data/catalogs/new-project/api
-mkdir -p .claude/skills/test-design-generator/data/catalogs/new-project/frontend
-mkdir -p .claude/skills/test-design-generator/data/catalogs/new-project/references
+mkdir -p <skills-root>/test-design-generator/data/catalogs/new-project/api
+mkdir -p <skills-root>/test-design-generator/data/catalogs/new-project/frontend
+mkdir -p <skills-root>/test-design-generator/data/catalogs/new-project/references
 
 # Copy relevant examples
-cp reference-test-design.md .claude/skills/test-design-generator/data/catalogs/new-project/api/
+cp reference-test-design.md <skills-root>/test-design-generator/data/catalogs/new-project/api/
 
 # Optionally override references for this project
-cp references/api-test-design.md data/catalogs/new-project/references/
-cp references/field-templates.md data/catalogs/new-project/references/
+cp <skills-root>/test-design-generator/references/api-test-design.md <skills-root>/test-design-generator/data/catalogs/new-project/references/
+cp <skills-root>/test-design-generator/references/field-templates.md <skills-root>/test-design-generator/data/catalogs/new-project/references/
 # Edit the copied files to match the new project's format
 ```
 
@@ -162,7 +166,7 @@ cp references/api-test-design.md data/catalogs/my-project/references/api-test-de
 ### Check Which References Are Active
 
 ```bash
-python .claude/skills/test-design-generator/scripts/search.py --list-refs --catalog my-project
+python <skills-root>/test-design-generator/scripts/search.py --list-refs --catalog my-project
 # Output shows: OVERRIDE (catalog-specific), shared (fallback), or catalog-only
 ```
 
