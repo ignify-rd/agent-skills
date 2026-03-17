@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify CLI help output
+        run: node bin/test-genie.js --help
+
+      - name: Verify init command
+        run: node bin/test-genie.js init --help
+
+      - name: Verify versions command
+        run: node bin/test-genie.js versions --help
+
+      - name: Verify update command
+        run: node bin/test-genie.js update --help
+
+      - name: Run npm test
+        run: npm test
+
+      - name: Test init --ai claude (installs skills)
+        run: |
+          mkdir -p /tmp/test-install
+          cd /tmp/test-install
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai claude
+          test -d .claude/skills/test-case-generator
+          test -f .claude/skills/test-case-generator/SKILL.md
+          test -d .claude/skills/test-design-generator
+          test -f .claude/skills/test-design-generator/SKILL.md
+          echo "✔ Skills installed correctly"
+
+  install-from-git:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Pack and install (simulates git/npm registry install)
+        run: |
+          # Pack creates a tarball exactly as npm publish/git install would
+          TARBALL=$(npm pack --json | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d)[0].filename))")
+          mkdir -p /tmp/consumer
+          cd /tmp/consumer
+          npm install $GITHUB_WORKSPACE/$TARBALL
+          ./node_modules/.bin/test-genie --help
+          ./node_modules/.bin/test-genie init --ai claude
+          test -d .claude/skills/test-case-generator
+          test -f .claude/skills/test-case-generator/SKILL.md
+          test -d .claude/skills/test-design-generator
+          test -f .claude/skills/test-design-generator/SKILL.md
+          echo "✔ npm install and test-genie command work"

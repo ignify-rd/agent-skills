@@ -1,0 +1,38 @@
+{
+  "name": "test-genie",
+  "version": "1.0.0",
+  "description": "test-genie: AI skills for test case and test design generation",
+  "type": "module",
+  "bin": {
+    "test-genie": "./bin/test-genie.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "test-case-generator/",
+    "test-design-generator/"
+  ],
+  "scripts": {
+    "test": "node bin/test-genie.js --help && node bin/test-genie.js versions --help && node bin/test-genie.js init --help && node bin/test-genie.js update --help"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ignify-rd/agent-skills.git"
+  },
+  "keywords": [
+    "test",
+    "ai",
+    "claude",
+    "skill",
+    "test-case",
+    "test-design"
+  ],
+  "license": "MIT"
+}
