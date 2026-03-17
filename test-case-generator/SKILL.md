@@ -1,5 +1,5 @@
 ---
-name: test-case-generator
+name: generate-test-case
 description: Generate test case JSON from mindmap + RSD/PTTK. Use when user says "sinh test cases", "generate test cases", "tạo test cases", "xuất json test", or provides a mindmap file (.txt/.md) for test case generation.
 ---
 

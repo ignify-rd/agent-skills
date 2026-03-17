@@ -12,8 +12,8 @@ Skills for software testing workflows.
 
 | Skill | Description |
 |-------|-------------|
-| `test-case-generator` | Generate test case JSON arrays from mindmap files |
-| `test-design-generator` | Generate test design documents (mindmap .md) from RSD/PTTK |
+| `generate-test-case` | Generate test case JSON arrays from mindmap files |
+| `generate-test-design` | Generate test design documents (mindmap .md) from RSD/PTTK |
 
 #### Installation
 
@@ -56,22 +56,9 @@ test-genie versions
 test-genie update --ai <type>
 ```
 
-#### How it works
+#### Usage
 
-Running `test-genie init --ai <type>` installs the following into your project's AI config directory:
+After running `test-genie init`, use these slash commands in your AI assistant:
 
-```
-# Example: --ai claude
-.claude/
-└── skills/
-    ├── test-case-generator/   ← Generate test case JSON from mindmaps
-    └── test-design-generator/ ← Generate test design mindmaps from RSD/PTTK
-
-# Example: --ai cursor
-.cursor/
-└── rules/
-    ├── test-case-generator/
-    └── test-design-generator/
-```
-
-Once installed, activate a skill in your AI assistant by describing your task — the assistant will automatically apply the appropriate skill.
+- `/generate-test-case` — generate test case JSON from a mindmap file
+- `/generate-test-design` — generate a test design mindmap from RSD/PTTK

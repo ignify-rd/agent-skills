@@ -1,5 +1,5 @@
 ---
-name: test-design-generator
+name: generate-test-design
 description: Generate test design documents (mindmap .md) from RSD/PTTK. Searches catalog of real examples by keyword to find matching reference. Use when user says "generate test design", "sinh test design", "tao mindmap", "tạo test design", or provides RSD/PTTK documents for mindmap generation.
 ---
 

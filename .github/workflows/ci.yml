@@ -8,7 +8,8 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: [arc-runner-set] # self-hosted runner
 
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +112,8 @@ jobs:
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai unknown 2>&1 && exit 1 || echo "✔ unknown AI type correctly rejected"
 
   install-from-git:
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: [arc-runner-set] # self-hosted runner
 
     steps:
       - uses: actions/checkout@v4
