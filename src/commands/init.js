@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { cpSync, existsSync, mkdirSync, rmSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import os from 'os';
 import { logger } from '../utils/logger.js';
 
@@ -37,6 +37,20 @@ const SKILLS = [
   'test-design-generator',
 ];
 
+// Maps skill directory name → slash command name + description (Claude-specific)
+const CLAUDE_COMMANDS = [
+  {
+    skill: 'test-case-generator',
+    command: 'generate-test-case',
+    description: 'Generate test case JSON from a mindmap file (.txt/.md) and optional RSD/PTTK',
+  },
+  {
+    skill: 'test-design-generator',
+    command: 'generate-test-design',
+    description: 'Generate a test design mindmap (.md) from RSD/PTTK documents',
+  },
+];
+
 export async function initCommand(options = {}) {
   const ai = options.ai || 'claude';
 
@@ -48,6 +62,7 @@ export async function initCommand(options = {}) {
     for (const [aiType, configDir] of Object.entries(AI_CONFIG)) {
       await installForAI(aiType, configDir);
     }
+    installClaudeCommands();
   } else {
     const configDir = AI_CONFIG[ai];
     if (!configDir) {
@@ -55,6 +70,9 @@ export async function initCommand(options = {}) {
       process.exit(1);
     }
     await installForAI(ai, configDir);
+    if (ai === 'claude') {
+      installClaudeCommands();
+    }
   }
 
   console.log();
@@ -90,6 +108,20 @@ async function installForAI(ai, configDir) {
     rmSync(dest, { recursive: true, force: true });
     cpSync(src, dest, { recursive: true });
     logger.success(`Installed: ${skill}`);
+  }
+
+  console.log();
+}
+
+function installClaudeCommands() {
+  const commandsDir = join(process.cwd(), '.claude', 'commands');
+  mkdirSync(commandsDir, { recursive: true });
+
+  for (const { command, description } of CLAUDE_COMMANDS) {
+    const dest = join(commandsDir, `${command}.md`);
+    const content = `---\ndescription: ${description}\n---\n\n$ARGUMENTS\n`;
+    writeFileSync(dest, content, 'utf8');
+    logger.success(`Installed slash command: /${command}`);
   }
 
   console.log();
