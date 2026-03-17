@@ -8,8 +8,22 @@ const __dirname = dirname(__filename);
 
 const SKILLS_ROOT = join(__dirname, '..', '..'); // package root
 
-const AI_CONFIG = {
-  claude: '.claude/skills',
+export const AI_CONFIG = {
+  claude:      '.claude/skills',
+  cursor:      '.cursor/rules',
+  windsurf:    '.windsurf/rules',
+  antigravity: '.agent/skills',
+  copilot:     '.github/copilot-skills',
+  kiro:        '.kiro/rules',
+  codex:       '.codex/skills',
+  qoder:       '.qoder/rules',
+  roocode:     '.roo/rules',
+  gemini:      '.gemini/skills',
+  trae:        '.trae/rules',
+  opencode:    '.opencode/skills',
+  continue:    '.continue/skills',
+  codebuddy:   '.codebuddy/skills',
+  droid:       '.factory/skills',
 };
 
 const SKILLS = [
@@ -22,12 +36,32 @@ export async function initCommand(options = {}) {
 
   logger.title('test-genie Installer');
 
-  const configDir = AI_CONFIG[ai];
-  if (!configDir) {
-    logger.error(`Unsupported AI type: "${ai}". Supported: ${Object.keys(AI_CONFIG).join(', ')}`);
-    process.exit(1);
+  if (ai === 'all') {
+    logger.info('Installing skills for all AI assistants...');
+    console.log();
+    for (const [aiType, configDir] of Object.entries(AI_CONFIG)) {
+      await installForAI(aiType, configDir);
+    }
+  } else {
+    const configDir = AI_CONFIG[ai];
+    if (!configDir) {
+      logger.error(`Unsupported AI type: "${ai}". Supported: ${[...Object.keys(AI_CONFIG), 'all'].join(', ')}`);
+      process.exit(1);
+    }
+    await installForAI(ai, configDir);
   }
 
+  console.log();
+  logger.info('Next steps:');
+  if (ai === 'all') {
+    logger.dim('Skills installed for all supported AI assistants.');
+  } else {
+    logger.dim(`Your skills are now in: ${AI_CONFIG[ai]}/`);
+  }
+  console.log();
+}
+
+async function installForAI(ai, configDir) {
   const targetBase = join(process.cwd(), configDir);
 
   logger.info(`Installing skills for ${ai}...`);
@@ -49,9 +83,5 @@ export async function initCommand(options = {}) {
     logger.success(`Installed: ${skill}`);
   }
 
-  console.log();
-  logger.info('Next steps:');
-  logger.dim(`Your skills are now in: ${configDir}/`);
-  logger.dim('Claude will automatically load them from .claude/skills/');
   console.log();
 }
