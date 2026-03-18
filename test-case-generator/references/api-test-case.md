@@ -3,25 +3,30 @@
 ## Pipeline tổng thể
 
 ```
-Phase 0:  Parse mindmap → tree (apiName, suites[], fields[])
-Phase 0b: Extract request body từ RSD/PTTK (nếu có) → inject vào tất cả batches
-Phase 0c: Extract response templates từ PTTK (1 LLM call) → inject vào R6
-BATCH 1:  Pre-validate sections (common cases, phân quyền)
-BATCH 2:  Validate section — 1 sub-batch PER FIELD (### heading)
-BATCH 3:  Post-validate sections (lưới dữ liệu, chức năng, timeout...)
-Dedup:    Loại bỏ duplicate testCaseName
-Output:   JSON array
+Phase 1:  Parse mindmap → tree (apiName, suites[], fields[])
+Phase 2:  Extract request body từ RSD/PTTK (nếu có) → inject vào tất cả batches
+Phase 3:  Extract response templates từ PTTK (1 LLM call) → inject vào R6
+Phase 4:  BATCH 1 — Pre-validate sections (common cases, phân quyền)
+Phase 5:  BATCH 2 — Validate section — 1 sub-batch PER FIELD (### heading)
+Phase 6:  BATCH 3 — Post-validate sections (lưới dữ liệu, chức năng, timeout...)
+Phase 7:  Dedup — Loại bỏ duplicate testCaseName
+Phase 8:  Output JSON array
 ```
 
-## Phase 0b: Trích xuất Request Body từ RSD/PTTK
+> **Quy tắc ưu tiên nguồn dữ liệu**: Xem `--ref priority-rules`
+
+## Phase 2: Trích xuất Request Body từ RSD/PTTK
+
+Theo quy tắc trong `priority-rules.md`: dùng PTTK nếu có, fallback RSD.
 
 Nếu user cung cấp RSD hoặc PTTK:
 
 1. Tìm phần mô tả API endpoint này (dùng "API Table of Contents" hint nếu có)
-2. Trích xuất:
+2. Trích xuất (từ PTTK nếu có, fallback RSD):
    - Tên field (giữ nguyên tên gốc)
    - Kiểu dữ liệu (string, integer, array, object)
    - Bắt buộc/tùy chọn
+   - maxLength, format constraints
    - Giá trị mẫu hợp lệ (concrete values)
 3. Build body JSON với TẤT CẢ required fields có giá trị mẫu
 
@@ -36,11 +41,10 @@ Ví dụ output:
 }
 ```
 
-> Priority: PTTK > RSD nếu cả 2 đều có thông tin body
+## Phase 3: Response Template Optimization
 
-## Phase 0c: Response Template Optimization
-
-Trước khi chạy batches, extract response templates từ PTTK **1 lần**:
+Trước khi chạy batches, extract response templates **1 lần**:
+- **Nguồn**: theo `priority-rules.md` — PTTK (ưu tiên) → RSD (fallback)
 - Lấy response body SUCCESS (status 200, errorCode "0")
 - Lấy response body ERROR (validation fail)
 - Inject cùng templates vào tất cả BATCH 1, 2, 3
@@ -187,7 +191,7 @@ Xem bảng mapping trong `output-format.md`.
 
 ---
 
-## BATCH 1: Pre-Validate Sections
+## Phase 4 — BATCH 1: Pre-Validate Sections
 
 **Sections xử lý:** tất cả ## sections TRƯỚC "Kiểm tra validate" trong mindmap
 - Thường: "Kiểm tra các case common", "Phân quyền", "Xác thực token"
@@ -215,7 +219,7 @@ Xem bảng mapping trong `output-format.md`.
 
 ---
 
-## BATCH 2: Validate Section — Per-Field
+## Phase 5 — BATCH 2: Validate Section — Per-Field
 
 **Section xử lý:** "Kiểm tra validate" và tất cả ### subsections bên trong
 
@@ -253,7 +257,7 @@ Xem bảng mapping trong `output-format.md`.
 
 ---
 
-## BATCH 3: Post-Validate Sections
+## Phase 6 — BATCH 3: Post-Validate Sections
 
 **Sections xử lý:** tất cả ## sections SAU "Kiểm tra validate"
 - Thường: "Kiểm tra luồng chính", "Kiểm tra chức năng", "Timeout"

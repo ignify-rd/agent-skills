@@ -18,6 +18,7 @@ Generate test case JSON arrays from a parsed mindmap file (exported from `.gmind
 - User provides a mindmap file (.txt or .md exported from .gmind) and asks to generate test cases
 - User says "sinh test case", "sinh test cases", "tạo test case", "tạo test cases", "generate test case", "generate test cases", "xuất json"
 - User uploads mindmap + optional RSD/PTTK for test case generation
+- **User provides only RSD + PTTK (no mindmap)** — skill auto-generates mindmap structure internally, then generates test cases from it
 
 ## Prerequisites
 
@@ -28,7 +29,20 @@ python3 --version || python --version
 
 ## Workflow
 
-### Step 1: Determine Mode
+### Step 1: Check Input Type
+
+| Input provided | Flow |
+|---------------|------|
+| Mindmap (.md/.txt) + optional RSD/PTTK | **Standard flow** — go to Step 2 |
+| RSD + PTTK only (no mindmap) | **Auto flow** — invoke `test-design-generator` skill first to generate mindmap, then go to Step 2 |
+| RSD only (no PTTK, no mindmap) | **Auto flow** — invoke `test-design-generator` skill first, then go to Step 2 |
+
+**Auto flow (no mindmap):**
+1. Invoke `test-design-generator` skill with the provided RSD + PTTK
+2. The skill generates a complete test design mindmap (.md)
+3. Use that generated mindmap as input for the standard flow below
+
+### Step 2: Determine Mode
 
 | Mindmap content | Mode | Output |
 |-----------------|------|--------|
@@ -39,18 +53,23 @@ python3 --version || python --version
 
 **Clues for Frontend mode:** First line is screen name (e.g., "WEB_BO_Danh mục > ..."), sections include "giao diện chung", "phân quyền", "validate", "lưới dữ liệu", "chức năng".
 
-### Step 2: Load References & Search Catalog
+### Step 3: Load Rules & References
 
-**Always load the project-specific references first**, then search for examples:
+**Always load priority rules and project-specific references first**, then search for examples:
 
 Use the installed skill path for your assistant:
 - Claude: `.claude/skills/test-case-generator/scripts/search.py`
 - Codex: `${CODEX_HOME:-~/.codex}/skills/test-case-generator/scripts/search.py`
 
 ```bash
-# Read reference files (auto-resolves: catalog-specific → shared fallback)
-python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case
+# Load priority rules (MUST load first)
+python <skills-root>/test-case-generator/scripts/search.py --ref priority-rules
+
+# Load generation rules
+python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case    # API mode
+python <skills-root>/test-case-generator/scripts/search.py --ref fe-test-case     # Frontend mode
 python <skills-root>/test-case-generator/scripts/search.py --ref output-format
+python <skills-root>/test-case-generator/scripts/search.py --ref quality-rules
 
 # For a specific project catalog
 python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case --catalog project-x
@@ -72,7 +91,7 @@ python <skills-root>/test-case-generator/scripts/search.py --list
 python <skills-root>/test-case-generator/scripts/search.py "validate string field" --domain api --full
 ```
 
-### Step 3: Read the Mindmap
+### Step 4: Read the Mindmap
 
 Parse the mindmap structure:
 - **Line 1**: API name / Screen name → used in `preConditions`
@@ -80,16 +99,13 @@ Parse the mindmap structure:
 - **### headings**: Sub-sections / Field names → grouping
 - **- bullet items**: Test case descriptions → `testCaseName`
 
-### Step 4: Extract RSD Context (API Mode Only)
+### Step 5: Extract Field & Body Context
 
-If RSD/PTTK files are provided:
-1. Extract the request body structure (field names, types, required status, example values)
-2. Use this to build the `preConditions` body in all test cases
-3. Priority: PTTK > RSD
+If RSD/PTTK files are provided, follow priority rules loaded in Step 3 (`--ref priority-rules`).
 
-### Step 5: Generate Test Cases in 3 Batches
+### Step 6: Generate Test Cases in Batches
 
-Follow the 3-batch strategy defined in the reference files:
+Follow the batch strategy defined in the reference files loaded in Step 3:
 
 - **BATCH 1**: Pre-validate sections (common cases, permissions)
 - **BATCH 2**: Validate section — one sub-batch PER FIELD (### heading)
@@ -98,7 +114,7 @@ Follow the 3-batch strategy defined in the reference files:
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
 These references are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
-### Step 6: Output JSON
+### Step 7: Output JSON
 
 Output a JSON array. Each element is one test case object following the schema loaded via `--ref output-format`.
 
@@ -189,11 +205,12 @@ python <skills-root>/test-case-generator/scripts/search.py --list-refs --catalog
 
 ```
 test-case-generator/
-├── references/            ← Shared references (fallback for all catalogs)
-│   ├── api-test-case.md
-│   ├── fe-test-case.md
-│   ├── output-format.md
-│   └── quality-rules.md
+├── references/            ← Shared references & rules (fallback for all catalogs)
+│   ├── priority-rules.md     ← PTTK vs RSD priority rules
+│   ├── api-test-case.md      ← API test case generation rules
+│   ├── fe-test-case.md       ← Frontend test case generation rules
+│   ├── output-format.md      ← JSON output schema & examples
+│   └── quality-rules.md      ← Quality & language rules
 ├── data/
 │   └── catalogs/
 │       ├── default/
@@ -204,8 +221,6 @@ test-case-generator/
 │           ├── api/
 │           ├── frontend/
 │           └── references/    ← Override references for this project
-│               ├── output-format.md   ← Custom JSON schema
-│               └── quality-rules.md   ← Custom quality rules
 ├── scripts/
 │   └── search.py
 └── SKILL.md

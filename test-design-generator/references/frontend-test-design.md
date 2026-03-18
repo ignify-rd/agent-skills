@@ -1,16 +1,18 @@
 # Frontend Test Design — Hướng dẫn sinh chi tiết
 
+> **Quy tắc ưu tiên nguồn dữ liệu**: Xem `--ref priority-rules`
+
 ## Pipeline tổng thể
 
 ```
-Phase -1: Phân tích hình ảnh (nếu có) → consolidate → bổ sung vào UI structure
-Phase 0:  Extract UI structure từ RSD → JSON (screenName, fields[], grid, pagination, permissions)
-Phase 0b: Extract fields từ PTTK (if available) → merge vào UI structure (PTTK wins)
-Phase 1:  Generate validate section (per-field templates + LLM extra business cases)
-Phase 2:  Generate lưới dữ liệu section (LLM) + chức năng section (LLM)
-Phase 2c: Verify & supplement chức năng against RSD (LLM re-read)
-Phase 3:  Combine with base template (common UI, permissions, pagination, timeout)
-Phase 4:  Validate and fix markdown
+Phase 1:  Phân tích hình ảnh (nếu có) → consolidate → bổ sung vào UI structure
+Phase 2:  Extract UI structure từ RSD → JSON (screenName, screenType, permissions, UI layout, business logic)
+Phase 3:  Extract fields từ PTTK (if available) → REPLACE field definitions từ RSD (PTTK wins hoàn toàn)
+Phase 4:  Generate validate section (per-field templates + LLM extra business cases)
+Phase 5:  Generate lưới dữ liệu section (LLM) + chức năng section (LLM)
+Phase 6:  Verify & supplement chức năng against RSD (LLM re-read)
+Phase 7:  Combine with base template (common UI, permissions, pagination, timeout)
+Phase 8:  Validate and fix markdown
 ```
 
 ## Base Template (8 placeholders)
@@ -37,7 +39,7 @@ Phase 4:  Validate and fix markdown
 
 **DETAIL screen:** Rename `## Kiểm tra validate` → `## Kiểm tra dữ liệu hiển thị`
 
-## Phase -1: Phân tích hình ảnh (nếu có screenshots/wireframes)
+## Phase 1: Phân tích hình ảnh (nếu có screenshots/wireframes)
 
 Tương ứng với logic trong ứng dụng tại `rsd-to-mindmap-frontend.vue` — service `preImageAnalysisService`.
 
@@ -99,15 +101,9 @@ Sau khi phân tích từng ảnh, tổng hợp lại thành một cấu trúc du
 }
 ```
 
-### Bước 3: Merge với RSD extraction (Phase 0)
+### Bước 3: Merge với RSD extraction (Phase 2)
 
-**Nguyên tắc merge hình ảnh + RSD:**
-
-| Nguồn | Ưu tiên | Dùng khi |
-|-------|---------|----------|
-| RSD | **Cao nhất** | Field names chính xác, business rules, required/optional |
-| PTTK | **Cao** | DB mappings, API endpoints, enum values |
-| Hình ảnh | **Bổ sung** | Placeholder text, field positions, UI layout hints, icon X, button labels thực tế |
+**Nguyên tắc merge**: Theo `--ref priority-rules`. Hình ảnh chỉ bổ sung, không override PTTK/RSD.
 
 **Merge rules:**
 - Hình ảnh **KHÔNG** override field names từ RSD
@@ -130,7 +126,9 @@ RSD không đề cập button "Xuất Excel"
 
 ---
 
-## Phase 0: Trích xuất cấu trúc UI từ RSD
+## Phase 2: Trích xuất cấu trúc UI từ RSD
+
+Theo `priority-rules.md`: khi có PTTK chỉ lấy từ RSD business logic/screen structure. Khi không có PTTK, lấy tất cả.
 
 Đọc RSD và trích xuất JSON đầy đủ:
 
@@ -279,7 +277,7 @@ Cho DETAIL screen: thêm section display tests:
 - {hasPermissionResult}
 ```
 
-## {VALIDATE_SECTION} — Phase 1
+## {VALIDATE_SECTION} — Phase 4
 
 ### Cho LIST/FORM/POPUP screens
 
@@ -321,7 +319,7 @@ KHÔNG dùng field templates. Thay bằng `generateDetailDataSection()`:
         - {SQL query SELECT ... FROM ... WHERE ...}
 ```
 
-## {GRID_SECTION} — Phase 2 (LIST screens only)
+## {GRID_SECTION} — Phase 5 (LIST screens only)
 
 ```markdown
 ## Kiểm tra lưới dữ liệu
@@ -407,7 +405,7 @@ KHÔNG dùng field templates. Thay bằng `generateDetailDataSection()`:
 
 Chỉ sinh khi `pagination` exists trong UI structure.
 
-## {FUNCTION_SECTION} — Phase 2 (LLM-generated)
+## {FUNCTION_SECTION} — Phase 5 (LLM-generated)
 
 Nội dung thay đổi tùy **screenType**:
 
@@ -512,7 +510,7 @@ Nội dung thay đổi tùy **screenType**:
       + Nội dung: <Mã lỗi> : <Mô tả lỗi Server trả>
 ```
 
-## Verify + Supplement (Phase 2c)
+## Phase 6: Verify + Supplement
 
 Sau khi generate function section, re-read RSD và verify:
 

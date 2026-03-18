@@ -18,6 +18,7 @@ Generate comprehensive test design documents (.md) from RSD and optional PTTK. U
 - User provides RSD/PTTK and asks to generate test design or mindmap
 - User says "sinh test design", "tạo test design", "tạo mindmap", "tao mindmap"
 - User uploads .docx/.pdf/.txt/.md files for test design / mindmap generation
+- Called internally by `test-case-generator` skill when user provides only RSD+PTTK without a mindmap
 
 ## Prerequisites
 
@@ -35,19 +36,23 @@ python3 --version || python --version
 | RSD describes an API endpoint | API | Markdown test design for API |
 | RSD describes a UI screen | Frontend | Markdown test design for Frontend |
 
-### Step 2: Load References & Search Catalog
+### Step 2: Load Rules & References
 
-**Always load the project-specific references first**, then search for examples:
+**Always load priority rules first**, then load generation rules and search for examples:
 
 Use the installed skill path for your assistant:
 - Claude: `.claude/skills/test-design-generator/scripts/search.py`
 - Codex: `${CODEX_HOME:-~/.codex}/skills/test-design-generator/scripts/search.py`
 
 ```bash
-# Read reference files (auto-resolves: catalog-specific → shared fallback)
-python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design
-python <skills-root>/test-design-generator/scripts/search.py --ref frontend-test-design
-python <skills-root>/test-design-generator/scripts/search.py --ref field-templates
+# Load priority rules (MUST load first)
+python <skills-root>/test-design-generator/scripts/search.py --ref priority-rules
+
+# Load generation rules
+python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design       # API mode
+python <skills-root>/test-design-generator/scripts/search.py --ref frontend-test-design   # Frontend mode
+python <skills-root>/test-design-generator/scripts/search.py --ref field-templates         # Frontend field templates
+python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
 
 # For a specific project catalog
 python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design --catalog project-x
@@ -80,30 +85,28 @@ After search returns results, **read the full example file** to understand the e
 # search.py returns the full_path — use view_file on it
 ```
 
-### Step 4: Generate Test Design Following the Example
+### Step 4: Generate Test Design Following the Rules
 
-Generate the test design following the references loaded via `--ref` and the format of the catalog examples.
-References are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
+Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
+Rules are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
 #### API Mode
-1. Read RSD → extract fields (name, type, required, maxLength, enum values)
-2. Read PTTK (if provided) → extract response structure, business logic, DB mappings
-3. Generate output following the reference example's exact format
+1. Read RSD → extract **business logic only** (error codes, DB mapping, if/else branches, luồng chính)
+2. Read PTTK (if provided) → extract **field definitions** (names, types, required, maxLength, format, request/response structure). If PTTK available, IGNORE field definitions/request/response in RSD.
+3. If no PTTK → fallback: extract field definitions from RSD
+4. Generate output following the loaded rules (`--ref api-test-design`)
 
 #### Frontend Mode
-1. Read RSD → extract screen type, fields, grid, pagination, permissions
-2. Read PTTK (if provided) → merge field details
-3. Generate output following the reference example's exact format
+1. Read RSD → extract **screen structure** (screen type, permissions, UI layout, business logic, chức năng)
+2. Read PTTK (if provided) → extract **field definitions** (names, types, API endpoints, DB mappings, enum values). If PTTK available, IGNORE field definitions/request/response in RSD.
+3. If no PTTK → fallback: extract field definitions from RSD
+4. Generate output following the loaded rules (`--ref frontend-test-design` + `--ref field-templates`)
 
-### Step 5: Apply Format Rules
+### Step 5: Apply Quality Rules
 
 Load quality rules and verify:
 ```bash
-# Load quality rules (per-catalog with fallback)
 python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
-
-# Search format rules in CSV
-python <skills-root>/test-design-generator/scripts/search.py "format status response" --domain rules
 ```
 
 ## Catalog Management
@@ -174,12 +177,13 @@ python <skills-root>/test-design-generator/scripts/search.py --list-refs --catal
 
 ```
 test-design-generator/
-├── references/            ← Shared references (fallback for all catalogs)
-│   ├── api-test-design.md
-│   ├── frontend-test-design.md
-│   ├── field-templates.md
-│   ├── output-examples.md
-│   └── quality-rules.md
+├── references/            ← Shared references & rules (fallback for all catalogs)
+│   ├── priority-rules.md        ← PTTK vs RSD priority rules
+│   ├── api-test-design.md       ← API test design generation rules
+│   ├── frontend-test-design.md  ← Frontend test design generation rules
+│   ├── field-templates.md       ← Frontend per-field test templates
+│   ├── output-examples.md       ← Example outputs
+│   └── quality-rules.md         ← Quality & language rules
 ├── data/
 │   ├── catalogs/
 │   │   ├── default/
@@ -190,9 +194,6 @@ test-design-generator/
 │   │       ├── api/
 │   │       ├── frontend/
 │   │       └── references/    ← Override references for this project
-│   │           ├── api-test-design.md     ← Custom base template
-│   │           ├── field-templates.md     ← Custom field templates
-│   │           └── quality-rules.md       ← Custom quality rules
 │   └── rules/
 │       └── api-rules.csv     ← Format rules (shared across projects)
 └── scripts/

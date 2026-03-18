@@ -1,14 +1,17 @@
 # Frontend Test Case — Hướng dẫn sinh chi tiết
 
+> **Quy tắc ưu tiên nguồn dữ liệu**: Xem `--ref priority-rules`
+
 ## Pipeline tổng thể
 
 ```
-Phase 0:  Parse mindmap → tree (screenName, screenPath, suites[], fields[])
-BATCH 1:  Pre-validate sections (giao diện chung, phân quyền)
-BATCH 2:  Validate section — 1 sub-batch PER FIELD (### heading)
-BATCH 3:  Post-validate sections (lưới dữ liệu, phân trang, chức năng, timeout)
-Dedup:    Loại bỏ duplicate testCaseName
-Output:   JSON array
+Phase 1:  Parse mindmap → tree (screenName, screenPath, suites[], fields[])
+Phase 2:  Extract field details từ PTTK (nếu có) → enrich validate test cases
+Phase 3:  BATCH 1 — Pre-validate sections (giao diện chung, phân quyền)
+Phase 4:  BATCH 2 — Validate section — 1 sub-batch PER FIELD (### heading)
+Phase 5:  BATCH 3 — Post-validate sections (lưới dữ liệu, phân trang, chức năng, timeout)
+Phase 6:  Dedup — Loại bỏ duplicate testCaseName
+Phase 7:  Output JSON array
 ```
 
 ## Xác định Screen Path cho preConditions
@@ -162,7 +165,7 @@ Xem bảng mapping trong `output-format.md`.
 
 ---
 
-## BATCH 1: Pre-Validate Sections
+## Phase 3 — BATCH 1: Pre-Validate Sections
 
 **Sections xử lý:** tất cả ## sections TRƯỚC "Kiểm tra validate"
 - Thường: "Kiểm tra giao diện chung", "Kiểm tra phân quyền"
@@ -195,7 +198,7 @@ Xem bảng mapping trong `output-format.md`.
 
 ---
 
-## BATCH 2: Validate Section — Per-Field
+## Phase 4 — BATCH 2: Validate Section — Per-Field
 
 **Section xử lý:** "Kiểm tra validate" và tất cả ### field headings bên trong
 
@@ -228,7 +231,7 @@ Xem bảng mapping trong `output-format.md`.
 
 ---
 
-## BATCH 3: Post-Validate Sections
+## Phase 5 — BATCH 3: Post-Validate Sections
 
 **Sections xử lý:** tất cả ## sections SAU "Kiểm tra validate"
 - Thường: "Kiểm tra lưới dữ liệu", "Kiểm tra Phân trang", "Kiểm tra chức năng", "Kiểm tra timeout"

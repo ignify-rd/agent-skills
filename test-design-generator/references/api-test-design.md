@@ -10,14 +10,16 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 ## Pipeline tổng thể
 
 ```
-Step 0:  Extract RSD structure → inputFields[], errorCodes, outputFields, dbMapping
-Step 0b: Extract PTTK fields (if available) → override/replace RSD fields
-Batch 1: Generate validate section (per-field templates)
-Batch 2: Generate main flow section (LLM from RSD)
-Batch 2b: Verify & supplement main flow (re-read RSD, cross-check, merge [SỬA])
-Step 3:  Combine with base template
-Step 4:  Validate and fix markdown
+Phase 1:  Extract RSD structure → business logic, errorCodes, dbMapping
+Phase 2:  Extract PTTK fields (if available) → inputFields[], outputFields[] (PTTK wins)
+Phase 3:  Generate validate section (per-field templates)
+Phase 4:  Generate main flow section (LLM from RSD)
+Phase 5:  Verify & supplement main flow (re-read RSD, cross-check, merge [SỬA])
+Phase 6:  Combine with base template
+Phase 7:  Validate and fix markdown
 ```
+
+> **Quy tắc ưu tiên nguồn dữ liệu**: Xem `--ref priority-rules`
 
 ## Base Template (hardcoded — KHÔNG thay đổi)
 
@@ -71,9 +73,60 @@ Step 4:  Validate and fix markdown
 
 **`{WRONG_METHODS}`**: Tính từ API method. VD: nếu method=POST → WRONG_METHODS = "GET/PUT/DELETE"
 
-## Trích xuất cấu trúc đầu vào
+## Phase 1: Trích xuất cấu trúc từ RSD — business logic
 
-Đọc RSD và trích xuất:
+Đọc RSD và trích xuất phần **business logic** (luôn lấy từ RSD):
+
+```json
+{
+  "title": "Tên API",
+  "endpoint": "POST /v1/category/search",
+  "method": "GET | POST | PUT | DELETE",
+  "errorCodes": {"mô tả lỗi": "status code"},
+  "dbMapping": {
+    "table": "Tên bảng DB",
+    "conditions": ["Điều kiện WHERE"],
+    "orderBy": "Sắp xếp"
+  }
+}
+```
+
+## Phase 2: Đọc PTTK (nếu có) — lấy field definitions
+
+Nếu có PTTK → tìm ĐÚNG API theo endpoint → đọc bảng INPUT/OUTPUT:
+
+```json
+{
+  "inputFields": [
+    {
+      "name": "tên field (từ PTTK)",
+      "type": "string | number | date | boolean | array | object",
+      "maxLength": 30,
+      "required": "Y | N",
+      "nullBehavior": "Mô tả khi truyền null (nếu optional)",
+      "validationRules": {
+        "allowedSpecialChars": ["_", "-"],
+        "allowSpaces": false,
+        "allowAccents": false
+      },
+      "children": []
+    }
+  ],
+  "outputFields": [
+    {"name": "field name", "children": []}
+  ]
+}
+```
+
+- Lấy TẤT CẢ fields từ PTTK (Trường, Kiểu dữ liệu, Bắt buộc, Định dạng, Mô tả)
+- **CHỈ dùng PTTK fields cho validate**. RSD chỉ dùng hiểu business logic
+- Data types chính xác từ PTTK (Date, Integer, Long, String)
+- Format constraints từ PTTK (dd/MM/yyyy, etc.)
+- Response body structure từ PTTK (tên trường, kiểu dữ liệu, nesting)
+
+## Phase 1+2 fallback: Khi KHÔNG có PTTK
+
+Nếu không có PTTK, đọc RSD và trích xuất CẢ field definitions lẫn business logic:
 
 ```json
 {
@@ -107,15 +160,7 @@ Step 4:  Validate and fix markdown
 }
 ```
 
-### Bổ sung từ PTTK
-
-Nếu có PTTK → tìm ĐÚNG API theo endpoint → đọc bảng INPUT:
-- Lấy TẤT CẢ fields từ PTTK (Trường, Kiểu dữ liệu, Bắt buộc, Định dạng, Mô tả)
-- **CHỈ dùng PTTK fields cho validate**. RSD chỉ dùng hiểu business logic
-- Data types chính xác từ PTTK (Date, Integer, Long, String)
-- Format constraints từ PTTK (dd/MM/yyyy, etc.)
-
-## Section 1: Kiểm tra validate
+## Phase 3: Kiểm tra validate
 
 ### Format chuẩn cho MỖI field
 
@@ -434,7 +479,7 @@ Mỗi field được sinh test cases theo format escaped numbering:
 **ARRAY field — Test list:**
 Không truyền, Truyền null, Mảng rỗng [], Mảng chứa phần tử rỗng, String/Number/Object (thay vì array).
 
-## Section 2: Kiểm tra luồng chính
+## Phase 4: Kiểm tra luồng chính
 
 ### ⚠️ QUY TẮC QUAN TRỌNG NHẤT
 
@@ -653,7 +698,7 @@ VD ĐÚNG:
 - Tên cột UPPERCASE từ RSD
 - Response fields dùng camelCase (extract từ PTTK nếu có)
 
-## Verify + Supplement (Batch 2b)
+## Phase 5: Verify + Supplement
 
 Sau khi generate luồng chính, re-read RSD:
 
