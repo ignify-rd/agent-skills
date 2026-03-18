@@ -4,172 +4,131 @@
 ███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║       ███████╗█████╔╝ ██║██║     ██║     ███████╗
 ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║       ╚════██║██╔═██╗ ██║██║     ██║     ╚════██║
 ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║       ███████║██║  ██╗██║███████╗███████╗███████║
-╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝       ╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝                                          
+╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝       ╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝
 ```
+# Test Genie – Hướng dẫn sử dụng
 
-[![CI](https://github.com/ignify-rd/agent-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/ignify-rd/agent-skills/actions/workflows/ci.yml)
+Tool giúp tự động tạo **test design** và **test case** từ tài liệu RSD/PTTK, chạy ngay trong IDE.
 
-A collection of AI skill apps. Each app ships one or more skills that extend your AI assistant's capabilities.
+---
 
-## Apps
+## Cài đặt (chỉ làm 1 lần)
 
-### test-genie
+**1. Cài Node.js**
+- Windows: https://nodejs.org → tải bản **LTS** → chạy cài đặt
+- macOS: https://nodejs.org → tải bản **LTS** → chạy cài đặt
 
-Skills for software testing workflows — generate test designs and test cases from RSD/PTTK documents.
-
-| Skill | Description |
-|-------|-------------|
-| `generate-test-design` | RSD/PTTK → test design mindmap (.md) |
-| `generate-test-case` | Mindmap → test cases → spreadsheet (Google Sheets) |
-
-#### Workflow Overview
-
-```
-RSD + PTTK (+ images)
-       │
-       ▼
-┌──────────────────┐
-│ generate-test-   │  Step 1: Extract business logic (RSD) + field definitions (PTTK)
-│ design           │  Step 2: Generate test design mindmap (.md)
-└────────┬─────────┘
-         │ .md mindmap
-         ▼
-┌──────────────────┐
-│ generate-test-   │  Step 1: Parse mindmap sections
-│ case             │  Step 2: Generate test cases (3 batches)
-│                  │  Step 3: Insert into template → upload to Google Sheets
-└────────┬─────────┘
-         │
-         ▼
-   Google Sheets URL
-```
-
-Both skills can run independently or chained. `generate-test-case` auto-invokes `generate-test-design` when no mindmap is provided.
-
-#### Key Concepts
-
-- **PTTK wins** for field definitions, request/response structure
-- **RSD wins** for business logic, error codes, main flow
-- **Per-project customization** via `AGENTS.md` at project root
-- **Catalog system** — add CSV/MD examples to help AI match your format
-- **Agent asks** when documents are missing info, have conflicts, or are ambiguous
-
-#### Installation
+**2. Cài Test Genie**
 
 ```bash
 npm install -g git+https://github.com/ignify-rd/agent-skills.git
 ```
 
-#### Setup
+---
+
+## Setup dự án mới (chỉ làm 1 lần/dự án)
+
+Mở terminal tại thư mục dự án, chạy:
 
 ```bash
-cd /path/to/your/project
-
-# Install for a specific AI assistant
-test-genie init --ai claude      # Claude Code   → .claude/skills/
-test-genie init --ai cursor      # Cursor         → .cursor/skills/
-test-genie init --ai windsurf    # Windsurf       → .windsurf/rules/
-test-genie init --ai antigravity # Antigravity    → .agent/skills/
-test-genie init --ai copilot     # GitHub Copilot → .github/copilot-skills/
-test-genie init --ai kiro        # Kiro           → .kiro/rules/
-test-genie init --ai codex       # Codex CLI      → $CODEX_HOME/skills or ~/.codex/skills/
-test-genie init --ai qoder       # Qoder          → .qoder/rules/
-test-genie init --ai roocode     # Roo Code       → .roo/rules/
-test-genie init --ai gemini      # Gemini CLI     → .gemini/skills/
-test-genie init --ai trae        # Trae           → .trae/rules/
-test-genie init --ai opencode    # OpenCode       → .opencode/skills/
-test-genie init --ai continue    # Continue       → .continue/skills/
-test-genie init --ai codebuddy   # CodeBuddy      → .codebuddy/skills/
-test-genie init --ai droid       # Droid (Factory)→ .factory/skills/
-test-genie init --ai all         # All assistants above
+test-genie init --ai cursor
 ```
 
-#### What `init` Creates
+Hỗ trợ các IDE khác: `claude`, `windsurf`, `copilot`, `gemini` — hoặc `--ai all` để cài hết.
+
+> ⚠️ Lệnh này **không ghi đè** `AGENTS.md` nếu file đã tồn tại. Muốn reset thì xóa file đó trước rồi chạy lại.
+
+Sau khi init, dự án sẽ có cấu trúc:
 
 ```
-<project>/
-├── .cursor/skills/                ← AI skills (managed by dev team)
-│   ├── test-case-generator/
-│   │   ├── SKILL.md
-│   │   ├── AGENTS.md
-│   │   ├── references/
-│   │   └── scripts/
-│   └── test-design-generator/
-│       ├── SKILL.md
-│       ├── AGENTS.md
-│       ├── references/
-│       ├── data/rules/
-│       └── scripts/
-├── catalog/                       ← Project examples (managed by user)
+my-project/
+├── AGENTS.md          ← Quy tắc riêng của dự án (bạn chỉnh)
+├── catalog/           ← File mẫu để AI học theo (bạn bỏ vào)
 │   ├── api/
 │   ├── frontend/
 │   └── mobile/
-├── excel_template/
-│   └── template.xlsx
-└── AGENTS.md                      ← Project rules (managed by user)
+└── excel_template/    ← Template Excel
 ```
 
-**Skills** (inside `.cursor/skills/`) are managed by the dev team. Run `test-genie update` to get the latest version.
+<!-- 📸 [Screenshot: cây thư mục dự án trong IDE] -->
 
-**Project data** (`catalog/`, `excel_template/`, `AGENTS.md`) is managed by the user. These files are never overwritten by `update`.
+---
 
-#### Commands
+## Bỏ file mẫu vào catalog
 
-```bash
-# Install skills + project structure
-test-genie init --ai <type>
+AI sẽ **bắt chước theo các file mẫu** này để sinh đúng format của dự án. Càng nhiều mẫu tốt, kết quả càng chuẩn.
 
-# Check available versions
-test-genie versions
+| Loại | Định dạng | Bỏ vào đâu |
+|---|---|---|
+| Test case mẫu | `.csv`, `.xlsx` | `catalog/api/` hoặc `catalog/frontend/` |
+| Test design mẫu | `.md`, `.txt` | `catalog/api/` hoặc `catalog/frontend/` |
+| Mindmap | `.gitmind`, `.xmind` | Export sang `.md`/`.txt` trước rồi mới bỏ vào |
 
-# Update skills to the latest version (does not touch project data)
-test-genie update --ai <type>
-```
+**Lấy file mẫu ở đâu?**
+- Test case: mở Google Sheets cũ → **File > Download > CSV** → copy vào `catalog/`
+- Test design: lấy file `.md` từ lần sinh trước → copy vào `catalog/`
 
-#### Usage
+<!-- 📸 [Screenshot: export CSV từ Google Sheets] -->
+<!-- 📸 [Screenshot: thư mục catalog với các file mẫu] -->
 
-After running `test-genie init`, use these commands in your AI assistant:
+---
 
-- `/generate-test-case` — generate test cases from mindmap → spreadsheet
-- `/generate-test-design` — generate test design mindmap from RSD/PTTK
+## Tùy chỉnh AGENTS.md (nếu cần)
 
-For Codex, these are skills, not slash commands. Ask naturally instead:
-
-- `Generate test cases from this mindmap`
-- `Use the generate-test-case skill on this file`
-- `Generate a test design from this RSD`
-
-#### Adding Project Examples
-
-Add examples to help AI match your project's format:
-
-```bash
-# Test case examples (CSV exported from Google Sheets)
-catalog/api/my-api-tests.csv
-catalog/frontend/my-frontend-tests.csv
-
-# Test design examples (MD output from previous generations)
-catalog/api/my-api-design.md
-catalog/frontend/my-screen-design.md
-```
-
-#### Customizing Rules
-
-Edit `AGENTS.md` at your project root to customize behavior:
+Mở file `AGENTS.md` ở gốc dự án và thêm quy tắc riêng, ví dụ:
 
 ```markdown
 ## Project-Specific Rules
 
-- Response body uses "code"/"message" instead of "errorCode"/"errorDesc"
-- All API test cases must include X-Request-ID header
-- Custom template type: HOME
+- Response dùng "code"/"message" thay vì "errorCode"/"errorDesc"
+- Tất cả API phải có header X-Request-ID
+- Khi tài liệu không rõ, tự quyết định, không cần hỏi.
 ```
 
-#### Rule Override Hierarchy
+<!-- 📸 [Screenshot: file AGENTS.md trong IDE] -->
 
-Rules resolve top-down (highest priority first):
+---
 
-1. Project `AGENTS.md` — at project root (user-managed)
-2. Skill `AGENTS.md` — inside skill folder (dev-managed)
-3. Skill references — `references/*.md` (dev-managed)
-4. SKILL.md — workflow instructions (never overridden)
+## Tạo test design
+
+**Chuẩn bị:** Đặt file RSD và PTTK vào thư mục dự án.
+
+**Gọi lệnh trong IDE:**
+
+```
+/generate-test-design
+```
+
+AI đọc tài liệu, có thể hỏi thêm vài câu để làm rõ, rồi sinh ra file `.md`.
+
+<!-- 📸 [Screenshot: gõ lệnh trong IDE] -->
+<!-- 📸 [Screenshot: file .md kết quả] -->
+
+> 💡 Sau khi xong, copy file `.md` vào `catalog/` để AI học cho lần sau.
+
+---
+
+## Tạo test case
+
+**Gọi lệnh trong IDE:**
+
+```
+/generate-test-case
+```
+
+AI hỏi đường dẫn file test design, sinh test case theo 3 đợt (common → validate → luồng chính), rồi đẩy kết quả lên **Google Sheets**.
+
+<!-- 📸 [Screenshot: gõ lệnh trong IDE] -->
+<!-- 📸 [Screenshot: link Google Sheets kết quả] -->
+
+> 💡 Chưa có file test design cũng không sao — AI sẽ tự tạo trước rồi mới sinh test case.
+
+---
+
+## Cập nhật khi có phiên bản mới
+
+```bash
+test-genie update --ai cursor
+```
+
+File của bạn (`catalog/`, `AGENTS.md`) **sẽ không bị ảnh hưởng**.
