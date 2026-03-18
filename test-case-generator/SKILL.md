@@ -166,9 +166,13 @@ Split mindmap into 3 batches, process sequentially:
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
 These references are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
-### Step 7: Output JSON
+### Step 7: Output to Spreadsheet
 
-Output a JSON array. Each element is one test case object following the schema loaded via `--ref output-format`.
+Output is a **spreadsheet file** (not raw JSON). The skill generates JSON internally, then inserts it into a template and uploads to Google Sheets.
+
+#### 7a: Generate JSON Array (internal)
+
+Generate a JSON array. Each element is one test case object following the schema loaded via `--ref output-format`.
 
 ```json
 [
@@ -190,6 +194,90 @@ Output a JSON array. Each element is one test case object following the schema l
   }
 ]
 ```
+
+#### 7b: Detect Template Structure
+
+Template location (per-catalog override supported):
+```bash
+# Resolution order:
+# 1. data/catalogs/{catalog}/templates/template.xlsx  (catalog-specific)
+# 2. data/templates/template.xlsx                      (shared default)
+```
+
+**CRITICAL: Do NOT hardcode any row numbers, column letters, or sheet names.** The template structure is fully dynamic and varies per project. Detect everything by reading the actual file.
+
+**Detection algorithm:**
+
+1. **Open template** — read the `.xlsx` file, list all sheet names
+2. **Identify the data sheet** — find the sheet that contains test case data (may not be the first sheet, may have any name)
+3. **Find header row(s)** — scan all rows top-to-bottom, look for rows where multiple cells match known column label patterns:
+
+   | JSON field | Possible header labels (case-insensitive, partial match OK) |
+   |-----------|-------------------------------------------------------------|
+   | testSuiteName | "Test Suite", "Suite Name", "Name" (in suite context) |
+   | externalId | "External ID", "ID", "Mã" |
+   | testCaseName | "Test Case", "Name" (in test case context), "Tên" |
+   | summary | "Summary", "Tóm tắt" |
+   | preConditions | "PreConditions", "Pre Conditions", "Điều kiện" |
+   | importance | "Importance", "Priority", "Mức độ" |
+   | step | "Step", "Steps", "Bước" |
+   | expectedResult | "Expected Result", "Expected", "Kết quả mong đợi" |
+   | result | "Result", "Kết quả" |
+   | note | "Note", "Ghi chú" |
+
+   Headers may span **multiple rows** (merged cells for group headers on row N, detail headers on row N+1). Detect both levels.
+
+4. **Build column mapping** — for each detected header label, record its column letter. Only map columns that actually exist in this template. If a JSON field has no matching column → skip it (do not error).
+
+5. **Find protected zone** — all rows ABOVE the header row(s) are the protected zone (summary area, formulas, metadata). Record this range. It may be 0 rows (header at row 1) or 20+ rows.
+
+6. **Find data start row** — first row after headers. Check if it's empty or has existing data:
+   - Empty → this is where insertion begins
+   - Has data → find the first empty row after existing data (append mode)
+
+7. **Detect preserved elements** — record merged cells, formula cells, conditional formatting, data validation rules anywhere in the sheet. These must not be overwritten.
+
+**Output of detection** — a structure like:
+```json
+{
+  "sheetName": "(detected)",
+  "headerRows": [15, 16],
+  "protectedZone": "1:17",
+  "dataStartRow": 18,
+  "columnMapping": {
+    "testSuiteName": "A",
+    "externalId": "F",
+    "testCaseName": "G",
+    "...": "..."
+  },
+  "mergedCells": ["A15:B15", "..."],
+  "formulaCells": ["C6", "D6", "..."]
+}
+```
+
+#### 7c: Insert Test Cases into Template
+
+For each test case in the JSON array:
+1. Map JSON fields to template columns using the column mapping from 7b. Skip any JSON field that has no mapped column.
+2. Write each test case to the next available row starting from data start row
+3. **Preserve the protected zone** — never write to any row in the protected zone (summary, formulas, metadata above headers)
+4. **Preserve merged cells** — do not break existing merged cell ranges
+5. **Preserve formulas** — do not overwrite cells that contain formulas (they typically reference the data range and auto-update)
+6. If template has existing data rows, append after the last existing row
+
+#### 7d: Upload to Google Sheets via MCP
+
+Use the Google Drive MCP server to upload the populated spreadsheet:
+
+1. **Check MCP availability** — verify Google Drive MCP server is connected
+2. **Upload** the populated `.xlsx` file to Google Drive
+3. **Convert** to Google Sheets format (if supported by MCP)
+4. **Return** the Google Sheets URL to the user
+
+If MCP is not available or upload fails:
+- Save the populated `.xlsx` file locally
+- Inform user of the local file path
+- Ask if they want to retry upload or use the local file
 
 ## Catalog Management
 
@@ -264,15 +352,19 @@ test-case-generator/
 │   ├── output-format.md      ← JSON output schema & examples
 │   └── quality-rules.md      ← Quality & language rules
 ├── data/
+│   ├── templates/
+│   │   └── template.xlsx     ← Default spreadsheet template
 │   └── catalogs/
 │       ├── default/
 │       │   ├── api/           ← API test case .csv examples
 │       │   ├── frontend/      ← Frontend test case .csv examples
-│       │   └── references/    ← Override references for default catalog (optional)
+│       │   ├── references/    ← Override references for default catalog (optional)
+│       │   └── templates/     ← Override template for this catalog (optional)
 │       └── {other-project}/
 │           ├── api/
 │           ├── frontend/
-│           └── references/    ← Override references for this project
+│           ├── references/    ← Override references for this project
+│           └── templates/     ← Override template for this project
 ├── scripts/
 │   └── search.py
 └── SKILL.md
