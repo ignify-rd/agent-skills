@@ -204,163 +204,465 @@ These references are resolved per-catalog: if the catalog has its own `reference
 
 ### Step 7: Output to Google Sheets
 
-Output is a **Google Sheets URL** (not raw JSON). The skill generates JSON internally, detects template structure, maps fields to columns, and writes directly to Google Sheets via MCP.
+Output is a **Google Sheets URL** (not raw JSON). The flow follows the same 3-step pattern as the test-genie web app:
 
-**IMPORTANT:** The final deliverable to the user is ALWAYS a Google Sheets link. JSON is only an intermediate format — NEVER return raw JSON as the final output.
+1. **Upload template** → Drive (one-time per project type, converts .xlsx → Google Sheets)
+2. **Copy template** → create new spreadsheet (preserves all headers, formatting, formulas, merged cells)
+3. **Append data** → write test case rows via Sheets API
+
+**IMPORTANT:** The final deliverable is ALWAYS a Google Sheets link. JSON is only internal — NEVER return raw JSON as final output.
 
 #### 7a: Generate JSON Array (internal)
 
-Generate a JSON array. Each element is one test case object following the schema loaded via `--ref output-format`.
+Generate a JSON array. Each element is one test case object. The field names depend on the **project type** (template).
 
+**Determine project type** — check the catalog's AGENTS.md or ask user. Available types:
+
+| Project Type | Template File | Columns | Header Row | Data Start Row | ID Pattern |
+|-------------|---------------|---------|------------|----------------|------------|
+| `API_TEST` | API_Fee_Template.xlsx | A-M (13) | 1 | 2 | API_1, API_2... |
+| `FEE_ENGINE` | TestLink.xlsm | A-U (21) | 2 | 3 | WEB_1, WEB_2... |
+| `HOME` | Template_new.xlsx | A-T (20) | 16 | 18 | TC_001, TC_002... |
+| `LENDING` | Template_old.xlsx | A-I (9) | 13 | 14 | TC_0001, TC_0002... |
+
+**API_TEST column mapping** (most common for API test cases):
+
+| Col | Header | JSON Key | Description |
+|-----|--------|----------|-------------|
+| A | Name | `testSuiteName` | Test Suite Name |
+| B | Details | `details` | Test Suite Details (usually `""`) |
+| C | External ID | `externalId` | Test Case ID: API_1, API_2... (usually `""`, auto-generated) |
+| D | Name | `testCaseName` | Test Case Name |
+| E | Summary | `summary` | = same as testCaseName |
+| F | PreConditions | `preConditions` | Endpoint + headers + body JSON |
+| G | Step | `steps` | Test steps |
+| H | Expected Result | `expectedResults` | Expected response |
+| I | Spec Title | `specTitle` | `""` |
+| J | Document ID | `documentId` | `""` |
+| K | Duration | `duration` | `""` |
+| L | Result | `result` | `"PENDING"` |
+| M | Note | `note` | `""` |
+
+**HOME column mapping** (for frontend/general test cases):
+
+| Col | Header | JSON Key | Description |
+|-----|--------|----------|-------------|
+| A | Name | `taskName` | Test Suite Name |
+| B | Details | `details` | Test Suite Details |
+| C-E | Testcase LV1/2/3 | `testcaseLV1/2/3` | Category levels |
+| F | External ID | `testCaseId` | TC_001, TC_002... |
+| G | Name | `testCaseTitle` | Test Case Name |
+| H | Summary | `testObjective` | Test Objective |
+| I | PreConditions | `preConditions` | Pre-conditions + Test Data |
+| J | Status | `status` | Status |
+| K | ExecutionType | `executionType` | Manual/Automated |
+| L | Importance | `priority` | Low/Medium/High |
+| M | Keywords | `keywords` | Keywords |
+| N | Attachments | `attachments` | Attachment count |
+| O | Step | `testSteps` | Test Steps |
+| P | Expected Result | `expectedResult` | Expected Result |
+| Q | Actual Result | `actualResult` | Actual Result |
+| R | StepExecType | `stepExecType` | Step Exec Type |
+| S | Spec Title | `specTitle` | Spec Title |
+| T | Document ID | `documentId` | Document ID |
+
+> For FEE_ENGINE and LENDING column mappings, see `test-genie/src/services/templates/templateDefinitions.js`.
+
+#### 7b: Upload Template to Google Drive (one-time)
+
+The template .xlsx file must exist in Google Drive as a Google Sheets file BEFORE creating spreadsheets. This is a one-time setup per project type.
+
+**Template resolution** (per-catalog override):
+```
+1. data/catalogs/{catalog}/templates/*.xlsx   (catalog-specific)
+2. data/templates/template.xlsx                (shared default)
+```
+
+**Step 1 — Search for existing template:**
+```
+# MCP: google_drive.search_files or google_drive.list_files
+query: "name = 'Test-Genie Template - API_TEST (DO NOT DELETE)' and mimeType = 'application/vnd.google-apps.spreadsheet'"
+```
+If found → save `templateFileId`, skip to 7c.
+
+**Step 2 — Upload template if not found:**
+```
+# MCP: google_drive.upload_file
+filePath: "<skills-root>/test-case-generator/data/templates/template.xlsx"
+name: "Test-Genie Template - API_TEST (DO NOT DELETE)"
+mimeType: "application/vnd.google-apps.spreadsheet"   # CRITICAL: converts .xlsx → Google Sheets
+description: "Test case template for Test-Genie (API_TEST). DO NOT DELETE."
+```
+Returns: `{ id: "1abc...", webViewLink: "https://docs.google.com/..." }`
+Save `templateFileId = result.id`
+
+**Step 3 — Validate upload:**
+```
+# MCP: google_drive.get_file
+fileId: "{templateFileId}"
+fields: "id,name,mimeType"
+```
+Verify `mimeType` = `"application/vnd.google-apps.spreadsheet"` (not xlsx).
+
+**CRITICAL:** The template preserves ALL formatting — headers, merged cells, colors, column widths, formulas. This is WHY we copy the template instead of building from scratch.
+
+#### 7c: Copy Template → Create New Spreadsheet
+
+**Step 1 — Copy template:**
+```
+# MCP: google_drive.copy_file
+fileId: "{templateFileId}"
+name: "TC_API_Lay_danh_sach_bo_loc_chinh_sach_phi_180326"
+```
+Returns: `{ id: "1xyz...", webViewLink: "https://docs.google.com/spreadsheets/d/1xyz.../edit" }`
+Save `spreadsheetId = result.id`
+
+**Step 2 — Get sheet name from the copied file:**
+```
+# MCP: google_sheets.get_spreadsheet
+spreadsheetId: "{spreadsheetId}"
+fields: "sheets.properties(sheetId,title)"
+```
+Returns: `{ sheets: [{ properties: { sheetId: 0, title: "TestCases" } }] }`
+Save `sheetName = result.sheets[0].properties.title`
+
+**Step 3 — Read & analyze template structure (CRITICAL):**
+
+Do NOT assume column mapping from the static tables in 7a. Always read the actual header row(s) from the copied spreadsheet to build a **dynamic column mapping**.
+
+```
+# MCP: google_sheets.get_values
+spreadsheetId: "{spreadsheetId}"
+range: "{sheetName}!A1:{lastCol}{dataStartRow}"    # e.g., "TestCases!A1:M2" for API_TEST
+```
+
+Returns the header area. Example for API_TEST (headerRow=1, dataStartRow=2):
+```json
+{
+  "values": [
+    ["Name", "Details", "External ID", "Name", "Summary", "PreConditions", "Step", "Expected Result", "Spec Title", "Document ID", "Duration", "Result", "Note"]
+  ]
+}
+```
+
+For HOME (headerRow=16, dataStartRow=18), read rows 1-18:
+```
+range: "{sheetName}!A1:T18"
+```
+Headers may span multiple rows (e.g., rows 15-16 with merged group headers on row 15 and detail headers on row 16).
+
+**Build dynamic column mapping from header row:**
+
+```javascript
+// Pseudocode — agent parses actual headers
+const headerRow = response.values[headerRowIndex]  // last row in header area
+const columnMapping = {}
+
+headerRow.forEach((header, colIndex) => {
+  const normalized = header.trim().toLowerCase()
+
+  // Map header labels to JSON keys
+  const labelToKey = {
+    // API_TEST / FEE_ENGINE / HOME share these labels
+    "name":             colIndex === 0 ? "testSuiteName" : "testCaseName",  // col A = suite, later "Name" = test case
+    "details":          "details",
+    "external id":      "externalId",
+    "summary":          "summary",
+    "preconditions":    "preConditions",
+    "step":             "steps",
+    "expected result":  "expectedResults",
+    "spec title":       "specTitle",
+    "document id":      "documentId",
+    "duration":         "duration",
+    "estimated exec. duration": "duration",
+    "result":           "result",
+    "note":             "note",
+    "notes":            "note",
+    // HOME-specific
+    "testcase lv1":     "testcaseLV1",
+    "testcase lv2":     "testcaseLV2",
+    "testcase lv3":     "testcaseLV3",
+    "status":           "status",
+    "executiontype":    "executionType",
+    "importance":       "priority",
+    "keywords":         "keywords",
+    "number of attachments": "attachments",
+    "actual result":    "actualResult",
+    "stepexectype":     "stepExecType",
+    // LENDING-specific
+    "test case id":     "testCaseId",
+    "test case title":  "testCaseTitle",
+    "pre-conditions":   "preConditions",
+    "test steps":       "testSteps",
+    "expected result":  "expectedResult",
+    "priority":         "priority",
+    "test results":     "testResults",
+    "bugid":            "bugId",
+  }
+
+  const key = labelToKey[normalized]
+  if (key) {
+    columnMapping[key] = colIndex
+  }
+})
+```
+
+**Output:** `columnMapping` object, e.g.:
+```json
+{
+  "testSuiteName": 0,
+  "details": 1,
+  "externalId": 2,
+  "testCaseName": 3,
+  "summary": 4,
+  "preConditions": 5,
+  "steps": 6,
+  "expectedResults": 7,
+  "specTitle": 8,
+  "documentId": 9,
+  "duration": 10,
+  "result": 11,
+  "note": 12
+}
+```
+
+Also detect:
+- `totalColumns` = headerRow.length (number of columns to use in each row)
+- `dataStartRow` = headerRowIndex + 2 (1-indexed, first row after headers)
+- `lastCol` = column letter for last column (e.g., "M" for 13 columns, "T" for 20)
+
+**Step 4 — Clear sample data (keep headers):**
+```
+# MCP: google_sheets.clear_values
+spreadsheetId: "{spreadsheetId}"
+range: "{sheetName}!A{dataStartRow}:{lastCol}"    # e.g., "TestCases!A2:M" for API_TEST
+```
+This removes any sample rows from the template, leaving headers intact.
+
+> **Fallback dataStartRow** (if detection fails): API_TEST=2, FEE_ENGINE=3, HOME=18, LENDING=14
+
+#### 7d: Build Values Array & Insert Data
+
+**Step 1 — Build 2D array using the dynamic column mapping from 7c Step 3:**
+
+Group by `testSuiteName`. For each group, insert a **suite header row** (col A only) followed by test case rows.
+
+```javascript
+// Pseudocode — agent builds this array using dynamic columnMapping from 7c Step 3
+const rows = []
+let currentSuite = null
+const totalCols = totalColumns  // from 7c detection, e.g., 13 for API_TEST
+
+// Helper: create a row with value at the correct column index
+function makeRow(fieldValues) {
+  const row = new Array(totalCols).fill("")
+  for (const [key, value] of Object.entries(fieldValues)) {
+    const colIndex = columnMapping[key]   // from 7c Step 3
+    if (colIndex !== undefined) {
+      row[colIndex] = value || ""
+    }
+  }
+  return row
+}
+
+for (const tc of testCases) {
+  // Insert suite header when suite changes
+  if (tc.testSuiteName !== currentSuite) {
+    currentSuite = tc.testSuiteName
+    // Suite header: only testSuiteName column has value, rest empty
+    rows.push(makeRow({ testSuiteName: currentSuite }))
+  }
+
+  // Test case row: use dynamic mapping — NOT hardcoded column positions
+  rows.push(makeRow({
+    testCaseName:    tc.testCaseName,
+    summary:         tc.testCaseName,         // summary = same as testCaseName
+    preConditions:   tc.preConditions,         // multiline string with \n
+    steps:           tc.step,
+    expectedResults: tc.expectedResult,
+    result:          "PENDING",
+    // All other fields default to "" (externalId, specTitle, documentId, etc.)
+  }))
+}
+```
+
+**Example output** (API_TEST, 13 columns A-M):
 ```json
 [
+  ["Kiểm tra các case common", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["", "", "", "Method_Kiểm tra khi nhập sai method GET", "Method_Kiểm tra khi nhập sai method GET", "1. Send API login thành công\n2. Chuẩn bị request hợp lệ\n 2.1 Endpoint: POST {{BASE_URL}}/v1/segment-manager/segment-config/search\n 2.2 Header:\n {\n  \"Authorization\": \"Bearer {JWT_TOKEN}\",\n  \"Content-Type\": \"application/json\"\n }\n 2.3 Body:\n {\n  \"page\": 0,\n  \"size\": 10\n }", "1. Nhập invalid Method: GET\n2. Send API", "1. Check api trả về:\n 1.1. Status: 107\n 1.2. Response:\n {\n  \"message\": \"Error retrieving AuthorInfo\"\n }", "", "", "", "PENDING", ""],
+  ["", "", "", "URL_Kiểm tra khi truyền sai url", "URL_Kiểm tra khi truyền sai url", "...", "...", "...", "", "", "", "PENDING", ""],
+  ["Kiểm tra phân quyền", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["", "", "", "Phân quyền_User không có quyền menu", "Phân quyền_User không có quyền menu", "...", "...", "...", "", "", "", "PENDING", ""]
+]
+```
+
+**Step 2 — Write data to sheet using MCP:**
+```
+# MCP: google_sheets.append_values
+spreadsheetId: "{spreadsheetId}"
+range: "{sheetName}!A:{lastCol}"           # lastCol from 7c detection, e.g., "TestCases!A:M"
+values: [                                   # the 2D array built above
+  ["Kiểm tra các case common", "", "", ...],
+  ["", "", "", "Method_Kiểm tra khi nhập sai method GET", ...],
+  ...
+]
+valueInputOption: "RAW"                     # IMPORTANT: RAW, not USER_ENTERED
+insertDataOption: "INSERT_ROWS"             # append after existing content
+```
+
+**IMPORTANT rules for append:**
+- `valueInputOption: "RAW"` — prevents Google Sheets from interpreting `=` as formula
+- `insertDataOption: "INSERT_ROWS"` — appends after existing data (preserves headers)
+- Multiline text (with `\n`) is preserved — Google Sheets renders newlines in cells
+- If total rows > 500 → split into chunks and call append multiple times
+
+#### 7e: Apply Formatting
+
+After writing data, format suite headers and test case rows using batchUpdate.
+
+**Step 1 — Calculate row positions:**
+```javascript
+// Parse the append response to get the starting row
+// Response: { updates: { updatedRange: "TestCases!A2:M75" } }
+const startRow = 2  // from updatedRange
+let currentRow = startRow
+
+// Use dynamic values from 7c Step 3
+const testCaseNameCol = columnMapping["testCaseName"]   // e.g., 3 for API_TEST
+const totalCols = totalColumns                           // e.g., 13 for API_TEST
+
+// Track which rows are suite headers vs test cases
+const formatRequests = []
+rows.forEach(row => {
+  // Suite header: col A has value, testCaseName column is empty
+  const isSuiteHeader = row[0] !== "" && row[testCaseNameCol] === ""
+  if (isSuiteHeader) {
+    // Format + merge for suite header
+    formatRequests.push(/* repeatCell + mergeCells — endColumnIndex: totalCols */)
+  } else {
+    // Format for test case row
+    formatRequests.push(/* repeatCell — endColumnIndex: totalCols */)
+  }
+  currentRow++
+})
+```
+
+**Step 2 — Send batchUpdate:**
+```
+# MCP: google_sheets.batch_update
+spreadsheetId: "{spreadsheetId}"
+requests: [
+  # --- Suite header row (example: row 2 = startRowIndex 1) ---
   {
-    "externalId": "",
-    "testSuiteName": "...",
-    "testSuiteDetails": "",
-    "testCaseName": "...",
-    "summary": "...",
-    "preConditions": "...",
-    "step": "...",
-    "expectedResult": "...",
-    "importance": "Low|Medium|High",
-    "specTitle": "",
-    "documentId": "",
-    "estimatedDuration": "",
-    "result": "PENDING",
-    "note": ""
+    "repeatCell": {
+      "range": {
+        "sheetId": 0,                    # from 7c Step 2 get_spreadsheet response
+        "startRowIndex": 1,              # 0-indexed: row 2 = index 1
+        "endRowIndex": 2,
+        "startColumnIndex": 0,
+        "endColumnIndex": 13             # = totalColumns from 7c Step 3 (dynamic!)
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "backgroundColor": { "red": 0.855, "green": 0.918, "blue": 0.816 },
+          "textFormat": {
+            "foregroundColor": { "red": 0, "green": 0, "blue": 0 },
+            "bold": true,
+            "fontSize": 11
+          },
+          "horizontalAlignment": "LEFT",
+          "wrapStrategy": "WRAP",
+          "borders": {
+            "top": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } },
+            "bottom": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } },
+            "left": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } },
+            "right": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } }
+          }
+        }
+      },
+      "fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,wrapStrategy,borders)"
+    }
+  },
+  {
+    "mergeCells": {
+      "range": {
+        "sheetId": 0,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 0,
+        "endColumnIndex": 13             # = totalColumns (dynamic!)
+      },
+      "mergeType": "MERGE_ALL"
+    }
+  },
+  # --- Test case rows (example: rows 3-5 = startRowIndex 2, endRowIndex 5) ---
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 0,
+        "startRowIndex": 2,
+        "endRowIndex": 5,
+        "startColumnIndex": 0,
+        "endColumnIndex": 13             # = totalColumns (dynamic!)
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "backgroundColor": { "red": 1, "green": 1, "blue": 1 },
+          "textFormat": {
+            "foregroundColor": { "red": 0, "green": 0, "blue": 0 },
+            "bold": false,
+            "fontSize": 11
+          },
+          "horizontalAlignment": "LEFT",
+          "wrapStrategy": "WRAP",
+          "borders": {
+            "top": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } },
+            "bottom": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } },
+            "left": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } },
+            "right": { "style": "SOLID", "color": { "red": 0.8, "green": 0.8, "blue": 0.8 } }
+          }
+        }
+      },
+      "fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,wrapStrategy,borders)"
+    }
   }
 ]
 ```
 
-#### 7b: Detect Template Structure
+> **Note on row indices:** Google Sheets batchUpdate uses 0-indexed row/col. Row 2 in the sheet = `startRowIndex: 1`. The `sheetId` comes from the get_spreadsheet response (usually `0` for first sheet).
 
-Template location (per-catalog override supported):
-```bash
-# Resolution order:
-# 1. data/catalogs/{catalog}/templates/template.xlsx  (catalog-specific)
-# 2. data/templates/template.xlsx                      (shared default)
+**Formatting summary:**
+| Element | Background | Text | Bold | Merge |
+|---------|-----------|------|------|-------|
+| Suite header row | `#DAEAD0` (light green) | Black, 11pt | Yes | Merge A to last col |
+| Test case row | White | Black, 11pt | No | No |
+| Both | Borders: solid, `rgb(0.8, 0.8, 0.8)` | Wrap text | — | — |
+
+#### 7f: Return Result
+
+```
+✅ Đã đẩy {n} test cases lên Google Sheets.
+📊 URL: https://docs.google.com/spreadsheets/d/{spreadsheetId}/edit
+📋 Sheet: {sheetName}, {suiteCount} test suites, {testCaseCount} test cases
 ```
 
-**CRITICAL: Do NOT hardcode any row numbers, column letters, or sheet names.** The template structure is fully dynamic and varies per project. Detect everything by reading the actual file.
-
-**Detection algorithm:**
-
-1. **Open template** — read the `.xlsx` file, list all sheet names
-2. **Identify the data sheet** — find the sheet that contains test case data (may not be the first sheet, may have any name)
-3. **Find header row(s)** — scan all rows top-to-bottom, look for rows where multiple cells match known column label patterns:
-
-   | JSON field | Possible header labels (case-insensitive, partial match OK) |
-   |-----------|-------------------------------------------------------------|
-   | testSuiteName | "Test Suite", "Suite Name", "Name" (in suite context) |
-   | externalId | "External ID", "ID", "Mã" |
-   | testCaseName | "Test Case", "Name" (in test case context), "Tên" |
-   | summary | "Summary", "Tóm tắt" |
-   | preConditions | "PreConditions", "Pre Conditions", "Điều kiện" |
-   | importance | "Importance", "Priority", "Mức độ" |
-   | step | "Step", "Steps", "Bước" |
-   | expectedResult | "Expected Result", "Expected", "Kết quả mong đợi" |
-   | result | "Result", "Kết quả" |
-   | note | "Note", "Ghi chú" |
-
-   Headers may span **multiple rows** (merged cells for group headers on row N, detail headers on row N+1). Detect both levels.
-
-4. **Build column mapping** — for each detected header label, record its column letter. Only map columns that actually exist in this template. If a JSON field has no matching column → skip it (do not error).
-
-5. **Find protected zone** — all rows ABOVE the header row(s) are the protected zone (summary area, formulas, metadata). Record this range. It may be 0 rows (header at row 1) or 20+ rows.
-
-6. **Find data start row** — first row after headers. Check if it's empty or has existing data:
-   - Empty → this is where insertion begins
-   - Has data → find the first empty row after existing data (append mode)
-
-7. **Detect preserved elements** — record merged cells, formula cells, conditional formatting, data validation rules anywhere in the sheet. These must not be overwritten.
-
-**Output of detection** — a structure like:
-```json
-{
-  "sheetName": "(detected)",
-  "headerRows": [15, 16],
-  "protectedZone": "1:17",
-  "dataStartRow": 18,
-  "columnMapping": {
-    "testSuiteName": "A",
-    "externalId": "F",
-    "testCaseName": "G",
-    "...": "..."
-  },
-  "mergedCells": ["A15:B15", "..."],
-  "formulaCells": ["C6", "D6", "..."]
-}
-```
-
-#### 7c: Insert Test Cases into Template
-
-For each test case in the JSON array:
-1. Map JSON fields to template columns using the column mapping from 7b. Skip any JSON field that has no mapped column.
-2. Write each test case to the next available row starting from data start row
-3. **Preserve the protected zone** — never write to any row in the protected zone (summary, formulas, metadata above headers)
-4. **Preserve merged cells** — do not break existing merged cell ranges
-5. **Preserve formulas** — do not overwrite cells that contain formulas (they typically reference the data range and auto-update)
-6. If template has existing data rows, append after the last existing row
-
-#### 7d: Upload to Google Sheets via MCP
-
-Write test cases directly to Google Sheets using the Google Sheets MCP server. Do NOT upload .xlsx — write data directly via API.
-
-**Pre-requisites:**
-- Google Sheets MCP server must be connected (check available MCP tools)
-- User must provide a `spreadsheetId` (from an existing Google Sheet URL) OR the skill creates a new one
-
-**Flow:**
-
-1. **Get or create spreadsheet**
-   - If user provides a Google Sheet URL → extract `spreadsheetId` from URL (format: `https://docs.google.com/spreadsheets/d/{spreadsheetId}/...`)
-   - If no URL → use MCP to create a new spreadsheet, get the `spreadsheetId`
-
-2. **Read template structure from target sheet** (same detection as 7b but on the live sheet)
-   - Use MCP `spreadsheets.values.get` to read the first ~20 rows
-   - Detect header row(s) and column mapping (same algorithm as 7b)
-   - Find the data start row (first empty row after headers)
-   - If the sheet is completely empty → read the local `.xlsx` template first, write headers to the sheet, THEN write data
-
-3. **Build values array** — transform JSON test cases into a 2D array matching the sheet's column order:
-   ```
-   values = [
-     [row1_col1, row1_col2, ..., row1_colN],
-     [row2_col1, row2_col2, ..., row2_colN],
-     ...
-   ]
-   ```
-   - Map each JSON field to the correct column position using the column mapping
-   - For columns not in JSON (e.g., formula columns, manual columns) → send `""` (empty string) to skip
-   - Preserve multiline text (newlines `\n` are kept as-is, Google Sheets renders them)
-
-4. **Write data** — use MCP to call `spreadsheets.values.update` or `spreadsheets.values.append`:
-   ```
-   spreadsheetId: "{id}"
-   range: "{sheetName}!{startCol}{dataStartRow}:{endCol}{dataStartRow + numRows}"
-   values: [[...], [...], ...]
-   ```
-   - Use `append` if appending to existing data
-   - Use `update` if writing to a specific range (e.g., fresh sheet)
-   - Set `valueInputOption: "USER_ENTERED"` so formulas and formats are interpreted
-
-5. **Batch by size** — Google Sheets API has limits. If total rows > 500:
-   - Split into chunks of 500 rows each
-   - Write each chunk sequentially
-   - Update the range offset for each chunk
-
-6. **Return result to user:**
-   ```
-   ✅ Đã đẩy {n} test cases lên Google Sheets.
-   📊 URL: https://docs.google.com/spreadsheets/d/{spreadsheetId}
-   📋 Sheet: {sheetName}, rows {dataStartRow} → {lastRow}
-   ```
-
-**If MCP is not available or write fails:**
+**If Google Sheets MCP is not available:**
 - Save JSON output to a local `.json` file
-- Inform user: "Google Sheets MCP không khả dụng. Đã lưu {n} test cases tại `{path}`. Bạn có thể import thủ công hoặc kết nối MCP và thử lại."
-- Do NOT silently fail — always inform user of the output location
+- Inform user: "Google Sheets MCP không khả dụng. Đã lưu {n} test cases tại `{path}`."
+- Provide manual import instructions: "Copy file vào Google Sheets hoặc kết nối MCP Google Drive/Sheets và thử lại."
+
+#### 7g: Troubleshooting
+
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| Template upload fails | MCP không có quyền Drive | Kiểm tra MCP config có scope `drive.file` hoặc `drive` |
+| Copy returns 404 | Template bị xóa trên Drive | Xóa cached templateFileId, upload lại (7b) |
+| Copy returns 500 | Google chưa xử lý xong file upload | Đợi 2-3 giây sau upload rồi copy lại |
+| Append writes wrong columns | Sai project type | Kiểm tra column mapping, so sánh với templateDefinitions.js |
+| Data bị mất format | Dùng `USER_ENTERED` thay vì `RAW` | Đổi sang `valueInputOption: "RAW"` |
+| Cells hiện `#REF!` | Ghi đè lên protected zone (headers/formulas) | Chỉ clear/write từ `dataStartRow` trở xuống |
+| `\n` không xuống dòng | Cell chưa bật wrap text | Apply formatting với `wrapStrategy: "WRAP"` (7e) |
 
 ## Catalog Management
 
