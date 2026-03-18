@@ -1,17 +1,19 @@
 ---
 name: generate-test-case
-description: Generate test case JSON from mindmap + RSD/PTTK. Use when user says "sinh test case", "sinh test cases", "generate test case", "generate test cases", "tạo test case", "tạo test cases", "xuất json test", or provides a mindmap file (.txt/.md) for test case generation.
+description: Generate test cases from mindmap + RSD/PTTK and push to Google Sheets. Use when user says "sinh test case", "sinh test cases", "generate test case", "generate test cases", "tạo test case", "tạo test cases", "xuất test case", "đẩy lên sheet", or provides a mindmap file (.txt/.md) for test case generation.
 ---
 
 # Test Case Generator
 
-Generate test case JSON arrays from a parsed mindmap file (exported from `.gmind`). Uses a searchable catalog of real test cases (CSV format exported from spreadsheet) to ensure output matches the expected format per project.
+Generate test cases from a parsed mindmap file (exported from `.gmind`) and push directly to Google Sheets. Uses a searchable catalog of real test cases (CSV format exported from spreadsheet) to ensure output matches the expected format per project.
 
-> **Scope**: This skill covers **test case generation** (JSON output) for two pages:
-> - `src/pages/api-test-generation.vue` — API test cases
-> - `src/pages/fe-test-generation.vue` — Frontend test cases
+Output: **Google Sheets URL** (not raw JSON). The skill generates JSON internally, maps it to the spreadsheet template structure, and writes data via Google Sheets MCP.
+
+> **Scope**: This skill covers **test case generation** (spreadsheet output) for two modes:
+> - **API mode** — API test cases
+> - **Frontend mode** — Frontend test cases
 >
-> It does **NOT** cover test design/mindmap generation — that is handled by `rsd-to-mindmap.vue` and `rsd-to-mindmap-frontend.vue` (see `test-design-generator` skill).
+> It does **NOT** cover test design/mindmap generation — that is handled by `test-design-generator` skill.
 
 ## When to Apply
 
@@ -200,9 +202,11 @@ Split mindmap into 3 batches, process sequentially:
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
 These references are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
-### Step 7: Output to Spreadsheet
+### Step 7: Output to Google Sheets
 
-Output is a **spreadsheet file** (not raw JSON). The skill generates JSON internally, then inserts it into a template and uploads to Google Sheets.
+Output is a **Google Sheets URL** (not raw JSON). The skill generates JSON internally, detects template structure, maps fields to columns, and writes directly to Google Sheets via MCP.
+
+**IMPORTANT:** The final deliverable to the user is ALWAYS a Google Sheets link. JSON is only an intermediate format — NEVER return raw JSON as the final output.
 
 #### 7a: Generate JSON Array (internal)
 
@@ -301,17 +305,62 @@ For each test case in the JSON array:
 
 #### 7d: Upload to Google Sheets via MCP
 
-Use the Google Drive MCP server to upload the populated spreadsheet:
+Write test cases directly to Google Sheets using the Google Sheets MCP server. Do NOT upload .xlsx — write data directly via API.
 
-1. **Check MCP availability** — verify Google Drive MCP server is connected
-2. **Upload** the populated `.xlsx` file to Google Drive
-3. **Convert** to Google Sheets format (if supported by MCP)
-4. **Return** the Google Sheets URL to the user
+**Pre-requisites:**
+- Google Sheets MCP server must be connected (check available MCP tools)
+- User must provide a `spreadsheetId` (from an existing Google Sheet URL) OR the skill creates a new one
 
-If MCP is not available or upload fails:
-- Save the populated `.xlsx` file locally
-- Inform user of the local file path
-- Ask if they want to retry upload or use the local file
+**Flow:**
+
+1. **Get or create spreadsheet**
+   - If user provides a Google Sheet URL → extract `spreadsheetId` from URL (format: `https://docs.google.com/spreadsheets/d/{spreadsheetId}/...`)
+   - If no URL → use MCP to create a new spreadsheet, get the `spreadsheetId`
+
+2. **Read template structure from target sheet** (same detection as 7b but on the live sheet)
+   - Use MCP `spreadsheets.values.get` to read the first ~20 rows
+   - Detect header row(s) and column mapping (same algorithm as 7b)
+   - Find the data start row (first empty row after headers)
+   - If the sheet is completely empty → read the local `.xlsx` template first, write headers to the sheet, THEN write data
+
+3. **Build values array** — transform JSON test cases into a 2D array matching the sheet's column order:
+   ```
+   values = [
+     [row1_col1, row1_col2, ..., row1_colN],
+     [row2_col1, row2_col2, ..., row2_colN],
+     ...
+   ]
+   ```
+   - Map each JSON field to the correct column position using the column mapping
+   - For columns not in JSON (e.g., formula columns, manual columns) → send `""` (empty string) to skip
+   - Preserve multiline text (newlines `\n` are kept as-is, Google Sheets renders them)
+
+4. **Write data** — use MCP to call `spreadsheets.values.update` or `spreadsheets.values.append`:
+   ```
+   spreadsheetId: "{id}"
+   range: "{sheetName}!{startCol}{dataStartRow}:{endCol}{dataStartRow + numRows}"
+   values: [[...], [...], ...]
+   ```
+   - Use `append` if appending to existing data
+   - Use `update` if writing to a specific range (e.g., fresh sheet)
+   - Set `valueInputOption: "USER_ENTERED"` so formulas and formats are interpreted
+
+5. **Batch by size** — Google Sheets API has limits. If total rows > 500:
+   - Split into chunks of 500 rows each
+   - Write each chunk sequentially
+   - Update the range offset for each chunk
+
+6. **Return result to user:**
+   ```
+   ✅ Đã đẩy {n} test cases lên Google Sheets.
+   📊 URL: https://docs.google.com/spreadsheets/d/{spreadsheetId}
+   📋 Sheet: {sheetName}, rows {dataStartRow} → {lastRow}
+   ```
+
+**If MCP is not available or write fails:**
+- Save JSON output to a local `.json` file
+- Inform user: "Google Sheets MCP không khả dụng. Đã lưu {n} test cases tại `{path}`. Bạn có thể import thủ công hoặc kết nối MCP và thử lại."
+- Do NOT silently fail — always inform user of the output location
 
 ## Catalog Management
 
