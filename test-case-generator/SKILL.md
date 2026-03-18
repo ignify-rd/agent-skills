@@ -116,6 +116,31 @@ If RSD/PTTK files are provided:
 
 Priority rules: see `AGENTS.md` or `--ref priority-rules`.
 
+### Step 5b: Validate Documents & Ask Clarification
+
+After extraction, check for issues and **proactively ask user** before proceeding:
+
+**Missing information (MUST ask):**
+- Cannot find the exact API/screen in PTTK → ask: "PTTK có nhiều API, không tìm thấy endpoint `{endpoint}`. Bạn muốn dùng API nào?" (list candidates)
+- Mindmap has field names not found in RSD/PTTK → ask: "Mindmap có field `{name}` nhưng không tìm thấy trong RSD/PTTK. Bỏ qua hay sinh test case với thông tin có sẵn?"
+- No response body structure in any document → ask: "Không tìm thấy cấu trúc response body. Bạn có tài liệu bổ sung không?"
+- Mindmap section names don't match expected format → ask: "Section `{name}` không khớp format chuẩn. Đây là validate, luồng chính, hay section khác?"
+
+**Conflicts between documents (MUST ask):**
+- Mindmap field name differs from PTTK/RSD → ask: "Mindmap gọi là `{mm_name}` nhưng PTTK gọi là `{pttk_name}`. Dùng tên nào cho testCaseName?"
+- PTTK says required but RSD says optional → ask: "Field `{name}`: PTTK = required, RSD = optional. Theo tài liệu nào?"
+- Mindmap has test cases that contradict RSD logic → ask: "Mindmap mô tả `{case}` nhưng RSD logic ngược lại. Theo tài liệu nào?"
+
+**Suspicious/unclear content (SHOULD ask):**
+- Mindmap has very few test cases for a complex section → ask: "Section `{name}` chỉ có {n} cases nhưng có {m} fields. Bạn muốn sinh thêm cases không?"
+- Business logic in RSD is ambiguous → ask: "Logic `{description}` không rõ ràng. Expected result cụ thể là gì?"
+- Duplicate test case names in mindmap → ask: "Có {n} test cases trùng tên `{name}`. Giữ tất cả hay deduplicate?"
+
+**DO NOT ask if:**
+- Information can be reasonably inferred from context
+- Priority rules already define the answer (e.g., PTTK wins for field definitions)
+- Mindmap is clear and matches RSD/PTTK
+
 ### Step 6: Generate Test Cases in Batches
 
 Split mindmap into 3 batches, process sequentially:

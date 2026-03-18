@@ -122,6 +122,33 @@ Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is availabl
 3. **REPLACE** all field definitions from RSD with PTTK values (PTTK wins completely)
 4. **If no PTTK** → keep field definitions from RSD
 
+### Step 4b: Validate Documents & Ask Clarification
+
+After extraction, check for issues and **proactively ask user** before proceeding:
+
+**Missing information (MUST ask):**
+- RSD has no error codes or error code table is empty → ask: "RSD không có bảng mã lỗi. Bạn có tài liệu bổ sung không, hay bỏ qua phần error codes?"
+- Cannot find the exact API/screen in PTTK → ask: "PTTK có nhiều API, không tìm thấy endpoint `{endpoint}`. Bạn muốn dùng API nào?" (list candidates)
+- Field type unclear (RSD says "text" but no maxLength, no format) → ask: "Field `{name}` không có maxLength/format trong tài liệu. Giá trị mặc định nào phù hợp?"
+- screenType ambiguous (has both grid and form elements) → ask: "Màn hình này vừa có lưới vừa có form. screenType là LIST hay FORM?"
+- No permissions section in RSD → ask: "RSD không mô tả phân quyền. Bỏ qua section phân quyền hay tạo mặc định?"
+
+**Conflicts between documents (MUST ask):**
+- PTTK field name differs from RSD field name → ask: "PTTK gọi là `{pttk_name}` nhưng RSD gọi là `{rsd_name}`. Dùng tên nào?"
+- PTTK says required but RSD says optional (or vice versa) → ask: "Field `{name}`: PTTK = required, RSD = optional. Theo tài liệu nào?"
+- Different data types between documents → ask: "Field `{name}`: PTTK type = `{type1}`, RSD type = `{type2}`. Dùng type nào?"
+- Response structure differs between PTTK and RSD → follow PTTK (per priority rules), but note the difference
+
+**Suspicious/unclear content (SHOULD ask):**
+- Business logic description is vague or uses ambiguous words ("có thể", "tùy trường hợp") → ask: "Logic `{description}` không rõ ràng. Cụ thể điều kiện là gì?"
+- Image shows field/button not in RSD → ask: "Hình ảnh có `{element}` nhưng RSD không đề cập. Thêm vào test design không?"
+- Duplicate fields with different specs → ask: "Field `{name}` xuất hiện 2 lần với spec khác nhau. Dùng spec nào?"
+
+**DO NOT ask if:**
+- Information can be reasonably inferred (e.g., WRONG_METHODS from API method)
+- Priority rules already define the answer (e.g., PTTK wins for field definitions)
+- It's a formatting/style question covered by references
+
 ### Step 5: Generate Test Design Sections
 
 Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
