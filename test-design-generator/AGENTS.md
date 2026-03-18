@@ -2,6 +2,8 @@
 
 Rules that override default behavior. Loaded automatically by AI agents.
 
+> **Per-project override:** Projects can have their own `AGENTS.md` at `data/catalogs/{catalog}/AGENTS.md`. Any rule defined there completely replaces the corresponding rule here. See SKILL.md "Rule Override Hierarchy" for details.
+
 ## Input Priority (PTTK vs RSD)
 
 | Source | Priority | Used for |

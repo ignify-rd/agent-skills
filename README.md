@@ -15,12 +15,43 @@ A collection of AI skill apps. Each app ships one or more skills that extend you
 
 ### test-genie
 
-Skills for software testing workflows.
+Skills for software testing workflows — generate test designs and test cases from RSD/PTTK documents.
 
 | Skill | Description |
 |-------|-------------|
-| `generate-test-case` | Generate test case JSON arrays from mindmap files |
-| `generate-test-design` | Generate test design documents (mindmap .md) from RSD/PTTK |
+| `generate-test-design` | RSD/PTTK → test design mindmap (.md) |
+| `generate-test-case` | Mindmap → test cases → spreadsheet (Google Sheets) |
+
+#### Workflow Overview
+
+```
+RSD + PTTK (+ images)
+       │
+       ▼
+┌──────────────────┐
+│ generate-test-   │  Step 1: Extract business logic (RSD) + field definitions (PTTK)
+│ design           │  Step 2: Generate test design mindmap (.md)
+└────────┬─────────┘
+         │ .md mindmap
+         ▼
+┌──────────────────┐
+│ generate-test-   │  Step 1: Parse mindmap sections
+│ case             │  Step 2: Generate test cases (3 batches)
+│                  │  Step 3: Insert into template → upload to Google Sheets
+└────────┬─────────┘
+         │
+         ▼
+   Google Sheets URL
+```
+
+Both skills can run independently or chained. `generate-test-case` auto-invokes `generate-test-design` when no mindmap is provided.
+
+#### Key Concepts
+
+- **PTTK wins** for field definitions, request/response structure
+- **RSD wins** for business logic, error codes, main flow
+- **Per-project customization** via catalog system (rules, references, templates, examples)
+- **Agent asks** when documents are missing info, have conflicts, or are ambiguous
 
 #### Installation
 
@@ -67,11 +98,47 @@ test-genie update --ai <type>
 
 After running `test-genie init`, use these commands in your AI assistant:
 
-- `/generate-test-case` — generate test case JSON from a mindmap file
-- `/generate-test-design` — generate a test design mindmap from RSD/PTTK
+- `/generate-test-case` — generate test cases from mindmap → spreadsheet
+- `/generate-test-design` — generate test design mindmap from RSD/PTTK
 
 For Codex, these are skills, not slash commands. Ask naturally instead:
 
 - `Generate test cases from this mindmap`
 - `Use the generate-test-case skill on this file`
 - `Generate a test design from this RSD`
+
+#### Starting a New Project
+
+Each project gets its own catalog with custom rules, examples, references, and templates.
+
+```bash
+# 1. Copy the template scaffold
+cp -r <skills-root>/test-case-generator/data/catalogs/_template \
+      <skills-root>/test-case-generator/data/catalogs/my-project
+cp -r <skills-root>/test-design-generator/data/catalogs/_template \
+      <skills-root>/test-design-generator/data/catalogs/my-project
+
+# 2. Edit AGENTS.md in each — set project-specific rules
+# 3. Add example CSVs (test-case) and .md files (test-design)
+# 4. Optionally override references/ and templates/
+```
+
+Catalog structure per skill:
+```
+data/catalogs/my-project/
+├── AGENTS.md          ← Project rules (overrides skill-level AGENTS.md)
+├── api/               ← Example files for API mode
+├── frontend/          ← Example files for Frontend mode
+├── references/        ← Override shared references (optional)
+└── templates/         ← Override spreadsheet template (test-case only, optional)
+```
+
+#### Rule Override Hierarchy
+
+Rules resolve top-down (highest priority first):
+
+1. Project `AGENTS.md` — `data/catalogs/{project}/AGENTS.md`
+2. Project references — `data/catalogs/{project}/references/*.md`
+3. Skill `AGENTS.md` — `{skill}/AGENTS.md`
+4. Shared references — `{skill}/references/*.md`
+5. SKILL.md — workflow instructions (never overridden)

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p test-case-generator/data/catalogs/_template/api)",
+      "Bash(mkdir -p test-case-generator/data/catalogs/_template/frontend)",
+      "Bash(mkdir -p test-case-generator/data/catalogs/_template/references)",
+      "Bash(mkdir -p test-case-generator/data/catalogs/_template/templates)",
+      "Bash(touch test-case-generator/data/catalogs/_template/api/.gitkeep)",
+      "Bash(touch test-case-generator/data/catalogs/_template/frontend/.gitkeep)",
+      "Bash(touch test-case-generator/data/catalogs/_template/references/.gitkeep)",
+      "Bash(touch test-case-generator/data/catalogs/_template/templates/.gitkeep)",
+      "Bash(mkdir -p test-design-generator/data/catalogs/_template/api)",
+      "Bash(mkdir -p test-design-generator/data/catalogs/_template/frontend)",
+      "Bash(mkdir -p test-design-generator/data/catalogs/_template/references)",
+      "Bash(touch test-design-generator/data/catalogs/_template/api/.gitkeep)",
+      "Bash(touch test-design-generator/data/catalogs/_template/frontend/.gitkeep)",
+      "Bash(touch test-design-generator/data/catalogs/_template/references/.gitkeep)"
+    ]
+  }
+}
