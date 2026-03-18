@@ -4,14 +4,15 @@
 Test Design Generator - BM25 Search Engine for Test Design Catalogs
 Searches .md example files and .csv rule files using BM25 ranking.
 
+Catalogs are located at the project root (catalog/api/, catalog/frontend/).
+References and format rules are located inside the skill folder.
+
 Usage:
   python search.py "<query>" --domain api          # Search API examples
   python search.py "<query>" --domain frontend     # Search Frontend examples
-  python search.py "<query>" --domain rules        # Search format rules
-  python search.py "<query>" --catalog other-proj   # Use different catalog
+  python search.py "<query>" --domain rules        # Search format rules (skill-bundled)
   python search.py --list                           # List all available examples
-  python search.py --ref api-test-design           # Read reference file (per-catalog with fallback)
-  python search.py --ref field-templates --catalog project-x
+  python search.py --ref api-test-design           # Read reference file
   python search.py --list-refs                      # List available references
 """
 
@@ -30,9 +31,10 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
 if sys.stderr.encoding and sys.stderr.encoding.lower() != 'utf-8':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-DATA_DIR = Path(__file__).parent.parent / "data"
-REFS_DIR = Path(__file__).parent.parent / "references"
-DEFAULT_CATALOG = "default"
+SKILL_DIR = Path(__file__).parent.parent
+REFS_DIR = SKILL_DIR / "references"
+RULES_DIR = SKILL_DIR / "data" / "rules"
+CATALOG_DIR = Path.cwd() / "catalog"
 MAX_RESULTS = 3
 
 
@@ -100,10 +102,8 @@ def search_md_files(query, directory, max_results=MAX_RESULTS):
     for idx, score in ranked[:max_results]:
         if score > 0:
             content = documents[idx]
-            # Extract first heading as title
             title_match = re.match(r'^#\s+(.+)', content, re.MULTILINE)
             title = title_match.group(1).strip() if title_match else file_names[idx]
-            # Show preview (first 500 chars after title)
             preview = content[:800].strip()
             results.append({
                 "file": file_names[idx],
@@ -122,7 +122,7 @@ def search_md_files(query, directory, max_results=MAX_RESULTS):
 
 
 def search_csv_rules(query, rules_dir, max_results=MAX_RESULTS):
-    """Search .csv rule files using BM25"""
+    """Search .csv rule files using BM25 (skill-bundled format rules)"""
     if not rules_dir.exists():
         return {"error": f"Rules directory not found: {rules_dir}", "results": []}
 
@@ -156,34 +156,24 @@ def search_csv_rules(query, rules_dir, max_results=MAX_RESULTS):
 
 
 def list_catalog(catalog_dir):
-    """List all .md files in a catalog (api/ and frontend/ subdirs)"""
+    """List all .md files in the catalog (api/, frontend/, mobile/ subdirs)"""
     if not catalog_dir.exists():
         return f"Catalog not found: {catalog_dir}"
 
-    lines = [f"📁 Catalog: {catalog_dir.name}", ""]
+    lines = [f"Catalog: {catalog_dir}", ""]
 
-    for subdir in ["api", "frontend"]:
+    for subdir in ["api", "frontend", "mobile"]:
         sub_path = catalog_dir / subdir
         if not sub_path.exists():
             continue
         md_files = sorted(sub_path.glob("*.md"))
-        lines.append(f"  📂 {subdir}/ ({len(md_files)} files)")
+        lines.append(f"  {subdir}/ ({len(md_files)} files)")
         for f in md_files:
             content = f.read_text(encoding='utf-8')
             title_match = re.match(r'^#\s+(.+)', content, re.MULTILINE)
             title = title_match.group(1).strip() if title_match else f.name
-            lines.append(f"    • {f.name} — {title}")
+            lines.append(f"    {f.name} — {title}")
         lines.append("")
-
-    # List other catalogs
-    catalogs_root = catalog_dir.parent
-    other_catalogs = [d.name for d in catalogs_root.iterdir() if d.is_dir() and d.name != catalog_dir.name]
-    if other_catalogs:
-        lines.extend(["📂 Other catalogs available:", ""])
-        for c in other_catalogs:
-            sub = catalogs_root / c
-            count = len(list(sub.rglob("*.md")))
-            lines.append(f"  • {c} ({count} examples)")
 
     return "\n".join(lines)
 
@@ -197,13 +187,11 @@ def format_output(result):
 
     for i, r in enumerate(result['results'], 1):
         if 'file' in r:
-            # MD file result
             lines.append(f"### Result {i}: {r['title']}")
             lines.append(f"**File:** {r['file']} | **Score:** {r['score']}")
             lines.append(f"**Path:** {r['full_path']}")
             lines.append(f"\n```markdown\n{r['preview']}\n```\n")
         else:
-            # CSV rule result
             lines.append(f"### Rule {i} (score: {r.get('_score', '?')})")
             for k, v in r.items():
                 if not k.startswith('_') and v:
@@ -212,68 +200,33 @@ def format_output(result):
 
     if result['count'] > 0:
         lines.append("---")
-        lines.append("💡 To read full file: use `view_file` on the path above")
+        lines.append("To read full file: use `view_file` on the path above")
 
     return "\n".join(lines)
 
 
 # ============ REFERENCES ============
-def resolve_ref_path(ref_name, catalog_dir):
-    """Resolve reference file path: catalog-specific first, then shared fallback."""
+def read_reference(ref_name):
+    """Read a reference file from the skill's references directory."""
     if not ref_name.endswith('.md'):
         ref_name += '.md'
 
-    # 1. Check catalog-specific references
-    catalog_ref = catalog_dir / "references" / ref_name
-    if catalog_ref.exists():
-        return catalog_ref, "catalog"
-
-    # 2. Fallback to shared references
-    shared_ref = REFS_DIR / ref_name
-    if shared_ref.exists():
-        return shared_ref, "shared"
-
-    return None, None
+    ref_path = REFS_DIR / ref_name
+    if not ref_path.exists():
+        return f"Reference not found: {ref_name}\nSearched: {ref_path}"
+    content = ref_path.read_text(encoding='utf-8')
+    return f"## Reference: {ref_path.name}\n**Path:** {ref_path}\n\n{content}"
 
 
-def read_reference(ref_name, catalog_dir):
-    """Read a reference file with per-catalog override support."""
-    path, source = resolve_ref_path(ref_name, catalog_dir)
-    if path is None:
-        return f"Reference not found: {ref_name}\nSearched:\n  - {catalog_dir / 'references' / ref_name}\n  - {REFS_DIR / ref_name}"
-    content = path.read_text(encoding='utf-8')
-    return f"## Reference: {path.name} (source: {source})\n**Path:** {path}\n\n{content}"
+def list_references():
+    """List all available references."""
+    lines = ["## Available References", ""]
 
-
-def list_references(catalog_dir):
-    """List all available references with override info."""
-    lines = [f"## References for catalog: {catalog_dir.name}", ""]
-
-    # Collect shared refs
-    shared_refs = {}
     if REFS_DIR.exists():
         for f in sorted(REFS_DIR.glob("*.md")):
-            shared_refs[f.name] = str(f)
-
-    # Collect catalog-specific refs
-    catalog_refs = {}
-    catalog_ref_dir = catalog_dir / "references"
-    if catalog_ref_dir.exists():
-        for f in sorted(catalog_ref_dir.glob("*.md")):
-            catalog_refs[f.name] = str(f)
-
-    # Merge: catalog overrides shared
-    all_refs = set(list(shared_refs.keys()) + list(catalog_refs.keys()))
-    for name in sorted(all_refs):
-        if name in catalog_refs and name in shared_refs:
-            lines.append(f"  {name} — OVERRIDE (catalog: {catalog_dir.name})")
-        elif name in catalog_refs:
-            lines.append(f"  {name} — catalog-only")
-        else:
-            lines.append(f"  {name} — shared (fallback)")
-
-    if not all_refs:
-        lines.append("  (no references found)")
+            lines.append(f"  {f.name}")
+    else:
+        lines.append("  (no references directory found)")
 
     return "\n".join(lines)
 
@@ -282,23 +235,24 @@ def list_references(catalog_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test Design Catalog Search")
     parser.add_argument("query", nargs="?", default="", help="Search query")
-    parser.add_argument("--domain", "-d", choices=["api", "frontend", "rules"], help="Search domain")
-    parser.add_argument("--catalog", "-c", default=DEFAULT_CATALOG, help="Catalog name (default: default)")
+    parser.add_argument("--domain", "-d", choices=["api", "frontend", "mobile", "rules"], help="Search domain")
+    parser.add_argument("--data-dir", help="Override catalog directory (default: ./catalog)")
     parser.add_argument("--max-results", "-n", type=int, default=MAX_RESULTS, help="Max results")
     parser.add_argument("--list", "-l", action="store_true", help="List available examples")
     parser.add_argument("--full", "-f", action="store_true", help="Show full file content instead of preview")
-    parser.add_argument("--ref", "-r", metavar="NAME", help="Read a reference file (per-catalog with fallback)")
+    parser.add_argument("--ref", "-r", metavar="NAME", help="Read a reference file")
     parser.add_argument("--list-refs", action="store_true", help="List available references")
 
     args = parser.parse_args()
-    catalog_dir = DATA_DIR / "catalogs" / args.catalog
+
+    catalog_dir = Path(args.data_dir) if args.data_dir else CATALOG_DIR
 
     if args.list_refs:
-        print(list_references(catalog_dir))
+        print(list_references())
         sys.exit(0)
 
     if args.ref:
-        print(read_reference(args.ref, catalog_dir))
+        print(read_reference(args.ref))
         sys.exit(0)
 
     if args.list:
@@ -310,11 +264,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if args.domain == "rules":
-        result = search_csv_rules(args.query, DATA_DIR / "rules", args.max_results)
-    elif args.domain == "frontend":
-        result = search_md_files(args.query, catalog_dir / "frontend", args.max_results)
-    elif args.domain == "api":
-        result = search_md_files(args.query, catalog_dir / "api", args.max_results)
+        result = search_csv_rules(args.query, RULES_DIR, args.max_results)
+    elif args.domain in ("api", "frontend", "mobile"):
+        result = search_md_files(args.query, catalog_dir / args.domain, args.max_results)
     else:
         # Auto: search both api + frontend, merge by score
         r_api = search_md_files(args.query, catalog_dir / "api", args.max_results)
@@ -324,7 +276,6 @@ if __name__ == "__main__":
         result = {"query": args.query, "count": len(all_results[:args.max_results]), "results": all_results[:args.max_results]}
 
     if args.full and result.get("results"):
-        # Show full content of top result
         top = result["results"][0]
         if "full_path" in top:
             content = Path(top["full_path"]).read_text(encoding='utf-8')

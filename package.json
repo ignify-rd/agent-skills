@@ -9,6 +9,7 @@
   "files": [
     "bin/",
     "src/",
+    "templates/",
     "test-case-generator/",
     "test-design-generator/"
   ],

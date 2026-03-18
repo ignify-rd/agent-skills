@@ -50,7 +50,8 @@ Both skills can run independently or chained. `generate-test-case` auto-invokes 
 
 - **PTTK wins** for field definitions, request/response structure
 - **RSD wins** for business logic, error codes, main flow
-- **Per-project customization** via catalog system (rules, references, templates, examples)
+- **Per-project customization** via `AGENTS.md` at project root
+- **Catalog system** — add CSV/MD examples to help AI match your format
 - **Agent asks** when documents are missing info, have conflicts, or are ambiguous
 
 #### Installation
@@ -62,9 +63,11 @@ npm install -g git+https://github.com/ignify-rd/agent-skills.git
 #### Setup
 
 ```bash
+cd /path/to/your/project
+
 # Install for a specific AI assistant
 test-genie init --ai claude      # Claude Code   → .claude/skills/
-test-genie init --ai cursor      # Cursor         → .cursor/rules/
+test-genie init --ai cursor      # Cursor         → .cursor/skills/
 test-genie init --ai windsurf    # Windsurf       → .windsurf/rules/
 test-genie init --ai antigravity # Antigravity    → .agent/skills/
 test-genie init --ai copilot     # GitHub Copilot → .github/copilot-skills/
@@ -81,16 +84,45 @@ test-genie init --ai droid       # Droid (Factory)→ .factory/skills/
 test-genie init --ai all         # All assistants above
 ```
 
+#### What `init` Creates
+
+```
+<project>/
+├── .cursor/skills/                ← AI skills (managed by dev team)
+│   ├── test-case-generator/
+│   │   ├── SKILL.md
+│   │   ├── AGENTS.md
+│   │   ├── references/
+│   │   └── scripts/
+│   └── test-design-generator/
+│       ├── SKILL.md
+│       ├── AGENTS.md
+│       ├── references/
+│       ├── data/rules/
+│       └── scripts/
+├── catalog/                       ← Project examples (managed by user)
+│   ├── api/
+│   ├── frontend/
+│   └── mobile/
+├── excel_template/
+│   └── template.xlsx
+└── AGENTS.md                      ← Project rules (managed by user)
+```
+
+**Skills** (inside `.cursor/skills/`) are managed by the dev team. Run `test-genie update` to get the latest version.
+
+**Project data** (`catalog/`, `excel_template/`, `AGENTS.md`) is managed by the user. These files are never overwritten by `update`.
+
 #### Commands
 
 ```bash
-# Install skills for your AI assistant
+# Install skills + project structure
 test-genie init --ai <type>
 
 # Check available versions
 test-genie versions
 
-# Update skills to the latest version
+# Update skills to the latest version (does not touch project data)
 test-genie update --ai <type>
 ```
 
@@ -107,38 +139,37 @@ For Codex, these are skills, not slash commands. Ask naturally instead:
 - `Use the generate-test-case skill on this file`
 - `Generate a test design from this RSD`
 
-#### Starting a New Project
+#### Adding Project Examples
 
-Each project gets its own catalog with custom rules, examples, references, and templates.
+Add examples to help AI match your project's format:
 
 ```bash
-# 1. Copy the template scaffold
-cp -r <skills-root>/test-case-generator/data/catalogs/_template \
-      <skills-root>/test-case-generator/data/catalogs/my-project
-cp -r <skills-root>/test-design-generator/data/catalogs/_template \
-      <skills-root>/test-design-generator/data/catalogs/my-project
+# Test case examples (CSV exported from Google Sheets)
+catalog/api/my-api-tests.csv
+catalog/frontend/my-frontend-tests.csv
 
-# 2. Edit AGENTS.md in each — set project-specific rules
-# 3. Add example CSVs (test-case) and .md files (test-design)
-# 4. Optionally override references/ and templates/
+# Test design examples (MD output from previous generations)
+catalog/api/my-api-design.md
+catalog/frontend/my-screen-design.md
 ```
 
-Catalog structure per skill:
-```
-data/catalogs/my-project/
-├── AGENTS.md          ← Project rules (overrides skill-level AGENTS.md)
-├── api/               ← Example files for API mode
-├── frontend/          ← Example files for Frontend mode
-├── references/        ← Override shared references (optional)
-└── templates/         ← Override spreadsheet template (test-case only, optional)
+#### Customizing Rules
+
+Edit `AGENTS.md` at your project root to customize behavior:
+
+```markdown
+## Project-Specific Rules
+
+- Response body uses "code"/"message" instead of "errorCode"/"errorDesc"
+- All API test cases must include X-Request-ID header
+- Custom template type: HOME
 ```
 
 #### Rule Override Hierarchy
 
 Rules resolve top-down (highest priority first):
 
-1. Project `AGENTS.md` — `data/catalogs/{project}/AGENTS.md`
-2. Project references — `data/catalogs/{project}/references/*.md`
-3. Skill `AGENTS.md` — `{skill}/AGENTS.md`
-4. Shared references — `{skill}/references/*.md`
-5. SKILL.md — workflow instructions (never overridden)
+1. Project `AGENTS.md` — at project root (user-managed)
+2. Skill `AGENTS.md` — inside skill folder (dev-managed)
+3. Skill references — `references/*.md` (dev-managed)
+4. SKILL.md — workflow instructions (never overridden)

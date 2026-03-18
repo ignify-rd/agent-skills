@@ -33,37 +33,34 @@ python3 --version || python --version
 
 Rules are resolved in this order (highest priority first):
 
-1. **Project-level `AGENTS.md`** — `data/catalogs/{catalog}/AGENTS.md` overrides ALL skill-level rules for that project
-2. **Project-level references** — `data/catalogs/{catalog}/references/*.md` override shared references
-3. **Skill-level `AGENTS.md`** — `test-case-generator/AGENTS.md` (default rules)
-4. **Shared references** — `references/*.md` (fallback)
-5. **This SKILL.md** — workflow instructions (lowest priority, never overridden)
+1. **Project `AGENTS.md`** — `AGENTS.md` at project root (user-managed, project-specific overrides)
+2. **Skill-level `AGENTS.md`** — `test-case-generator/AGENTS.md` (default rules)
+3. **Skill references** — `references/*.md` (detailed rules, managed by dev team)
+4. **This SKILL.md** — workflow instructions (lowest priority, never overridden)
 
-When a project has its own `AGENTS.md`, any rule defined there **completely replaces** the corresponding rule in the skill-level `AGENTS.md`. Rules NOT defined in the project `AGENTS.md` fall back to skill-level.
+When the project has its own `AGENTS.md` at the root, any rule defined there **completely replaces** the corresponding rule in the skill-level `AGENTS.md`.
 
 ## Workflow
 
 ### Step 0: Validate Project Setup
 
-Before starting generation, check that the catalog and project config exist:
+Before starting generation, check that the project structure exists:
 
-1. **Detect catalog** — if user specifies `--catalog {name}`, check if `data/catalogs/{name}/` exists
-2. **Check AGENTS.md** — look for `data/catalogs/{name}/AGENTS.md` (project-level override rules)
-3. **Check references** — look for `data/catalogs/{name}/references/` (project-level reference overrides)
-4. **Check template** — look for `data/catalogs/{name}/templates/template.xlsx` (project-level spreadsheet template)
+1. **Check catalog** — look for `catalog/` directory at project root (contains `api/`, `frontend/`, `mobile/`)
+2. **Check AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
+3. **Check template** — look for `excel_template/template.xlsx` (spreadsheet template for Google Sheets output)
 
-**If catalog folder does not exist:**
-- Ask user: "Catalog `{name}` chưa tồn tại. Bạn muốn tạo mới với cấu trúc mặc định không?"
-- If yes → scaffold using `test-genie scaffold --catalog {name}` or create manually (see "Create a New Catalog" section)
-- If no → fall back to `default` catalog
+**If catalog directory does not exist:**
+- Ask user: "Chưa có thư mục `catalog/`. Bạn đã chạy `test-genie init` chưa?"
+- If not → guide user to run `test-genie init` to set up project structure
 
-**If AGENTS.md does not exist in catalog:**
+**If AGENTS.md does not exist at project root:**
 - Use skill-level `AGENTS.md` (default rules)
-- Inform user: "Project `{name}` chưa có AGENTS.md riêng. Đang dùng rules mặc định. Bạn có muốn tạo AGENTS.md cho project này không?"
+- Inform user: "Project chưa có AGENTS.md. Đang dùng rules mặc định."
 
 **If catalog exists but has no examples (empty api/ and frontend/):**
-- Warn user: "Catalog `{name}` chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm CSV examples trước không?"
-- Proceed with shared references as fallback
+- Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm CSV examples trước không?"
+- Proceed with skill references as fallback
 
 ### Step 1: Check Input Type
 
@@ -95,7 +92,10 @@ Before starting generation, check that the catalog and project config exist:
 
 Use the installed skill path for your assistant:
 - Claude: `.claude/skills/test-case-generator/scripts/search.py`
+- Cursor: `.cursor/skills/test-case-generator/scripts/search.py`
 - Codex: `${CODEX_HOME:-~/.codex}/skills/test-case-generator/scripts/search.py`
+
+**IMPORTANT:** Always run search.py from the **project root** directory (where `catalog/` and `AGENTS.md` are located).
 
 ```bash
 # Load priority rules (MUST load first)
@@ -107,17 +107,13 @@ python <skills-root>/test-case-generator/scripts/search.py --ref fe-test-case   
 python <skills-root>/test-case-generator/scripts/search.py --ref output-format
 python <skills-root>/test-case-generator/scripts/search.py --ref quality-rules
 
-# For a specific project catalog
-python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case --catalog project-x
-
-# List all available references (shows which are overridden)
+# List all available references
 python <skills-root>/test-case-generator/scripts/search.py --list-refs
-python <skills-root>/test-case-generator/scripts/search.py --list-refs --catalog project-x
 
-# Search API examples
+# Search API examples (searches catalog/api/ in project root)
 python <skills-root>/test-case-generator/scripts/search.py "search list validate" --domain api
 
-# Search Frontend examples
+# Search Frontend examples (searches catalog/frontend/ in project root)
 python <skills-root>/test-case-generator/scripts/search.py "giao dien chung phan quyen" --domain frontend
 
 # List all available examples
@@ -200,7 +196,6 @@ Split mindmap into 3 batches, process sequentially:
 **After all batches:** Deduplicate testCaseNames (case-insensitive, keep first occurrence).
 
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
-These references are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
 ### Step 7: Output to Google Sheets
 
@@ -272,10 +267,9 @@ Generate a JSON array. Each element is one test case object. The field names dep
 
 The template .xlsx file must exist in Google Drive as a Google Sheets file BEFORE creating spreadsheets. This is a one-time setup per project type.
 
-**Template resolution** (per-catalog override):
+**Template resolution:**
 ```
-1. data/catalogs/{catalog}/templates/*.xlsx   (catalog-specific)
-2. data/templates/template.xlsx                (shared default)
+excel_template/template.xlsx    (project root, created by test-genie init)
 ```
 
 **Step 1 — Search for existing template:**
@@ -288,7 +282,7 @@ If found → save `templateFileId`, skip to 7c.
 **Step 2 — Upload template if not found:**
 ```
 # MCP: google_drive.upload_file
-filePath: "<skills-root>/test-case-generator/data/templates/template.xlsx"
+filePath: "excel_template/template.xlsx"
 name: "Test-Genie Template - API_TEST (DO NOT DELETE)"
 mimeType: "application/vnd.google-apps.spreadsheet"   # CRITICAL: converts .xlsx → Google Sheets
 description: "Test case template for Test-Genie (API_TEST). DO NOT DELETE."
@@ -678,105 +672,42 @@ externalId,testSuiteName,testCaseName,preConditions,step,expectedResult,importan
 ### Add Examples to Catalog
 
 1. Export test cases from Google Sheets / Excel as CSV (UTF-8)
-2. Place in `data/catalogs/{catalog_name}/api/` or `data/catalogs/{catalog_name}/frontend/`
-3. The search engine will automatically index it
+2. Place in `catalog/api/` or `catalog/frontend/` at your project root
+3. The search engine will automatically index new files
 
-### Switch Catalog (per-project)
-
-```bash
-python <skills-root>/test-case-generator/scripts/search.py "keyword" --catalog other-project
-```
-
-### Create a New Catalog for Another Project
-
-Use the `_template` scaffold:
-```bash
-# Copy the entire template scaffold
-cp -r <skills-root>/test-case-generator/data/catalogs/_template <skills-root>/test-case-generator/data/catalogs/new-project
-
-# Edit AGENTS.md — replace {PROJECT_NAME}, uncomment and customize rules
-# Add CSV examples to api/ and frontend/
-# Optionally override references in references/
-# Optionally add a custom template.xlsx in templates/
-```
-
-Or create manually:
-```bash
-mkdir -p <skills-root>/test-case-generator/data/catalogs/new-project/{api,frontend,references,templates}
-```
-
-The `_template` scaffold includes:
-```
-_template/
-├── AGENTS.md          ← Project-specific rule overrides (commented template)
-├── api/.gitkeep       ← API test case CSV examples
-├── frontend/.gitkeep  ← Frontend test case CSV examples
-├── references/.gitkeep ← Override shared references
-└── templates/.gitkeep  ← Override spreadsheet template
-```
-
-## References per-Catalog
-
-References (rules, format specs, quality checks) support **per-catalog overrides** with shared fallback:
-
-### Resolution Order
-
-1. `data/catalogs/{catalog}/references/{file}.md` — catalog-specific (highest priority)
-2. `references/{file}.md` — shared fallback (default)
-
-### How to Override References for a Project
+### List Available Examples
 
 ```bash
-# 1. Copy the shared reference you want to customize
-cp references/output-format.md data/catalogs/my-project/references/output-format.md
-
-# 2. Edit to match project-specific format (e.g., different JSON schema, importance mapping)
-# 3. When using --catalog my-project, the overridden file will be loaded automatically
+python <skills-root>/test-case-generator/scripts/search.py --list
 ```
 
-### Check Which References Are Active
+## Project Structure
 
-```bash
-python <skills-root>/test-case-generator/scripts/search.py --list-refs --catalog my-project
-# Output shows: OVERRIDE (catalog-specific), shared (fallback), or catalog-only
-```
-
-## Data Structure
+After running `test-genie init`, your project has this structure:
 
 ```
-test-case-generator/
-├── SKILL.md               ← Workflow instructions (this file)
-├── AGENTS.md              ← Skill-level override rules
-├── references/            ← Shared references & rules (fallback for all catalogs)
-│   ├── priority-rules.md     ← PTTK vs RSD priority rules
-│   ├── api-test-case.md      ← API test case generation rules
-│   ├── fe-test-case.md       ← Frontend test case generation rules
-│   ├── output-format.md      ← JSON output schema & examples
-│   └── quality-rules.md      ← Quality & language rules
-├── data/
-│   ├── templates/
-│   │   └── template.xlsx     ← Default spreadsheet template
-│   └── catalogs/
-│       ├── _template/        ← Scaffold for new projects (cp -r to create new catalog)
-│       │   ├── AGENTS.md        ← Project-level rule overrides (commented template)
-│       │   ├── api/
-│       │   ├── frontend/
-│       │   ├── references/
-│       │   └── templates/
-│       ├── default/
-│       │   ├── AGENTS.md     ← Project-level rule overrides (optional)
-│       │   ├── api/           ← API test case .csv examples
-│       │   ├── frontend/      ← Frontend test case .csv examples
-│       │   ├── references/    ← Override references for default catalog (optional)
-│       │   └── templates/     ← Override template for this catalog (optional)
-│       └── {other-project}/
-│           ├── AGENTS.md     ← Project-level rule overrides
-│           ├── api/
-│           ├── frontend/
-│           ├── references/
-│           └── templates/
-├── scripts/
-│   └── search.py
+<project-root>/
+├── .cursor/skills/                    ← Managed by dev team (test-genie update)
+│   ├── test-case-generator/
+│   │   ├── SKILL.md                      ← Workflow instructions (this file)
+│   │   ├── AGENTS.md                     ← Skill-level default rules
+│   │   ├── references/                   ← Detailed rules (dev-managed)
+│   │   │   ├── priority-rules.md
+│   │   │   ├── api-test-case.md
+│   │   │   ├── fe-test-case.md
+│   │   │   ├── output-format.md
+│   │   │   └── quality-rules.md
+│   │   └── scripts/
+│   │       └── search.py
+│   └── test-design-generator/
+│       └── ...
+├── catalog/                           ← Managed by user/tester
+│   ├── api/                              ← API test case .csv examples
+│   ├── frontend/                         ← Frontend test case .csv examples
+│   └── mobile/                           ← Mobile test case examples
+├── excel_template/
+│   └── template.xlsx                  ← Spreadsheet template for Google Sheets
+└── AGENTS.md                          ← Project-specific rules (user-managed)
 ```
 
 ## Key Format Differences: API vs Frontend

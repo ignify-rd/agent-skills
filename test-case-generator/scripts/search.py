@@ -4,6 +4,9 @@
 Test Case Generator - BM25 Search Engine for Test Case Catalogs
 Searches CSV catalog files (exported from spreadsheet) using BM25 ranking.
 
+Catalogs are located at the project root (catalog/api/, catalog/frontend/).
+References are located inside the skill folder (references/).
+
 CSV format from spreadsheet export:
   Row 1: Group header (ignored)
   Row 2-3: Column names (ignored - may span 2 lines due to quoted newlines)
@@ -24,9 +27,8 @@ Usage:
   python search.py "giao dien chung" --domain frontend
   python search.py --list
   python search.py "validate" --domain api --full
-  python search.py --ref output-format            # Read reference file (per-catalog with fallback)
-  python search.py --ref api-test-case --catalog project-x
-  python search.py --list-refs                     # List available references
+  python search.py --ref output-format
+  python search.py --list-refs
 """
 
 import argparse
@@ -45,9 +47,9 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
 if sys.stderr.encoding and sys.stderr.encoding.lower() != 'utf-8':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-DATA_DIR = Path(__file__).parent.parent / "data"
-REFS_DIR = Path(__file__).parent.parent / "references"
-DEFAULT_CATALOG = "default"
+SKILL_DIR = Path(__file__).parent.parent
+REFS_DIR = SKILL_DIR / "references"
+CATALOG_DIR = Path.cwd() / "catalog"
 MAX_RESULTS = 5
 
 # Column index mapping
@@ -221,9 +223,9 @@ def list_catalog(catalog_dir):
     if not catalog_dir.exists():
         return f"Catalog not found: {catalog_dir}"
 
-    lines = [f"Catalog: {catalog_dir.name}", ""]
+    lines = [f"Catalog: {catalog_dir}", ""]
 
-    for subdir in ["api", "frontend"]:
+    for subdir in ["api", "frontend", "mobile"]:
         sub_path = catalog_dir / subdir
         if not sub_path.exists():
             continue
@@ -244,13 +246,6 @@ def list_catalog(catalog_dir):
                 lines.append(f"    {f.name} — (parse error)")
         lines.append(f"    Total: {total} test cases")
         lines.append("")
-
-    # Other catalogs
-    catalogs_root = catalog_dir.parent
-    if catalogs_root.exists():
-        others = [d.name for d in catalogs_root.iterdir() if d.is_dir() and d.name != catalog_dir.name]
-        if others:
-            lines.append("Other catalogs: " + ", ".join(others))
 
     return "\n".join(lines)
 
@@ -294,63 +289,27 @@ def format_full_json(result):
 
 
 # ============ REFERENCES ============
-def resolve_ref_path(ref_name, catalog_dir):
-    """Resolve reference file path: catalog-specific first, then shared fallback."""
-    # Add .md extension if not present
+def read_reference(ref_name):
+    """Read a reference file from the skill's references directory."""
     if not ref_name.endswith('.md'):
         ref_name += '.md'
 
-    # 1. Check catalog-specific references
-    catalog_ref = catalog_dir / "references" / ref_name
-    if catalog_ref.exists():
-        return catalog_ref, "catalog"
-
-    # 2. Fallback to shared references
-    shared_ref = REFS_DIR / ref_name
-    if shared_ref.exists():
-        return shared_ref, "shared"
-
-    return None, None
+    ref_path = REFS_DIR / ref_name
+    if not ref_path.exists():
+        return f"Reference not found: {ref_name}\nSearched: {ref_path}"
+    content = ref_path.read_text(encoding='utf-8')
+    return f"## Reference: {ref_path.name}\n**Path:** {ref_path}\n\n{content}"
 
 
-def read_reference(ref_name, catalog_dir):
-    """Read a reference file with per-catalog override support."""
-    path, source = resolve_ref_path(ref_name, catalog_dir)
-    if path is None:
-        return f"Reference not found: {ref_name}\nSearched:\n  - {catalog_dir / 'references' / ref_name}\n  - {REFS_DIR / ref_name}"
-    content = path.read_text(encoding='utf-8')
-    return f"## Reference: {path.name} (source: {source})\n**Path:** {path}\n\n{content}"
+def list_references():
+    """List all available references."""
+    lines = ["## Available References", ""]
 
-
-def list_references(catalog_dir):
-    """List all available references with override info."""
-    lines = [f"## References for catalog: {catalog_dir.name}", ""]
-
-    # Collect shared refs
-    shared_refs = {}
     if REFS_DIR.exists():
         for f in sorted(REFS_DIR.glob("*.md")):
-            shared_refs[f.name] = str(f)
-
-    # Collect catalog-specific refs
-    catalog_refs = {}
-    catalog_ref_dir = catalog_dir / "references"
-    if catalog_ref_dir.exists():
-        for f in sorted(catalog_ref_dir.glob("*.md")):
-            catalog_refs[f.name] = str(f)
-
-    # Merge: catalog overrides shared
-    all_refs = set(list(shared_refs.keys()) + list(catalog_refs.keys()))
-    for name in sorted(all_refs):
-        if name in catalog_refs and name in shared_refs:
-            lines.append(f"  {name} — OVERRIDE (catalog: {catalog_dir.name})")
-        elif name in catalog_refs:
-            lines.append(f"  {name} — catalog-only")
-        else:
-            lines.append(f"  {name} — shared (fallback)")
-
-    if not all_refs:
-        lines.append("  (no references found)")
+            lines.append(f"  {f.name}")
+    else:
+        lines.append("  (no references directory found)")
 
     return "\n".join(lines)
 
@@ -359,23 +318,24 @@ def list_references(catalog_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test Case Catalog Search (CSV)")
     parser.add_argument("query", nargs="?", default="", help="Search query")
-    parser.add_argument("--domain", "-d", choices=["api", "frontend"])
-    parser.add_argument("--catalog", "-c", default=DEFAULT_CATALOG)
+    parser.add_argument("--domain", "-d", choices=["api", "frontend", "mobile"])
+    parser.add_argument("--data-dir", help="Override catalog directory (default: ./catalog)")
     parser.add_argument("--max-results", "-n", type=int, default=MAX_RESULTS)
     parser.add_argument("--list", "-l", action="store_true")
     parser.add_argument("--full", "-f", action="store_true", help="Output top 3 as JSON")
-    parser.add_argument("--ref", "-r", metavar="NAME", help="Read a reference file (per-catalog with fallback)")
+    parser.add_argument("--ref", "-r", metavar="NAME", help="Read a reference file")
     parser.add_argument("--list-refs", action="store_true", help="List available references")
 
     args = parser.parse_args()
-    catalog_dir = DATA_DIR / "catalogs" / args.catalog
+
+    catalog_dir = Path(args.data_dir) if args.data_dir else CATALOG_DIR
 
     if args.list_refs:
-        print(list_references(catalog_dir))
+        print(list_references())
         sys.exit(0)
 
     if args.ref:
-        print(read_reference(args.ref, catalog_dir))
+        print(read_reference(args.ref))
         sys.exit(0)
 
     if args.list:

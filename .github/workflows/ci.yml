@@ -42,20 +42,49 @@ jobs:
           mkdir -p /tmp/test-claude
           cd /tmp/test-claude
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai claude
+
+          # Skill files installed
           test -d .claude/skills/test-case-generator
           test -f .claude/skills/test-case-generator/SKILL.md
+          test -f .claude/skills/test-case-generator/AGENTS.md
+          test -d .claude/skills/test-case-generator/references
+          test -d .claude/skills/test-case-generator/scripts
           test -d .claude/skills/test-design-generator
           test -f .claude/skills/test-design-generator/SKILL.md
-          echo "✔ claude: skills installed correctly"
+          test -d .claude/skills/test-design-generator/data/rules
+
+          # Skill data NOT copied (catalogs should not be in skill folder)
+          test ! -d .claude/skills/test-case-generator/data/catalogs
+          test ! -d .claude/skills/test-design-generator/data/catalogs
+
+          # Project structure created
+          test -d catalog/api
+          test -d catalog/frontend
+          test -d catalog/mobile
+          test -f catalog/api/.gitkeep
+          test -d excel_template
+          test -f AGENTS.md
+
+          echo "✔ claude: skills + project structure installed correctly"
 
       - name: Test init --ai cursor
         run: |
           mkdir -p /tmp/test-cursor
           cd /tmp/test-cursor
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai cursor
-          test -d .cursor/rules/test-case-generator
-          test -f .cursor/rules/test-case-generator/SKILL.md
-          test -d .cursor/rules/test-design-generator
+
+          # Skill files
+          test -d .cursor/skills/test-case-generator
+          test -f .cursor/skills/test-case-generator/SKILL.md
+          test -d .cursor/skills/test-design-generator
+          test -f .cursor/skills/test-design-generator/SKILL.md
+
+          # Project structure
+          test -d catalog/api
+          test -d catalog/frontend
+          test -d catalog/mobile
+          test -f AGENTS.md
+
           echo "✔ cursor: skills installed correctly"
 
       - name: Test init --ai windsurf
@@ -65,6 +94,8 @@ jobs:
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai windsurf
           test -d .windsurf/rules/test-case-generator
           test -f .windsurf/rules/test-case-generator/SKILL.md
+          test -d catalog/api
+          test -f AGENTS.md
           echo "✔ windsurf: skills installed correctly"
 
       - name: Test init --ai roocode
@@ -74,6 +105,8 @@ jobs:
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai roocode
           test -d .roo/rules/test-case-generator
           test -f .roo/rules/test-case-generator/SKILL.md
+          test -d catalog/api
+          test -f AGENTS.md
           echo "✔ roocode: skills installed correctly"
 
       - name: Test init --ai copilot
@@ -83,6 +116,8 @@ jobs:
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai copilot
           test -d .github/copilot-skills/test-case-generator
           test -f .github/copilot-skills/test-case-generator/SKILL.md
+          test -d catalog/api
+          test -f AGENTS.md
           echo "✔ copilot: skills installed correctly"
 
       - name: Test init --ai codex
@@ -94,6 +129,8 @@ jobs:
           test -f /tmp/test-codex-home/skills/test-case-generator/SKILL.md
           test -d /tmp/test-codex-home/skills/test-design-generator
           test -f /tmp/test-codex-home/skills/test-design-generator/SKILL.md
+          test -d catalog/api
+          test -f AGENTS.md
           echo "✔ codex: skills installed correctly"
 
       - name: Test init --ai all
@@ -101,8 +138,10 @@ jobs:
           mkdir -p /tmp/test-all /tmp/test-all-codex-home
           cd /tmp/test-all
           CODEX_HOME=/tmp/test-all-codex-home node $GITHUB_WORKSPACE/bin/test-genie.js init --ai all
+
+          # All AI assistant configs created
           test -d .claude/skills/test-case-generator
-          test -d .cursor/rules/test-case-generator
+          test -d .cursor/skills/test-case-generator
           test -d .windsurf/rules/test-case-generator
           test -d .roo/rules/test-case-generator
           test -d .github/copilot-skills/test-case-generator
@@ -116,7 +155,23 @@ jobs:
           test -d .continue/skills/test-case-generator
           test -d .codebuddy/skills/test-case-generator
           test -d .factory/skills/test-case-generator
+
+          # Project structure created (only once, shared)
+          test -d catalog/api
+          test -d catalog/frontend
+          test -d catalog/mobile
+          test -f AGENTS.md
+
           echo "✔ all: skills installed for all assistants"
+
+      - name: Test init does not overwrite existing AGENTS.md
+        run: |
+          mkdir -p /tmp/test-no-overwrite
+          cd /tmp/test-no-overwrite
+          echo "CUSTOM RULES" > AGENTS.md
+          node $GITHUB_WORKSPACE/bin/test-genie.js init --ai claude
+          grep -q "CUSTOM RULES" AGENTS.md
+          echo "✔ AGENTS.md not overwritten"
 
       - name: Test unsupported AI type exits with error
         run: |
@@ -143,10 +198,20 @@ jobs:
           npm install $GITHUB_WORKSPACE/$TARBALL
           ./node_modules/.bin/test-genie --help
           ./node_modules/.bin/test-genie init --ai claude
+
+          # Skill files
           test -d .claude/skills/test-case-generator
           test -f .claude/skills/test-case-generator/SKILL.md
+          test -d .claude/skills/test-case-generator/references
           test -d .claude/skills/test-design-generator
           test -f .claude/skills/test-design-generator/SKILL.md
+
+          # Project structure
+          test -d catalog/api
+          test -d catalog/frontend
+          test -d catalog/mobile
+          test -f AGENTS.md
+
           echo "✔ npm install and test-genie command work"
 
       - name: Test init --ai all via installed package
@@ -157,6 +222,8 @@ jobs:
           npm install $TARBALL
           ./node_modules/.bin/test-genie init --ai all
           test -d .claude/skills/test-case-generator
-          test -d .cursor/rules/test-case-generator
+          test -d .cursor/skills/test-case-generator
           test -d .windsurf/rules/test-case-generator
+          test -d catalog/api
+          test -f AGENTS.md
           echo "✔ init --ai all works via installed package"

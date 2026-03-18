@@ -31,36 +31,33 @@ python3 --version || python --version
 
 Rules are resolved in this order (highest priority first):
 
-1. **Project-level `AGENTS.md`** — `data/catalogs/{catalog}/AGENTS.md` overrides ALL skill-level rules for that project
-2. **Project-level references** — `data/catalogs/{catalog}/references/*.md` override shared references
-3. **Skill-level `AGENTS.md`** — `test-design-generator/AGENTS.md` (default rules)
-4. **Shared references** — `references/*.md` (fallback)
-5. **This SKILL.md** — workflow instructions (lowest priority, never overridden)
+1. **Project `AGENTS.md`** — `AGENTS.md` at project root (user-managed, project-specific overrides)
+2. **Skill-level `AGENTS.md`** — `test-design-generator/AGENTS.md` (default rules)
+3. **Skill references** — `references/*.md` (detailed rules, managed by dev team)
+4. **This SKILL.md** — workflow instructions (lowest priority, never overridden)
 
-When a project has its own `AGENTS.md`, any rule defined there **completely replaces** the corresponding rule in the skill-level `AGENTS.md`. Rules NOT defined in the project `AGENTS.md` fall back to skill-level.
+When the project has its own `AGENTS.md` at the root, any rule defined there **completely replaces** the corresponding rule in the skill-level `AGENTS.md`.
 
 ## Workflow
 
 ### Step 0: Validate Project Setup
 
-Before starting generation, check that the catalog and project config exist:
+Before starting generation, check that the project structure exists:
 
-1. **Detect catalog** — if user specifies `--catalog {name}`, check if `data/catalogs/{name}/` exists
-2. **Check AGENTS.md** — look for `data/catalogs/{name}/AGENTS.md` (project-level override rules)
-3. **Check references** — look for `data/catalogs/{name}/references/` (project-level reference overrides)
+1. **Check catalog** — look for `catalog/` directory at project root (contains `api/`, `frontend/`, `mobile/`)
+2. **Check AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
 
-**If catalog folder does not exist:**
-- Ask user: "Catalog `{name}` chưa tồn tại. Bạn muốn tạo mới với cấu trúc mặc định không?"
-- If yes → scaffold using `test-genie scaffold --catalog {name}` or create manually (see "Create a New Catalog" section)
-- If no → fall back to `default` catalog
+**If catalog directory does not exist:**
+- Ask user: "Chưa có thư mục `catalog/`. Bạn đã chạy `test-genie init` chưa?"
+- If not → guide user to run `test-genie init` to set up project structure
 
-**If AGENTS.md does not exist in catalog:**
+**If AGENTS.md does not exist at project root:**
 - Use skill-level `AGENTS.md` (default rules)
-- Inform user: "Project `{name}` chưa có AGENTS.md riêng. Đang dùng rules mặc định. Bạn có muốn tạo AGENTS.md cho project này không?"
+- Inform user: "Project chưa có AGENTS.md. Đang dùng rules mặc định."
 
 **If catalog exists but has no examples (empty api/ and frontend/):**
-- Warn user: "Catalog `{name}` chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm examples trước không?"
-- Proceed with shared references as fallback
+- Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm examples trước không?"
+- Proceed with skill references as fallback
 
 ### Step 1: Determine Mode
 
@@ -75,7 +72,10 @@ Before starting generation, check that the catalog and project config exist:
 
 Use the installed skill path for your assistant:
 - Claude: `.claude/skills/test-design-generator/scripts/search.py`
+- Cursor: `.cursor/skills/test-design-generator/scripts/search.py`
 - Codex: `${CODEX_HOME:-~/.codex}/skills/test-design-generator/scripts/search.py`
+
+**IMPORTANT:** Always run search.py from the **project root** directory (where `catalog/` and `AGENTS.md` are located).
 
 ```bash
 # Load priority rules (MUST load first)
@@ -87,20 +87,16 @@ python <skills-root>/test-design-generator/scripts/search.py --ref frontend-test
 python <skills-root>/test-design-generator/scripts/search.py --ref field-templates         # Frontend field templates
 python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
 
-# For a specific project catalog
-python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design --catalog project-x
-
-# List all available references (shows which are overridden)
+# List all available references
 python <skills-root>/test-design-generator/scripts/search.py --list-refs
-python <skills-root>/test-design-generator/scripts/search.py --list-refs --catalog project-x
 
-# Search API examples by keyword
+# Search API examples by keyword (searches catalog/api/ in project root)
 python <skills-root>/test-design-generator/scripts/search.py "search list api" --domain api
 
-# Search Frontend examples
+# Search Frontend examples (searches catalog/frontend/ in project root)
 python <skills-root>/test-design-generator/scripts/search.py "danh sach list screen" --domain frontend
 
-# Search format rules
+# Search format rules (skill-bundled, not in project catalog)
 python <skills-root>/test-design-generator/scripts/search.py "common section status" --domain rules
 
 # List all available examples
@@ -185,8 +181,6 @@ After extraction, check for issues and **proactively ask user** before proceedin
 ### Step 5: Generate Test Design Sections
 
 Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
-Rules are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
-
 #### API Mode — Generation
 
 **Common section (hardcoded):** Copy the base template exactly — only replace `{API_NAME}` and `{WRONG_METHODS}`. Format: `- status: 107` (simple). NEVER use `1\. Check api trả về:` in common.
@@ -262,111 +256,49 @@ Checklist:
 
 ## Catalog Management
 
-### Switch Catalog (per-project)
-
-Each project can have its own catalog of reference examples:
-
-```bash
-# Use a different project's catalog
-python <skills-root>/test-design-generator/scripts/search.py "keyword" --catalog other-project
-
-# List examples in a specific catalog
-python <skills-root>/test-design-generator/scripts/search.py --list --catalog other-project
-```
-
 ### Add Examples to Catalog
 
 To add new reference examples:
 1. Save the test design output as a `.md` file
-2. Place it in `data/catalogs/{catalog_name}/api/` or `data/catalogs/{catalog_name}/frontend/`
-3. The search engine will automatically index it
+2. Place it in `catalog/api/` or `catalog/frontend/` at your project root
+3. The search engine will automatically index new files
 
-### Create a New Catalog for Another Project
-
-Use the `_template` scaffold:
-```bash
-# Copy the entire template scaffold
-cp -r <skills-root>/test-design-generator/data/catalogs/_template <skills-root>/test-design-generator/data/catalogs/new-project
-
-# Edit AGENTS.md — replace {PROJECT_NAME}, uncomment and customize rules
-# Add .md examples to api/ and frontend/
-# Optionally override references in references/
-```
-
-Or create manually:
-```bash
-mkdir -p <skills-root>/test-design-generator/data/catalogs/new-project/{api,frontend,references}
-```
-
-The `_template` scaffold includes:
-```
-_template/
-├── AGENTS.md          ← Project-specific rule overrides (commented template)
-├── api/.gitkeep       ← API test design .md examples
-├── frontend/.gitkeep  ← Frontend test design .md examples
-└── references/.gitkeep ← Override shared references
-```
-
-## References per-Catalog
-
-References (rules, templates, format specs) support **per-catalog overrides** with shared fallback:
-
-### Resolution Order
-
-1. `data/catalogs/{catalog}/references/{file}.md` — catalog-specific (highest priority)
-2. `references/{file}.md` — shared fallback (default)
-
-### How to Override References for a Project
+### List Available Examples
 
 ```bash
-# 1. Copy the shared reference you want to customize
-cp references/api-test-design.md data/catalogs/my-project/references/api-test-design.md
-
-# 2. Edit to match project-specific format (e.g., different base template, field templates, quality rules)
-# 3. When using --catalog my-project, the overridden file will be loaded automatically
+python <skills-root>/test-design-generator/scripts/search.py --list
 ```
 
-### Check Which References Are Active
+## Project Structure
 
-```bash
-python <skills-root>/test-design-generator/scripts/search.py --list-refs --catalog my-project
-# Output shows: OVERRIDE (catalog-specific), shared (fallback), or catalog-only
-```
-
-## Data Structure
+After running `test-genie init`, your project has this structure:
 
 ```
-test-design-generator/
-├── SKILL.md               ← Workflow instructions (this file)
-├── AGENTS.md              ← Skill-level override rules
-├── references/            ← Shared references & rules (fallback for all catalogs)
-│   ├── priority-rules.md        ← PTTK vs RSD priority rules
-│   ├── api-test-design.md       ← API test design generation rules
-│   ├── frontend-test-design.md  ← Frontend test design generation rules
-│   ├── field-templates.md       ← Frontend per-field test templates
-│   ├── output-examples.md       ← Example outputs
-│   └── quality-rules.md         ← Quality & language rules
-├── data/
-│   ├── catalogs/
-│   │   ├── _template/        ← Scaffold for new projects (cp -r to create new catalog)
-│   │   │   ├── AGENTS.md        ← Project-level rule overrides (commented template)
-│   │   │   ├── api/
-│   │   │   ├── frontend/
-│   │   │   └── references/
-│   │   ├── default/
-│   │   │   ├── AGENTS.md     ← Project-level rule overrides (optional)
-│   │   │   ├── api/           ← API test design .md examples
-│   │   │   ├── frontend/      ← Frontend test design .md examples
-│   │   │   └── references/    ← Override references for default catalog (optional)
-│   │   └── {other-project}/
-│   │       ├── AGENTS.md     ← Project-level rule overrides
-│   │       ├── api/
-│   │       ├── frontend/
-│   │       └── references/
-│   └── rules/
-│       └── api-rules.csv     ← Format rules (shared across projects)
-├── scripts/
-│   └── search.py
+<project-root>/
+├── .cursor/skills/                    ← Managed by dev team (test-genie update)
+│   ├── test-design-generator/
+│   │   ├── SKILL.md                      ← Workflow instructions (this file)
+│   │   ├── AGENTS.md                     ← Skill-level default rules
+│   │   ├── references/                   ← Detailed rules (dev-managed)
+│   │   │   ├── priority-rules.md
+│   │   │   ├── api-test-design.md
+│   │   │   ├── frontend-test-design.md
+│   │   │   ├── field-templates.md
+│   │   │   ├── output-examples.md
+│   │   │   └── quality-rules.md
+│   │   ├── data/rules/
+│   │   │   └── api-rules.csv             ← Format rules (searchable via --domain rules)
+│   │   └── scripts/
+│   │       └── search.py
+│   └── test-case-generator/
+│       └── ...
+├── catalog/                           ← Managed by user/tester
+│   ├── api/                              ← API test design .md examples
+│   ├── frontend/                         ← Frontend test design .md examples
+│   └── mobile/                           ← Mobile test design examples
+├── excel_template/
+│   └── template.xlsx                  ← Spreadsheet template (used by test-case-generator)
+└── AGENTS.md                          ← Project-specific rules (user-managed)
 ```
 
 ## Key Format Rules (Quick Reference)
