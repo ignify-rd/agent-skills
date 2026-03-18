@@ -101,15 +101,42 @@ Parse the mindmap structure:
 
 ### Step 5: Extract Field & Body Context
 
-If RSD/PTTK files are provided, follow priority rules loaded in Step 3 (`--ref priority-rules`).
+If RSD/PTTK files are provided:
+
+**API Mode:**
+1. Find the API endpoint section in PTTK (preferred) or RSD (fallback)
+2. Extract: field names, data types, required/optional, maxLength, format constraints, example values
+3. Build complete request body JSON with ALL required fields having concrete values
+4. Extract response templates (SUCCESS + ERROR) once — inject into all batches
+
+**Frontend Mode:**
+1. Find the screen/API section in PTTK (preferred) or RSD (fallback)
+2. Extract: field names, types, placeholder, maxLength, API endpoints, DB mappings, enum values
+3. Use extracted details to enrich validate test case generation
+
+Priority rules: see `AGENTS.md` or `--ref priority-rules`.
 
 ### Step 6: Generate Test Cases in Batches
 
-Follow the batch strategy defined in the reference files loaded in Step 3:
+Split mindmap into 3 batches, process sequentially:
 
-- **BATCH 1**: Pre-validate sections (common cases, permissions)
-- **BATCH 2**: Validate section — one sub-batch PER FIELD (### heading)
-- **BATCH 3**: Post-validate sections (grid, pagination, functionality, timeout)
+**BATCH 1 — Pre-validate sections:**
+- All ## sections BEFORE "Kiểm tra validate" (e.g., common cases, permissions)
+- Force testSuiteName = section name
+- Instruction: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho validate hay luồng chính."
+
+**BATCH 2 — Validate section (per-field):**
+- "Kiểm tra validate" and all ### subsections inside
+- Split: each `### field_name` = 1 separate sub-batch
+- Force testSuiteName per catalog convention (search catalog first)
+- Instruction per sub-batch: "Chỉ sinh test cases validate cho field: {field_name}."
+
+**BATCH 3 — Post-validate sections:**
+- All ## sections AFTER "Kiểm tra validate" (e.g., grid, functionality, timeout)
+- Force testSuiteName = section name, maxTokens: 65536
+- Instruction: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh lại cases đã có."
+
+**After all batches:** Deduplicate testCaseNames (case-insensitive, keep first occurrence).
 
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
 These references are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.

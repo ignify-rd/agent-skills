@@ -85,29 +85,120 @@ After search returns results, **read the full example file** to understand the e
 # search.py returns the full_path — use view_file on it
 ```
 
-### Step 4: Generate Test Design Following the Rules
+### Step 4: Extract Data from RSD & PTTK
+
+Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is available, IGNORE field definitions, request body, and response body in RSD.
+
+#### API Mode — Extraction
+
+**Phase 1: RSD → business logic only (always from RSD)**
+1. Find the exact API section in RSD by endpoint or name
+2. Extract: title, endpoint, method, errorCodes (description → status code mapping), dbMapping (table, conditions, orderBy)
+3. Extract: if/else branches, mode variations (create/update/delete), status transitions
+
+**Phase 2: PTTK → field definitions (if available)**
+1. Find the EXACT API by endpoint in PTTK (PTTK is usually a large document with many APIs)
+2. Extract inputFields: name, type (Date/Integer/Long/String — exact from PTTK), maxLength, required (Y/N), nullBehavior, validationRules (allowedSpecialChars, allowSpaces, allowAccents)
+3. Extract outputFields: name, type, nesting structure
+4. Extract response body structure (field names, data types, nesting) — this defines the response format for ALL test cases
+5. **If no PTTK** → fallback: extract field definitions AND business logic from RSD
+
+#### Frontend Mode — Extraction
+
+**Phase 1: Analyze images (if provided)**
+1. For each image: extract screenType, buttons, inputFields (label, type, placeholder, location), gridColumns, hasPagination
+2. Consolidate all image analyses into one structure
+3. Merge with RSD: images only supplement (placeholder text, hasIconX, button labels) — images CANNOT override field names from RSD/PTTK
+
+**Phase 2: RSD → screen structure (always from RSD)**
+1. Extract: screenName, screenType (LIST/FORM/POPUP/DETAIL), breadcrumb, permissions, UI elements
+2. Extract: fields with types (textbox/combobox/dropdown/toggle/checkbox/button/icon_x)
+3. Extract: grid columns (name, dbColumn, dbTable, format), pagination values, sort order
+4. Extract: button visibility rules by status/permission, additional features
+
+**Phase 3: PTTK → field definitions (if available)**
+1. Find the exact screen/API in PTTK by name or endpoint
+2. Extract: field names, types, API endpoints, DB mappings, enum values, maxLength, format constraints
+3. **REPLACE** all field definitions from RSD with PTTK values (PTTK wins completely)
+4. **If no PTTK** → keep field definitions from RSD
+
+### Step 5: Generate Test Design Sections
 
 Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
 Rules are resolved per-catalog: if the catalog has its own `references/` folder, those files take priority over the shared defaults.
 
-#### API Mode
-1. Read RSD → extract **business logic only** (error codes, DB mapping, if/else branches, luồng chính)
-2. Read PTTK (if provided) → extract **field definitions** (names, types, required, maxLength, format, request/response structure). If PTTK available, IGNORE field definitions/request/response in RSD.
-3. If no PTTK → fallback: extract field definitions from RSD
-4. Generate output following the loaded rules (`--ref api-test-design`)
+#### API Mode — Generation
 
-#### Frontend Mode
-1. Read RSD → extract **screen structure** (screen type, permissions, UI layout, business logic, chức năng)
-2. Read PTTK (if provided) → extract **field definitions** (names, types, API endpoints, DB mappings, enum values). If PTTK available, IGNORE field definitions/request/response in RSD.
-3. If no PTTK → fallback: extract field definitions from RSD
-4. Generate output following the loaded rules (`--ref frontend-test-design` + `--ref field-templates`)
+**Common section (hardcoded):** Copy the base template exactly — only replace `{API_NAME}` and `{WRONG_METHODS}`. Format: `- status: 107` (simple). NEVER use `1\. Check api trả về:` in common.
 
-### Step 5: Apply Quality Rules
+**Validate section (per-field):** For each inputField from Phase 2, generate test cases using the field templates in `--ref api-test-design`:
+- String Required → test: empty, missing, null, maxLen-1/maxLen/maxLen+1, numeric, accented chars, special chars, spaces, emoji, unicode, boolean, array, object, XSS, SQL injection
+- Integer with default → test: empty/missing/null (uses default), valid value, negative, decimal, string
+- Optional Integer → test: empty/missing/null (returns all), valid/invalid value, string
+- ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
+- JSON response must be multiline WITHOUT backtick fence
+
+**Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format:
+1. Response fields verification — list ALL output fields (camelCase) with sample values
+2. DB mapping verification — full SQL: SELECT/FROM/WHERE/ORDER BY with concrete values
+3. Search scenarios — exact, approximate (LIKE), combined conditions, not found
+4. Sort order verification — ORDER BY clause
+5. Error code scenarios — each error code → 1 test case with exact message
+6. Business logic branches — each if/else → test both true and false, each with Response
+7. DB validations — exists/not exists → test both cases
+8. Mode variations — create/update/delete → test each mode
+9. Status transitions — valid/invalid transitions → test each
+
+**Verify + supplement:** Re-read RSD, list ALL logic branches, cross-check with generated test cases. Missing → add. Wrong expected result → write `### [SỬA] Kiểm tra ...` and replace.
+
+#### Frontend Mode — Generation
+
+**Common UI section (hardcoded):** Navigation, layout, breadcrumb, zoom — copy template from `--ref frontend-test-design`.
+
+**Permission section (hardcoded):** No permission / has permission — 2 test cases.
+
+**Validate section (per-field templates):** Dispatch by field.type using `--ref field-templates`:
+
+| field.type | Template |
+|-----------|----------|
+| textbox/text/input | generateTextboxTests |
+| combobox | generateComboboxTests |
+| dropdown (values[]) | generateSimpleDropdownTests |
+| dropdown (apiEndpoint) | generateSearchableDropdownTests |
+| toggle/switch | generateToggleTests |
+| checkbox | generateCheckboxTests |
+| button | generateButtonTests |
+| icon_x/icon_close | generateIconXTests |
+
+After field templates, supplement with LLM for: cross-field validation, special values, cascading fields, auto-fill rules.
+
+**For DETAIL screens:** Do NOT use field templates. Use `generateDetailDataSection()` — test data display, null/empty handling, SQL queries per field.
+
+**Grid section (LIST only):** Default state, sort order, each column with SQL, scroll behavior (pinned columns), data verification.
+
+**Pagination section (hardcoded):** Values, default, per-value test, page navigation. Only generate when pagination exists.
+
+**Function section (LLM-generated per screenType):**
+- **LIST:** Search per field (exists/not exists/partial), combined search, clear filter, add new button
+- **FORM/POPUP:** Save success/fail, field interactions (enable/disable, auto-fill, dependent validation), cancel
+- **DETAIL:** Button visibility by status/permission, click actions, navigation
+
+**Verify + supplement:** Re-read RSD and verify all search scenarios, field combinations, empty results, business rules are covered. Missing → append. Wrong → `### [SỬA]` and replace.
+
+### Step 6: Apply Quality Rules
 
 Load quality rules and verify:
 ```bash
 python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
 ```
+
+Checklist:
+- 100% Vietnamese, keep field/button names exactly as in RSD/PTTK
+- No placeholders — use concrete sample values in SQL and responses
+- 1 test = 1 check (atomic)
+- Forbidden words: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
+- SQL: concrete values (`WHERE ID = 10001`), UPPERCASE columns, NO placeholders
+- Output starts with `# {API_NAME}` or `# {SCREEN_NAME}` — NO blockquote header, NO `---` horizontal rules
 
 ## Catalog Management
 
