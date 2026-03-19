@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import os from 'os';
 import { logger } from '../utils/logger.js';
 
@@ -191,6 +191,41 @@ function installProjectStructure() {
     logger.success('Created: AGENTS.md');
   } else {
     logger.dim('AGENTS.md already exists (skipped)');
+  }
+
+  const credentialsPath = join(projectRoot, 'credentials.json');
+  if (!existsSync(credentialsPath)) {
+    const credentialsTemplate = {
+      type: 'service_account',
+      project_id: '',
+      private_key_id: '',
+      private_key: '',
+      client_email: '',
+      client_id: '',
+      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+      token_uri: 'https://oauth2.googleapis.com/token',
+      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+      client_x509_cert_url: '',
+    };
+    writeFileSync(credentialsPath, JSON.stringify(credentialsTemplate, null, 2), 'utf8');
+    logger.success('Created: credentials.json (fill in your Service Account details)');
+  } else {
+    logger.dim('credentials.json already exists (skipped)');
+  }
+
+  const gitignorePath = join(projectRoot, '.gitignore');
+  const gitignoreEntry = 'credentials.json';
+  if (!existsSync(gitignorePath)) {
+    writeFileSync(gitignorePath, `${gitignoreEntry}\n`, 'utf8');
+    logger.success('Created: .gitignore (credentials.json excluded)');
+  } else {
+    const existing = readFileSync(gitignorePath, 'utf8');
+    if (!existing.split('\n').map(l => l.trim()).includes(gitignoreEntry)) {
+      writeFileSync(gitignorePath, existing.endsWith('\n') ? existing + `${gitignoreEntry}\n` : existing + `\n${gitignoreEntry}\n`, 'utf8');
+      logger.success('Updated: .gitignore (added credentials.json)');
+    } else {
+      logger.dim('.gitignore already excludes credentials.json (skipped)');
+    }
   }
 
   console.log();
