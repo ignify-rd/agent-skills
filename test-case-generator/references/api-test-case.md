@@ -94,7 +94,8 @@ Tiết kiệm: ~1750 tokens/generation (15 SUCCESS cases × ~200 tokens - 500 ex
 Ví dụ đúng:
 - `"Method_Kiểm tra khi nhập sai method"`
 - `"URL_Kiểm tra khi truyền sai url"`
-- `"Phân quyền_Kiểm tra user không có quyền"`
+- `"Phân quyền_Kiểm tra user không có quyền"` ← expect 403/401
+- `"Phân quyền_Kiểm tra user có quyền"` ← expect 200 **(bắt buộc — PHẢI có)**
 - `"regChannel_Bỏ trống field bắt buộc"`
 - `"regChannel_Truyền 101 ký tự"`
 
@@ -143,6 +144,7 @@ Ví dụ theo section:
 - **Method**: `"1. Nhập invalid Method: GET\n2. Send API"`
 - **URL**: `"1. Nhập sai endpoint: /v1/fee/invalid-path\n2. Send API"`
 - **Phân quyền (no permission)**: `"1. Login với user không có quyền\n2. Send API"`
+- **Phân quyền (has permission)**: `"1. Login với user có quyền\n2. Send API"` ← **bắt buộc, luôn có**
 - **Validate (bỏ trống)**: `"1. Bỏ trống {field} (bắt buộc)\n2. Send API"`
 - **Validate (type error)**: `"1. Truyền {field} = true (boolean)\n2. Send API"`
 - **Validate (over max)**: `"1. Truyền {field} = 101 ký tự\n2. Send API"`

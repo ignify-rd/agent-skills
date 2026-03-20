@@ -292,6 +292,7 @@ SUITE_HEADER_FORMAT = {
         'fontSize': 11,
     },
     'horizontalAlignment': 'LEFT',
+    'verticalAlignment': 'TOP',
     'wrapStrategy': 'WRAP',
     'borders': {
         'top':    {'style': 'SOLID', 'color': {'red': 0.8, 'green': 0.8, 'blue': 0.8}},
@@ -310,6 +311,7 @@ FIELD_SUITE_HEADER_FORMAT = {
         'fontSize': 10,
     },
     'horizontalAlignment': 'LEFT',
+    'verticalAlignment': 'TOP',
     'wrapStrategy': 'WRAP',
     'borders': {
         'top':    {'style': 'SOLID', 'color': {'red': 0.7, 'green': 0.7, 'blue': 0.7}},
@@ -328,6 +330,7 @@ TEST_CASE_FORMAT = {
         'fontSize': 11,
     },
     'horizontalAlignment': 'LEFT',
+    'verticalAlignment': 'TOP',
     'wrapStrategy': 'WRAP',
     'borders': {
         'top':    {'style': 'SOLID', 'color': {'red': 0.8, 'green': 0.8, 'blue': 0.8}},
