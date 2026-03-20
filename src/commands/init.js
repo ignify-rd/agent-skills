@@ -45,7 +45,10 @@ function installSkills(ai) {
     const src = join(PACKAGE_ROOT, skill);
     const dest = join(installBase, skill);
     mkdirSync(dest, { recursive: true });
-    cpSync(src, dest, { recursive: true });
+    cpSync(src, dest, {
+      recursive: true,
+      filter: (srcPath) => !srcPath.startsWith(join(src, 'data', 'catalogs')),
+    });
     logger.success(`Installed: ${skill} → ${dest}`);
   }
 }
