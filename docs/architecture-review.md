@@ -1,34 +1,34 @@
-# Phan tich kien truc test-genie agent
+# Phân tích kiến trúc test-genie agent
 
-> RD-941 - Architecture review cho test-design-generator va test-case-generator
+> RD-941 - Architecture review cho test-design-generator và test-case-generator
 
 ---
 
-## Kien truc hien tai
+## Kiến trúc hiện tại
 
 ### test-design-generator
 
 **Flow:**
 
-1. **Step 0** - Validate project setup: kiem tra `catalog/` va `AGENTS.md` tai project root
-2. **Step 1** - Detect mode: xac dinh API mode (RSD mo ta endpoint) hay Frontend mode (RSD mo ta UI screen)
+1. **Step 0** - Validate project setup: kiểm tra `catalog/` và `AGENTS.md` tại project root
+2. **Step 1** - Detect mode: xác định API mode (RSD mô tả endpoint) hay Frontend mode (RSD mô tả UI screen)
 3. **Step 2** - Load rules & references qua `search.py --ref`: priority-rules, api-test-design / frontend-test-design, field-templates, quality-rules
-4. **Step 3** - Read top-matching example tu catalog: tim vi du thuc te theo keyword, doc full text
-5. **Step 4** - Extract data tu RSD + PTTK (2-3 phases tuy mode):
-   - API mode: Phase 1 (business logic tu RSD) + Phase 2 (field definitions tu PTTK)
-   - Frontend mode: Phase 1 (image analysis) + Phase 2 (screen structure tu RSD) + Phase 3 (field definitions tu PTTK)
-6. **Step 4b** - Validate & ask clarification neu thieu/mau thuan thong tin
+4. **Step 3** - Read top-matching example từ catalog: tìm ví dụ thực tế theo keyword, đọc full text
+5. **Step 4** - Extract data từ RSD + PTTK (2-3 phases tùy mode):
+   - API mode: Phase 1 (business logic từ RSD) + Phase 2 (field definitions từ PTTK)
+   - Frontend mode: Phase 1 (image analysis) + Phase 2 (screen structure từ RSD) + Phase 3 (field definitions từ PTTK)
+6. **Step 4b** - Validate & ask clarification nếu thiếu/mâu thuẫn thông tin
 7. **Step 5** - Generate test design sections:
    - Common section (hardcoded template)
-   - Validate section (per-field, dung field templates)
+   - Validate section (per-field, dùng field templates)
    - Main flow section (LLM-generated)
-   - Verify + supplement: LLM re-read RSD va cross-check coverage
+   - Verify + supplement: LLM re-read RSD và cross-check coverage
 8. **Step 6** - Apply quality rules + self-verify
 
-**Dac diem chinh:**
-- Catalog-based RAG: `search.py` tim vi du theo keyword, load full text vao context
+**Đặc điểm chính:**
+- Catalog-based RAG: `search.py` tìm ví dụ theo keyword, load full text vào context
 - Rule hierarchy: project `AGENTS.md` > skill `AGENTS.md` > `references/*.md` > `SKILL.md`
-- Self-verify: sau khi sinh, LLM re-read RSD va cross-check coverage
+- Self-verify: sau khi sinh, LLM re-read RSD và cross-check coverage
 
 ---
 
@@ -36,108 +36,108 @@
 
 **Flow:**
 
-1. **Step 0** - Validate project setup: kiem tra `catalog/`, `AGENTS.md`, `excel_template/template.xlsx`
-2. **Step 1** - Check input type: neu khong co mindmap thi invoke `test-design-generator` truoc
-3. **Step 2** - Detect mode: API vs Frontend dua vao mindmap content
+1. **Step 0** - Validate project setup: kiểm tra `catalog/`, `AGENTS.md`, `excel_template/template.xlsx`
+2. **Step 1** - Check input type: nếu không có mindmap thì invoke `test-design-generator` trước
+3. **Step 2** - Detect mode: API vs Frontend dựa vào mindmap content
 4. **Step 3** - Load rules & examples qua `search.py --ref`
 5. **Step 4** - Parse mindmap structure (headings -> test suites, bullets -> test cases)
-6. **Step 5** - Extract field/body context tu PTTK/RSD
+6. **Step 5** - Extract field/body context từ PTTK/RSD
 7. **Step 5b** - Validate & ask clarification
-8. **Step 6** - Generate test cases theo 3 batches tuan tu:
+8. **Step 6** - Generate test cases theo 3 batches tuần tự:
    - Batch 1: Pre-validate sections (common, permissions)
-   - Batch 2: Validate section, per-field sub-batch (moi field = 1 LLM call rieng)
+   - Batch 2: Validate section, per-field sub-batch (mỗi field = 1 LLM call riêng)
    - Batch 3: Post-validate sections (grid, functionality)
-9. **Step 7** - Output len Google Sheets qua 4 scripts Python:
+9. **Step 7** - Output lên Google Sheets qua 4 scripts Python:
    - `upload_template.py`: upload .xlsx -> Google Drive as new Sheets
-   - `detect_template.py`: detect column structure dong (scan header row)
+   - `detect_template.py`: detect column structure động (scan header row)
    - `upload_to_sheet.py`: write test case rows + formatting
    - Return URL
 
-**Dac diem chinh:**
-- Batch processing: chia mindmap thanh 3 lo xu ly tuan tu, tranh context overflow
-- Validate batch dung per-field sub-batch (moi field = 1 LLM call rieng)
+**Đặc điểm chính:**
+- Batch processing: chia mindmap thành 3 lô xử lý tuần tự, tránh context overflow
+- Validate batch dùng per-field sub-batch (mỗi field = 1 LLM call riêng)
 - Google Sheets integration qua Service Account credentials
-- Column mapping hoan toan dynamic: `detect_template.py` scan header row, khong hardcode project type
-- Moi lan chay tao spreadsheet MOI tren Google Drive, khong reuse file cu
+- Column mapping hoàn toàn dynamic: `detect_template.py` scan header row, không hardcode project type
+- Mỗi lần chạy tạo spreadsheet mới trên Google Drive, không reuse file cũ
 
 ---
 
-## Phan tich hieu qua token
+## Phân tích hiệu quả token
 
-### Diem lang phi
+### Điểm lãng phí
 
-| Van de | Mo ta | Uoc tinh |
+| Vấn đề | Mô tả | Ước tính |
 |--------|-------|----------|
-| Load toan bo references moi lan | Step 2 ca 2 skills load nhieu file `--ref` vao context (priority-rules, api/fe-test-case/design, output-format, quality-rules) - du co dung hay khong | 5-10k tokens/lan |
-| Load full example tu catalog | Step 3 (test-design) doc full text file vi du dau tien - chu yeu de hoc format | 2-5k tokens |
-| Self-verify step | Step 5 yeu cau LLM re-read toan bo RSD va cross-check - thuong khong phat hien loi sau | 1-2k tokens extra |
-| Per-field sub-batch | Validate section goi LLM nhieu lan (1 lan/field), moi lan phai re-inject context (rules + request body) -> nhan so token voi so fields | Tang tuyen tinh theo field count |
-| Clarification step lap | Step 4b/5b co the trigger nhieu cau hoi user - round-trip ton kem neu user phai tra loi tung cai | N/A |
+| Load toàn bộ references mỗi lần | Step 2 cả 2 skills load nhiều file `--ref` vào context (priority-rules, api/fe-test-case/design, output-format, quality-rules) - dù có dùng hay không | 5-10k tokens/lần |
+| Load full example từ catalog | Step 3 (test-design) đọc full text file ví dụ đầu tiên - chủ yếu để học format | 2-5k tokens |
+| Self-verify step | Step 5 yêu cầu LLM re-read toàn bộ RSD và cross-check - thường không phát hiện được lỗi sâu | 1-2k tokens extra |
+| Per-field sub-batch | Validate section gọi LLM nhiều lần (1 lần/field), mỗi lần phải re-inject context (rules + request body) -> nhân số token với số fields | Tăng tuyến tính theo field count |
+| Clarification step lặp | Step 4b/5b có thể trigger nhiều câu hỏi user - round-trip tốn kém nếu user phải trả lời từng cái | N/A |
 
-### Diem phu thuoc nang vao LLM quality
+### Điểm phụ thuộc nặng vào LLM quality
 
-| Buoc | Rui ro |
+| Bước | Rủi ro |
 |------|--------|
-| Detect mode (API vs Frontend) | Dua vao LLM doc mindmap/RSD va phan doan - khong co rule cung nao backup, de sai voi tai lieu mo ho |
-| Extract tu RSD/PTTK | LLM phai parse tai lieu Word/PDF khong cau truc, nhan dien dung field name, type, required - de bo sot hoac nham voi doc lon |
-| Main flow generation | LLM-generated hoan toan - khong co template cung - quality phu thuoc truc tiep vao model va context window |
-| Self-verify | LLM tu verify output cua chinh minh - khong du independence de phat hien logic error sau |
-| testSuiteName assignment | Dua vao catalog search + LLM judgment de chon dung ten suite - neu catalog thieu vi du thi fallback vao LLM guess |
+| Detect mode (API vs Frontend) | Dựa vào LLM đọc mindmap/RSD và phán đoán - không có rule cứng nào backup, dễ sai với tài liệu mơ hồ |
+| Extract từ RSD/PTTK | LLM phải parse tài liệu Word/PDF không cấu trúc, nhận diện đúng field name, type, required - rất dễ bỏ sót hoặc nhầm với doc lớn |
+| Main flow generation | LLM-generated hoàn toàn - không có template cứng - quality phụ thuộc trực tiếp vào model và context window |
+| Self-verify | LLM tự verify output của chính mình - không đủ independence để phát hiện logic error sâu |
+| testSuiteName assignment | Dựa vào catalog search + LLM judgment để chọn đúng tên suite - nếu catalog thiếu ví dụ thì fallback vào LLM guess |
 
 ---
 
-## Huong cai thien de xuat
+## Hướng cải thiện đề xuất
 
 ### 1. Lazy-load references theo mode
 
-Thay vi load tat ca `--ref` ngay tu dau, chi load nhung file can thiet cho mode da detect.
+Thay vì load tất cả `--ref` ngay từ đầu, chỉ load những file cần thiết cho mode đã detect.
 
-- API mode: chi load `priority-rules`, `api-test-design`, `quality-rules`
-- Frontend mode: chi load `priority-rules`, `frontend-test-design`, `field-templates`, `quality-rules`
-- Tiet kiem 30-50% tokens o buoc load rules
-- Ap dung cho ca `test-design-generator` va `test-case-generator`
+- API mode: chỉ load `priority-rules`, `api-test-design`, `quality-rules`
+- Frontend mode: chỉ load `priority-rules`, `frontend-test-design`, `field-templates`, `quality-rules`
+- Tiết kiệm 30-50% tokens ở bước load rules
+- Áp dụng cho cả `test-design-generator` và `test-case-generator`
 
-### 2. Structured extraction thay vi free-form LLM parsing
+### 2. Structured extraction thay vì free-form LLM parsing
 
-Viet script Python nho de pre-parse RSD/PTTK (docx -> structured JSON: field list, endpoint, error codes). LLM nhan JSON thay vi raw document text.
+Viết script Python nhỏ để pre-parse RSD/PTTK (docx -> structured JSON: field list, endpoint, error codes). LLM nhận JSON thay vì raw document text.
 
-- Giam rui ro extract sai voi tai lieu lon
-- Giam context size (JSON compact hon full docx text)
-- Lam ro rang ket qua extraction de de kiem tra
+- Giảm rủi ro extract sai với tài liệu lớn
+- Giảm context size (JSON compact hơn full docx text)
+- Làm rõ ràng kết quả extraction để dễ kiểm tra
 
 ### 3. Rule-based mode detection
 
-Them heuristic cung (regex) de detect API vs Frontend truoc khi de LLM phan doan.
+Thêm heuristic cứng (regex) để detect API vs Frontend trước khi để LLM phán đoán.
 
-Vi du: neu mindmap line 1 match `/^(GET|POST|PUT|DELETE)\s+\//` -> API mode. LLM chi can confirm khi heuristic khong chac.
+Ví dụ: nếu mindmap line 1 match `/^(GET|POST|PUT|DELETE)\s+\//` -> API mode. LLM chỉ cần confirm khi heuristic không chắc.
 
-- Giam rui ro detect sai voi tai lieu mo ho
-- Nhanh hon, re hon mot LLM call
+- Giảm rủi ro detect sai với tài liệu mơ hồ
+- Nhanh hơn, rẻ hơn một LLM call
 
-### 4. Gop per-field sub-batch thanh batch lon hon
+### 4. Gộp per-field sub-batch thành batch lớn hơn
 
-Thay vi 1 LLM call / field, group 3-5 fields vao 1 call voi instruction ro rang.
+Thay vì 1 LLM call / field, group 3-5 fields vào 1 call với instruction rõ ràng.
 
-- Giam so round-trip, giam tong overhead context
-- Can dam bao instruction du ro de LLM khong lan fields
+- Giảm số round-trip, giảm tổng overhead context
+- Cần đảm bảo instruction đủ rõ để LLM không lẫn fields
 
-### 5. Tach self-verify thanh checklist cung
+### 5. Tách self-verify thành checklist cứng
 
-Thay vi "LLM re-read RSD", dua ra mot checklist co dinh (coverage matrix) ma LLM chi can tick. Vi du: [ ] error codes covered, [ ] all if/else branches tested, [ ] DB mapping verified.
+Thay vì "LLM re-read RSD", đưa ra một checklist cố định (coverage matrix) mà LLM chỉ cần tick. Ví dụ: [ ] error codes covered, [ ] all if/else branches tested, [ ] DB mapping verified.
 
-- Nhanh hon (khong re-read toan bo RSD)
-- De audit hon (checklist explicit)
-- Phat hien van de duoc chu dong hon
+- Nhanh hơn (không re-read toàn bộ RSD)
+- Dễ audit hơn (checklist explicit)
+- Phát hiện vấn đề được chủ động hơn
 
 ### 6. Cache catalog search results
 
-Neu cung keyword duoc search nhieu lan trong 1 session, cache ket qua de tranh re-scan catalog. Dac biet huu ich khi chay nhieu fields cung loai.
+Nếu cùng keyword được search nhiều lần trong 1 session, cache kết quả để tránh re-scan catalog. Đặc biệt hữu ích khi chạy nhiều fields cùng loại.
 
-- Ap dung don gian nhat: in-memory dict trong `search.py`
-- Hu ich nhat voi validate section (nhieu fields co cung domain keyword)
+- Áp dụng đơn giản nhất: in-memory dict trong `search.py`
+- Hữu ích nhất với validate section (nhiều fields có cùng domain keyword)
 
 ---
 
-## Tong ket
+## Tổng kết
 
-Ca hai skills deu co kien truc tot: rule hierarchy ro rang, catalog-based RAG linh hoat, batch processing tranh context overflow. Cac diem can cai thien chu yeu la o hieu qua token (lazy-load references, gop per-field batch) va giam phu thuoc vao LLM judgment (rule-based mode detection, structured extraction, checklist verify). Nhung cai thien nay khong doi hoi thay doi kien truc tong the, chi can refine cac buoc hien co.
+Cả hai skills đều có kiến trúc tốt: rule hierarchy rõ ràng, catalog-based RAG linh hoạt, batch processing tránh context overflow. Các điểm cần cải thiện chủ yếu là ở hiệu quả token (lazy-load references, gộp per-field batch) và giảm phụ thuộc vào LLM judgment (rule-based mode detection, structured extraction, checklist verify). Những cải thiện này không đòi hỏi thay đổi kiến trúc tổng thể, chỉ cần refine các bước hiện có.
