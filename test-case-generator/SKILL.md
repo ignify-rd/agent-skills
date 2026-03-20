@@ -1,13 +1,13 @@
 ---
 name: generate-test-case
-description: Generate test cases from mindmap + RSD/PTTK and push to Google Sheets. Use when user says "sinh test case", "sinh test cases", "generate test case", "generate test cases", "tạo test case", "tạo test cases", "xuất test case", "đẩy lên sheet", or provides a mindmap file (.txt/.md) for test case generation.
+description: Generate test cases from mindmap + RSD/PTTK and output to test-cases.json. Use when user says "sinh test case", "sinh test cases", "generate test case", "generate test cases", "tạo test case", "tạo test cases", "xuất test case", "xuất json", or provides a mindmap file (.txt/.md) for test case generation.
 ---
 
 # Test Case Generator
 
-Generate test cases from a parsed mindmap file (exported from `.gmind`) and push directly to Google Sheets. Uses a searchable catalog of real test cases (CSV format exported from spreadsheet) to ensure output matches the expected format per project.
+Generate test cases from a parsed mindmap file (exported from `.gmind`) and output to a JSON file. Uses a searchable catalog of real test cases (CSV format exported from spreadsheet) to ensure output matches the expected format per project.
 
-Output: **Google Sheets URL** (not raw JSON). The skill generates JSON internally, maps it to the spreadsheet template structure, and writes data via Google Sheets MCP.
+Output: **`<tên-test-case>/test-cases.json`** — a JSON array of test case objects. To upload to Google Sheets, use: `python upload_gsheet.py <tên-test-case>`
 
 > **Scope**: This skill covers **test case generation** (spreadsheet output) for two modes:
 > - **API mode** — API test cases
@@ -18,7 +18,7 @@ Output: **Google Sheets URL** (not raw JSON). The skill generates JSON internall
 ## When to Apply
 
 - User provides a mindmap file (.txt or .md exported from .gmind) and asks to generate test cases
-- User says "sinh test case", "sinh test cases", "tạo test case", "tạo test cases", "generate test case", "generate test cases", "xuất json"
+- User says "sinh test case", "sinh test cases", "tạo test case", "tạo test cases", "generate test case", "generate test cases", "xuất json", "xuất test case"
 - User uploads mindmap + optional RSD/PTTK for test case generation
 - **User provides only RSD + PTTK (no mindmap)** — skill auto-generates mindmap structure internally, then generates test cases from it
 
@@ -48,7 +48,7 @@ Before starting generation, check that the project structure exists:
 
 1. **Check catalog** — look for `catalog/` directory at project root (contains `api/`, `frontend/`, `mobile/`)
 2. **Check AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
-3. **Check template** — look for `excel_template/template.xlsx` (spreadsheet template for Google Sheets output)
+3. **Check template structure** — look for `excel_template/structure.json`
 
 **If catalog directory does not exist:**
 - Ask user: "Chưa có thư mục `catalog/`. Bạn đã chạy `test-genie init` chưa?"
@@ -61,6 +61,11 @@ Before starting generation, check that the project structure exists:
 **If catalog exists but has no examples (empty api/ and frontend/):**
 - Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm CSV examples trước không?"
 - Proceed with skill references as fallback
+
+**If `excel_template/structure.json` does not exist:**
+- Check if `excel_template/template.xlsx` exists
+- If yes → run `python <skills-root>/test-case-generator/scripts/extract_structure.py` to generate it
+- If no → inform user: "Chưa có template. Bạn cần đặt file template.xlsx vào excel_template/"
 
 ### Step 1: Check Input Type
 
@@ -117,7 +122,7 @@ SKILL_SCRIPTS=$(node -e "const p=require('child_process').execSync('npm root -g'
 echo $SKILL_SCRIPTS
 ```
 
-**IMPORTANT:** Always run search.py from the **project root** directory (where `catalog/` and `AGENTS.md` are located).
+**Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
 
 #### Load by mode (lazy-load)
 
@@ -241,41 +246,21 @@ Split mindmap into 3 batches, process sequentially:
 
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
 
-### Step 7: Output to Google Sheets
+### Step 7: Output to JSON File
 
-Output is a **Google Sheets URL** (not raw JSON). Flow:
+Output is a **JSON file** saved to the test case folder. Flow:
 
-1. **Upload** `excel_template/template.xlsx` → Google Drive as new Google Sheets
-2. **Detect** column structure dynamically from the uploaded sheet
-3. **Write** test case rows + apply formatting
+1. **Generate** JSON array of test case objects
+2. **Save** to `<tên-test-case>/test-cases.json`
+3. **Report** result and guide user to upload if needed
 
-**IMPORTANT:**
-- Final deliverable is ALWAYS a Google Sheets link — never return raw JSON
-- Each run creates a **new** spreadsheet — never reuse existing Drive files
-- Template structure is whatever is in `excel_template/template.xlsx` — no fixed project types
+#### 7a: Generate JSON Array
 
-**Script paths** — resolve automatically:
-```bash
-SKILL_SCRIPTS=$(node -e "const p=require('child_process').execSync('npm root -g',{encoding:'utf8'}).trim(); console.log(p+'/test-genie/test-case-generator/scripts')" 2>/dev/null \
-  || find ~/.claude ~/.cursor -name "upload_template.py" -path "*/test-case-generator/*" 2>/dev/null | head -1 | xargs dirname)
-echo $SKILL_SCRIPTS
-```
-
-**Prerequisites:**
-```bash
-pip install google-api-python-client google-auth
-```
-Place `credentials.json` (Service Account) at project root, or pass `--credentials path/to/credentials.json`.
-
-**ALWAYS run scripts from the project root directory.**
-
-#### 7a: Generate JSON Array (internal)
-
-Generate a JSON array where each element is one test case object. Use these standard field names — `detect_template.py` will map them to the correct columns automatically:
+Generate a JSON array where each element is one test case object. Use these standard field names:
 
 | Field | Description | Notes |
 |-------|-------------|-------|
-| `testSuiteName` | Test suite / group name | Triggers a suite header row |
+| `testSuiteName` | Test suite / group name | Triggers a suite header row on upload |
 | `testCaseName` | Test case name | Required |
 | `summary` | Summary (usually = testCaseName) | |
 | `preConditions` | Pre-conditions + test data | Multiline with `\n` |
@@ -288,125 +273,89 @@ Generate a JSON array where each element is one test case object. Use these stan
 
 Other fields (`details`, `status`, `executionType`, `keywords`, `specTitle`, `documentId`, `duration`, `testcaseLV1/2/3`, `testCaseId`, `testCaseTitle`, `testSteps`, `testResults`, `bugId`, `actualResult`) are also supported and will be mapped if the template has matching columns.
 
-#### 7b: Upload Template to Google Drive
+#### 7b: Save to JSON File
+
+Save the JSON array to `<tên-test-case>/test-cases.json`:
+- Pretty-print with `indent=2`, `ensure_ascii=False`
+- The test case folder should already contain the input documents (RSD, PTTK) and optionally `test-design.md`
 
 ```bash
-python $SKILL_SCRIPTS/upload_template.py \
-  --name "TC_API_Ten_chuc_nang_DDMMYY"
+# Example: save to file
+cat > "<tên-test-case>/test-cases.json" << 'EOF'
+[
+  {
+    "testSuiteName": "Kiểm tra các case common",
+    "testCaseName": "Method_Kiểm tra khi nhập sai method GET",
+    ...
+  }
+]
+EOF
 ```
 
-- `--name`: name for the new spreadsheet (e.g. `TC_API_Lay_danh_sach_200326`)
-- `--template`: path to xlsx file (default: `excel_template/template.xlsx`)
+#### 7c: Return Result
 
-Output:
-```json
-{
-  "spreadsheetId": "1abc...",
-  "webViewLink": "https://docs.google.com/spreadsheets/d/1abc.../edit",
-  "name": "TC_API_Ten_chuc_nang_DDMMYY"
-}
+```
+Đã lưu {testCaseCount} test cases tại `<tên-test-case>/test-cases.json`.
+Suites: {suiteCount} | Test cases: {testCaseCount}
+Để upload lên Google Sheets, chạy: python <skills-root>/test-case-generator/scripts/upload_gsheet.py <tên-test-case>
 ```
 
-Save `spreadsheetId` and `webViewLink` for next steps.
+### Upload to Google Sheets (separate command)
 
-#### 7c: Detect Column Structure
+After generating `test-cases.json`, upload to Google Sheets using:
 
 ```bash
-python $SKILL_SCRIPTS/detect_template.py \
-  --spreadsheet-id {spreadsheetId}
+python <skills-root>/test-case-generator/scripts/upload_gsheet.py <tên-test-case>
 ```
 
-Output:
-```json
-{
-  "spreadsheetId": "1abc...",
-  "webViewLink": "https://docs.google.com/spreadsheets/d/1abc.../edit",
-  "sheetName": "TestCases",
-  "sheetId": 0,
-  "columnMapping": {
-    "testSuiteName": 0,
-    "details": 1,
-    "externalId": 2,
-    "testCaseName": 3,
-    "summary": 4,
-    "preConditions": 5,
-    "steps": 6,
-    "expectedResults": 7,
-    "result": 11,
-    "note": 12
-  },
-  "totalColumns": 13,
-  "lastCol": "M",
-  "headerRow": 2,
-  "dataStartRow": 3
-}
-```
-
-This script:
-- Scans rows 1–20 to find the actual header row (fully dynamic, no hardcoded project types)
-- Skips group-header rows (e.g. "Test Suite", "Test Case") and single-cell metadata rows
-- Clears sample/formula rows from the template (keeps headers intact)
-
-Save all output fields — they are inputs for the next step.
-
-> **Re-detect only:** Use `--no-clear` to skip clearing sample data (useful for inspection).
-
-#### 7d: Write Test Cases to Sheet
-
-Save the generated JSON array to a temp file, then run:
-
+**Prerequisites:**
 ```bash
-python $SKILL_SCRIPTS/upload_to_sheet.py \
-  --spreadsheet-id {spreadsheetId} \
-  --sheet-name "{sheetName}" \
-  --sheet-id {sheetId} \
-  --data /tmp/test_cases.json \
-  --column-mapping '{columnMapping as JSON string}' \
-  --total-columns {totalColumns} \
-  --data-start-row {dataStartRow}
+pip install google-auth-oauthlib google-auth google-api-python-client openpyxl
+```
+
+Place `credentials.json` (OAuth Desktop App / installed type) at project root. First run will open a browser for authentication — token is cached at `~/.config/test-genie/token.json`.
+
+**Extract template structure (one-time setup):**
+```bash
+python <skills-root>/test-case-generator/scripts/extract_structure.py
+```
+This reads `excel_template/template.xlsx` and outputs `excel_template/structure.json`.
+
+**Upload test cases:**
+```bash
+python <skills-root>/test-case-generator/scripts/upload_gsheet.py <tên-test-case> \
+  [--title "Custom Title"] \
+  [--credentials credentials.json]
 ```
 
 Output:
 ```json
 {
   "success": true,
+  "spreadsheetId": "1abc...",
+  "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1abc.../edit",
+  "title": "TC_Ten_chuc_nang_200326",
   "rowsWritten": 75,
   "suiteCount": 5,
-  "testCaseCount": 70,
-  "updatedRange": "TestCases!A3:M77",
-  "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1abc.../edit"
+  "testCaseCount": 70
 }
 ```
 
 This script:
-- Inserts suite header rows automatically when `testSuiteName` changes
-- Appends with `valueInputOption: RAW` — `\n` renders as newlines in cells
-- Applies formatting: suite headers (light green, bold, merged) + test case rows (white, wrap text)
+- Creates a new Google Sheets with template header rows + formatting (from `structure.json`)
+- Writes test case data with suite headers (light green, bold, merged) and test case rows (white, wrap text)
+- Shares the file with "anyone" as editor
+- Returns the spreadsheet URL
 
-#### 7e: Return Result
-
-```
-✅ Đã đẩy {testCaseCount} test cases lên Google Sheets.
-📊 URL: {spreadsheetUrl}
-📋 Sheet: {sheetName} — {suiteCount} test suites, {testCaseCount} test cases
-```
-
-**If scripts fail (no credentials / Drive access):**
-- Save JSON to `test_cases.json` at project root
-- Inform user: "Không thể kết nối Google Drive. Đã lưu {n} test cases tại `test_cases.json`."
-
-#### 7f: Troubleshooting
+#### Upload Troubleshooting
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
 | `credentials.json not found` | File chưa có ở project root | Đặt file vào project root hoặc dùng `--credentials path/to/file.json` |
-| `Missing dependencies` | Chưa cài thư viện | Chạy `pip install google-api-python-client google-auth` |
-| Upload fails 403 | Service account không có quyền Drive | Cấp quyền Drive API trong Google Cloud Console |
-| Upload processing timeout | Google chưa xử lý xong | Chạy lại `upload_template.py` |
-| `columnMapping` rỗng | Header row không detect được | Chạy `detect_template.py --no-clear` để xem headers thực tế |
-| Columns bị lệch | Template có cấu trúc lạ | Xem output `columnMapping` từ `detect_template.py`, đối chiếu với header row thực tế |
-| `\n` không xuống dòng | Thiếu wrap text | Script tự apply `wrapStrategy: WRAP`, kiểm tra `--no-format` có bị bật không |
-| Cells hiện `#REF!` | Ghi đè lên formula zone | Kiểm tra `dataStartRow` từ output `detect_template.py` |
+| `Missing dependencies` | Chưa cài thư viện | Chạy `pip install google-auth-oauthlib google-auth google-api-python-client` |
+| `structure.json not found` | Chưa extract template | Chạy `python extract_structure.py` |
+| Browser không mở | First-time auth trên server | Dùng `--no-browser` hoặc copy URL thủ công |
+| Sharing fails | Org policy | File vẫn được tạo, share thủ công |
 
 ## Catalog Management
 
@@ -448,27 +397,31 @@ After running `test-genie init`, your project has this structure:
 │   │   │   ├── output-format.md
 │   │   │   └── quality-rules.md
 │   │   └── scripts/
-│   │       ├── search.py
-│   │       ├── upload_template.py     ← Upload .xlsx → Google Drive (one-time)
-│   │       ├── detect_template.py     ← Copy template + detect column structure
-│   │       └── upload_to_sheet.py     ← Write test cases + apply formatting
+│   │       ├── search.py                 ← Catalog search (auto-detects project root)
+│   │       ├── extract_structure.py      ← Extract template → structure.json (one-time)
+│   │       ├── upload_gsheet.py          ← Upload test-cases.json → Google Sheets
+│   │       ├── google_auth.py            ← OAuth Desktop App authentication
+│   │       ├── upload_template.py        ← Legacy: upload .xlsx → Google Drive
+│   │       ├── detect_template.py        ← Legacy: detect columns from uploaded sheet
+│   │       └── upload_to_sheet.py        ← Legacy: write data to existing sheet
 │   └── test-design-generator/
 │       └── ...
 ├── .claude/commands/                  ← Claude slash commands (auto-generated)
 │   ├── generate-test-case.md
 │   └── generate-test-design.md
-├── .cursor/commands/                  ← Cursor slash commands (auto-generated)
-│   ├── generate-test-case.mdc
-│   └── generate-test-design.mdc
-├── .cursor/rules/
-│   └── test-genie.mdc                 ← Cursor auto-loads when relevant
 ├── catalog/                           ← Managed by user/tester
 │   ├── api/                              ← API test case .csv examples
 │   ├── frontend/                         ← Frontend test case .csv examples
 │   └── mobile/                           ← Mobile test case examples
 ├── excel_template/
-│   └── template.xlsx                  ← Spreadsheet template for Google Sheets
-├── credentials.json                   ← Service Account (DO NOT COMMIT)
+│   ├── template.xlsx                  ← Spreadsheet template
+│   └── structure.json                 ← Template structure (generated by extract_structure.py)
+├── <tên-test-case>/                   ← Per-feature test folder
+│   ├── RSD.docx                          ← Input: requirement spec
+│   ├── PTTK.docx                         ← Input: technical spec (optional)
+│   ├── test-design.md                    ← Output: test design mindmap
+│   └── test-cases.json                   ← Output: test cases JSON array
+├── credentials.json                   ← OAuth Desktop App credentials (DO NOT COMMIT)
 └── AGENTS.md                          ← Project-specific rules (user-managed)
 ```
 

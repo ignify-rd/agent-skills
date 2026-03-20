@@ -55,8 +55,15 @@ import json
 import os
 import sys
 
+# Import shared auth module (same directory)
+sys.path.insert(0, os.path.dirname(__file__))
 try:
-    from google.oauth2 import service_account
+    from google_auth import find_credentials as _find_creds, build_sheets_service as _build_sheets
+    _USE_OAUTH = True
+except ImportError:
+    _USE_OAUTH = False
+
+try:
     from googleapiclient.discovery import build
 except ImportError:
     print(json.dumps({"error": "Missing dependencies. Run: pip install google-api-python-client google-auth"}))
@@ -106,6 +113,8 @@ FORMAT_FIELDS = 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignmen
 
 
 def find_credentials(provided_path=None):
+    if _USE_OAUTH:
+        return _find_creds(provided_path)
     candidates = []
     if provided_path:
         candidates.append(provided_path)
@@ -122,6 +131,10 @@ def find_credentials(provided_path=None):
 
 
 def build_sheets_service(credentials_path):
+    if _USE_OAUTH:
+        return _build_sheets(credentials_path)
+    # Legacy fallback: service account
+    from google.oauth2 import service_account
     creds = service_account.Credentials.from_service_account_file(
         credentials_path, scopes=SCOPES
     )

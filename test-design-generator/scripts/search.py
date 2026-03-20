@@ -37,8 +37,32 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != 'utf-8':
 SKILL_DIR = Path(__file__).parent.parent
 REFS_DIR = SKILL_DIR / "references"
 RULES_DIR = SKILL_DIR / "data" / "rules"
-CATALOG_DIR = Path.cwd() / "catalog"
 MAX_RESULTS = 3
+
+# Marker files/dirs that identify the project root
+_PROJECT_MARKERS = ("catalog", "AGENTS.md", "excel_template")
+
+
+def find_project_root(explicit_path=None):
+    """Find project root by walking up from CWD looking for marker files.
+
+    Markers: catalog/, AGENTS.md, excel_template/
+    Falls back to CWD if nothing found within 10 levels.
+    """
+    if explicit_path:
+        p = Path(explicit_path)
+        if p.exists():
+            return p
+
+    current = Path.cwd()
+    for _ in range(10):
+        if any((current / m).exists() for m in _PROJECT_MARKERS):
+            return current
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    return Path.cwd()  # fallback
 
 
 # ============ BM25 ============
@@ -285,7 +309,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test Design Catalog Search")
     parser.add_argument("query", nargs="?", default="", help="Search query")
     parser.add_argument("--domain", "-d", choices=["api", "frontend", "mobile", "rules"], help="Search domain")
-    parser.add_argument("--data-dir", help="Override catalog directory (default: ./catalog)")
+    parser.add_argument("--data-dir", help="Override catalog directory (default: auto-detect)")
+    parser.add_argument("--project-root", help="Explicit project root path (auto-detected if omitted)")
     parser.add_argument("--max-results", "-n", type=int, default=MAX_RESULTS, help="Max results")
     parser.add_argument("--list", "-l", action="store_true", help="List available examples")
     parser.add_argument("--full", "-f", action="store_true", help="Show full file content instead of preview")
@@ -294,7 +319,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    catalog_dir = Path(args.data_dir) if args.data_dir else CATALOG_DIR
+    project_root = find_project_root(args.project_root)
+    catalog_dir = Path(args.data_dir) if args.data_dir else project_root / "catalog"
 
     if args.list_refs:
         print(list_references())

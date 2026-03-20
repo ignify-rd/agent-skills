@@ -28,43 +28,50 @@ import os
 import sys
 import time
 
+# Import shared auth module (same directory)
+sys.path.insert(0, os.path.dirname(__file__))
 try:
-    from google.oauth2 import service_account
+    from google_auth import find_credentials, build_drive_service as _build_drive
+except ImportError:
+    # Fallback: try direct import
+    _build_drive = None
+
+try:
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 except ImportError:
-    print(json.dumps({"error": "Missing dependencies. Run: pip install google-api-python-client google-auth"}))
+    print(json.dumps({"error": "Missing dependencies. Run: pip install google-api-python-client google-auth google-auth-oauthlib"}))
     sys.exit(1)
-
-SCOPES = [
-    'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/spreadsheets',
-]
 
 GOOGLE_SHEETS_MIME = 'application/vnd.google-apps.spreadsheet'
 DEFAULT_TEMPLATE = 'excel_template/template.xlsx'
 
 
-def find_credentials(provided_path=None):
-    candidates = []
-    if provided_path:
-        candidates.append(provided_path)
-    candidates += [
-        'credentials.json',
-        os.path.expanduser('~/.config/test-genie/credentials.json'),
-        os.path.join(os.path.dirname(__file__), '..', 'credentials.json'),
-        os.path.join(os.path.dirname(__file__), 'credentials.json'),
-    ]
-    for path in candidates:
-        if path and os.path.isfile(path):
-            return path
-    return None
+if not _build_drive:
+    # Fallback find_credentials if google_auth import failed
+    def find_credentials(provided_path=None):
+        candidates = []
+        if provided_path:
+            candidates.append(provided_path)
+        candidates += [
+            'credentials.json',
+            os.path.expanduser('~/.config/test-genie/credentials.json'),
+            os.path.join(os.path.dirname(__file__), '..', 'credentials.json'),
+            os.path.join(os.path.dirname(__file__), 'credentials.json'),
+        ]
+        for path in candidates:
+            if path and os.path.isfile(path):
+                return path
+        return None
 
 
 def build_drive_service(credentials_path):
-    creds = service_account.Credentials.from_service_account_file(
-        credentials_path, scopes=SCOPES
-    )
+    if _build_drive:
+        return _build_drive(credentials_path)
+    # Legacy fallback: service account
+    from google.oauth2 import service_account
+    SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
+    creds = service_account.Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
     return build('drive', 'v3', credentials=creds)
 
 
