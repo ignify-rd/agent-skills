@@ -43,8 +43,59 @@ TOKEN_DIR = Path.home() / '.config' / 'test-genie'
 TOKEN_PATH = TOKEN_DIR / 'token.json'
 
 
+def _is_valid_oauth_credentials(path):
+    """Check if a credentials.json is a valid OAuth (installed/web) type, not service_account."""
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        # Valid OAuth credentials have 'installed' or 'web' top-level key
+        if 'installed' in data or 'web' in data:
+            return True
+        # Service account or empty placeholder — not usable for OAuth desktop flow
+        return False
+    except (json.JSONDecodeError, OSError):
+        return False
+
+
+# Bundled fallback credentials (shipped with test-genie)
+_BUNDLED_CREDENTIALS = {
+    "installed": {
+        "client_id": "557486265467-392qr7me0acjg8g9ofi8d3883a3ro189.apps.googleusercontent.com",
+        "project_id": "trim-heaven-475813-a2",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": "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",
+        "redirect_uris": ["http://localhost"]
+    }
+}
+
+_BUNDLED_CREDENTIALS_PATH = os.path.join(
+    os.path.expanduser('~/.config/test-genie'), 'credentials.json'
+)
+
+
+def _ensure_bundled_credentials():
+    """Write bundled credentials to ~/.config/test-genie/credentials.json if not present."""
+    if os.path.isfile(_BUNDLED_CREDENTIALS_PATH) and _is_valid_oauth_credentials(_BUNDLED_CREDENTIALS_PATH):
+        return _BUNDLED_CREDENTIALS_PATH
+    os.makedirs(os.path.dirname(_BUNDLED_CREDENTIALS_PATH), exist_ok=True)
+    with open(_BUNDLED_CREDENTIALS_PATH, 'w', encoding='utf-8') as f:
+        json.dump(_BUNDLED_CREDENTIALS, f, indent=2)
+    return _BUNDLED_CREDENTIALS_PATH
+
+
 def find_credentials(provided_path=None):
-    """Search for credentials.json in standard locations."""
+    """Search for credentials.json in standard locations.
+
+    Priority:
+    1. Explicit path (--credentials)
+    2. Project root credentials.json
+    3. ~/.config/test-genie/credentials.json
+    4. Bundled fallback (auto-written to ~/.config/test-genie/)
+
+    Skips service_account type credentials (not compatible with OAuth desktop flow).
+    """
     candidates = []
     if provided_path:
         candidates.append(provided_path)
@@ -55,9 +106,11 @@ def find_credentials(provided_path=None):
         os.path.join(os.path.dirname(__file__), 'credentials.json'),
     ]
     for path in candidates:
-        if path and os.path.isfile(path):
+        if path and os.path.isfile(path) and _is_valid_oauth_credentials(path):
             return path
-    return None
+
+    # No valid OAuth credentials found — use bundled fallback
+    return _ensure_bundled_credentials()
 
 
 def _load_token(credentials_path):

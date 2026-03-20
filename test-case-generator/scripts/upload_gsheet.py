@@ -225,16 +225,20 @@ def build_header_requests(structure, sheet_id):
                 }
             })
 
-    # Apply merged cells
+    # Apply merged cells (clamp to grid limits)
     for mc in structure.get('mergedCells', []):
+        end_col = min(mc['endCol'], total_columns)
+        start_col = mc['startCol'] - 1
+        if start_col >= total_columns:
+            continue  # skip merges outside grid
         requests.append({
             'mergeCells': {
                 'range': {
                     'sheetId': sheet_id,
                     'startRowIndex': mc['startRow'] - 1,
                     'endRowIndex': mc['endRow'],
-                    'startColumnIndex': mc['startCol'] - 1,
-                    'endColumnIndex': mc['endCol'],
+                    'startColumnIndex': start_col,
+                    'endColumnIndex': end_col,
                 },
                 'mergeType': 'MERGE_ALL',
             }
