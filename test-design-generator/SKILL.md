@@ -101,16 +101,6 @@ Resolve the skill scripts path. Scripts are installed alongside this SKILL.md fi
 # Priority 1: Project-local skills (created by test-genie init)
 SKILL_SCRIPTS=$(find . .claude .cursor .windsurf .roo .kiro .gemini .agent -name "search.py" -path "*/test-design-generator/*" 2>/dev/null | head -1 | xargs dirname)
 
-# Priority 2: Global npm install
-if [ -z "$SKILL_SCRIPTS" ]; then
-  SKILL_SCRIPTS=$(node -e "const p=require('child_process').execSync('npm root -g',{encoding:'utf8'}).trim(); console.log(p+'/test-genie/test-design-generator/scripts')" 2>/dev/null)
-fi
-
-# Priority 3: Home directory fallback
-if [ -z "$SKILL_SCRIPTS" ] || [ ! -d "$SKILL_SCRIPTS" ]; then
-  SKILL_SCRIPTS=$(find ~/.claude ~/.cursor -name "search.py" -path "*/test-design-generator/*" 2>/dev/null | head -1 | xargs dirname)
-fi
-
 echo $SKILL_SCRIPTS
 ```
 
