@@ -183,10 +183,36 @@ python $SKILL_SCRIPTS/search.py --ref quality-rules
 python $SKILL_SCRIPTS/search.py --ref api-test-case
 ```
 
-**Frontend mode — load this only:**
+**Frontend mode — load these:**
 ```bash
 python $SKILL_SCRIPTS/search.py --ref fe-test-case
 ```
+
+Ngoài ra, **bắt buộc load `field-templates.md`** từ test-design-generator (skill chị em):
+```bash
+# Resolve path to field-templates.md
+for d in \
+  ".claude/skills/test-design-generator/references" \
+  ".cursor/skills/test-design-generator/references" \
+  ".windsurf/skills/test-design-generator/references" \
+  ".roo/skills/test-design-generator/references" \
+  ".kiro/skills/test-design-generator/references"; do
+  [ -f "$d/field-templates.md" ] && FIELD_TEMPLATES="$d/field-templates.md" && break
+done
+
+# Nếu không tìm được qua scripts, dùng npm global:
+[ -z "$FIELD_TEMPLATES" ] && {
+  npm_root=$(npm root -g 2>/dev/null)
+  f="$npm_root/test-genie/test-design-generator/references/field-templates.md"
+  [ -f "$f" ] && FIELD_TEMPLATES="$f"
+}
+
+# Fallback: đọc trực tiếp bằng Read tool
+# Nếu vẫn không tìm được → đọc file field-templates.md bằng Read tool tại path phổ biến nhất
+cat "$FIELD_TEMPLATES"
+```
+
+> **Tại sao cần field-templates.md?** File này là nguồn chuẩn định nghĩa ĐẦY ĐỦ cases cho từng loại field frontend. `fe-test-case.md` chỉ chứa format/rules — field-templates.md chứa DANH SÁCH cases. Thiếu file này → validate cases bị thiếu emoji, XSS, SQL injection, minLength, format validation.
 
 > **Why lazy-load?** Loading all references regardless of mode wastes tokens on rules that won't be used. Only load what the detected mode requires.
 
@@ -376,6 +402,13 @@ Phải bao gồm **tất cả** — kể cả:
 ### Step 6: Generate Test Cases in Batches
 
 Split mindmap into 3 batches, process sequentially:
+
+**Quy tắc bắt buộc cho testSuiteName — áp dụng cho CẢ API và Frontend:**
+
+> Chỉ được dùng các tên suite trong danh sách này. **KHÔNG được tạo suite tên khác** (kể cả khi traceability check append thêm test cases):
+> - API: `"Kiểm tra các case common"`, `"Kiểm tra phân quyền"`, `"Kiểm tra trường {fieldName}"` (BATCH 2), `"Kiểm tra luồng chính"`, `"Kiểm tra timeout"`
+> - Frontend: `"Kiểm tra giao diện chung"`, `"Kiểm tra phân quyền"`, `"Kiểm tra validate"`, `"Kiểm tra chức năng"`, `"Kiểm tra lưới dữ liệu"`, `"Kiểm tra phân trang"`, `"Kiểm tra timeout"`
+> - SAI: `"Kiểm tra bảo mật"`, `"Kiểm tra lỗi nghiệp vụ"`, `"Kiểm tra security"`, `"String : id"`, `"file: MultipartFile (Required)"`, v.v.
 
 **BATCH 1 — Pre-validate sections:**
 - All ## sections BEFORE "Kiểm tra validate" (e.g., common cases, permissions)

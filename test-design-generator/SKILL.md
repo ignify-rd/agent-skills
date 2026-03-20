@@ -374,7 +374,7 @@ Nếu bất kỳ item nào NO → thêm bullet với `### [SỬA] Kiểm tra ...
 
 **Permission section (hardcoded):** No permission / has permission — 2 test cases.
 
-**Validate section (per-field templates):** Dispatch by field.type using `--ref field-templates`:
+**Validate section (per-field templates):** Dispatch by field.type using `--ref field-templates`. **QUAN TRỌNG: Phải output ĐẦY ĐỦ TẤT CẢ cases có trong template — không được bỏ bớt, không được chọn lọc.**
 
 | field.type | Template |
 |-----------|----------|
@@ -387,7 +387,28 @@ Nếu bất kỳ item nào NO → thêm bullet với `### [SỬA] Kiểm tra ...
 | button | generateButtonTests |
 | icon_x/icon_close | generateIconXTests |
 
-After field templates, supplement with LLM for: cross-field validation, special values, cascading fields, auto-fill rules.
+**Mandatory completeness rule — KHÔNG được bỏ bất kỳ case nào trong template:**
+
+Với mỗi textbox editable, bắt buộc sinh ĐỦ các cases sau (lấy từ field-templates.md):
+- Hiển thị mặc định, giá trị mặc định, placeholder
+- Icon X: hiển thị khi nhập, xóa nhanh
+- Nhập số, nhập chữ, nhập ký tự đặc biệt (@#$%^&*)
+- Nhập ký tự chứa space đầu/cuối, Paste ký tự chứa space đầu/cuối, nhập all space
+- Boundary: nhập maxLen-1, maxLen, Paste maxLen, nhập maxLen+1 → cảnh báo
+- **Bắt buộc thêm (thường bị bỏ sót):** emoji (🙂), XSS (`<script>alert(1)</script>`), SQL injection (`' OR 1=1 --`), unicode đặc biệt
+- MinLength boundary: minLen-1 → lỗi, minLen → ok (nếu có minLength)
+- Required validation: bỏ trống → lỗi (nếu isRequired)
+- Format validation: đúng/sai định dạng (nếu có regex/pattern)
+- Conditional disabled state (nếu field có thể bị disabled theo điều kiện)
+
+Với mỗi combobox/dropdown, bắt buộc sinh ĐỦ:
+- Hiển thị, placeholder, icon X, chọn 1/nhiều
+- API error, API trả rỗng → "Không tìm thấy", loading state
+- Search textbox: số, chữ, ký tự đặc biệt, maxSearchLen boundary
+- Tìm từ khóa tồn tại/không tồn tại/1 phần, chọn bằng chuột/bàn phím
+- Required validation (nếu có)
+
+Sau khi áp dụng template, supplement thêm với LLM: cross-field validation, cascading fields, auto-fill rules.
 
 **For DETAIL screens:** Do NOT use field templates. Use `generateDetailDataSection()` — test data display, null/empty handling, SQL queries per field.
 

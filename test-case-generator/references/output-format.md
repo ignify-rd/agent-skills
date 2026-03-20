@@ -16,7 +16,7 @@
   "specTitle": "",               // LUÔN để trống
   "documentId": "",              // LUÔN để trống
   "estimatedDuration": "",       // LUÔN để trống
-  "result": "PENDING",           // LUÔN là "PENDING"
+  "result": "",                  // LUÔN để trống
   "note": ""                     // LUÔN để trống
 }
 ```
@@ -65,7 +65,7 @@
   "specTitle": "",
   "documentId": "",
   "estimatedDuration": "",
-  "result": "PENDING",
+  "result": "",
   "note": ""
 }
 ```
@@ -86,7 +86,7 @@
   "specTitle": "",
   "documentId": "",
   "estimatedDuration": "",
-  "result": "PENDING",
+  "result": "",
   "note": ""
 }
 ```
@@ -107,7 +107,7 @@
   "specTitle": "",
   "documentId": "",
   "estimatedDuration": "",
-  "result": "PENDING",
+  "result": "",
   "note": ""
 }
 ```
@@ -128,7 +128,7 @@
   "specTitle": "",
   "documentId": "",
   "estimatedDuration": "",
-  "result": "PENDING",
+  "result": "",
   "note": ""
 }
 ```
@@ -149,7 +149,7 @@
   "specTitle": "",
   "documentId": "",
   "estimatedDuration": "",
-  "result": "PENDING",
+  "result": "",
   "note": ""
 }
 ```

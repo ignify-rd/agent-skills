@@ -27,11 +27,22 @@ Nếu không xác định được từ mindmap, dùng header dòng 1 làm scree
 
 ## R0: testSuiteName
 
-- = Level 1 node (## heading) trong mindmap
-- Force-override trong mỗi batch:
-  - BATCH 1: = tên section (VD: "Kiểm tra giao diện chung")
-  - BATCH 2: = "Kiểm tra validate" (cố định, KHÔNG phải tên field)
-  - BATCH 3: = tên section (VD: "Kiểm tra chức năng")
+**5 tên suite cố định dùng cho Frontend** (KHÔNG được tạo suite mới ngoài danh sách này):
+
+| Batch | testSuiteName |
+|-------|--------------|
+| BATCH 1 | `"Kiểm tra giao diện chung"` |
+| BATCH 1 | `"Kiểm tra phân quyền"` |
+| BATCH 2 | `"Kiểm tra validate"` _(tất cả test cases validate đều dùng tên này, kể cả XSS/emoji/SQL injection)_ |
+| BATCH 3 | `"Kiểm tra chức năng"` |
+| BATCH 3 | `"Kiểm tra lưới dữ liệu"` |
+| BATCH 3 | `"Kiểm tra phân trang"` |
+| BATCH 3 | `"Kiểm tra timeout"` |
+
+**Quy tắc bắt buộc:**
+- **KHÔNG được tạo** suite tên mới: "Kiểm tra bảo mật", "Kiểm tra lỗi nghiệp vụ", "Kiểm tra security", v.v.
+- **Security tests** (XSS, SQL injection, emoji): testSuiteName = `"Kiểm tra validate"` — KHÔNG tạo suite riêng
+- **Frontend validate KHÔNG có field sub-suites**: tất cả test cases validate đều dùng `"Kiểm tra validate"` (khác API mode)
 
 ## R1: externalId
 
@@ -265,42 +276,107 @@ Xem bảng mapping trong `output-format.md`.
 
 ## Standard Validate Cases cho Frontend Fields
 
+> **Nguồn chuẩn**: Các cases dưới đây là tập đầy đủ — phải sinh ĐỦ, không bỏ sót. Xem thêm `field-templates.md` (trong test-design-generator/references) để biết format mindmap tương ứng.
+
 ### Textbox (editable)
 
-| Case | step | expectedResult |
-|------|------|----------------|
-| Hiển thị mặc định | Quan sát | Luôn hiển thị và enable |
-| Giá trị mặc định | Quan sát | Mặc định rỗng |
-| Placeholder | Quan sát | Hiển thị placeholder "{text}" |
-| Nhập số | Nhập ký tự số | Hệ thống cho phép nhập |
-| Nhập chữ | Nhập ký tự chữ | Hệ thống cho phép nhập |
-| Nhập ký tự đặc biệt | Nhập @#$ | Hệ thống chặn không cho phép nhập |
-| Nhập space đầu/cuối | Nhập " abc " | Hệ thống cho phép nhập |
-| Nhập all space | Nhập "   " | Hệ thống cho phép nhập |
-| Nhập N-1 ký tự | Nhập N-1 ký tự | Hệ thống cho phép nhập |
-| Nhập N ký tự (max) | Nhập N ký tự | Hệ thống cho phép nhập |
-| Paste N ký tự | Paste N ký tự | Hệ thống cho phép Paste |
-| Nhập N+1 ký tự | Nhập N+1 ký tự | Hiển thị cảnh báo "{warning}" |
-| Icon X — hiển thị | Nhập 1 ký tự | Hiển thị icon X xóa nhanh |
-| Icon X — clear | Click icon X | Clear data đã nhập |
-
-### Dropdown/Combobox
+**BẮT BUỘC sinh đủ tất cả cases sau** (không được bỏ):
 
 | Case | step | expectedResult |
 |------|------|----------------|
-| Hiển thị mặc định | Quan sát | Luôn hiện và enable |
-| Giá trị mặc định | Quan sát | Mặc định rỗng |
-| Placeholder | Quan sát | Hiển thị placeholder "{text}" |
-| Nhấn mở dropdown | Click dropdown | Hiển thị danh sách các giá trị: {list} |
-| Chọn giá trị X | Chọn giá trị X | Hệ thống hiển thị text "X" |
-| Icon X — hiển thị | Chọn giá trị | Hiển thị icon X xóa nhanh |
-| Icon X — clear | Click icon X | Clear data đã chọn |
+| Hiển thị mặc định | `1. Quan sát textbox "{name}"` | `Luôn hiển thị và enable` |
+| Giá trị mặc định | `1. Quan sát giá trị mặc định` | `Mặc định rỗng` |
+| Placeholder | `1. Quan sát placeholder` | `Hiển thị placeholder "{text}"` |
+| Icon X — hiển thị | `1. Nhập 1 ký tự vào textbox "{name}"\n2. Quan sát` | `Hiển thị icon X xóa nhanh ký tự nhập` |
+| Icon X — clear | `1. Nhập giá trị\n2. Click icon X` | `Clear data đã nhập ở textbox` |
+| Nhập ký tự là số | `1. Tại textbox "{name}", nhập ký tự là số\n2. Quan sát` | `Hệ thống cho phép nhập` |
+| Nhập ký tự chữ | `1. Tại textbox "{name}", nhập ký tự chữ\n2. Quan sát` | `Hệ thống cho phép nhập` |
+| Nhập ký tự đặc biệt | `1. Tại textbox "{name}", nhập ký tự đặc biệt (@#$%^&*)\n2. Quan sát` | `{allowSpecialChars ? "Hệ thống cho phép nhập" : "Hệ thống chặn không cho phép nhập"}` |
+| Nhập emoji | `1. Tại textbox "{name}", nhập emoji (🙂)\n2. Quan sát` | `Hệ thống chặn không cho phép nhập` |
+| Nhập XSS | `1. Tại textbox "{name}", nhập <script>alert(1)</script>\n2. Quan sát` | `Hệ thống chặn không cho phép nhập` |
+| Nhập SQL injection | `1. Tại textbox "{name}", nhập ' OR 1=1 --\n2. Quan sát` | `Hệ thống chặn không cho phép nhập` |
+| Nhập space đầu/cuối | `1. Tại textbox "{name}", nhập " abc "\n2. Quan sát` | `{allowSpaces ? "Hệ thống cho phép nhập" : "Hệ thống chặn không cho phép nhập"}` |
+| Paste space đầu/cuối | `1. Paste " abc " vào textbox "{name}"\n2. Quan sát` | `{allowSpaces ? "Hệ thống cho phép Paste" : "Hệ thống chặn không cho phép Paste"}` |
+| Nhập all space | `1. Tại textbox "{name}", nhập toàn khoảng trắng\n2. Quan sát` | `{allowSpaces ? "Hệ thống cho phép nhập" : "Hệ thống chặn không cho phép nhập"}` |
+| Nhập N-1 ký tự | `1. Tại textbox "{name}", nhập {N-1} ký tự\n2. Quan sát` | `Hệ thống cho phép nhập` |
+| Nhập N ký tự (max) | `1. Tại textbox "{name}", nhập {N} ký tự\n2. Quan sát` | `Hệ thống cho phép nhập` |
+| Paste N ký tự | `1. Paste {N} ký tự vào textbox "{name}"\n2. Quan sát` | `Hệ thống cho phép Paste` |
+| Nhập N+1 ký tự | `1. Tại textbox "{name}", nhập {N+1} ký tự\n2. Quan sát` | `Hiển thị cảnh báo "{warning}"` |
+| MinLen-1 _(nếu có)_ | `1. Tại textbox "{name}", nhập {minLen-1} ký tự\n2. Quan sát` | `Hiển thị thông báo lỗi validate "Vui lòng nhập tối thiểu {minLen} ký tự"` |
+| MinLen _(nếu có)_ | `1. Tại textbox "{name}", nhập {minLen} ký tự\n2. Quan sát` | `Hệ thống cho phép nhập` |
+| Bỏ trống _(nếu required)_ | `1. Để trống textbox "{name}"\n2. Quan sát` | `Hiển thị thông báo lỗi validate "{requiredMessage}"` |
+| Sai định dạng _(nếu có format)_ | `1. Nhập giá trị sai định dạng {formatName}\n2. Quan sát` | `Hiển thị thông báo lỗi validate "{formatErrorMessage}"` |
+| Đúng định dạng _(nếu có format)_ | `1. Nhập giá trị đúng định dạng {formatName}\n2. Quan sát` | `Hệ thống cho phép nhập` |
+| Disabled state _(nếu conditional)_ | `1. Đặt điều kiện {disableCondition}\n2. Quan sát textbox "{name}"` | `Textbox ở trạng thái Disabled, không thể nhập` |
 
-### Toggle
+**Conditional rules:**
+- Nếu `allowSpecialChars=true` → expectedResult = "Hệ thống cho phép nhập"
+- Nếu `allowSpaces=false` → expectedResult cho space tests = "Hệ thống chặn không cho phép nhập/Paste"
+- Emoji, XSS, SQL injection: luôn sinh, expectedResult = chặn (trừ khi tài liệu nói cho phép)
+- MinLen cases: chỉ sinh khi field có minLength constraint
+- Required/format cases: chỉ sinh khi field có isRequired/validationPattern
+
+---
+
+### Combobox (API data + search)
+
+**BẮT BUỘC sinh đủ:**
 
 | Case | step | expectedResult |
 |------|------|----------------|
-| Hiển thị mặc định | Quan sát | {defaultState} |
-| Giá trị mặc định | Quan sát | Mặc định là {default} |
-| Click bật | Click toggle (đang tắt) | Toggle chuyển sang bật |
-| Click tắt | Click toggle (đang bật) | Toggle chuyển sang tắt |
+| Hiển thị mặc định | `1. Quan sát combobox "{name}"` | `Luôn hiển thị và enable` |
+| Giá trị mặc định | `1. Quan sát giá trị mặc định` | `Mặc định rỗng` |
+| Placeholder | `1. Quan sát placeholder` | `Hiển thị placeholder "{text}"` |
+| Bắt buộc _(required)_ | `1. Bỏ trống combobox "{name}"\n2. Quan sát` | `Hiển thị support text "Vui lòng chọn giá trị"` |
+| Icon X — hiển thị | `1. Chọn giá trị trong combobox "{name}"\n2. Quan sát` | `Hiển thị icon x cho phép xoá nhanh` |
+| Icon X — clear | `1. Chọn giá trị\n2. Click icon x` | `Clear data đã chọn` |
+| Giá trị data | `1. Mở combobox "{name}"\n2. Quan sát danh sách` | `Hiển thị data UI map với response API. Endpoint: {apiEndpoint}` |
+| API không phản hồi | `1. Mở combobox "{name}" khi API {apiEndpoint} timeout\n2. Quan sát` | `Hiển thị popup lỗi "Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại."` |
+| API phản hồi lỗi | `1. Mở combobox khi API trả lỗi\n2. Quan sát` | `Hiển thị popup lỗi với nội dung errorDesc server trả về` |
+| API trả rỗng | `1. Mở combobox khi API trả danh sách rỗng\n2. Quan sát` | `Hiển thị "Không tìm thấy" tại Combobox` |
+| Loading state | `1. Mở combobox "{name}"\n2. Quan sát khi đang chờ API` | `Hiển thị loading indicator` |
+| Chọn 1 giá trị | `1. Mở combobox\n2. Chọn 1 giá trị` | `Hệ thống cho phép chọn` |
+| Chọn nhiều | `1. Mở combobox\n2. Chọn nhiều giá trị` | `{isSingleSelect ? "Chỉ cho phép chọn 1" : "Cho phép chọn nhiều"}` |
+| Search — nhập số | `1. Mở combobox\n2. Nhập số vào ô tìm kiếm` | `Cho phép nhập` |
+| Search — nhập chữ | `1. Mở combobox\n2. Nhập chữ a-z A-Z` | `Cho phép nhập` |
+| Search — ký tự đặc biệt | `1. Mở combobox\n2. Nhập ký tự đặc biệt` | `{allowSearchSpecialChars ? "Cho phép nhập" : "Hệ thống chặn"}` |
+| Search — khoảng trắng | `1. Mở combobox\n2. Nhập khoảng trắng` | `Cho phép nhập` |
+| Search maxLen | `1. Nhập {maxSearchLen} ký tự` | `Hệ thống cho phép nhập {maxSearchLen} ký tự` |
+| Search maxLen+1 | `1. Nhập {maxSearchLen+1} ký tự` | `Hệ thống chặn không cho nhập quá {maxSearchLen} ký tự` |
+| Từ khóa tồn tại | `1. Nhập từ khóa tồn tại` | `Hiển thị kết quả tương ứng` |
+| Từ khóa không tồn tại | `1. Nhập từ khóa không có trong hệ thống` | `Hiển thị Không tìm thấy tại Dropdown` |
+| 1 phần từ khóa | `1. Nhập 1 phần từ khóa` | `Hiển thị kết quả chứa 1 phần từ khóa` |
+| Chọn bằng chuột | `1. Click chuột trái vào dòng giá trị` | `Cho phép chọn select` |
+| Chọn bằng bàn phím | `1. Focus vào giá trị\n2. Nhấn Enter/SPACE` | `Cho phép chọn select` |
+| Hiển thị sau khi chọn | `1. Chọn giá trị X` | `Fill đúng text "X", đóng combobox` |
+
+---
+
+### Simple Dropdown (hardcoded values)
+
+| Case | step | expectedResult |
+|------|------|----------------|
+| Hiển thị mặc định | `1. Quan sát dropdown "{name}"` | `Luôn hiện và enable` |
+| Giá trị mặc định | `1. Quan sát giá trị mặc định` | `Mặc định rỗng` |
+| Placeholder | `1. Quan sát placeholder` | `Hiển thị placeholder "{text}"` |
+| Bắt buộc _(required)_ | `1. Bỏ trống dropdown\n2. Quan sát` | `Hiển thị lỗi validate "{requiredMessage}"` |
+| Danh sách values | `1. Click dropdown "{name}"\n2. Quan sát` | `Hiển thị danh sách: {value1}, {value2}, ...` |
+| Chọn 1 giá trị | `1. Click dropdown\n2. Chọn 1 giá trị` | `Hệ thống cho phép chọn` |
+| Chọn nhiều | `1. Click dropdown\n2. Chọn nhiều` | `{isSingleSelect ? "Hệ thống chỉ cho phép chọn 1" : "Cho phép chọn nhiều"}` |
+| Chọn từng value | `1. Chọn giá trị = "{value}"` | `Hệ thống hiển thị text "{value}" tại dropdown` |
+| Icon X — hiển thị | `1. Chọn giá trị` | `Hiển thị icon X xóa nhanh` |
+| Icon X — clear | `1. Click icon X` | `Clear data đã chọn` |
+| Disabled _(conditional)_ | `1. Đặt điều kiện {disableCondition}\n2. Quan sát` | `Dropdown ở trạng thái Disabled` |
+
+---
+
+### Toggle Button
+
+| Case | step | expectedResult |
+|------|------|----------------|
+| Hiển thị mặc định | `1. Quan sát Toggle Button "{name}"` | `Luôn hiển thị và enable` |
+| Giá trị mặc định | `1. Quan sát giá trị mặc định` | `{defaultValueDesc}` |
+| Chuyển từ A → B | `1. Click Toggle (đang ở {from})` | `{description}` |
+| Chuyển từ B → A | `1. Click Toggle (đang ở {to})` | `{description}` |
+| Disabled _(conditional)_ | `1. Đặt {disableCondition}\n2. Quan sát` | `Toggle ở trạng thái Disabled` |
+| Không có quyền | `1. Login với user không có quyền thay đổi {name}\n2. Quan sát` | `Toggle ở trạng thái Disabled` |

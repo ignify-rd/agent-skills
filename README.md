@@ -34,7 +34,9 @@ Mở terminal tại thư mục dự án, chạy:
 test-genie init --ai cursor
 ```
 
-Hỗ trợ các IDE khác: `claude`, `windsurf`, `copilot`, `gemini` — hoặc `--ai all` để cài hết.
+> ⚠️ **Bắt buộc truyền `--ai`** — lệnh sẽ báo lỗi nếu không có flag này.
+
+Hỗ trợ: `cursor`, `claude`, `windsurf`, `copilot`, `gemini`, `roocode`, `kiro` — hoặc `--ai all` để cài hết.
 
 > ⚠️ Lệnh này **không ghi đè** `AGENTS.md` nếu file đã tồn tại. Muốn reset thì xóa file đó trước rồi chạy lại.
 
@@ -91,20 +93,35 @@ Mở file `AGENTS.md` ở gốc dự án và thêm quy tắc riêng, ví dụ:
 
 ## Tạo test design
 
-**Chuẩn bị:** Đặt file RSD và PTTK vào thư mục dự án.
+**Chuẩn bị:** Đặt file RSD (.pdf) và PTTK (.pdf) vào cùng 1 thư mục có tên feature.
+
+```
+my-project/
+└── login-feature/
+    ├── RSD_login.pdf
+    └── PTTK_login.pdf
+```
 
 **Gọi lệnh trong IDE:**
 
 ```
-/generate-test-design
+/generate-test-design login-feature
 ```
 
-AI đọc tài liệu, có thể hỏi thêm vài câu để làm rõ, rồi sinh ra file `.md`.
+Truyền tên thư mục → AI tự tìm file PDF bên trong, không cần chỉ đường dẫn thủ công.
+
+AI sẽ:
+1. Đọc toàn bộ RSD/PTTK
+2. Trích xuất inventory (error codes, business rules, DB fields, external services)
+3. Sinh mindmap theo cấu trúc chuẩn: common → validate → luồng chính
+4. Tự kiểm tra coverage trước khi lưu
+
+Kết quả lưu tại `login-feature/test-design.md`.
 
 <!-- 📸 [Screenshot: gõ lệnh trong IDE] -->
 <!-- 📸 [Screenshot: file .md kết quả] -->
 
-> 💡 Sau khi xong, copy file `.md` vào `catalog/` để AI học cho lần sau.
+> 💡 Sau khi xong, copy file `.md` vào `catalog/` để AI học theo format cho lần sau.
 
 ---
 
@@ -113,15 +130,22 @@ AI đọc tài liệu, có thể hỏi thêm vài câu để làm rõ, rồi sin
 **Gọi lệnh trong IDE:**
 
 ```
-/generate-test-case
+/generate-test-case login-feature
 ```
 
-AI hỏi đường dẫn file test design, sinh test case theo 3 đợt (common → validate → luồng chính), rồi đẩy kết quả lên **Google Sheets**.
+Truyền tên thư mục → AI tự tìm tài liệu bên trong. Nếu chưa có `test-design.md`, AI tự tạo trước.
+
+AI sẽ:
+1. Đọc RSD/PTTK trực tiếp để xây inventory (error codes, DB fields, external services)
+2. Sinh test case theo 3 đợt: common → validate → luồng chính
+3. Tự kiểm tra coverage — thiếu gì tự bổ sung, không hỏi
+4. Lưu kết quả vào `login-feature/test-cases.json`
+5. **Tự động upload lên Google Sheets** và trả về link
 
 <!-- 📸 [Screenshot: gõ lệnh trong IDE] -->
 <!-- 📸 [Screenshot: link Google Sheets kết quả] -->
 
-> 💡 Chưa có file test design cũng không sao — AI sẽ tự tạo trước rồi mới sinh test case.
+> 💡 Lần đầu chạy sẽ mở trình duyệt để đăng nhập Google — sau đó token được lưu lại, không cần đăng nhập lại.
 
 ---
 
@@ -131,4 +155,29 @@ AI hỏi đường dẫn file test design, sinh test case theo 3 đợt (common 
 test-genie update --ai cursor
 ```
 
+> ⚠️ **Bắt buộc truyền `--ai`** — giống lệnh `init`.
+
 File của bạn (`catalog/`, `AGENTS.md`) **sẽ không bị ảnh hưởng**.
+
+---
+
+## Changelog
+
+### v1.1 — Cải thiện coverage
+
+**Thay đổi quan trọng:**
+
+- **`test-genie init` và `update` bắt buộc truyền `--ai`** — trước đây mặc định là `claude`, giờ phải chỉ rõ IDE đang dùng
+- **Truyền tên thư mục thay vì đường dẫn file** — `/generate-test-case login-feature` thay vì phải chỉ từng file PDF
+- **Không cần credentials.json** — tool tự dùng OAuth mặc định nếu không tìm thấy credentials của bạn
+- **Tự động upload Google Sheets** sau khi sinh test case xong (không cần chạy lệnh riêng)
+- **Coverage cao hơn cho luồng chính:**
+  - Tool trích xuất toàn bộ error codes, business rules, DB fields, external services trước khi sinh
+  - Tự kiểm tra và bổ sung các trường hợp còn thiếu (error codes, DB fields, rollback scenarios)
+  - Đảm bảo mọi error code trong tài liệu đều có test case với đúng message
+  - Verify tất cả DB fields (kể cả CREATED_TIME, S3_FILE_KEY, derived fields)
+  - Test rollback: verify không có data ghi vào DB khi S3/external service lỗi
+
+**Nâng cấp nhỏ:**
+- Script tự tìm đường dẫn — không còn lỗi "Skill scripts not found" khi chạy trong Cursor/Windsurf
+- Nếu không tìm được script, tool tự đọc file rules trực tiếp để không bỏ qua format

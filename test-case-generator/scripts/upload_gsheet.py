@@ -265,7 +265,25 @@ def build_header_requests(structure, sheet_id):
 
 
 # ============ TEST CASE DATA (reused from upload_to_sheet.py) ============
-# Suite header formatting: light green #DAEAD0
+
+# 5 main suite names (any testSuiteName matching these → green header)
+MAIN_SUITE_NAMES = {
+    'kiểm tra các case common',
+    'kiểm tra giao diện chung',
+    'kiểm tra phân quyền',
+    'kiểm tra validate',
+    'kiểm tra luồng chính',
+    'kiểm tra timeout',
+    'kiểm tra chức năng',
+    'kiểm tra lưới dữ liệu',
+    'kiểm tra phân trang',
+}
+
+def _is_main_suite(suite_name: str) -> bool:
+    """Return True if suite_name is one of the 5 main suites (green header)."""
+    return suite_name.strip().lower() in MAIN_SUITE_NAMES
+
+# Suite header formatting: light green #DAEAD0 (for main suites)
 SUITE_HEADER_FORMAT = {
     'backgroundColor': {'red': 0.855, 'green': 0.918, 'blue': 0.816},
     'textFormat': {
@@ -280,6 +298,24 @@ SUITE_HEADER_FORMAT = {
         'bottom': {'style': 'SOLID', 'color': {'red': 0.8, 'green': 0.8, 'blue': 0.8}},
         'left':   {'style': 'SOLID', 'color': {'red': 0.8, 'green': 0.8, 'blue': 0.8}},
         'right':  {'style': 'SOLID', 'color': {'red': 0.8, 'green': 0.8, 'blue': 0.8}},
+    },
+}
+
+# Field sub-suite header formatting: light gray #E8E8E8 (for "Kiểm tra trường X")
+FIELD_SUITE_HEADER_FORMAT = {
+    'backgroundColor': {'red': 0.910, 'green': 0.910, 'blue': 0.910},
+    'textFormat': {
+        'foregroundColor': {'red': 0.2, 'green': 0.2, 'blue': 0.2},
+        'bold': True,
+        'fontSize': 10,
+    },
+    'horizontalAlignment': 'LEFT',
+    'wrapStrategy': 'WRAP',
+    'borders': {
+        'top':    {'style': 'SOLID', 'color': {'red': 0.7, 'green': 0.7, 'blue': 0.7}},
+        'bottom': {'style': 'SOLID', 'color': {'red': 0.7, 'green': 0.7, 'blue': 0.7}},
+        'left':   {'style': 'SOLID', 'color': {'red': 0.7, 'green': 0.7, 'blue': 0.7}},
+        'right':  {'style': 'SOLID', 'color': {'red': 0.7, 'green': 0.7, 'blue': 0.7}},
     },
 }
 
@@ -314,14 +350,66 @@ def col_index_to_letter(index):
     return result
 
 
+VALIDATE_PARENT = 'Kiểm tra validate'
+
+
+def _is_field_subsuite(suite_name: str) -> bool:
+    """Return True if this is a per-field sub-suite inside 'Kiểm tra validate'."""
+    return not _is_main_suite(suite_name) and bool(suite_name.strip())
+
+
+def _append_suite_row(rows, suite_row_indices, suite_names_by_index, suite_name, total_columns):
+    """Helper: append one suite header row to rows and update index maps."""
+    row_idx = len(rows)
+    suite_row_indices.append(row_idx)
+    suite_names_by_index[row_idx] = suite_name
+    suite_row = [''] * total_columns
+    suite_row[0] = suite_name
+    rows.append(suite_row)
+
+
 def build_rows(test_cases, column_mapping, total_columns):
     """Build 2D array from test cases using column mapping.
-    Returns (rows, suite_row_indices, test_case_count).
+
+    Guarantees:
+    - Each unique testSuiteName appears as a header row only ONCE (dedup by name).
+    - Field sub-suites (not in MAIN_SUITE_NAMES) automatically get a green
+      'Kiểm tra validate' parent header inserted before the first field sub-suite
+      in each validate block.
+    - Test cases with the same testSuiteName that are non-contiguous are
+      grouped together: the suite header is NOT repeated; cases are placed
+      under the EXISTING header.
+
+    Returns (rows, suite_row_indices, test_case_count, suite_names_by_index).
+    suite_names_by_index: dict mapping row_index → suite_name string.
     """
+    # Step 1: pre-group test cases by suite order, preserving first-seen order
+    # This prevents duplicate headers caused by non-contiguous same-suite cases.
+    from collections import OrderedDict
+    suite_groups: OrderedDict = OrderedDict()  # suite_name → [tc, ...]
+    for tc in test_cases:
+        suite_name = tc.get('testSuiteName', '').strip()
+        if suite_name not in suite_groups:
+            suite_groups[suite_name] = []
+        suite_groups[suite_name].append(tc)
+
+    # Step 2: re-order: if any field sub-suites exist, place 'Kiểm tra validate'
+    # parent header just before the first field sub-suite group.
+    ordered_suites = list(suite_groups.keys())
+    has_field_subsuite = any(_is_field_subsuite(s) for s in ordered_suites)
+    if has_field_subsuite and VALIDATE_PARENT not in suite_groups:
+        # Find index of first field sub-suite and insert parent before it
+        insert_at = next(
+            i for i, s in enumerate(ordered_suites) if _is_field_subsuite(s)
+        )
+        ordered_suites.insert(insert_at, VALIDATE_PARENT)
+        suite_groups[VALIDATE_PARENT] = []  # empty group → header only, no test cases
+
+    # Step 3: build rows from ordered groups
     rows = []
     suite_row_indices = []
+    suite_names_by_index = {}  # row_index → suite_name
     test_case_count = 0
-    current_suite = None
 
     def make_row(field_values):
         row = [''] * total_columns
@@ -331,64 +419,64 @@ def build_rows(test_cases, column_mapping, total_columns):
                 row[col_idx] = str(value) if value is not None else ''
         return row
 
-    for tc in test_cases:
-        suite_name = tc.get('testSuiteName', '')
+    for suite_name in ordered_suites:
+        tcs = suite_groups.get(suite_name, [])
 
-        if suite_name and suite_name != current_suite:
-            current_suite = suite_name
-            suite_row_indices.append(len(rows))
-            # Suite header: put name in first column (will be merged across all columns)
-            suite_row = [''] * total_columns
-            suite_row[0] = suite_name
-            rows.append(suite_row)
+        # Emit suite header row
+        _append_suite_row(rows, suite_row_indices, suite_names_by_index, suite_name, total_columns)
 
-        # Normalize field aliases
-        steps_val = tc.get('steps') or tc.get('step') or tc.get('testSteps') or ''
-        expected_val = tc.get('expectedResults') or tc.get('expectedResult') or ''
-        summary_val = tc.get('summary') or tc.get('testObjective') or tc.get('testCaseName', '')
-        tc_name_val = tc.get('testCaseName') or tc.get('testCaseTitle') or ''
+        for tc in tcs:
+            # Normalize field aliases
+            steps_val = tc.get('steps') or tc.get('step') or tc.get('testSteps') or ''
+            expected_val = tc.get('expectedResults') or tc.get('expectedResult') or ''
+            summary_val = tc.get('summary') or tc.get('testObjective') or tc.get('testCaseName', '')
+            tc_name_val = tc.get('testCaseName') or tc.get('testCaseTitle') or ''
 
-        tc_row = make_row({
-            'testCaseName':    tc_name_val,
-            'testCaseTitle':   tc_name_val,
-            'summary':         summary_val,
-            'testObjective':   summary_val,
-            'preConditions':   tc.get('preConditions', ''),
-            'steps':           steps_val,
-            'testSteps':       steps_val,
-            'expectedResults': expected_val,
-            'expectedResult':  expected_val,
-            'result':          tc.get('result', 'PENDING'),
-            'testResults':     tc.get('testResults', ''),
-            'priority':        tc.get('priority') or tc.get('importance', ''),
-            'externalId':      tc.get('externalId', ''),
-            'testCaseId':      tc.get('testCaseId', ''),
-            'note':            tc.get('note', ''),
-            'details':         tc.get('details', ''),
-            'specTitle':       tc.get('specTitle', ''),
-            'documentId':      tc.get('documentId', ''),
-            'duration':        tc.get('duration', ''),
-            'keywords':        tc.get('keywords', ''),
-            'status':          tc.get('status', ''),
-            'executionType':   tc.get('executionType', ''),
-            'testcaseLV1':     tc.get('testcaseLV1', ''),
-            'testcaseLV2':     tc.get('testcaseLV2', ''),
-            'testcaseLV3':     tc.get('testcaseLV3', ''),
-            'actualResult':    tc.get('actualResult', ''),
-            'stepExecType':    tc.get('stepExecType', ''),
-            'attachments':     tc.get('attachments', ''),
-            'bugId':           tc.get('bugId', ''),
-        })
-        rows.append(tc_row)
-        test_case_count += 1
+            tc_row = make_row({
+                'testCaseName':    tc_name_val,
+                'testCaseTitle':   tc_name_val,
+                'summary':         summary_val,
+                'testObjective':   summary_val,
+                'preConditions':   tc.get('preConditions', ''),
+                'steps':           steps_val,
+                'testSteps':       steps_val,
+                'expectedResults': expected_val,
+                'expectedResult':  expected_val,
+                'result':          tc.get('result', 'PENDING'),
+                'testResults':     tc.get('testResults', ''),
+                'priority':        tc.get('priority') or tc.get('importance', ''),
+                'externalId':      tc.get('externalId', ''),
+                'testCaseId':      tc.get('testCaseId', ''),
+                'note':            tc.get('note', ''),
+                'details':         tc.get('details', ''),
+                'specTitle':       tc.get('specTitle', ''),
+                'documentId':      tc.get('documentId', ''),
+                'duration':        tc.get('duration', ''),
+                'keywords':        tc.get('keywords', ''),
+                'status':          tc.get('status', ''),
+                'executionType':   tc.get('executionType', ''),
+                'testcaseLV1':     tc.get('testcaseLV1', ''),
+                'testcaseLV2':     tc.get('testcaseLV2', ''),
+                'testcaseLV3':     tc.get('testcaseLV3', ''),
+                'actualResult':    tc.get('actualResult', ''),
+                'stepExecType':    tc.get('stepExecType', ''),
+                'attachments':     tc.get('attachments', ''),
+                'bugId':           tc.get('bugId', ''),
+            })
+            rows.append(tc_row)
+            test_case_count += 1
 
-    return rows, suite_row_indices, test_case_count
+    return rows, suite_row_indices, test_case_count, suite_names_by_index
 
 
-def build_format_requests(rows, suite_row_indices, start_row, sheet_id, total_columns):
-    """Build formatting requests for suite headers and test case rows."""
+def build_format_requests(rows, suite_row_indices, start_row, sheet_id, total_columns, suite_names_by_index=None):
+    """Build formatting requests for suite headers and test case rows.
+    suite_names_by_index: dict mapping row_index → suite_name (used for color selection).
+    Main suites (5 fixed names) → green. Field sub-suites → gray.
+    """
     requests = []
     suite_set = set(suite_row_indices)
+    suite_names_by_index = suite_names_by_index or {}
 
     i = 0
     while i < len(rows):
@@ -396,6 +484,9 @@ def build_format_requests(rows, suite_row_indices, start_row, sheet_id, total_co
         row_index = sheet_row - 1  # 0-based
 
         if i in suite_set:
+            # Determine color: green for main suites, gray for field sub-suites
+            suite_name = suite_names_by_index.get(i, '')
+            header_fmt = SUITE_HEADER_FORMAT if _is_main_suite(suite_name) else FIELD_SUITE_HEADER_FORMAT
             # Suite header: format + merge
             requests.append({
                 'repeatCell': {
@@ -406,7 +497,7 @@ def build_format_requests(rows, suite_row_indices, start_row, sheet_id, total_co
                         'startColumnIndex': 0,
                         'endColumnIndex': total_columns,
                     },
-                    'cell': {'userEnteredFormat': SUITE_HEADER_FORMAT},
+                    'cell': {'userEnteredFormat': header_fmt},
                     'fields': FORMAT_FIELDS,
                 }
             })
@@ -564,7 +655,7 @@ def main():
                 ).execute()
 
         # Step 3: Build test case rows
-        rows, suite_row_indices, test_case_count = build_rows(
+        rows, suite_row_indices, test_case_count, suite_names_by_index = build_rows(
             test_cases, column_mapping, total_columns
         )
 
@@ -603,7 +694,8 @@ def main():
             start_row = parse_start_row(last_updated_range)
             if start_row is not None:
                 format_requests = build_format_requests(
-                    rows, suite_row_indices, start_row, 0, total_columns
+                    rows, suite_row_indices, start_row, 0, total_columns,
+                    suite_names_by_index=suite_names_by_index,
                 )
                 for i in range(0, len(format_requests), 100):
                     chunk = format_requests[i:i + 100]

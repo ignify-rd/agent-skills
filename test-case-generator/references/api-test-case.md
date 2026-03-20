@@ -55,13 +55,26 @@ Tiết kiệm: ~1750 tokens/generation (15 SUCCESS cases × ~200 tokens - 500 ex
 
 ## R0: testSuiteName
 
-- = Level 1 node (## heading) trong mindmap
-- Force-override trong mỗi batch:
-  - BATCH 1: = tên section đang xử lý (VD: "Kiểm tra các case common", "Kiểm tra phân quyền")
-  - BATCH 2: = tên field type + field name (VD: "String : id", "Integer : isPriority", "List listPriorityLevel") HOẶC = "Kiểm tra validate" tùy project
-  - BATCH 3: = tên section đang xử lý (VD: "Kiểm tra luồng chính", "Kiểm tra chức năng chính", "Kiểm tra khi bị timeout")
+**5 tên suite cố định dùng cho API** (KHÔNG được tạo suite mới ngoài danh sách này):
+
+| Batch | testSuiteName |
+|-------|--------------|
+| BATCH 1 | `"Kiểm tra các case common"` |
+| BATCH 1 | `"Kiểm tra phân quyền"` |
+| BATCH 2 — wrapper | `"Kiểm tra validate"` _(không dùng trực tiếp, xem sub-suite bên dưới)_ |
+| BATCH 2 — per field | `"Kiểm tra trường {fieldName}"` _(VD: "Kiểm tra trường file", "Kiểm tra trường uploadType")_ |
+| BATCH 3 | `"Kiểm tra luồng chính"` |
+| BATCH 3 | `"Kiểm tra timeout"` _(chỉ khi có timeout section)_ |
+
+**Quy tắc bắt buộc:**
+- **BATCH 2**: mỗi `### {fieldName}` trong mindmap → testSuiteName = `"Kiểm tra trường {fieldName}"`
+  - `{fieldName}` = TÊN field (VD: `file`, `uploadType`, `domainType`) — KHÔNG phải type definition từ PTTK
+  - SAI: `"file: MultipartFile (Required)"`, `"String : id"`, `"Integer : isPriority"`
+  - ĐÚNG: `"Kiểm tra trường file"`, `"Kiểm tra trường id"`, `"Kiểm tra trường isPriority"`
+- **KHÔNG được tạo** suite tên mới như: "Kiểm tra bảo mật", "Kiểm tra lỗi nghiệp vụ", "Kiểm tra security", v.v.
+- **Kỹ thuật 4 (Error codes)**: testSuiteName = `"Kiểm tra luồng chính"` — KHÔNG tạo suite riêng
+- **Security tests** (XSS, SQL injection, emoji trong validate): testSuiteName = `"Kiểm tra trường {fieldName}"` — KHÔNG tạo "Kiểm tra bảo mật"
 - Nhiều APIs cùng suite name → gộp vào 1 suite, KHÔNG reset số thứ tự
-- **Luôn search catalog trước** để xem project đang dùng naming convention nào cho validate suites
 
 ## R1: externalId
 
@@ -230,26 +243,26 @@ Xem bảng mapping trong `output-format.md`.
 **Instruction thêm vào mỗi sub-batch:**
 > "Chỉ sinh test cases validate cho field: {field_name}. KHÔNG sinh cases cho các field khác hay common cases."
 
-**Force-override:** `testSuiteName` = tên field type + field name (VD: `"String : id"`) HOẶC `"Kiểm tra validate"` — tùy convention trong catalog
+**Force-override:** `testSuiteName` = `"Kiểm tra trường {fieldName}"` — lấy tên field (KHÔNG dùng type definition từ PTTK)
 
-**testCaseName format:** `"Validate_{mô tả}"` (VD: `"Validate_Kiểm tra truyền id là mảng"`)
+**testCaseName format:** `"{fieldName}_{mô tả}"` (VD: `"id_Kiểm tra bỏ trống"`, `"file_Truyền sai định dạng"`)
 
 **Ví dụ sub-batch cho field "id" (string):**
 ```json
 [
   {
-    "testSuiteName": "String : id",
-    "testCaseName": "Validate_Kiểm tra bỏ trống id",
+    "testSuiteName": "Kiểm tra trường id",
+    "testCaseName": "id_Kiểm tra bỏ trống",
     ...
   },
   {
-    "testSuiteName": "String : id",
-    "testCaseName": "Validate_Kiểm tra truyền id = null",
+    "testSuiteName": "Kiểm tra trường id",
+    "testCaseName": "id_Kiểm tra truyền null",
     ...
   },
   {
-    "testSuiteName": "String : id",
-    "testCaseName": "Validate_Kiểm tra truyền id 101 ký tự",
+    "testSuiteName": "Kiểm tra trường id",
+    "testCaseName": "id_Truyền 101 ký tự",
     ...
   }
 ]
@@ -468,3 +481,103 @@ Mỗi string field cần cover các cases:
 | Object | `{}` | Status 200, error |
 | XSS | `<script>alert(1)</script>` | Status 200, error |
 | SQL Injection | `' OR 1=1--` | Status 200, error |
+
+---
+
+## Standard Validate Cases cho Number/Integer Field
+
+Mỗi Number/Integer field cần cover các cases:
+
+| Case | step | expectedResult |
+|------|------|----------------|
+| Để trống (required) | Bỏ trống field | Status 200, error message |
+| Không truyền (required) | Không truyền field trong body | Status 200, error message |
+| Truyền null | `"field": null` | Theo RSD |
+| Số âm | Truyền `-1` | Status 200, error |
+| Số thập phân | Truyền `1.5` | Status 200, error |
+| Leading zero | Truyền `00123` | Status 200, error |
+| Số quá lớn vượt giới hạn Integer | Truyền số rất lớn | Status 200, error |
+| Chuỗi ký tự | `"abc"` | Status 200, error |
+| Chuỗi chữ lẫn số | `"10abc000"` | Status 200, error |
+| Ký tự đặc biệt | `@#$%, *, -, +` | Status 200, error |
+| All space | `"   "` | Status 200, error |
+| Space đầu/cuối | `" 123 "` | Status 200, error |
+| Boolean | `true` / `false` | Status 200, error |
+| XSS | `<script>alert(1)</script>` | Status 200, error |
+| SQL Injection | `' OR 1=1--` | Status 200, error |
+| Object | `{}` | Status 200, error |
+| Array | `[]` | Status 200, error |
+
+---
+
+## Standard Validate Cases cho Date Field
+
+Mỗi Date field cần cover các cases (format mặc định: `dd/MM/yyyy`):
+
+| Case | step | expectedResult |
+|------|------|----------------|
+| Để trống (required) | Bỏ trống field | Status 200, error message |
+| Không truyền (required) | Không truyền field trong body | Status 200, error message |
+| Truyền null | `"field": null` | Theo RSD |
+| Đúng định dạng | Truyền `25/12/2024` | Status 200, success |
+| Sai định dạng | Truyền `yyyy/dd/MM` thay vì `dd/MM/yyyy` | Status 200, error |
+| Chuỗi không phải ngày | `"abc123"` | Status 200, error |
+| Ngày không tồn tại | `30/02/2025`, `32/01/2025` | Status 200, error |
+| Ngày quá khứ | `01/01/2020` | Theo RSD (allowed/not allowed) |
+| Ngày hiện tại | Today | Theo RSD |
+| Ngày tương lai | `31/12/2099` | Theo RSD (allowed/not allowed) |
+| Số nguyên | `20241225` | Status 200, error |
+| XSS | `<script>alert(1)</script>` | Status 200, error |
+| SQL Injection | `' OR 1=1--` | Status 200, error |
+| Object | `{}` | Status 200, error |
+| Array | `[]` | Status 200, error |
+
+**Lưu ý:** Nếu RSD quy định constraint ngày quá khứ/hiện tại/tương lai (VD: không được chọn ngày quá khứ), adjust expectedResult theo đúng constraint đó.
+
+---
+
+## Standard Validate Cases cho DateTime Field
+
+Mỗi DateTime field cần cover các cases (format mặc định: `dd/MM/yyyy HH:mm:ss`):
+
+| Case | step | expectedResult |
+|------|------|----------------|
+| Để trống (required) | Bỏ trống field | Status 200, error message |
+| Không truyền (required) | Không truyền field trong body | Status 200, error message |
+| Truyền null | `"field": null` | Theo RSD |
+| Đúng định dạng | Truyền `25/12/2024 14:30:45` | Status 200, success |
+| Sai định dạng ngày | Truyền `yyyy/dd/MM HH:mm:ss` | Status 200, error |
+| Sai định dạng giờ | Truyền `25/12/2024 25:70:90` | Status 200, error |
+| Chỉ có ngày không có giờ | `25/12/2024` | Status 200, error |
+| Chuỗi không phải ngày giờ | `"abc123"` | Status 200, error |
+| Ngày không tồn tại | `30/02/2025 14:30:45` | Status 200, error |
+| Ngày giờ quá khứ | `01/01/2020 10:00:00` | Theo RSD (allowed/not allowed) |
+| Ngày giờ hiện tại | Now | Theo RSD |
+| Ngày giờ tương lai | `31/12/2099 23:59:59` | Theo RSD (allowed/not allowed) |
+| Số nguyên | `20241225` | Status 200, error |
+| XSS | `<script>alert(1)</script>` | Status 200, error |
+| SQL Injection | `' OR 1=1--` | Status 200, error |
+| Object | `{}` | Status 200, error |
+| Array | `[]` | Status 200, error |
+
+---
+
+## Standard Validate Cases cho Array Field
+
+Mỗi Array field cần cover các cases:
+
+| Case | step | expectedResult |
+|------|------|----------------|
+| Không truyền (required) | Không truyền field trong body | Status 200, error message |
+| Truyền null | `"field": null` | Theo RSD |
+| Mảng rỗng | `[]` | Status 200, error |
+| Phần tử rỗng trong mảng | `[{}]` | Status 200, error |
+| String thay vì array | `"field": "abc"` | Status 200, error |
+| Number thay vì array | `"field": 123` | Status 200, error |
+| Object thay vì array | `"field": {}` | Status 200, error |
+| Boolean thay vì array | `"field": true` | Status 200, error |
+| XSS | `<script>alert(1)</script>` | Status 200, error |
+| SQL Injection | `' OR 1=1--` | Status 200, error |
+
+**Lưu ý:** Với Array field có child fields, sinh thêm validate cases cho từng child field riêng (mỗi child field = 1 sub-suite `"Kiểm tra trường {childFieldName}"`).
+
