@@ -54,7 +54,13 @@ function installSkills(ai) {
 }
 
 export function updateSkills(options = {}) {
-  const ai = options.ai || 'claude';
+  const ai = options.ai;
+
+  if (!ai) {
+    logger.error('Missing required option: --ai <name>');
+    logger.dim(`Supported: ${SUPPORTED_AI.join(', ')}`);
+    process.exit(1);
+  }
 
   if (!SUPPORTED_AI.includes(ai)) {
     logger.error(`Unknown AI type: "${ai}". Supported: ${SUPPORTED_AI.join(', ')}`);
@@ -79,9 +85,16 @@ export function updateSkills(options = {}) {
 }
 
 export async function initCommand(options = {}) {
-  const ai = options.ai || 'claude';
+  const ai = options.ai;
 
   logger.title('test-genie Installer');
+
+  if (!ai) {
+    logger.error('Missing required option: --ai <name>');
+    logger.dim(`Supported: ${SUPPORTED_AI.join(', ')}`);
+    logger.dim('Example: test-genie init --ai cursor');
+    process.exit(1);
+  }
 
   if (!SUPPORTED_AI.includes(ai)) {
     logger.error(`Unknown AI type: "${ai}". Supported: ${SUPPORTED_AI.join(', ')}`);
