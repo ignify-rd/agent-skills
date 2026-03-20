@@ -118,14 +118,54 @@ Apply these checks on the **first 10 lines** of the mindmap:
 
 **Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
 
-Resolve the skill scripts path. Scripts are installed alongside this SKILL.md file:
+#### Resolve SKILL_SCRIPTS path
 
+Scripts are installed alongside this SKILL.md file in a `scripts/` subdirectory. Try these methods in order:
+
+**Method 1 — Recursive find from project root:**
 ```bash
-# Priority 1: Project-local skills (created by test-genie init)
-SKILL_SCRIPTS=$(find . .claude .cursor .windsurf .roo .kiro .gemini .agent -name "search.py" -path "*/test-case-generator/*" 2>/dev/null | head -1 | xargs dirname)
-
-echo $SKILL_SCRIPTS
+SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-case-generator/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
 ```
+
+**Method 2 — Direct path check (if Method 1 returns empty):**
+```bash
+for d in \
+  ".claude/skills/test-case-generator/scripts" \
+  ".cursor/skills/test-case-generator/scripts" \
+  ".windsurf/skills/test-case-generator/scripts" \
+  ".roo/skills/test-case-generator/scripts" \
+  ".kiro/skills/test-case-generator/scripts"; do
+  [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
+done
+echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
+```
+
+**Method 3 — Global npm (if Method 2 returns empty):**
+```bash
+npm_root=$(npm root -g 2>/dev/null)
+[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-case-generator/scripts/search.py" ] && \
+  SKILL_SCRIPTS="$npm_root/test-genie/test-case-generator/scripts"
+```
+
+**Method 4 — CRITICAL FALLBACK (if all above fail): Read reference files directly**
+
+If `SKILL_SCRIPTS` is still empty after all methods, **DO NOT skip loading references**. Instead, read the reference files directly using the Read tool (or equivalent file reading capability):
+
+```
+READ: <skills-dir>/test-case-generator/references/priority-rules.md
+READ: <skills-dir>/test-case-generator/references/quality-rules.md
+READ: <skills-dir>/test-case-generator/references/output-format.md
+READ: <skills-dir>/test-case-generator/references/api-test-case.md      (API mode only)
+READ: <skills-dir>/test-case-generator/references/fe-test-case.md        (Frontend mode only)
+```
+
+Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is found. Try common paths:
+- `.claude/skills/`
+- `.cursor/skills/`
+- `.windsurf/skills/`
+
+**⚠️ NEVER proceed without loading references.** The output-format and mode-specific rules are mandatory. If you truly cannot find any reference file, inform the user: "Không tìm thấy skill scripts. Bạn có thể chạy `test-genie init` để khởi tạo lại không?"
 
 **Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
 
@@ -133,19 +173,19 @@ echo $SKILL_SCRIPTS
 
 **Always load first (both modes):**
 ```bash
-python <skills-root>/test-case-generator/scripts/search.py --ref priority-rules
-python <skills-root>/test-case-generator/scripts/search.py --ref output-format
-python <skills-root>/test-case-generator/scripts/search.py --ref quality-rules
+python $SKILL_SCRIPTS/search.py --ref priority-rules
+python $SKILL_SCRIPTS/search.py --ref output-format
+python $SKILL_SCRIPTS/search.py --ref quality-rules
 ```
 
 **API mode — load this only:**
 ```bash
-python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case
+python $SKILL_SCRIPTS/search.py --ref api-test-case
 ```
 
 **Frontend mode — load this only:**
 ```bash
-python <skills-root>/test-case-generator/scripts/search.py --ref fe-test-case
+python $SKILL_SCRIPTS/search.py --ref fe-test-case
 ```
 
 > **Why lazy-load?** Loading all references regardless of mode wastes tokens on rules that won't be used. Only load what the detected mode requires.
@@ -154,19 +194,19 @@ python <skills-root>/test-case-generator/scripts/search.py --ref fe-test-case
 
 ```bash
 # Search API examples (searches catalog/api/ in project root)
-python <skills-root>/test-case-generator/scripts/search.py "search list validate" --domain api
+python $SKILL_SCRIPTS/search.py "search list validate" --domain api
 
 # Search Frontend examples (searches catalog/frontend/ in project root)
-python <skills-root>/test-case-generator/scripts/search.py "giao dien chung phan quyen" --domain frontend
+python $SKILL_SCRIPTS/search.py "giao dien chung phan quyen" --domain frontend
 
 # List all available references
-python <skills-root>/test-case-generator/scripts/search.py --list-refs
+python $SKILL_SCRIPTS/search.py --list-refs
 
 # List all available examples
-python <skills-root>/test-case-generator/scripts/search.py --list
+python $SKILL_SCRIPTS/search.py --list
 
 # Read full content of top match
-python <skills-root>/test-case-generator/scripts/search.py "validate string field" --domain api --full
+python $SKILL_SCRIPTS/search.py "validate string field" --domain api --full
 ```
 
 ### Step 4: Read the Mindmap
@@ -219,6 +259,91 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - Priority rules already define the answer (e.g., PTTK wins for field definitions)
 - Mindmap is clear and matches RSD/PTTK
 
+### Step 5c: Business Logic Extraction — Inventory
+
+**Before generating any test cases**, read RSD/PTTK và extract toàn bộ business logic thành structured inventory. Đây là checklist bắt buộc — mọi item phải có ≥1 test case trong luồng chính.
+
+Output dưới dạng internal JSON (không show cho user):
+
+```json
+{
+  "apiName": "string — tên API",
+  "endpoint": "METHOD /path",
+  "errorCodes": [
+    {
+      "code": "PCER_UPLOAD_001",
+      "desc": "exact message từ RSD — copy nguyên văn",
+      "triggerCondition": "điều kiện cụ thể để trigger lỗi này"
+    }
+  ],
+  "businessRules": [
+    {
+      "id": "BR1",
+      "type": "branch",
+      "condition": "uploadType = 1",
+      "trueBranch": "INSERT vào PROMOTION_CUSTOMER_PENDING với action=ADD",
+      "falseBranch": null
+    },
+    {
+      "id": "BR2",
+      "type": "branch",
+      "condition": "uploadType = 2",
+      "trueBranch": "INSERT vào PROMOTION_CUSTOMER_PENDING với action=DELETE",
+      "falseBranch": null
+    },
+    {
+      "id": "BR3",
+      "type": "condition",
+      "condition": "rows > PROMO_CUS_MAX_ROW",
+      "effect": "error PCER_UPLOAD_003"
+    }
+  ],
+  "modes": [
+    { "name": "Thêm mới", "triggerValue": "uploadType=1", "expectedAction": "INSERT pending records" },
+    { "name": "Xoá", "triggerValue": "uploadType=2", "expectedAction": "mark for deletion" }
+  ],
+  "dbOperations": [
+    {
+      "table": "PROMOTION_CUSTOMER_PENDING",
+      "operation": "INSERT",
+      "when": "upload thành công",
+      "fieldsToVerify": ["UPLOAD_TYPE", "DOMAIN_TYPE", "FEE_SERVICE", "STATUS", "FILE_NAME", "BATCH_ID"]
+    }
+  ],
+  "externalServices": [
+    {
+      "name": "S3",
+      "callPoint": "sau khi validate file thành công",
+      "onSuccess": "lưu file, tiếp tục insert DB",
+      "onFailure": "error code theo RSD (vd: code=2)",
+      "onTimeout": "error code theo RSD"
+    }
+  ],
+  "statusTransitions": [
+    { "from": "N/A", "to": "WAITING_PREVIEW (1)", "trigger": "upload thành công" }
+  ],
+  "decisionCombinations": [
+    { "conditions": {"uploadType": 1, "domainType": "1", "feeServiceExists": true}, "expected": "success" },
+    { "conditions": {"uploadType": 1, "domainType": "1", "feeServiceExists": false}, "expected": "PCER_009" },
+    { "conditions": {"uploadType": 2, "domainType": "2", "feeServiceExists": true}, "expected": "success delete" }
+  ]
+}
+```
+
+**Hướng dẫn extract từng mục:**
+
+| Mục | Lấy từ đâu trong RSD/PTTK | Lưu ý |
+|-----|--------------------------|-------|
+| `errorCodes[]` | Bảng mã lỗi | Copy **exact** message, không paraphrase |
+| `businessRules[]` | Mô tả luồng xử lý, điều kiện if/else | Mỗi nhánh = 1 rule riêng |
+| `modes[]` | Các mode/loại hoạt động của API | Ví dụ: create/update/delete/search |
+| `dbOperations[]` | Mô tả ghi DB, stored procedure, table mapping | List **tất cả fields** cần verify |
+| `externalServices[]` | Tích hợp S3, queue, third-party | Phải có onFailure behavior |
+| `statusTransitions[]` | Status field, flow diagram | Valid + invalid transitions |
+| `decisionCombinations[]` | Khi ≥2 conditions cùng ảnh hưởng output | Prune impossible combos |
+
+**⚠️ CRITICAL:** Không được sinh test cases cho đến khi extraction JSON hoàn chỉnh. Đây là checklist sẽ dùng để verify coverage ở Step 6b.
+
 ### Step 6: Generate Test Cases in Batches
 
 Split mindmap into 3 batches, process sequentially:
@@ -250,6 +375,85 @@ Split mindmap into 3 batches, process sequentially:
 **After all batches:** Deduplicate testCaseNames (case-insensitive, keep first occurrence).
 
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
+
+### Step 6b: Traceability Check — Coverage Verification
+
+**After all batches generated, before saving:** Cross-check against the inventory JSON from Step 5c. Dùng checklist dưới đây — tick ✓ từng item, ghi rõ test case nào cover nó. Item nào chưa có → **append ngay**, không hỏi user.
+
+#### API Mode — Traceability Matrix
+
+**A. Error Code Coverage**
+```
+Với mỗi item trong errorCodes[]:
+  → Tìm test case có expectedResult chứa "poErrorCode": "{code}" với exact message
+  → Nếu không có: APPEND test case "Lỗi nghiệp vụ_{code}_{desc ngắn}"
+```
+
+**B. Business Rule Coverage**
+```
+Với mỗi item trong businessRules[]:
+  → type="branch": cần 2 test cases (trueBranch + falseBranch, nếu có)
+  → type="condition": cần 1 test case trigger condition đó
+  → Nếu thiếu: APPEND vào suite "Kiểm tra luồng chính"
+```
+
+**C. Mode Coverage**
+```
+Với mỗi item trong modes[]:
+  → Cần ≥1 happy path test case cho mode đó
+  → Nếu thiếu: APPEND happy path
+```
+
+**D. DB Operation Coverage**
+```
+Với mỗi item trong dbOperations[]:
+  → Cần ≥1 test case verify DB sau khi operation thành công
+  → Test case phải có SQL SELECT với concrete values trong expectedResult
+  → Nếu thiếu: APPEND test case "DB_{table}_{operation}"
+```
+
+**E. External Service Coverage**
+```
+Với mỗi item trong externalServices[]:
+  → Cần: 1 test success (đã cover ở happy path)
+  → Cần: 1 test onFailure (service unavailable/error)
+  → Cần: 1 test onTimeout (nếu RSD đề cập timeout behavior)
+  → Nếu thiếu: APPEND các test này vào suite "Kiểm tra luồng chính"
+```
+
+**F. Status Transition Coverage**
+```
+Với mỗi item trong statusTransitions[]:
+  → Cần: 1 test valid transition (trigger đúng điều kiện → status đổi đúng)
+  → Cần: 1 test invalid transition (từ sai state → error)
+  → Nếu thiếu: APPEND
+```
+
+**G. Decision Combination Coverage**
+```
+Với mỗi item trong decisionCombinations[]:
+  → Cần: 1 test case với exact combination đó
+  → Nếu thiếu: APPEND
+```
+
+#### Cách thực hiện
+
+1. Lấy inventory JSON từ Step 5c
+2. Duyệt từng mục A→G theo thứ tự
+3. Tìm test case tương ứng trong danh sách đã sinh
+4. Nếu thiếu → sinh ngay và append vào đúng suite
+5. Báo cáo gap summary (không hỏi user, tự xử lý):
+
+```
+Coverage check:
+✓ Error codes:    6/6 covered
+✓ Business rules: 4/4 covered (BR1: TC_x, BR2: TC_y, ...)
+✗ DB operations:  1/2 covered — APPEND: "DB_FILE_STORAGE_INSERT"
+✗ External:       0/1 covered — APPEND: "S3_timeout", "S3_unavailable"
+→ Đã append 3 test cases.
+```
+
+> **Target:** Mọi item trong inventory đều có ít nhất 1 test case. 5% còn lại là undocumented implicit behaviors — chấp nhận được.
 
 ### Step 7: Output to JSON File
 

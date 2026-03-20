@@ -95,14 +95,54 @@ Apply these regex/keyword checks on the RSD **before** asking LLM:
 
 **Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
 
-Resolve the skill scripts path. Scripts are installed alongside this SKILL.md file:
+#### Resolve SKILL_SCRIPTS path
 
+Scripts are installed alongside this SKILL.md file in a `scripts/` subdirectory. Try these methods in order:
+
+**Method 1 — Recursive find from project root:**
 ```bash
-# Priority 1: Project-local skills (created by test-genie init)
-SKILL_SCRIPTS=$(find . .claude .cursor .windsurf .roo .kiro .gemini .agent -name "search.py" -path "*/test-design-generator/*" 2>/dev/null | head -1 | xargs dirname)
-
-echo $SKILL_SCRIPTS
+SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-design-generator/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
 ```
+
+**Method 2 — Direct path check (if Method 1 returns empty):**
+```bash
+for d in \
+  ".claude/skills/test-design-generator/scripts" \
+  ".cursor/skills/test-design-generator/scripts" \
+  ".windsurf/skills/test-design-generator/scripts" \
+  ".roo/skills/test-design-generator/scripts" \
+  ".kiro/skills/test-design-generator/scripts"; do
+  [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
+done
+echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
+```
+
+**Method 3 — Global npm (if Method 2 returns empty):**
+```bash
+npm_root=$(npm root -g 2>/dev/null)
+[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-design-generator/scripts/search.py" ] && \
+  SKILL_SCRIPTS="$npm_root/test-genie/test-design-generator/scripts"
+```
+
+**Method 4 — CRITICAL FALLBACK (if all above fail): Read reference files directly**
+
+If `SKILL_SCRIPTS` is still empty after all methods, **DO NOT skip loading references**. Instead, read the reference files directly using the Read tool (or equivalent file reading capability):
+
+```
+READ: <skills-dir>/test-design-generator/references/priority-rules.md
+READ: <skills-dir>/test-design-generator/references/quality-rules.md
+READ: <skills-dir>/test-design-generator/references/api-test-design.md      (API mode only)
+READ: <skills-dir>/test-design-generator/references/frontend-test-design.md  (Frontend mode only)
+READ: <skills-dir>/test-design-generator/references/field-templates.md       (Frontend mode only)
+```
+
+Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is found. Try common paths:
+- `.claude/skills/`
+- `.cursor/skills/`
+- `.windsurf/skills/`
+
+**⚠️ NEVER proceed without loading references.** The format template in `api-test-design.md` is mandatory — without it the output will be in wrong format. If you truly cannot find any reference file, inform the user: "Không tìm thấy skill scripts. Bạn có thể chạy `test-genie init` để khởi tạo lại không?"
 
 **Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
 
@@ -110,19 +150,19 @@ echo $SKILL_SCRIPTS
 
 **Always load first (both modes):**
 ```bash
-python <skills-root>/test-design-generator/scripts/search.py --ref priority-rules
-python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
+python $SKILL_SCRIPTS/search.py --ref priority-rules
+python $SKILL_SCRIPTS/search.py --ref quality-rules
 ```
 
-**API mode — load these only:**
+**API mode — load this only:**
 ```bash
-python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design
+python $SKILL_SCRIPTS/search.py --ref api-test-design
 ```
 
 **Frontend mode — load these only:**
 ```bash
-python <skills-root>/test-design-generator/scripts/search.py --ref frontend-test-design
-python <skills-root>/test-design-generator/scripts/search.py --ref field-templates
+python $SKILL_SCRIPTS/search.py --ref frontend-test-design
+python $SKILL_SCRIPTS/search.py --ref field-templates
 ```
 
 > **Why lazy-load?** Loading all references regardless of mode wastes 30-50% tokens on rules that won't be used. Only load what the detected mode requires.
@@ -131,22 +171,22 @@ python <skills-root>/test-design-generator/scripts/search.py --ref field-templat
 
 ```bash
 # Search API examples by keyword (searches catalog/api/ in project root)
-python <skills-root>/test-design-generator/scripts/search.py "search list api" --domain api
+python $SKILL_SCRIPTS/search.py "search list api" --domain api
 
 # Search Frontend examples (searches catalog/frontend/ in project root)
-python <skills-root>/test-design-generator/scripts/search.py "danh sach list screen" --domain frontend
+python $SKILL_SCRIPTS/search.py "danh sach list screen" --domain frontend
 
 # Search format rules (skill-bundled, not in project catalog)
-python <skills-root>/test-design-generator/scripts/search.py "common section status" --domain rules
+python $SKILL_SCRIPTS/search.py "common section status" --domain rules
 
 # List all available references
-python <skills-root>/test-design-generator/scripts/search.py --list-refs
+python $SKILL_SCRIPTS/search.py --list-refs
 
 # List all available examples
-python <skills-root>/test-design-generator/scripts/search.py --list
+python $SKILL_SCRIPTS/search.py --list
 
 # Read full content of top match
-python <skills-root>/test-design-generator/scripts/search.py "export excel" --domain api --full
+python $SKILL_SCRIPTS/search.py "export excel" --domain api --full
 ```
 
 ### Step 3: Read the Top-Matching Example
