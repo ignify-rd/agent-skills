@@ -53,6 +53,31 @@ function installSkills(ai) {
   }
 }
 
+export function updateSkills(options = {}) {
+  const ai = options.ai || 'claude';
+
+  if (!SUPPORTED_AI.includes(ai)) {
+    logger.error(`Unknown AI type: "${ai}". Supported: ${SUPPORTED_AI.join(', ')}`);
+    process.exit(1);
+  }
+
+  logger.info('Updating skills...');
+  console.log();
+
+  if (ai === 'all') {
+    for (const name of Object.keys(AI_CONFIGS)) {
+      installSkills(name);
+    }
+    installSkills('codex');
+  } else {
+    installSkills(ai);
+  }
+
+  console.log();
+  logger.success('Skills updated successfully!');
+  console.log();
+}
+
 export async function initCommand(options = {}) {
   const ai = options.ai || 'claude';
 

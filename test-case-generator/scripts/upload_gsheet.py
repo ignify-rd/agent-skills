@@ -337,7 +337,10 @@ def build_rows(test_cases, column_mapping, total_columns):
         if suite_name and suite_name != current_suite:
             current_suite = suite_name
             suite_row_indices.append(len(rows))
-            rows.append(make_row({'testSuiteName': suite_name}))
+            # Suite header: put name in first column (will be merged across all columns)
+            suite_row = [''] * total_columns
+            suite_row[0] = suite_name
+            rows.append(suite_row)
 
         # Normalize field aliases
         steps_val = tc.get('steps') or tc.get('step') or tc.get('testSteps') or ''
