@@ -118,15 +118,22 @@ Apply these checks on the **first 10 lines** of the mindmap:
 
 **Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
 
-Use the installed skill path for your assistant:
-- Claude: find with `find ~/.claude -name "search.py" -path "*/test-case-generator/*" 2>/dev/null | head -1`
-- Cursor: find with `find ~/.cursor -name "search.py" -path "*/test-case-generator/*" 2>/dev/null | head -1`
-- Or use: `node -e "require('child_process').execSync('npm root -g', {encoding:'utf8'}).trim() + '/test-genie/test-case-generator/scripts/search.py'" 2>/dev/null`
+Resolve the skill scripts path. Scripts are installed alongside this SKILL.md file:
 
-**Shortcut** — resolve script path automatically:
 ```bash
-SKILL_SCRIPTS=$(node -e "const p=require('child_process').execSync('npm root -g',{encoding:'utf8'}).trim(); console.log(p+'/test-genie/test-case-generator/scripts')" 2>/dev/null \
-  || find ~/.claude ~/.cursor -name "search.py" -path "*/test-case-generator/*" 2>/dev/null | head -1 | xargs dirname)
+# Priority 1: Project-local skills (created by test-genie init)
+SKILL_SCRIPTS=$(find . .claude .cursor .windsurf .roo .kiro .gemini .agent -name "search.py" -path "*/test-case-generator/*" 2>/dev/null | head -1 | xargs dirname)
+
+# Priority 2: Global npm install
+if [ -z "$SKILL_SCRIPTS" ]; then
+  SKILL_SCRIPTS=$(node -e "const p=require('child_process').execSync('npm root -g',{encoding:'utf8'}).trim(); console.log(p+'/test-genie/test-case-generator/scripts')" 2>/dev/null)
+fi
+
+# Priority 3: Home directory fallback
+if [ -z "$SKILL_SCRIPTS" ] || [ ! -d "$SKILL_SCRIPTS" ]; then
+  SKILL_SCRIPTS=$(find ~/.claude ~/.cursor -name "search.py" -path "*/test-case-generator/*" 2>/dev/null | head -1 | xargs dirname)
+fi
+
 echo $SKILL_SCRIPTS
 ```
 
