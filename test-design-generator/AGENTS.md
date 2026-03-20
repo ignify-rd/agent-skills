@@ -2,7 +2,7 @@
 
 Rules that override default behavior. Loaded automatically by AI agents.
 
-> **Per-project override:** Projects can have their own `AGENTS.md` at the project root. Any rule defined there completely replaces the corresponding rule here. See SKILL.md "Rule Override Hierarchy" for details.
+> **Per-project override:** Projects can have their own `AGENTS.md` at the project root. Rules defined there are **merged** with these defaults — only sections explicitly defined in project `AGENTS.md` override the corresponding defaults here. Sections not mentioned fall back to these skill-level defaults.
 
 ## Input Priority (PTTK vs RSD)
 
