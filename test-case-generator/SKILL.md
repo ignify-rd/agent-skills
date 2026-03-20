@@ -297,66 +297,49 @@ cat > "<tên-test-case>/test-cases.json" << 'EOF'
 EOF
 ```
 
-#### 7c: Return Result
+#### 7c: Upload to Google Sheets (automatic)
 
-```
-Đã lưu {testCaseCount} test cases tại `<tên-test-case>/test-cases.json`.
-Suites: {suiteCount} | Test cases: {testCaseCount}
-Để upload lên Google Sheets, chạy: python <skills-root>/test-case-generator/scripts/upload_gsheet.py <tên-test-case>
-```
+After saving `test-cases.json`, **automatically** upload to Google Sheets. Do NOT stop and ask the user — run upload immediately.
 
-### Upload to Google Sheets (separate command)
-
-After generating `test-cases.json`, upload to Google Sheets using:
-
+**Pre-check (one-time):** If `excel_template/structure.json` does not exist, extract it first:
 ```bash
-python <skills-root>/test-case-generator/scripts/upload_gsheet.py <tên-test-case>
+python $SKILL_SCRIPTS/extract_structure.py --project-root .
 ```
 
-**Prerequisites:**
+**Upload:**
+```bash
+python $SKILL_SCRIPTS/upload_gsheet.py <tên-test-case> --project-root .
+```
+
+**Prerequisites** (install if missing):
 ```bash
 pip install google-auth-oauthlib google-auth google-api-python-client openpyxl
 ```
 
-Place `credentials.json` (OAuth Desktop App / installed type) at project root. First run will open a browser for authentication — token is cached at `~/.config/test-genie/token.json`.
+First run will open a browser for OAuth authentication — token is cached at `~/.config/test-genie/token.json` for reuse. Credentials fallback to bundled test-genie OAuth credentials if user's `credentials.json` is missing or invalid.
 
-**Extract template structure (one-time setup):**
-```bash
-python <skills-root>/test-case-generator/scripts/extract_structure.py
+#### 7d: Return Result
+
+Report both JSON file and Google Sheets link:
+
 ```
-This reads `excel_template/template.xlsx` and outputs `excel_template/structure.json`.
-
-**Upload test cases:**
-```bash
-python <skills-root>/test-case-generator/scripts/upload_gsheet.py <tên-test-case> \
-  [--title "Custom Title"] \
-  [--credentials credentials.json]
+Đã lưu {testCaseCount} test cases tại `<tên-test-case>/test-cases.json`.
+Suites: {suiteCount} | Test cases: {testCaseCount}
+Google Sheets: {spreadsheetUrl}
 ```
 
-Output:
-```json
-{
-  "success": true,
-  "spreadsheetId": "1abc...",
-  "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1abc.../edit",
-  "title": "TC_Ten_chuc_nang_200326",
-  "rowsWritten": 75,
-  "suiteCount": 5,
-  "testCaseCount": 70
-}
+If upload fails, still report the JSON file and show the error:
 ```
-
-This script:
-- Creates a new Google Sheets with template header rows + formatting (from `structure.json`)
-- Writes test case data with suite headers (light green, bold, merged) and test case rows (white, wrap text)
-- Shares the file with "anyone" as editor
-- Returns the spreadsheet URL
+Đã lưu {testCaseCount} test cases tại `<tên-test-case>/test-cases.json`.
+Upload Google Sheets thất bại: {error}
+Để upload thủ công: python $SKILL_SCRIPTS/upload_gsheet.py <tên-test-case>
+```
 
 #### Upload Troubleshooting
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
-| `credentials.json not found` | File chưa có ở project root | Đặt file vào project root hoặc dùng `--credentials path/to/file.json` |
+| `credentials.json not found` | File chưa có ở project root | Script tự dùng bundled credentials. Hoặc đặt file vào project root |
 | `Missing dependencies` | Chưa cài thư viện | Chạy `pip install google-auth-oauthlib google-auth google-api-python-client` |
 | `structure.json not found` | Chưa extract template | Chạy `python extract_structure.py` |
 | Browser không mở | First-time auth trên server | Dùng `--no-browser` hoặc copy URL thủ công |
