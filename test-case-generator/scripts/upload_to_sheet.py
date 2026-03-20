@@ -102,7 +102,7 @@ TEST_CASE_FORMAT = {
     },
 }
 
-FORMAT_FIELDS = 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,wrapStrategy,borders)'
+FORMAT_FIELDS = 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy,borders)'
 
 
 def find_credentials(provided_path=None):
@@ -167,20 +167,30 @@ def build_rows(test_cases, column_mapping, total_columns):
             rows.append(make_row({'testSuiteName': suite_name}))
 
         # Build test case row
+        # Normalize field aliases first so column mapping works regardless of key name used
+        steps_val = tc.get('steps') or tc.get('step') or tc.get('testSteps') or ''
+        expected_val = tc.get('expectedResults') or tc.get('expectedResult') or ''
+        summary_val = tc.get('summary') or tc.get('testObjective') or tc.get('testCaseName', '')
+        tc_name_val = tc.get('testCaseName') or tc.get('testCaseTitle') or ''
+
         tc_row = make_row({
-            'testCaseName':    tc.get('testCaseName', ''),
-            'summary':         tc.get('summary') or tc.get('testCaseName', ''),
+            'testCaseName':    tc_name_val,
+            'testCaseTitle':   tc_name_val,
+            'summary':         summary_val,
+            'testObjective':   summary_val,
             'preConditions':   tc.get('preConditions', ''),
-            'steps':           tc.get('steps') or tc.get('step', ''),
-            'testSteps':       tc.get('testSteps') or tc.get('steps') or tc.get('step', ''),
-            'expectedResults': tc.get('expectedResults') or tc.get('expectedResult', ''),
-            'expectedResult':  tc.get('expectedResult') or tc.get('expectedResults', ''),
+            'steps':           steps_val,
+            'testSteps':       steps_val,
+            'expectedResults': expected_val,
+            'expectedResult':  expected_val,
             'result':          tc.get('result', 'PENDING'),
+            'testResults':     tc.get('testResults', ''),
             'importance':      tc.get('importance', ''),
             'priority':        tc.get('priority') or tc.get('importance', ''),
             'externalId':      tc.get('externalId', ''),
             'testCaseId':      tc.get('testCaseId', ''),
             'note':            tc.get('note', ''),
+            'notes':           tc.get('note', ''),
             'details':         tc.get('details', ''),
             'specTitle':       tc.get('specTitle', ''),
             'documentId':      tc.get('documentId', ''),
@@ -191,8 +201,10 @@ def build_rows(test_cases, column_mapping, total_columns):
             'testcaseLV1':     tc.get('testcaseLV1', ''),
             'testcaseLV2':     tc.get('testcaseLV2', ''),
             'testcaseLV3':     tc.get('testcaseLV3', ''),
-            'testCaseTitle':   tc.get('testCaseTitle') or tc.get('testCaseName', ''),
-            'testObjective':   tc.get('testObjective') or tc.get('summary', ''),
+            'actualResult':    tc.get('actualResult', ''),
+            'stepExecType':    tc.get('stepExecType', ''),
+            'attachments':     tc.get('attachments', ''),
+            'bugId':           tc.get('bugId', ''),
         })
         rows.append(tc_row)
         test_case_count += 1

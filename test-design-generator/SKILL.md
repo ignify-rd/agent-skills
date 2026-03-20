@@ -36,7 +36,7 @@ Rules are resolved in this order (highest priority first):
 3. **Skill references** — `references/*.md` (detailed rules, managed by dev team)
 4. **This SKILL.md** — workflow instructions (lowest priority, never overridden)
 
-When the project has its own `AGENTS.md` at the root, any rule defined there **completely replaces** the corresponding rule in the skill-level `AGENTS.md`.
+**How overrides work:** Rules in project `AGENTS.md` are merged with skill defaults — only the sections/rules explicitly defined in project `AGENTS.md` override the corresponding defaults. Sections not mentioned fall back to skill-level `AGENTS.md`.
 
 ## Workflow
 
@@ -71,9 +71,15 @@ Before starting generation, check that the project structure exists:
 **Always load priority rules first**, then load generation rules and search for examples:
 
 Use the installed skill path for your assistant:
-- Claude: `.claude/skills/test-design-generator/scripts/search.py`
-- Cursor: `.cursor/skills/test-design-generator/scripts/search.py`
-- Codex: `${CODEX_HOME:-~/.codex}/skills/test-design-generator/scripts/search.py`
+- Claude: find with `find ~/.claude -name "search.py" -path "*/test-design-generator/*" 2>/dev/null | head -1`
+- Cursor: find with `find ~/.cursor -name "search.py" -path "*/test-design-generator/*" 2>/dev/null | head -1`
+
+**Shortcut** — resolve script path automatically:
+```bash
+SKILL_SCRIPTS=$(node -e "const p=require('child_process').execSync('npm root -g',{encoding:'utf8'}).trim(); console.log(p+'/test-genie/test-design-generator/scripts')" 2>/dev/null \
+  || find ~/.claude ~/.cursor -name "search.py" -path "*/test-design-generator/*" 2>/dev/null | head -1 | xargs dirname)
+echo $SKILL_SCRIPTS
+```
 
 **IMPORTANT:** Always run search.py from the **project root** directory (where `catalog/` and `AGENTS.md` are located).
 
@@ -275,7 +281,7 @@ After running `test-genie init`, your project has this structure:
 
 ```
 <project-root>/
-├── .cursor/skills/                    ← Managed by dev team (test-genie update)
+├── node_modules/test-genie/           ← Skills live here (managed by npm)
 │   ├── test-design-generator/
 │   │   ├── SKILL.md                      ← Workflow instructions (this file)
 │   │   ├── AGENTS.md                     ← Skill-level default rules
@@ -292,6 +298,14 @@ After running `test-genie init`, your project has this structure:
 │   │       └── search.py
 │   └── test-case-generator/
 │       └── ...
+├── .claude/commands/                  ← Claude slash commands (auto-generated)
+│   ├── generate-test-case.md
+│   └── generate-test-design.md
+├── .cursor/commands/                  ← Cursor slash commands (auto-generated)
+│   ├── generate-test-case.mdc
+│   └── generate-test-design.mdc
+├── .cursor/rules/
+│   └── test-genie.mdc                 ← Cursor auto-loads when relevant
 ├── catalog/                           ← Managed by user/tester
 │   ├── api/                              ← API test design .md examples
 │   ├── frontend/                         ← Frontend test design .md examples

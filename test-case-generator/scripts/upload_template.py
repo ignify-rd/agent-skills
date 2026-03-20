@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-upload_template.py - Upload Excel template to Google Drive as Google Sheets
+upload_template.py - Upload excel_template/template.xlsx to Google Drive as a new Google Sheets
+
+Always uploads a fresh copy — does NOT reuse existing files on Drive.
+The template structure is whatever the project placed in excel_template/template.xlsx.
 
 Usage:
-  python upload_template.py --template excel_template/template.xlsx --project-type API_TEST
-  python upload_template.py --template excel_template/template.xlsx --project-type HOME
-  python upload_template.py --credentials path/to/credentials.json --template ...
+  python upload_template.py --name "TC_API_Lay_danh_sach_180326"
+  python upload_template.py --name "TC_API_Lay_danh_sach_180326" --template excel_template/template.xlsx
+  python upload_template.py --name "TC_API_Lay_danh_sach_180326" --credentials path/to/credentials.json
 
 Output (JSON):
-  { "templateFileId": "1abc...", "webViewLink": "https://docs.google.com/..." }
-
-Steps:
-  1. Search Drive for existing template (by name)
-  2. If found → return existing templateFileId
-  3. If not found → upload .xlsx, convert to Google Sheets format
-  4. Validate upload (check mimeType)
+  {
+    "spreadsheetId": "1abc...",
+    "webViewLink": "https://docs.google.com/spreadsheets/d/1abc.../edit",
+    "name": "TC_API_Lay_danh_sach_180326"
+  }
 
 Requirements:
   pip install google-api-python-client google-auth
@@ -40,22 +41,14 @@ SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
 ]
 
-TEMPLATE_NAMES = {
-    'API_TEST':   'Test-Genie Template - API_TEST (DO NOT DELETE)',
-    'HOME':       'Test-Genie Template - HOME (DO NOT DELETE)',
-    'FEE_ENGINE': 'Test-Genie Template - FEE_ENGINE (DO NOT DELETE)',
-    'LENDING':    'Test-Genie Template - LENDING (DO NOT DELETE)',
-}
-
 GOOGLE_SHEETS_MIME = 'application/vnd.google-apps.spreadsheet'
+DEFAULT_TEMPLATE = 'excel_template/template.xlsx'
 
 
 def find_credentials(provided_path=None):
-    """Find credentials.json in common locations."""
     candidates = []
     if provided_path:
         candidates.append(provided_path)
-    # Common locations
     candidates += [
         'credentials.json',
         os.path.expanduser('~/.config/test-genie/credentials.json'),
@@ -75,24 +68,8 @@ def build_drive_service(credentials_path):
     return build('drive', 'v3', credentials=creds)
 
 
-def search_existing_template(service, template_name):
-    """Search for existing template in Drive by name."""
-    query = (
-        f"name = '{template_name}' "
-        f"and mimeType = '{GOOGLE_SHEETS_MIME}' "
-        f"and trashed = false"
-    )
-    result = service.files().list(
-        q=query,
-        fields='files(id,name,webViewLink)',
-        pageSize=1
-    ).execute()
-    files = result.get('files', [])
-    return files[0] if files else None
-
-
-def upload_template(service, template_path, template_name):
-    """Upload .xlsx file to Drive, converting to Google Sheets format."""
+def upload_as_sheets(drive_service, template_path, name):
+    """Upload .xlsx file to Drive, converting to Google Sheets format. Always creates new file."""
     if not os.path.isfile(template_path):
         raise FileNotFoundError(f"Template file not found: {template_path}")
 
@@ -102,11 +79,10 @@ def upload_template(service, template_path, template_name):
         resumable=False
     )
     file_metadata = {
-        'name': template_name,
-        'mimeType': GOOGLE_SHEETS_MIME,  # CRITICAL: converts .xlsx → Google Sheets
-        'description': f'Test case template for Test-Genie ({template_name}). DO NOT DELETE.',
+        'name': name,
+        'mimeType': GOOGLE_SHEETS_MIME,  # converts .xlsx → Google Sheets on upload
     }
-    uploaded = service.files().create(
+    uploaded = drive_service.files().create(
         body=file_metadata,
         media_body=media,
         fields='id,name,mimeType,webViewLink'
@@ -114,70 +90,55 @@ def upload_template(service, template_path, template_name):
     return uploaded
 
 
-def validate_upload(service, file_id, retries=3):
-    """Verify uploaded file has correct mimeType (Google Sheets, not xlsx)."""
+def wait_for_processing(drive_service, file_id, retries=5, delay=2):
+    """Wait until Drive finishes converting the file to Google Sheets format."""
     for attempt in range(retries):
-        file_info = service.files().get(
+        file_info = drive_service.files().get(
             fileId=file_id,
             fields='id,name,mimeType,webViewLink'
         ).execute()
         if file_info.get('mimeType') == GOOGLE_SHEETS_MIME:
             return file_info
-        time.sleep(2)
+        time.sleep(delay)
     raise RuntimeError(
-        f"Upload validation failed: mimeType is '{file_info.get('mimeType')}', "
-        f"expected '{GOOGLE_SHEETS_MIME}'"
+        f"Upload processing timeout: mimeType is still '{file_info.get('mimeType')}' "
+        f"after {retries} retries. Expected '{GOOGLE_SHEETS_MIME}'."
     )
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Upload Excel template to Google Drive')
-    parser.add_argument('--template', required=True, help='Path to .xlsx template file')
-    parser.add_argument('--project-type', required=True,
-                        choices=list(TEMPLATE_NAMES.keys()),
-                        help='Project type (API_TEST, HOME, FEE_ENGINE, LENDING)')
+    parser = argparse.ArgumentParser(
+        description='Upload excel_template/template.xlsx to Google Drive as a new Google Sheets'
+    )
+    parser.add_argument('--name', required=True,
+                        help='Name for the new spreadsheet (e.g. TC_API_Lay_danh_sach_180326)')
+    parser.add_argument('--template', default=DEFAULT_TEMPLATE,
+                        help=f'Path to .xlsx template file (default: {DEFAULT_TEMPLATE})')
     parser.add_argument('--credentials', help='Path to service account credentials.json')
-    parser.add_argument('--force', action='store_true',
-                        help='Force re-upload even if template already exists')
     args = parser.parse_args()
 
     credentials_path = find_credentials(args.credentials)
     if not credentials_path:
         print(json.dumps({
-            "error": "credentials.json not found. Provide --credentials path or place credentials.json in project root."
+            "error": "credentials.json not found. Provide --credentials or place credentials.json in project root."
         }))
         sys.exit(1)
 
-    template_name = TEMPLATE_NAMES[args.project_type]
-
     try:
-        service = build_drive_service(credentials_path)
+        drive_service = build_drive_service(credentials_path)
 
-        # Step 1: Search for existing template
-        if not args.force:
-            existing = search_existing_template(service, template_name)
-            if existing:
-                print(json.dumps({
-                    "templateFileId": existing['id'],
-                    "webViewLink": existing.get('webViewLink', ''),
-                    "name": existing['name'],
-                    "status": "existing"
-                }))
-                return
+        # Always upload fresh — never reuse existing Drive files
+        uploaded = upload_as_sheets(drive_service, args.template, args.name)
 
-        # Step 2: Upload template
-        uploaded = upload_template(service, args.template, template_name)
-
-        # Step 3: Validate upload (wait for Drive to process)
+        # Wait for Drive to finish converting .xlsx → Google Sheets
         time.sleep(2)
-        validated = validate_upload(service, uploaded['id'])
+        validated = wait_for_processing(drive_service, uploaded['id'])
 
         print(json.dumps({
-            "templateFileId": validated['id'],
+            "spreadsheetId": validated['id'],
             "webViewLink": validated.get('webViewLink', ''),
             "name": validated['name'],
-            "status": "uploaded"
-        }))
+        }, ensure_ascii=False))
 
     except Exception as e:
         print(json.dumps({"error": str(e)}))

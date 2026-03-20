@@ -1,63 +1,23 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import os from 'os';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PACKAGE_ROOT = join(__dirname, '..', '..'); // package root
-
-export const AI_CONFIG = {
-  claude:      '.claude/skills',
-  cursor:      '.cursor/skills',
-  windsurf:    '.windsurf/rules',
-  antigravity: '.agent/skills',
-  copilot:     '.github/copilot-skills',
-  kiro:        '.kiro/rules',
-  codex:       '.codex/skills',
-  qoder:       '.qoder/rules',
-  roocode:     '.roo/rules',
-  gemini:      '.gemini/skills',
-  trae:        '.trae/rules',
-  opencode:    '.opencode/skills',
-  continue:    '.continue/skills',
-  codebuddy:   '.codebuddy/skills',
-  droid:       '.factory/skills',
-};
-
-function codexSkillsDir() {
-  const codexHome = process.env.CODEX_HOME || join(os.homedir(), '.codex');
-  return join(codexHome, 'skills');
-}
-
-const SKILLS = [
-  'test-case-generator',
-  'test-design-generator',
-];
-
-const SKILL_CONTENTS = [
-  'SKILL.md',
-  'AGENTS.md',
-  'references',
-  'scripts',
-];
-
-const SKILL_EXTRA = {
-  'test-design-generator': ['data/rules'],
-};
+const PACKAGE_ROOT = join(__dirname, '..', '..'); // package root (node_modules/test-genie/)
 
 const COMMANDS = [
   {
-    skill: 'test-case-generator',
     command: 'generate-test-case',
-    description: 'Generate test case JSON from a mindmap file (.txt/.md) and optional RSD/PTTK',
+    skill: 'test-case-generator',
+    description: 'Generate test cases from mindmap + RSD/PTTK and push to Google Sheets. Use when user says "sinh test case", "tạo test case", "generate test case", "xuất test case"',
   },
   {
-    skill: 'test-design-generator',
     command: 'generate-test-design',
-    description: 'Generate a test design mindmap (.md) from RSD/PTTK documents',
+    skill: 'test-design-generator',
+    description: 'Generate a test design mindmap (.md) from RSD/PTTK. Use when user says "sinh test design", "tạo mindmap", "generate test design"',
   },
 ];
 
@@ -67,25 +27,21 @@ export async function initCommand(options = {}) {
   logger.title('test-genie Installer');
 
   if (ai === 'all') {
-    logger.info('Installing skills for all AI assistants...');
+    logger.info('Installing commands for all AI assistants...');
     console.log();
-    for (const [aiType, configDir] of Object.entries(AI_CONFIG)) {
-      await installSkillsForAI(aiType, configDir);
-    }
     installClaudeCommands();
     installCursorCommands();
+    installCursorRules();
   } else {
-    const configDir = AI_CONFIG[ai];
-    if (!configDir) {
-      logger.error(`Unsupported AI type: "${ai}". Supported: ${[...Object.keys(AI_CONFIG), 'all'].join(', ')}`);
-      process.exit(1);
+    if (!['claude', 'cursor'].includes(ai)) {
+      logger.warn(`Commands not yet supported for "${ai}". Supported: claude, cursor, all`);
     }
-    await installSkillsForAI(ai, configDir);
-    if (ai === 'claude') {
+    if (ai === 'claude' || ai === 'all') {
       installClaudeCommands();
     }
-    if (ai === 'cursor') {
+    if (ai === 'cursor' || ai === 'all') {
       installCursorCommands();
+      installCursorRules();
     }
   }
 
@@ -93,59 +49,9 @@ export async function initCommand(options = {}) {
 
   console.log();
   logger.info('Next steps:');
-  if (ai === 'all') {
-    logger.dim('Skills installed for all supported AI assistants.');
-  } else {
-    const installedPath = ai === 'codex' ? codexSkillsDir() : join(process.cwd(), AI_CONFIG[ai]);
-    logger.dim(`Skills installed in: ${installedPath}`);
-  }
   logger.dim(`Project catalog: ${join(process.cwd(), 'catalog')}`);
   logger.dim(`Project rules:   ${join(process.cwd(), 'AGENTS.md')}`);
-  console.log();
-}
-
-async function installSkillsForAI(ai, configDir) {
-  const targetBase = ai === 'codex' ? codexSkillsDir() : join(process.cwd(), configDir);
-
-  logger.info(`Installing skills for ${ai}...`);
-  logger.dim(`Target: ${targetBase}`);
-  console.log();
-
-  mkdirSync(targetBase, { recursive: true });
-
-  for (const skill of SKILLS) {
-    const src = join(PACKAGE_ROOT, skill);
-    const dest = join(targetBase, skill);
-
-    if (!existsSync(src)) {
-      logger.warn(`Skill not found: ${skill} (skipping)`);
-      continue;
-    }
-
-    rmSync(dest, { recursive: true, force: true });
-    mkdirSync(dest, { recursive: true });
-
-    for (const item of SKILL_CONTENTS) {
-      const itemSrc = join(src, item);
-      if (!existsSync(itemSrc)) continue;
-      const itemDest = join(dest, item);
-      cpSync(itemSrc, itemDest, { recursive: true });
-    }
-
-    const extras = SKILL_EXTRA[skill];
-    if (extras) {
-      for (const extra of extras) {
-        const extraSrc = join(src, extra);
-        if (!existsSync(extraSrc)) continue;
-        const extraDest = join(dest, extra);
-        mkdirSync(dirname(extraDest), { recursive: true });
-        cpSync(extraSrc, extraDest, { recursive: true });
-      }
-    }
-
-    logger.success(`Installed: ${skill}`);
-  }
-
+  logger.dim(`Skills location: ${PACKAGE_ROOT}`);
   console.log();
 }
 
@@ -186,7 +92,7 @@ function installProjectStructure() {
     if (existsSync(templateSrc)) {
       cpSync(templateSrc, agentsPath);
     } else {
-      writeFileSync(agentsPath, '# Project Rules\n\nAdd project-specific rules here.\n', 'utf8');
+      writeFileSync(agentsPath, '# Project Rules\n\nAdd project-specific overrides here.\n', 'utf8');
     }
     logger.success('Created: AGENTS.md');
   } else {
@@ -221,7 +127,8 @@ function installProjectStructure() {
   } else {
     const existing = readFileSync(gitignorePath, 'utf8');
     if (!existing.split('\n').map(l => l.trim()).includes(gitignoreEntry)) {
-      writeFileSync(gitignorePath, existing.endsWith('\n') ? existing + `${gitignoreEntry}\n` : existing + `\n${gitignoreEntry}\n`, 'utf8');
+      const separator = existing.endsWith('\n') ? '' : '\n';
+      writeFileSync(gitignorePath, `${existing}${separator}${gitignoreEntry}\n`, 'utf8');
       logger.success('Updated: .gitignore (added credentials.json)');
     } else {
       logger.dim('.gitignore already excludes credentials.json (skipped)');
@@ -235,11 +142,22 @@ function installClaudeCommands() {
   const commandsDir = join(process.cwd(), '.claude', 'commands');
   mkdirSync(commandsDir, { recursive: true });
 
-  for (const { command, description } of COMMANDS) {
+  for (const { command, skill, description } of COMMANDS) {
+    const skillPath = join(PACKAGE_ROOT, skill, 'SKILL.md');
     const dest = join(commandsDir, `${command}.md`);
-    const content = `---\ndescription: ${description}\n---\n\n$ARGUMENTS\n`;
+    const content = [
+      `---`,
+      `description: ${description}`,
+      `---`,
+      ``,
+      `If \`AGENTS.md\` exists at the project root, read it first — its rules override all skill defaults.`,
+      `Then read \`${skillPath}\` and follow the workflow exactly.`,
+      ``,
+      `$ARGUMENTS`,
+      ``,
+    ].join('\n');
     writeFileSync(dest, content, 'utf8');
-    logger.success(`Installed slash command: /${command}`);
+    logger.success(`Installed: /${command}`);
   }
 
   console.log();
@@ -249,12 +167,67 @@ function installCursorCommands() {
   const commandsDir = join(process.cwd(), '.cursor', 'commands');
   mkdirSync(commandsDir, { recursive: true });
 
-  for (const { command, description } of COMMANDS) {
+  for (const { command, skill, description } of COMMANDS) {
+    const skillPath = join(PACKAGE_ROOT, skill, 'SKILL.md');
     const dest = join(commandsDir, `${command}.mdc`);
-    const content = `---\ndescription: ${description}\n---\n\n$ARGUMENTS\n`;
+    const content = [
+      `---`,
+      `description: ${description}`,
+      `---`,
+      ``,
+      `If \`AGENTS.md\` exists at the project root, read it first — its rules override all skill defaults.`,
+      `Then read \`${skillPath}\` and follow the workflow exactly.`,
+      ``,
+      `$ARGUMENTS`,
+      ``,
+    ].join('\n');
     writeFileSync(dest, content, 'utf8');
-    logger.success(`Installed slash command: /${command}`);
+    logger.success(`Installed: /${command}`);
   }
+
+  console.log();
+}
+
+function installCursorRules() {
+  const rulesDir = join(process.cwd(), '.cursor', 'rules');
+  mkdirSync(rulesDir, { recursive: true });
+
+  const commandLines = COMMANDS.map(({ command, skill, description }) => {
+    const skillPath = join(PACKAGE_ROOT, skill, 'SKILL.md');
+    return `- **/${command}**: ${description} → \`${skillPath}\``;
+  }).join('\n');
+
+  const content = [
+    `---`,
+    `description: Apply when user asks to generate test cases, test designs, or mindmaps (sinh test case, tạo test case, sinh test design, tạo mindmap, generate test case, generate test design)`,
+    `alwaysApply: false`,
+    `---`,
+    ``,
+    `# test-genie`,
+    ``,
+    `## Rule Priority`,
+    ``,
+    `1. \`AGENTS.md\` at project root — project-specific overrides (highest priority)`,
+    `2. Skill \`AGENTS.md\` in package — default rules`,
+    `3. Skill \`SKILL.md\` in package — workflow (never overridden)`,
+    ``,
+    `If \`AGENTS.md\` exists at project root, read it first. Its rules override the corresponding skill defaults.`,
+    ``,
+    `## Available Commands`,
+    ``,
+    commandLines,
+    ``,
+    `## How to Use`,
+    ``,
+    `1. Read \`AGENTS.md\` at project root (if exists)`,
+    `2. Read the relevant SKILL.md path listed above`,
+    `3. Follow the workflow exactly`,
+    ``,
+  ].join('\n');
+
+  const dest = join(rulesDir, 'test-genie.mdc');
+  writeFileSync(dest, content, 'utf8');
+  logger.success('Installed: .cursor/rules/test-genie.mdc');
 
   console.log();
 }
