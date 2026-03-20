@@ -186,21 +186,5 @@ function installProjectStructure() {
     logger.dim('credentials.json already exists (skipped)');
   }
 
-  const gitignorePath = join(projectRoot, '.gitignore');
-  const gitignoreEntry = 'credentials.json';
-  if (!existsSync(gitignorePath)) {
-    writeFileSync(gitignorePath, `${gitignoreEntry}\n`, 'utf8');
-    logger.success('Created: .gitignore (credentials.json excluded)');
-  } else {
-    const existing = readFileSync(gitignorePath, 'utf8');
-    if (!existing.split('\n').map(l => l.trim()).includes(gitignoreEntry)) {
-      const separator = existing.endsWith('\n') ? '' : '\n';
-      writeFileSync(gitignorePath, `${existing}${separator}${gitignoreEntry}\n`, 'utf8');
-      logger.success('Updated: .gitignore (added credentials.json)');
-    } else {
-      logger.dim('.gitignore already excludes credentials.json (skipped)');
-    }
-  }
-
   console.log();
 }
