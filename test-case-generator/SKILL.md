@@ -82,13 +82,28 @@ Before starting generation, check that the project structure exists:
 | API name + endpoint references | API | JSON test cases for API |
 | Screen name + UI section names | Frontend | JSON test cases for Frontend |
 
-**Clues for API mode:** First line is API name, sections include "case common", "phân quyền", "validate", field names are request params (PAR_TYPE, REG_CHANNEL...).
+#### Heuristic-first detection (rule-based, no LLM needed)
 
-**Clues for Frontend mode:** First line is screen name (e.g., "WEB_BO_Danh mục > ..."), sections include "giao diện chung", "phân quyền", "validate", "lưới dữ liệu", "chức năng".
+Apply these checks on the **first 10 lines** of the mindmap:
+
+| Heuristic | Mode | Confidence |
+|-----------|------|------------|
+| Line 1 matches `(GET\|POST\|PUT\|DELETE\|PATCH)\s+/` or contains API endpoint pattern | API | High |
+| Sections include `case common` + `validate` + field names are UPPER_SNAKE_CASE (PAR_TYPE, REG_CHANNEL) | API | High |
+| Line 1 starts with `WEB_` or contains `Danh mục >`, `Màn hình` | Frontend | High |
+| Sections include `giao diện chung`, `lưới dữ liệu`, `chức năng` | Frontend | High |
+
+**Decision logic:**
+1. If heuristic returns **High confidence** → use that mode, skip LLM detection
+2. If **no heuristic matches** or **conflicting signals** → fallback to LLM to read mindmap and determine mode
+
+**Clues for API mode (LLM fallback):** First line is API name, sections include "case common", "phân quyền", "validate", field names are request params (PAR_TYPE, REG_CHANNEL...).
+
+**Clues for Frontend mode (LLM fallback):** First line is screen name (e.g., "WEB_BO_Danh mục > ..."), sections include "giao diện chung", "phân quyền", "validate", "lưới dữ liệu", "chức năng".
 
 ### Step 3: Load Rules & References
 
-**Always load priority rules and project-specific references first**, then search for examples:
+**Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
 
 Use the installed skill path for your assistant:
 - Claude: find with `find ~/.claude -name "search.py" -path "*/test-case-generator/*" 2>/dev/null | head -1`
@@ -104,24 +119,38 @@ echo $SKILL_SCRIPTS
 
 **IMPORTANT:** Always run search.py from the **project root** directory (where `catalog/` and `AGENTS.md` are located).
 
-```bash
-# Load priority rules (MUST load first)
-python <skills-root>/test-case-generator/scripts/search.py --ref priority-rules
+#### Load by mode (lazy-load)
 
-# Load generation rules
-python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case    # API mode
-python <skills-root>/test-case-generator/scripts/search.py --ref fe-test-case     # Frontend mode
+**Always load first (both modes):**
+```bash
+python <skills-root>/test-case-generator/scripts/search.py --ref priority-rules
 python <skills-root>/test-case-generator/scripts/search.py --ref output-format
 python <skills-root>/test-case-generator/scripts/search.py --ref quality-rules
+```
 
-# List all available references
-python <skills-root>/test-case-generator/scripts/search.py --list-refs
+**API mode — load this only:**
+```bash
+python <skills-root>/test-case-generator/scripts/search.py --ref api-test-case
+```
 
+**Frontend mode — load this only:**
+```bash
+python <skills-root>/test-case-generator/scripts/search.py --ref fe-test-case
+```
+
+> **Why lazy-load?** Loading all references regardless of mode wastes tokens on rules that won't be used. Only load what the detected mode requires.
+
+#### Search examples & utilities
+
+```bash
 # Search API examples (searches catalog/api/ in project root)
 python <skills-root>/test-case-generator/scripts/search.py "search list validate" --domain api
 
 # Search Frontend examples (searches catalog/frontend/ in project root)
 python <skills-root>/test-case-generator/scripts/search.py "giao dien chung phan quyen" --domain frontend
+
+# List all available references
+python <skills-root>/test-case-generator/scripts/search.py --list-refs
 
 # List all available examples
 python <skills-root>/test-case-generator/scripts/search.py --list
@@ -189,11 +218,19 @@ Split mindmap into 3 batches, process sequentially:
 - Force testSuiteName = section name
 - Instruction: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho validate hay luồng chính."
 
-**BATCH 2 — Validate section (per-field):**
+**BATCH 2 — Validate section (grouped fields):**
 - "Kiểm tra validate" and all ### subsections inside
-- Split: each `### field_name` = 1 separate sub-batch
+- **Group 3-5 fields per sub-batch** instead of 1 field per sub-batch to reduce LLM round-trips
 - Force testSuiteName per catalog convention (search catalog first)
-- Instruction per sub-batch: "Chỉ sinh test cases validate cho field: {field_name}."
+- Instruction per sub-batch: "Sinh test cases validate cho các fields sau: {field_1}, {field_2}, {field_3}. Mỗi field xử lý riêng biệt, KHÔNG trộn test cases giữa các fields."
+
+**Grouping rules:**
+- Group fields with **similar types** together (e.g., 3 textbox fields in 1 call, 2 combobox + 1 dropdown in 1 call)
+- If a field has **complex validation** (nhiều rule đặc biệt, cross-field dependencies) → tách riêng 1 sub-batch
+- Maximum 5 fields per sub-batch — nếu nhiều hơn 5 thì chia thêm sub-batch
+- Each sub-batch MUST include: field names, types, constraints, and request body context
+
+> **Why group?** Per-field sub-batch gọi LLM N lần (mỗi lần re-inject context). Gộp 3-5 fields giảm xuống N/4 calls, tiết kiệm overhead context đáng kể mà vẫn đủ rõ ràng cho LLM xử lý.
 
 **BATCH 3 — Post-validate sections:**
 - All ## sections AFTER "Kiểm tra validate" (e.g., grid, functionality, timeout)

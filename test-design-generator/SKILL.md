@@ -66,9 +66,25 @@ Before starting generation, check that the project structure exists:
 | RSD describes an API endpoint | API | Markdown test design for API |
 | RSD describes a UI screen | Frontend | Markdown test design for Frontend |
 
+#### Heuristic-first detection (rule-based, no LLM needed)
+
+Apply these regex/keyword checks on the RSD **before** asking LLM:
+
+| Heuristic | Mode | Confidence |
+|-----------|------|------------|
+| Title/heading matches `(GET\|POST\|PUT\|DELETE\|PATCH)\s+/` | API | High |
+| Document contains `endpoint`, `request body`, `response body`, `API` (case-insensitive) in first 2 pages | API | Medium |
+| Document contains `màn hình`, `screen`, `giao diện`, `button`, `textbox`, `combobox`, `lưới` | Frontend | Medium |
+| Title contains `Danh sách`, `Chi tiết`, `Thêm mới`, `Cập nhật` + UI element names | Frontend | Medium |
+
+**Decision logic:**
+1. If heuristic returns **High confidence** → use that mode, skip LLM detection
+2. If heuristic returns **Medium confidence** → use that mode but note in output: "Mode detected by heuristic: {mode}"
+3. If **no heuristic matches** or **conflicting signals** → fallback to LLM to read RSD and determine mode
+
 ### Step 2: Load Rules & References
 
-**Always load priority rules first**, then load generation rules and search for examples:
+**Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
 
 Use the installed skill path for your assistant:
 - Claude: find with `find ~/.claude -name "search.py" -path "*/test-design-generator/*" 2>/dev/null | head -1`
@@ -83,19 +99,30 @@ echo $SKILL_SCRIPTS
 
 **IMPORTANT:** Always run search.py from the **project root** directory (where `catalog/` and `AGENTS.md` are located).
 
+#### Load by mode (lazy-load)
+
+**Always load first (both modes):**
 ```bash
-# Load priority rules (MUST load first)
 python <skills-root>/test-design-generator/scripts/search.py --ref priority-rules
-
-# Load generation rules
-python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design       # API mode
-python <skills-root>/test-design-generator/scripts/search.py --ref frontend-test-design   # Frontend mode
-python <skills-root>/test-design-generator/scripts/search.py --ref field-templates         # Frontend field templates
 python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
+```
 
-# List all available references
-python <skills-root>/test-design-generator/scripts/search.py --list-refs
+**API mode — load these only:**
+```bash
+python <skills-root>/test-design-generator/scripts/search.py --ref api-test-design
+```
 
+**Frontend mode — load these only:**
+```bash
+python <skills-root>/test-design-generator/scripts/search.py --ref frontend-test-design
+python <skills-root>/test-design-generator/scripts/search.py --ref field-templates
+```
+
+> **Why lazy-load?** Loading all references regardless of mode wastes 30-50% tokens on rules that won't be used. Only load what the detected mode requires.
+
+#### Search examples & utilities
+
+```bash
 # Search API examples by keyword (searches catalog/api/ in project root)
 python <skills-root>/test-design-generator/scripts/search.py "search list api" --domain api
 
@@ -104,6 +131,9 @@ python <skills-root>/test-design-generator/scripts/search.py "danh sach list scr
 
 # Search format rules (skill-bundled, not in project catalog)
 python <skills-root>/test-design-generator/scripts/search.py "common section status" --domain rules
+
+# List all available references
+python <skills-root>/test-design-generator/scripts/search.py --list-refs
 
 # List all available examples
 python <skills-root>/test-design-generator/scripts/search.py --list
@@ -209,7 +239,22 @@ Generate the test design following the rules loaded via `--ref` and the format o
 8. Mode variations — create/update/delete → test each mode
 9. Status transitions — valid/invalid transitions → test each
 
-**Verify + supplement:** Re-read RSD, list ALL logic branches, cross-check with generated test cases. Missing → add. Wrong expected result → write `### [SỬA] Kiểm tra ...` and replace.
+**Verify — coverage checklist (API):**
+
+Instead of re-reading the entire RSD, verify against this fixed checklist. For each item, check YES/NO — if NO, add the missing test cases:
+
+- [ ] **Error codes**: Every error code in RSD has at least 1 test case with exact message
+- [ ] **If/else branches**: Every if/else condition in RSD has both TRUE and FALSE test cases
+- [ ] **DB validations**: EXISTS/NOT EXISTS conditions each have test cases
+- [ ] **Response fields**: ALL output fields from PTTK/RSD appear in at least 1 response example
+- [ ] **SQL concrete values**: All SQL uses concrete values, no placeholders
+- [ ] **Mode variations**: If API has create/update/delete modes, each mode is tested
+- [ ] **Status transitions**: If API has status transitions, valid + invalid transitions are tested
+- [ ] **Required fields**: Every required field has empty/missing/null validate cases
+
+If any item is NO → add missing test cases with `### [SỬA] Kiểm tra ...` and replace.
+
+> **Why checklist?** Re-reading entire RSD for self-verify wastes 1-2k tokens and rarely catches deep logic errors. A fixed checklist is faster, explicit, and easier to audit.
 
 #### Frontend Mode — Generation
 
@@ -243,7 +288,20 @@ After field templates, supplement with LLM for: cross-field validation, special 
 - **FORM/POPUP:** Save success/fail, field interactions (enable/disable, auto-fill, dependent validation), cancel
 - **DETAIL:** Button visibility by status/permission, click actions, navigation
 
-**Verify + supplement:** Re-read RSD and verify all search scenarios, field combinations, empty results, business rules are covered. Missing → append. Wrong → `### [SỬA]` and replace.
+**Verify — coverage checklist (Frontend):**
+
+Instead of re-reading the entire RSD, verify against this fixed checklist:
+
+- [ ] **All fields covered**: Every field from RSD/PTTK has validate test cases (or explicitly skipped for DETAIL screens)
+- [ ] **Field types match templates**: Each field dispatched to correct template (textbox, combobox, etc.)
+- [ ] **Search scenarios**: Every searchable field has exists/not exists/partial test cases (LIST only)
+- [ ] **Button visibility**: Every button with conditional visibility has permission/status test cases
+- [ ] **Grid columns**: Every grid column has data verification + sort test cases (LIST only)
+- [ ] **Cross-field validation**: Dependent fields (cascading dropdowns, auto-fill) have interaction test cases
+- [ ] **Empty state**: Grid empty results, form default state tested
+- [ ] **Permissions**: Has permission / no permission test cases exist
+
+If any item is NO → append missing test cases. Wrong expected result → `### [SỬA]` and replace.
 
 ### Step 6: Apply Quality Rules
 

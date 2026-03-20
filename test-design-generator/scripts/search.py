@@ -21,6 +21,9 @@ import sys
 import io
 import csv
 import re
+import json
+import hashlib
+import tempfile
 from pathlib import Path
 from math import log
 from collections import defaultdict
@@ -78,6 +81,47 @@ class BM25:
         return sorted(scores, key=lambda x: x[1], reverse=True)
 
 
+# ============ CACHE ============
+def _cache_key(directory):
+    """Generate a hash key based on directory path + file names + modification times."""
+    md_files = sorted(directory.glob("*.md"))
+    parts = [str(directory)]
+    for f in md_files:
+        parts.append(f"{f.name}:{f.stat().st_mtime}")
+    return hashlib.md5("|".join(parts).encode()).hexdigest()
+
+
+def _cache_path(directory, prefix="tdg"):
+    """Get the temp cache file path for a directory."""
+    key = _cache_key(directory)
+    return Path(tempfile.gettempdir()) / f"{prefix}_catalog_{key}.json"
+
+
+def _load_cached(directory, prefix="tdg"):
+    """Load cached documents + file_names if cache is valid."""
+    cp = _cache_path(directory, prefix)
+    if cp.exists():
+        try:
+            data = json.loads(cp.read_text(encoding='utf-8'))
+            return data["documents"], data["file_names"], data["file_paths"]
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return None, None, None
+
+
+def _save_cache(directory, documents, file_names, file_paths, prefix="tdg"):
+    """Save parsed documents to cache."""
+    cp = _cache_path(directory, prefix)
+    try:
+        cp.write_text(json.dumps({
+            "documents": documents,
+            "file_names": file_names,
+            "file_paths": file_paths,
+        }, ensure_ascii=False), encoding='utf-8')
+    except OSError:
+        pass  # Non-critical, skip silently
+
+
 # ============ SEARCH ============
 def search_md_files(query, directory, max_results=MAX_RESULTS):
     """Search .md files in directory using BM25"""
@@ -88,11 +132,16 @@ def search_md_files(query, directory, max_results=MAX_RESULTS):
     if not md_files:
         return {"error": f"No .md files in {directory}", "results": []}
 
-    documents, file_names = [], []
-    for f in md_files:
-        content = f.read_text(encoding='utf-8')
-        documents.append(content)
-        file_names.append(f.name)
+    # Try cache first
+    documents, file_names, file_paths = _load_cached(directory)
+    if documents is None:
+        documents, file_names, file_paths = [], [], []
+        for f in md_files:
+            content = f.read_text(encoding='utf-8')
+            documents.append(content)
+            file_names.append(f.name)
+            file_paths.append(str(f))
+        _save_cache(directory, documents, file_names, file_paths)
 
     bm25 = BM25()
     bm25.fit(documents)
@@ -110,7 +159,7 @@ def search_md_files(query, directory, max_results=MAX_RESULTS):
                 "title": title,
                 "score": round(score, 2),
                 "preview": preview,
-                "full_path": str(md_files[idx])
+                "full_path": file_paths[idx] if file_paths else str(md_files[idx])
             })
 
     return {

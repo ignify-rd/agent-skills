@@ -37,6 +37,8 @@ import io
 import csv
 import re
 import json
+import hashlib
+import tempfile
 from pathlib import Path
 from math import log
 from collections import defaultdict
@@ -182,13 +184,55 @@ def load_all_cases(directory):
     return all_cases
 
 
+# ============ CACHE ============
+def _cache_key(directory):
+    """Generate a hash key based on directory path + file names + modification times."""
+    csv_files = sorted(directory.glob("*.csv"))
+    parts = [str(directory)]
+    for f in csv_files:
+        parts.append(f"{f.name}:{f.stat().st_mtime}")
+    return hashlib.md5("|".join(parts).encode()).hexdigest()
+
+
+def _cache_path(directory):
+    """Get the temp cache file path for a directory."""
+    key = _cache_key(directory)
+    return Path(tempfile.gettempdir()) / f"tcg_catalog_{key}.json"
+
+
+def _load_cached_cases(directory):
+    """Load cached test cases if cache is valid."""
+    cp = _cache_path(directory)
+    if cp.exists():
+        try:
+            return json.loads(cp.read_text(encoding='utf-8'))
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return None
+
+
+def _save_cases_cache(directory, cases):
+    """Save parsed test cases to cache."""
+    cp = _cache_path(directory)
+    try:
+        cp.write_text(json.dumps(cases, ensure_ascii=False), encoding='utf-8')
+    except OSError:
+        pass  # Non-critical, skip silently
+
+
 # ============ SEARCH ============
 def search_cases(query, directory, max_results=MAX_RESULTS):
     """Search test cases using BM25."""
     if not directory.exists():
         return {"error": f"Directory not found: {directory}", "results": []}
 
-    cases = load_all_cases(directory)
+    # Try cache first
+    cases = _load_cached_cases(directory)
+    if cases is None:
+        cases = load_all_cases(directory)
+        if cases:
+            _save_cases_cache(directory, cases)
+
     if not cases:
         return {"error": f"No test cases found in {directory}", "results": []}
 
