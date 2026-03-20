@@ -334,13 +334,42 @@ Output dưới dạng internal JSON (không show cho user):
 
 | Mục | Lấy từ đâu trong RSD/PTTK | Lưu ý |
 |-----|--------------------------|-------|
-| `errorCodes[]` | Bảng mã lỗi | Copy **exact** message, không paraphrase |
+| `errorCodes[]` | Bảng mã lỗi — đọc **toàn bộ bảng**, không bỏ sót dòng nào | Copy **exact** message, không paraphrase. Thêm `"section": "validate"\|"main"` để biết thuộc batch nào |
 | `businessRules[]` | Mô tả luồng xử lý, điều kiện if/else | Mỗi nhánh = 1 rule riêng |
 | `modes[]` | Các mode/loại hoạt động của API | Ví dụ: create/update/delete/search |
-| `dbOperations[]` | Mô tả ghi DB, stored procedure, table mapping | List **tất cả fields** cần verify |
-| `externalServices[]` | Tích hợp S3, queue, third-party | Phải có onFailure behavior |
+| `dbOperations[].fieldsToVerify` | Bảng DB mapping trong PTTK — đọc **tất cả cột** trong bảng | **BẮT BUỘC** list đủ 100% fields, kể cả auto-generate (ID, CREATED_TIME, CREATED_USER) và derived fields (BRANCH = bdsCode + "000") |
+| `externalServices[]` | Tích hợp S3, queue, third-party | Phải có `onFailure`, `onTimeout`, và `rollbackBehavior` |
 | `statusTransitions[]` | Status field, flow diagram | Valid + invalid transitions |
 | `decisionCombinations[]` | Khi ≥2 conditions cùng ảnh hưởng output | Prune impossible combos |
+
+**Quy tắc bổ sung cho errorCodes extraction:**
+
+Mỗi error code phải có field `"section"` để biết nó thuộc BATCH nào:
+```json
+{ "code": "PCER_UPLOAD_004", "desc": "File upload không đúng file mẫu", "triggerCondition": "file thiếu cột bắt buộc", "section": "validate" },
+{ "code": "PCER_UPLOAD_005", "desc": "Tồn tại dòng trống dữ liệu", "triggerCondition": "file có blank row", "section": "validate" },
+{ "code": "PCER_UPLOAD_006", "desc": "File upload chứa phần mềm không hợp lệ", "triggerCondition": "file có macro/virus", "section": "validate" },
+{ "code": "2", "desc": "Có lỗi xảy ra trong quá trình xử lý", "triggerCondition": "S3 error hoặc DB error", "section": "main" }
+```
+
+**Quy tắc bổ sung cho dbOperations.fieldsToVerify:**
+
+Phải bao gồm **tất cả** — kể cả:
+- Fields do system tự generate: `ID`, `CREATED_TIME`, `CREATED_USER`
+- Fields có logic derived: `BRANCH = bdsCode + "000"`, `STATUS = 1`
+- Fields lưu từ input: `FILE_NAME`, `UPLOAD_TYPE`, `DOMAIN_TYPE`, `FEE_SERVICE`
+- Fields từ S3 response: `S3_FILE_KEY`, `S3_FILE_PATH`
+- Counter fields: `TOTAL_UPLOAD`
+
+**Quy tắc bổ sung cho externalServices rollback:**
+```json
+{
+  "name": "S3",
+  "onFailure": "trả error code 2",
+  "onTimeout": "trả error code 2",
+  "rollbackBehavior": "KHÔNG INSERT vào DB — verify bằng SELECT COUNT(*) = 0 sau khi S3 fail"
+}
+```
 
 **⚠️ CRITICAL:** Không được sinh test cases cho đến khi extraction JSON hoàn chỉnh. Đây là checklist sẽ dùng để verify coverage ở Step 6b.
 
@@ -382,11 +411,14 @@ Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-tes
 
 #### API Mode — Traceability Matrix
 
-**A. Error Code Coverage**
+**A. Error Code Coverage — toàn bộ batches**
 ```
 Với mỗi item trong errorCodes[]:
-  → Tìm test case có expectedResult chứa "poErrorCode": "{code}" với exact message
-  → Nếu không có: APPEND test case "Lỗi nghiệp vụ_{code}_{desc ngắn}"
+  → section="validate": tìm trong BATCH 2 output (validate test cases)
+  → section="main":     tìm trong BATCH 3 output (luồng chính test cases)
+  → Tìm test case có expectedResult chứa "{code}" VÀ exact message từ inventory
+  → Nếu không có: APPEND vào đúng suite (validate hoặc luồng chính)
+  → KHÔNG được bỏ qua error code nào dù nó thuộc batch nào
 ```
 
 **B. Business Rule Coverage**
@@ -409,7 +441,17 @@ Với mỗi item trong modes[]:
 Với mỗi item trong dbOperations[]:
   → Cần ≥1 test case verify DB sau khi operation thành công
   → Test case phải có SQL SELECT với concrete values trong expectedResult
+  → SQL phải verify TẤT CẢ fields trong dbOperations[].fieldsToVerify, không được bỏ sót
+  → Đặc biệt check: derived fields (BRANCH), system fields (CREATED_TIME), S3 fields (S3_FILE_KEY)
   → Nếu thiếu: APPEND test case "DB_{table}_{operation}"
+```
+
+**D2. Rollback Coverage**
+```
+Với mỗi externalServices[] có rollbackBehavior:
+  → Cần 1 test case verify KHÔNG có data trong DB sau khi external service fail
+  → expectedResult phải có: SELECT COUNT(*) FROM {table} WHERE {condition} → 0
+  → Nếu thiếu: APPEND test case "{ServiceName}_fail_Verify rollback không INSERT DB"
 ```
 
 **E. External Service Coverage**

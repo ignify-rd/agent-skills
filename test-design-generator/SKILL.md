@@ -261,6 +261,44 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - Priority rules already define the answer (e.g., PTTK wins for field definitions)
 - It's a formatting/style question covered by references
 
+### Step 4c: Business Logic Inventory (API mode only)
+
+**Before generating any section**, extract toàn bộ business logic thành inventory. Đây là checklist để đảm bảo mọi item đều xuất hiện trong mindmap đúng section.
+
+```json
+{
+  "errorCodes": [
+    { "code": "PCER_UPLOAD_001", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file format sai" },
+    { "code": "PCER_UPLOAD_004", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file sai template" },
+    { "code": "2", "desc": "Có lỗi xảy ra trong quá trình xử lý", "section": "main", "triggerCondition": "S3 error hoặc DB error" }
+  ],
+  "businessRules": [
+    { "id": "BR1", "condition": "uploadType = 1", "trueBranch": "INSERT với action=ADD", "falseBranch": null, "section": "main" },
+    { "id": "BR2", "condition": "uploadType = 2", "trueBranch": "INSERT với action=DELETE", "falseBranch": null, "section": "main" }
+  ],
+  "dbFields": [
+    "ID (auto)", "DOMAIN_TYPE", "FEE_SERVICE", "CUSTOMER_ID", "BRANCH (= bdsCode + '000')",
+    "STATUS (= 1)", "UPLOAD_TYPE", "CREATED_USER", "CREATED_TIME", "TOTAL_UPLOAD", "FILE_NAME", "S3_FILE_KEY"
+  ],
+  "externalServices": [
+    { "name": "S3", "onFailure": "error code 2", "rollbackBehavior": "không INSERT DB" }
+  ],
+  "modes": ["uploadType=1 (Thêm mới)", "uploadType=2 (Xoá)"]
+}
+```
+
+**Extraction rules:**
+- `errorCodes[].section`: `"validate"` = thuộc section "Kiểm tra validate" trong mindmap; `"main"` = thuộc "Kiểm tra luồng chính"
+- `errorCodes[].desc`: copy **exact** từ bảng mã lỗi trong RSD/PTTK — **đọc toàn bộ bảng, không bỏ sót dòng nào**
+- `dbFields[]`: lấy từ bảng DB mapping trong PTTK — **list 100% columns** kể cả auto-generate và derived fields
+- `externalServices[].rollbackBehavior`: nếu RSD mô tả "không lưu DB khi lỗi" → ghi rõ, cần 1 bullet trong mindmap
+
+**Dùng inventory này khi sinh từng section:**
+- Error codes có `section="validate"` → phải xuất hiện trong ## Kiểm tra validate
+- Error codes có `section="main"` → phải xuất hiện trong ## Kiểm tra luồng chính
+- `dbFields[]` → tất cả fields phải có trong SQL verify của luồng chính
+- `rollbackBehavior` → phải có bullet "S3 lỗi → không INSERT vào DB" trong luồng chính
+
 ### Step 5: Generate Test Design Sections
 
 Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
@@ -288,20 +326,47 @@ Generate the test design following the rules loaded via `--ref` and the format o
 
 **Verify — coverage checklist (API):**
 
-Instead of re-reading the entire RSD, verify against this fixed checklist. For each item, check YES/NO — if NO, add the missing test cases:
+Dùng inventory JSON từ Step 4c để cross-check — **không re-read toàn bộ RSD**:
 
-- [ ] **Error codes**: Every error code in RSD has at least 1 test case with exact message
-- [ ] **If/else branches**: Every if/else condition in RSD has both TRUE and FALSE test cases
-- [ ] **DB validations**: EXISTS/NOT EXISTS conditions each have test cases
-- [ ] **Response fields**: ALL output fields from PTTK/RSD appear in at least 1 response example
-- [ ] **SQL concrete values**: All SQL uses concrete values, no placeholders
-- [ ] **Mode variations**: If API has create/update/delete modes, each mode is tested
-- [ ] **Status transitions**: If API has status transitions, valid + invalid transitions are tested
-- [ ] **Required fields**: Every required field has empty/missing/null validate cases
+**A. Error Code Coverage**
+```
+Với mỗi errorCodes[]:
+  → section="validate": phải có bullet trong ## Kiểm tra validate (đúng subsection field)
+  → section="main":     phải có bullet trong ## Kiểm tra luồng chính
+  → Bullet phải chứa exact error code và mô tả ngắn trigger condition
+  → Nếu thiếu: THÊM bullet vào đúng section, đánh dấu ### [SỬA]
+```
 
-If any item is NO → add missing test cases with `### [SỬA] Kiểm tra ...` and replace.
+**B. Business Rule Coverage**
+```
+Với mỗi businessRules[]:
+  → type="branch": cần 2 bullets (trueBranch + falseBranch)
+  → Nếu thiếu: THÊM vào ## Kiểm tra luồng chính
+```
 
-> **Why checklist?** Re-reading entire RSD for self-verify wastes 1-2k tokens and rarely catches deep logic errors. A fixed checklist is faster, explicit, and easier to audit.
+**C. DB Field Coverage**
+```
+Với dbFields[]:
+  → Tất cả fields phải xuất hiện trong SQL SELECT của luồng chính
+  → Đặc biệt check: CREATED_TIME, S3_FILE_KEY, BRANCH (derived), TOTAL_UPLOAD
+  → Nếu thiếu: UPDATE bullet luồng chính để thêm fields vào SQL
+```
+
+**D. Rollback Coverage**
+```
+Với externalServices[].rollbackBehavior:
+  → Phải có bullet: "{ServiceName} lỗi → không INSERT vào DB"
+  → Nếu thiếu: THÊM vào ## Kiểm tra luồng chính
+```
+
+**E. Mode Coverage**
+```
+Với modes[]:
+  → Mỗi mode cần ≥1 bullet happy path trong luồng chính
+  → Nếu thiếu: THÊM
+```
+
+Nếu bất kỳ item nào NO → thêm bullet với `### [SỬA] Kiểm tra ...`
 
 #### Frontend Mode — Generation
 
