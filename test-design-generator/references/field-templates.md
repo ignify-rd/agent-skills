@@ -223,7 +223,7 @@ field.type → template function:
 
 - Kiểm tra giá trị
 
-    - Hiển thị data UI map với response API. Endpoint: {apiEndpoint}
+    - Hiển thị danh sách giá trị (liệt kê ĐẦY ĐỦ giá trị cụ thể từ RSD/PTTK, KHÔNG ghi chung chung. Nếu >20 giá trị thì liệt kê 10 giá trị đầu + ghi "... và N giá trị khác theo RSD/PTTK"). Endpoint: {apiEndpoint}
     - {dbQuery}
 
 - Kiểm tra hiển thị khi không nhận được phản hồi của API {apiEndpoint}
@@ -398,7 +398,7 @@ field.type → template function:
         - {value1}
         - {value2}
         - {value3}
-        ...
+        - ... (liệt kê ĐẦY ĐỦ TẤT CẢ giá trị cụ thể từ RSD/PTTK, KHÔNG được bỏ sót hay ghi "...". Nếu >20 giá trị thì liệt kê 10 giá trị đầu + ghi "... và N giá trị khác theo RSD/PTTK")
 
 - Kiểm tra khi chọn giá trị trong Dropdown list
 
@@ -462,7 +462,7 @@ field.type → template function:
 
 - Kiểm tra danh sách giá trị trong dropdown
 
-    - Danh sách hiển thị các giá trị theo API: {apiEndpoint}
+    - Hiển thị danh sách giá trị (liệt kê ĐẦY ĐỦ giá trị cụ thể từ RSD/PTTK, KHÔNG ghi chung chung. Nếu >20 giá trị thì liệt kê 10 giá trị đầu + ghi "... và N giá trị khác theo RSD/PTTK"). Endpoint: {apiEndpoint}
     - {dbQuery}
 
 #### searchBox

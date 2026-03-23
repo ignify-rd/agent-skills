@@ -336,7 +336,7 @@ Xem bảng mapping trong `output-format.md`.
 | Bắt buộc _(required)_ | `1. Bỏ trống combobox "{name}"\n2. Quan sát` | `Hiển thị support text "Vui lòng chọn giá trị"` |
 | Icon X — hiển thị | `1. Chọn giá trị trong combobox "{name}"\n2. Quan sát` | `Hiển thị icon x cho phép xoá nhanh` |
 | Icon X — clear | `1. Chọn giá trị\n2. Click icon x` | `Clear data đã chọn` |
-| Giá trị data | `1. Mở combobox "{name}"\n2. Quan sát danh sách` | `Hiển thị data UI map với response API. Endpoint: {apiEndpoint}` |
+| Giá trị data | `1. Mở combobox "{name}"\n2. Quan sát danh sách` | `Hiển thị danh sách giá trị: {liệt kê ĐẦY ĐỦ giá trị cụ thể từ RSD/PTTK hoặc API response. Nếu >20 giá trị thì liệt kê 10 đầu + "... và N giá trị khác"}. Endpoint: {apiEndpoint}` |
 | API không phản hồi | `1. Mở combobox "{name}" khi API {apiEndpoint} timeout\n2. Quan sát` | `Hiển thị popup lỗi "Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại."` |
 | API phản hồi lỗi | `1. Mở combobox khi API trả lỗi\n2. Quan sát` | `Hiển thị popup lỗi với nội dung errorDesc server trả về` |
 | API trả rỗng | `1. Mở combobox khi API trả danh sách rỗng\n2. Quan sát` | `Hiển thị "Không tìm thấy" tại Combobox` |
@@ -366,7 +366,7 @@ Xem bảng mapping trong `output-format.md`.
 | Giá trị mặc định | `1. Quan sát giá trị mặc định` | `Mặc định rỗng` |
 | Placeholder | `1. Quan sát placeholder` | `Hiển thị placeholder "{text}"` |
 | Bắt buộc _(required)_ | `1. Bỏ trống dropdown\n2. Quan sát` | `Hiển thị lỗi validate "{requiredMessage}"` |
-| Danh sách values | `1. Click dropdown "{name}"\n2. Quan sát` | `Hiển thị danh sách: {value1}, {value2}, ...` |
+| Danh sách values | `1. Click dropdown "{name}"\n2. Quan sát` | `Hiển thị danh sách: {liệt kê ĐẦY ĐỦ giá trị cụ thể từ RSD/PTTK. Nếu >20 giá trị thì liệt kê 10 đầu + "... và N giá trị khác"}` |
 | Chọn 1 giá trị | `1. Click dropdown\n2. Chọn 1 giá trị` | `Hệ thống cho phép chọn` |
 | Chọn nhiều | `1. Click dropdown\n2. Chọn nhiều` | `{isSingleSelect ? "Hệ thống chỉ cho phép chọn 1" : "Cho phép chọn nhiều"}` |
 | Chọn từng value | `1. Chọn giá trị = "{value}"` | `Hệ thống hiển thị text "{value}" tại dropdown` |
