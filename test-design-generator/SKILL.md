@@ -40,16 +40,23 @@ Rules are resolved in this order (highest priority first):
 
 ## Workflow
 
-### Step 0: Validate Project Setup
+### Step 0: Validate Project Setup & Load Project Rules
 
-Before starting generation, check that the project structure exists:
+Before starting generation, check project structure and **load project-level rules**:
 
 1. **Check catalog** — look for `catalog/` directory at project root (contains `api/`, `frontend/`, `mobile/`)
-2. **Check AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
+2. **Check & READ AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
 
 **If catalog directory does not exist:**
 - Ask user: "Chưa có thư mục `catalog/`. Bạn đã chạy `test-genie init` chưa?"
 - If not → guide user to run `test-genie init` to set up project structure
+
+**If AGENTS.md exists at project root:**
+- **READ the entire file content** — extract ALL sections and rules defined by the project
+- Store these rules as `projectRules` — they will be applied with **HIGHEST PRIORITY** throughout the entire generation workflow
+- Any rule in project AGENTS.md **overrides** the corresponding rule in skill-level AGENTS.md and references
+- Sections in project AGENTS.md that don't exist in defaults are **ADDED** (not ignored)
+- Pay special attention to `## Project-Specific Rules` — these are custom rules that MUST be followed in every step
 
 **If AGENTS.md does not exist at project root:**
 - Use skill-level `AGENTS.md` (default rules)
@@ -58,6 +65,8 @@ Before starting generation, check that the project structure exists:
 **If catalog exists but has no examples (empty api/ and frontend/):**
 - Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm examples trước không?"
 - Proceed with skill references as fallback
+
+**⚠️ CRITICAL: Project AGENTS.md is the highest-priority rule source.** Every subsequent step (mode detection, extraction, generation, verification) MUST check `projectRules` and apply them. If a project rule conflicts with a skill reference or default, the project rule WINS.
 
 ### Step 0b: Resolve Input Documents
 
@@ -92,6 +101,20 @@ Apply these regex/keyword checks on the RSD **before** asking LLM:
 3. If **no heuristic matches** or **conflicting signals** → fallback to LLM to read RSD and determine mode
 
 ### Step 2: Load Rules & References
+
+**Step 2a: Apply project AGENTS.md rules (loaded in Step 0)**
+
+Before loading any references, review `projectRules` from Step 0. Project rules affect:
+- **Which sections to generate** — project may add/remove/rename sections
+- **How to generate each section** — project may override field template dispatch, screen type rules, format rules
+- **Quality/style constraints** — project may define custom forbidden phrases, naming conventions, writing style
+- **Test case granularity** — project may require splitting cases differently (e.g., "tách riêng từng field", "buttons vào phần chức năng")
+- **Image analysis behavior** — project may require analyzing images before reading RSD
+- **Custom field types** — project may define field types not in default templates
+
+All rules from project AGENTS.md apply as overrides throughout the remaining steps. If project AGENTS.md defines a rule that contradicts a skill reference, **follow the project rule**.
+
+**Step 2b: Load skill references (mode-specific)**
 
 **Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
 
@@ -302,6 +325,13 @@ After extraction, check for issues and **proactively ask user** before proceedin
 ### Step 5: Generate Test Design Sections
 
 Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
+
+**⚠️ BEFORE generating any section, review `projectRules` from Step 0.** Project AGENTS.md rules MUST be applied throughout generation:
+- If project defines custom section structure (e.g., "buttons vào phần chức năng thay vì validate") → follow that
+- If project defines writing style (e.g., "viết ngắn gọn", "tách riêng từng case") → follow that
+- If project defines image analysis behavior (e.g., "phân tích hình ảnh trước") → follow that
+- If project defines custom field handling not in default templates → follow that
+- If project defines any `## Project-Specific Rules` → apply ALL of them to every section
 #### API Mode — Generation
 
 **Common section (hardcoded):** Copy the base template exactly — only replace `{API_NAME}` and `{WRONG_METHODS}`. Format: `- status: 107` (simple). NEVER use `1\. Check api trả về:` in common.
@@ -386,6 +416,15 @@ Nếu bất kỳ item nào NO → thêm bullet với `### [SỬA] Kiểm tra ...
 | checkbox | generateCheckboxTests |
 | button | generateButtonTests |
 | icon_x/icon_close | generateIconXTests |
+| date/datepicker | generateDatePickerTests |
+| daterange/date_range | generateDateRangePickerTests |
+| textarea/multiline | generateTextareaTests |
+| number/number_input | generateNumberInputTests |
+| radio/radio_group | generateRadioButtonTests |
+| file/file_upload/upload | generateFileUploadTests |
+| password/password_input | generatePasswordInputTests |
+| tag/tag_input/chip | generateTagInputTests |
+| richtext/rich_text_editor | generateRichTextEditorTests |
 
 **Mandatory completeness rule — KHÔNG được bỏ bất kỳ case nào trong template:**
 
@@ -395,7 +434,7 @@ Với mỗi textbox editable, bắt buộc sinh ĐỦ các cases sau (lấy từ
 - Nhập số, nhập chữ, nhập ký tự đặc biệt (@#$%^&*)
 - Nhập ký tự chứa space đầu/cuối, Paste ký tự chứa space đầu/cuối, nhập all space
 - Boundary: nhập maxLen-1, maxLen, Paste maxLen, nhập maxLen+1 → cảnh báo
-- **Bắt buộc thêm (thường bị bỏ sót):** emoji (🙂), XSS (`<script>alert(1)</script>`), SQL injection (`' OR 1=1 --`), unicode đặc biệt
+- **Bắt buộc (đã có trong template):** emoji, XSS (`<script>alert(1)</script>`), SQL injection (`' OR 1=1 --`), unicode đặc biệt, chữ có dấu tiếng Việt
 - MinLength boundary: minLen-1 → lỗi, minLen → ok (nếu có minLength)
 - Required validation: bỏ trống → lỗi (nếu isRequired)
 - Format validation: đúng/sai định dạng (nếu có regex/pattern)
@@ -404,9 +443,28 @@ Với mỗi textbox editable, bắt buộc sinh ĐỦ các cases sau (lấy từ
 Với mỗi combobox/dropdown, bắt buộc sinh ĐỦ:
 - Hiển thị, placeholder, icon X, chọn 1/nhiều
 - API error, API trả rỗng → "Không tìm thấy", loading state
-- Search textbox: số, chữ, ký tự đặc biệt, maxSearchLen boundary
+- Search textbox: số, chữ, ký tự đặc biệt, emoji, XSS, SQL injection, maxSearchLen boundary
 - Tìm từ khóa tồn tại/không tồn tại/1 phần, chọn bằng chuột/bàn phím
 - Required validation (nếu có)
+
+Với mỗi date picker/date range, bắt buộc sinh ĐỦ:
+- Hiển thị, placeholder, icon lịch, chọn ngày hợp lệ, nhập sai định dạng, ngày không tồn tại
+- Min/max date boundary, ngày quá khứ/tương lai (nếu có constraint)
+- Icon X, required validation, emoji/XSS/SQL injection
+
+Với mỗi number input, bắt buộc sinh ĐỦ:
+- Nhập số dương, số 0, số âm, số thập phân, leading zero
+- Nhập chữ/ký tự đặc biệt/khoảng trắng → chặn
+- Min/max value boundary, stepper +/- (nếu có)
+- emoji/XSS/SQL injection
+
+Với mỗi file upload, bắt buộc sinh ĐỦ:
+- Upload đúng/sai định dạng, dung lượng boundary, file rỗng
+- Upload trùng tên, tên chứa ký tự đặc biệt/unicode
+- Progress, hủy upload, xóa file, drag & drop (nếu có)
+
+Với mỗi textarea, bắt buộc sinh ĐỦ:
+- Tất cả cases của textbox + xuống dòng (Enter), multiline, bộ đếm ký tự (nếu có)
 
 Sau khi áp dụng template, supplement thêm với LLM: cross-field validation, cascading fields, auto-fill rules.
 
@@ -420,12 +478,16 @@ Sau khi áp dụng template, supplement thêm với LLM: cross-field validation,
 - **LIST:** Search per field (exists/not exists/partial), combined search, clear filter, add new button
 - **FORM/POPUP:** Save success/fail, field interactions (enable/disable, auto-fill, dependent validation), cancel
 - **DETAIL:** Button visibility by status/permission, click actions, navigation
+- **All screen types:** Any button-related test cases belong in function section (not validate) — buttons test logic flow, not input validation
+
+**⚠️ Project AGENTS.md override:** If project AGENTS.md defines additional function section rules (e.g., "buttons vào phần chức năng", custom section assignments), apply them here. Project rules take precedence over the defaults above.
 
 **Verify — coverage checklist (Frontend):**
 
 Instead of re-reading the entire RSD, verify against this fixed checklist:
 
 - [ ] **All fields covered**: Every field from RSD/PTTK has validate test cases (or explicitly skipped for DETAIL screens)
+- [ ] **All fields from images**: If user provided screenshots/wireframes, every visible field/button/column in images has test cases (except sidebar/header)
 - [ ] **Field types match templates**: Each field dispatched to correct template (textbox, combobox, etc.)
 - [ ] **Search scenarios**: Every searchable field has exists/not exists/partial test cases (LIST only)
 - [ ] **Button visibility**: Every button with conditional visibility has permission/status test cases
@@ -433,6 +495,9 @@ Instead of re-reading the entire RSD, verify against this fixed checklist:
 - [ ] **Cross-field validation**: Dependent fields (cascading dropdowns, auto-fill) have interaction test cases
 - [ ] **Empty state**: Grid empty results, form default state tested
 - [ ] **Permissions**: Has permission / no permission test cases exist
+- [ ] **Test case granularity**: Each test case tests exactly 1 thing — no generic/vague cases (e.g., "Kiểm tra khi trạng thái không hợp lệ" should be split into specific status values)
+- [ ] **Section assignment**: Button/action test cases are in "Kiểm tra chức năng", not in "Kiểm tra validate"
+- [ ] **Project AGENTS.md rules**: ALL rules from project AGENTS.md `## Project-Specific Rules` are satisfied
 
 If any item is NO → append missing test cases. Wrong expected result → `### [SỬA]` and replace.
 
@@ -450,6 +515,7 @@ Checklist:
 - Forbidden words: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
 - SQL: concrete values (`WHERE ID = 10001`), UPPERCASE columns, NO placeholders
 - Output starts with `# {API_NAME}` or `# {SCREEN_NAME}` — NO blockquote header, NO `---` horizontal rules
+- **Project AGENTS.md quality rules**: If project defines additional quality constraints (e.g., "viết ngắn gọn", custom forbidden phrases, writing style) → apply them on top of defaults
 
 ## Catalog Management
 

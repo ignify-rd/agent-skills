@@ -42,21 +42,30 @@ Rules are resolved in this order (highest priority first):
 
 ## Workflow
 
-### Step 0: Validate Project Setup
+### Step 0: Validate Project Setup & Load Project Rules
 
-Before starting generation, check that the project structure exists:
+Before starting generation, check project structure and **load project-level rules**:
 
 1. **Check catalog** — look for `catalog/` directory at project root (contains `api/`, `frontend/`, `mobile/`)
-2. **Check AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
+2. **Check & READ AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
 3. **Check template structure** — look for `excel_template/structure.json`
 
 **If catalog directory does not exist:**
 - Ask user: "Chưa có thư mục `catalog/`. Bạn đã chạy `test-genie init` chưa?"
 - If not → guide user to run `test-genie init` to set up project structure
 
+**If AGENTS.md exists at project root:**
+- **READ the entire file content** — extract ALL sections and rules defined by the project
+- Store these rules as `projectRules` — they will be applied with **HIGHEST PRIORITY** throughout the entire generation workflow
+- Any rule in project AGENTS.md **overrides** the corresponding rule in skill-level AGENTS.md and references
+- Sections in project AGENTS.md that don't exist in defaults are **ADDED** (not ignored)
+- Pay special attention to `## Project-Specific Rules` — these are custom rules that MUST be followed in every step
+
 **If AGENTS.md does not exist at project root:**
 - Use skill-level `AGENTS.md` (default rules)
 - Inform user: "Project chưa có AGENTS.md. Đang dùng rules mặc định."
+
+**⚠️ CRITICAL: Project AGENTS.md is the highest-priority rule source.** Every subsequent step (mode detection, extraction, generation, verification) MUST check `projectRules` and apply them. If a project rule conflicts with a skill reference or default, the project rule WINS.
 
 **If catalog exists but has no examples (empty api/ and frontend/):**
 - Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm CSV examples trước không?"
@@ -115,6 +124,19 @@ Apply these checks on the **first 10 lines** of the mindmap:
 **Clues for Frontend mode (LLM fallback):** First line is screen name (e.g., "WEB_BO_Danh mục > ..."), sections include "giao diện chung", "phân quyền", "validate", "lưới dữ liệu", "chức năng".
 
 ### Step 3: Load Rules & References
+
+**Step 3a: Apply project AGENTS.md rules (loaded in Step 0)**
+
+Before loading any references, review `projectRules` from Step 0. Project rules affect:
+- **How to generate each field** — project may override format, writing style, section assignment
+- **Quality/style constraints** — project may define custom forbidden phrases, naming conventions, writing style
+- **Test case granularity** — project may require splitting cases differently (e.g., "tách riêng từng field", "buttons vào phần chức năng")
+- **Image analysis behavior** — project may require analyzing images before reading RSD
+- **Account/credentials** — project may define custom test account
+
+All rules from project AGENTS.md apply as overrides throughout the remaining steps. If project AGENTS.md defines a rule that contradicts a skill reference, **follow the project rule**.
+
+**Step 3b: Load skill references (mode-specific)**
 
 **Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
 

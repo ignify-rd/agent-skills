@@ -2,7 +2,24 @@
 
 Rules that override default behavior. Loaded automatically by AI agents.
 
-> **Per-project override:** Projects can have their own `AGENTS.md` at the project root. Rules defined there are **merged** with these defaults — only sections explicitly defined in project `AGENTS.md` override the corresponding defaults here. Sections not mentioned fall back to these skill-level defaults.
+> **Per-project override:** Projects can have their own `AGENTS.md` at the project root. Project AGENTS.md has the **HIGHEST PRIORITY** — rules defined there override ALL corresponding defaults here AND in skill references.
+
+## ⚠️ How to Apply Project AGENTS.md
+
+**This is CRITICAL — project AGENTS.md must be READ and APPLIED, not just checked for existence.**
+
+1. At the start of generation (Step 0), **READ the entire project AGENTS.md file**
+2. Extract ALL sections and rules — especially `## Project-Specific Rules`
+3. Store as `projectRules` and apply throughout the entire workflow
+4. Any rule in project AGENTS.md that conflicts with rules below → **project rule WINS**
+5. Sections in project AGENTS.md not present here are **ADDED** (custom rules), not ignored
+
+**Common project-level overrides:**
+- Custom section assignment (e.g., "buttons go in function section, not validate")
+- Writing style constraints (e.g., "viết ngắn gọn", "tách riêng từng case")
+- Image analysis behavior (e.g., "analyze images before reading RSD")
+- Custom test account override
+- Scope rules (e.g., "only generate for specified sections")
 
 ## Input Priority (PTTK vs RSD)
 

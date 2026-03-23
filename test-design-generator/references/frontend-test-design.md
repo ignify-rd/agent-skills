@@ -149,7 +149,7 @@ Theo `priority-rules.md`: khi có PTTK chỉ lấy từ RSD business logic/scree
   "fields": [
     {
       "name": "Tên field hiển thị",
-      "type": "textbox | combobox | dropdown | searchable_dropdown | toggle | checkbox | button | icon_x",
+      "type": "textbox | combobox | dropdown | searchable_dropdown | toggle | checkbox | button | icon_x | date | daterange | textarea | number | radio | file_upload | password | tag_input | richtext",
       "placeholder": "Placeholder text hoặc null",
       "maxLength": null,
       "allowSpecialChars": false,
@@ -293,6 +293,15 @@ Sử dụng per-field templates từ `field-templates.md`. Dispatch theo field t
 | checkbox | generateCheckboxTests |
 | button | generateButtonTests |
 | icon_x, icon_close | generateIconXTests |
+| date, datepicker | generateDatePickerTests |
+| daterange, date_range | generateDateRangePickerTests |
+| textarea, multiline | generateTextareaTests |
+| number, number_input | generateNumberInputTests |
+| radio, radio_group | generateRadioButtonTests |
+| file, file_upload, upload | generateFileUploadTests |
+| password, password_input | generatePasswordInputTests |
+| tag, tag_input, chip | generateTagInputTests |
+| richtext, rich_text_editor | generateRichTextEditorTests |
 | Unknown type | Fallback → generateTextboxTests |
 
 Sau khi generate tất cả field templates → gọi LLM để tìm **extra business validation** không có trong template:
