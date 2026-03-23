@@ -216,6 +216,27 @@ cat "$FIELD_TEMPLATES"
 
 > **Why lazy-load?** Loading all references regardless of mode wastes tokens on rules that won't be used. Only load what the detected mode requires.
 
+#### Extract test account from catalog
+
+After loading references, extract the test account/password to use in preConditions:
+
+**Priority order:**
+1. **Project AGENTS.md** (highest) — check for `## Test Account` section with `testAccount:` value
+2. **Catalog examples** — read 1-2 CSV files from `catalog/{mode}/`, extract the account used in preConditions (look for `account:` pattern in preConditions column)
+3. **Default** — `164987/ Test@147258369`
+
+**How to extract from catalog:**
+```bash
+# Quick extract: find account pattern in first catalog CSV
+head -20 catalog/frontend/*.csv 2>/dev/null | grep -oP 'account:\s*\K[^"\\]+' | head -1
+```
+
+Or read the first catalog CSV and look for the login/account pattern in preConditions.
+
+**Store the resolved account** for use in all test case generation batches. The account MUST be consistent across all test cases in the output.
+
+**Cách diễn đạt, hành văn:** Ngoài account, toàn bộ cách viết preConditions, step, expectedResult cũng phải **tuân theo catalog**. Catalog là nguồn chuẩn cho style/wording — nếu catalog viết theo cách nào thì output phải theo đúng cách đó.
+
 #### Search examples & utilities
 
 ```bash

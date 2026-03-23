@@ -49,6 +49,8 @@
 
 ---
 
+> **Lưu ý về account trong preConditions:** Các ví dụ dưới đây dùng account mặc định `164987/ Test@147258369`. Khi sinh test cases thực tế, account được xác định theo thứ tự ưu tiên: (1) project AGENTS.md → (2) catalog examples → (3) default. Cách diễn đạt, hành văn tuân theo catalog. Xem chi tiết tại `fe-test-case.md` R4 và `api-test-case.md` R4.
+
 ## Ví dụ 1: API Test Case — Common Section
 
 ```json

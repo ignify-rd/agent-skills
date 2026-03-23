@@ -84,7 +84,7 @@ Ví dụ SAI:
 **Format bắt buộc:**
 ```
 Đ/k1: Vào màn hình:
-1. Người dùng đăng nhập thành công {system} trên Web với account: 164987/ Test@147258369
+1. Người dùng đăng nhập thành công {system} trên Web với account: {account}
 2. Tại sitemap, người dùng truy cập màn hình {screenPath}
 Đ/k2: Phân quyền
 3. User được phân quyền truy cập
@@ -98,7 +98,7 @@ Ví dụ SAI:
 **Trường hợp đặc biệt — test không có quyền:**
 ```
 Đ/k1: Vào màn hình:
-1. Người dùng đăng nhập thành công {system} trên Web với account: 164987/ Test@147258369
+1. Người dùng đăng nhập thành công {system} trên Web với account: {account}
 2. Tại sitemap, người dùng truy cập màn hình {screenPath}
 Đ/k2: Phân quyền
 3. User không được phân quyền truy cập
@@ -107,8 +107,14 @@ Ví dụ SAI:
 **Rules:**
 - `{system}` = tên hệ thống (VD: "FEE", "BO"), lấy từ mindmap header
 - `{screenPath}` = đường dẫn breadcrumb đến màn hình
+- `{account}` = tài khoản/mật khẩu test, xác định theo thứ tự ưu tiên:
+  1. **Project AGENTS.md** (ưu tiên cao nhất) — nếu định nghĩa `testAccount` trong section `## Test Account`
+  2. **Catalog examples** — nếu project có catalog CSV với account cụ thể, extract và dùng account đó
+  3. **Default** — `164987/ Test@147258369` (chỉ dùng khi không có nguồn nào ở trên)
+- Cách diễn đạt, hành văn trong preConditions phải **tuân theo catalog** — nếu catalog dùng cách viết/format cụ thể, output phải theo đúng style đó
 - KHÔNG thay đổi format preConditions (cố định cho toàn bộ project)
 - KHÔNG dùng HTTP endpoint hay body JSON trong preConditions (đây là Frontend, không phải API)
+- Account phải **nhất quán** trong toàn bộ output — KHÔNG dùng account khác nhau giữa các test cases
 
 ## R5: step
 

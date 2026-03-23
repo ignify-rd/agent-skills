@@ -111,7 +111,7 @@ Ví dụ sai:
 
 **Format bắt buộc:**
 ```
-1. Send API login thành công
+1. Send API login thành công{loginDetail}
 2. Chuẩn bị request hợp lệ
    2.1 Endpoint: {METHOD} {{BASE_URL}}{path}
    2.2 Header:
@@ -126,11 +126,17 @@ Ví dụ sai:
 ```
 
 **Rules:**
+- `{loginDetail}` = chi tiết login, xác định theo thứ tự ưu tiên:
+  1. **Project AGENTS.md** (ưu tiên cao nhất) — nếu định nghĩa `testAccount` trong section `## Test Account`
+  2. **Catalog examples** — nếu project có catalog CSV với account/login cụ thể trong preConditions, extract và dùng format đó
+  3. **Default** — để trống (chỉ ghi "Send API login thành công")
+- Cách diễn đạt, hành văn trong preConditions phải **tuân theo catalog** — nếu catalog dùng cách viết/format cụ thể, output phải theo đúng style đó
 - Luôn dùng endpoint user cung cấp (nếu có). KHÔNG tự đặt endpoint khác.
 - Body = request hợp lệ hoàn chỉnh (baseline). Step sẽ mô tả sự thay đổi.
 - Body KHÔNG được để trống nếu API có input fields.
 - Header luôn có Authorization + Content-Type.
 - KHÔNG thay đổi body theo từng test case trong preConditions (thay đổi thể hiện ở step).
+- Account phải **nhất quán** trong toàn bộ output — KHÔNG dùng account khác nhau giữa các test cases.
 
 ## R5: step
 

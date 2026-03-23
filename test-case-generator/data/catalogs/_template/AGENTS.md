@@ -24,6 +24,15 @@ Only define rules that DIFFER from the defaults. Undefined rules fall back to sk
 <!-- - Language: 100% Vietnamese -->
 <!-- - Forbidden phrases: "và/hoặc", "hoặc", "có thể" -->
 
+## Test Account
+
+<!-- Uncomment and modify to override the default test account used in preConditions -->
+<!-- This has the HIGHEST priority — overrides both catalog examples and skill defaults -->
+<!-- - Frontend: "Người dùng đăng nhập thành công {system} trên Web với account: {your_account}" -->
+<!-- - API: "Send API login thành công với account: {your_account}" -->
+
+<!-- testAccount: "username/ password" -->
+
 ## Project-Specific Rules
 
 <!-- Add any rules unique to this project -->

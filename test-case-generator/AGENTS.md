@@ -47,6 +47,18 @@ Each batch: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho se
 - API testCaseName: with prefix `"{Field}_Mô tả"` — Frontend: no prefix, direct from mindmap
 - Dedup: track testCaseNames case-insensitive, keep first occurrence
 
+## Test Account
+
+Test account used in preConditions. Resolved by priority:
+1. **Project AGENTS.md** (highest) — define `testAccount` to override for all test cases
+2. **Catalog examples** — if catalog CSV files contain a specific account in preConditions, use that
+3. **Default** — `164987/ Test@147258369`
+
+Cách diễn đạt, hành văn trong preConditions tuân theo catalog — nếu catalog dùng cách viết/format cụ thể, output phải theo đúng style đó.
+
+<!-- Projects can override by adding this section in their own AGENTS.md: -->
+<!-- testAccount: "your_username/ your_password" -->
+
 ## Quality Rules
 
 - 100% Vietnamese, keep field/button names exactly as in RSD/PTTK
