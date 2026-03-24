@@ -455,18 +455,29 @@ expectedResult: "1. Check api trả về:\n   1.1. Status: 200\n   1.2. Response
 
 ### Trình tự xử lý BATCH 3
 
-Sinh test cases theo đúng thứ tự:
+Sinh test cases theo đúng thứ tự, dựa trên inventory đã extract ở Step 5c:
 
 ```
-1. Happy paths (Kỹ thuật 1)       — mỗi mode/luồng
-2. Branch coverage (Kỹ thuật 2)   — mỗi if/else
-3. Decision table (Kỹ thuật 3)    — tổ hợp điều kiện
-4. Error codes (Kỹ thuật 4)       — mỗi error code
-5. DB verification (Kỹ thuật 5)   — mỗi write operation
-6. External failures (Kỹ thuật 6) — mỗi external service
+1. Happy paths (Kỹ thuật 1)       — mỗi mode/luồng trong inventory.modes[]
+2. Branch coverage (Kỹ thuật 2)   — mỗi branch trong inventory.businessRules[]
+3. Decision table (Kỹ thuật 3)    — mỗi combo trong inventory.decisionCombinations[]
+4. Error codes (Kỹ thuật 4)       — mỗi code trong inventory.errorCodes[] section="main"
+5. DB verification (Kỹ thuật 5)   — mỗi operation trong inventory.dbOperations[]
+6. External failures (Kỹ thuật 6) — mỗi service trong inventory.externalServices[]
 ```
 
 **KHÔNG bỏ qua kỹ thuật nào**, kể cả khi mindmap không đề cập rõ — đọc RSD để tìm.
+
+**⚠️ CHECKLIST trước khi kết thúc BATCH 3:**
+```
+□ Mỗi mode trong inventory.modes[]           → có ≥1 happy path test case?
+□ Mỗi branch trong inventory.businessRules[] → có test TRUE + test FALSE?
+□ Mỗi error code section="main"              → có test với exact message từ RSD?
+□ Mỗi dbOperation[]                          → có test SELECT verify tất cả fields?
+□ Mỗi externalService[]                      → có test onFailure + onTimeout?
+□ Mỗi decisionCombination[]                  → có test với exact combination đó?
+Nếu bất kỳ ô nào chưa tích → tự append trước khi kết thúc batch.
+```
 
 ---
 

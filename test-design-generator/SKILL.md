@@ -412,6 +412,37 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - `autoFillRules[]` → phải có test case cho từng auto-fill behavior
 - `permissions[]` → mỗi role phải có test case trong ## Kiểm tra phân quyền
 
+### Step 4d: Inventory Verification Gate
+
+**Sau khi hoàn thành Step 4c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
+
+**API mode:**
+```
+📋 Business Logic Inventory đã extract:
+- Error codes:        {N} (list: PCER_001 [validate], PCER_002 [main], ...)
+- Business rules:     {N} if/else branches (list: BR1, BR2, ...)
+- Modes/flows:        {N} (list: uploadType=1, uploadType=2, ...)
+- DB fields:          {N} columns cần verify (list: ID, STATUS, FILE_NAME, ...)
+- External services:  {N} (list: S3, Queue, ...)
+```
+
+**Frontend mode:**
+```
+📋 Business Logic Inventory đã extract:
+- Fields:             {N} fields cần generate validate cases (list tên + type)
+- Business rules:     {N} (list: BR1 [validate], BR2 [function], ...)
+- Error messages:     {N} messages cần cover (list trigger)
+- Enable/disable:     {N} rules (list field + condition)
+- Auto-fill:          {N} cascading rules
+- Permissions:        {N} roles
+```
+
+**Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận trước khi tiếp tục:**
+> "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không? (có thể tôi đọc bỏ sót phần nào đó)"
+
+**Nếu API mode và errorCodes = 0:** Dừng lại, hỏi user:
+> "Không tìm thấy bảng mã lỗi trong tài liệu. Bạn có thể chỉ rõ section nào chứa error codes không?"
+
 ### Step 5: Generate Test Design Sections
 
 Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
@@ -433,16 +464,33 @@ Generate the test design following the rules loaded via `--ref` and the format o
 - ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
 - JSON response must be multiline WITHOUT backtick fence
 
-**Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format:
-1. Response fields verification — list ALL output fields (camelCase) with sample values
-2. DB mapping verification — full SQL: SELECT/FROM/WHERE/ORDER BY with concrete values
+**Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format.
+
+**⚠️ PHẢI sinh dựa trên inventory từ Step 4c — inject các items cụ thể vào generation:**
+
+```
+Sinh test cases cho ## Kiểm tra luồng chính. BẮT BUỘC cover đủ các items sau từ inventory:
+
+Modes:            {list inventory.modes[] — mỗi mode cần ≥1 happy path}
+Business rules:   {list inventory.businessRules[] — mỗi branch cần test TRUE + FALSE}
+Error codes:      {list inventory.errorCodes[section="main"] — mỗi code cần 1 test với exact message}
+DB fields:        {list inventory.dbFields[] — TẤT CẢ fields phải có trong SQL verify}
+External services:{list inventory.externalServices[] — cần test onFailure + rollback}
+
+KHÔNG bỏ sót bất kỳ item nào.
+```
+
+Thứ tự sinh:
+1. Response fields verification — list ALL output fields (camelCase) với sample values
+2. DB mapping verification — full SQL: SELECT/FROM/WHERE/ORDER BY với concrete values, verify **tất cả `dbFields[]`**
 3. Search scenarios — exact, approximate (LIKE), combined conditions, not found
 4. Sort order verification — ORDER BY clause
-5. Error code scenarios — each error code → 1 test case with exact message
-6. Business logic branches — each if/else → test both true and false, each with Response
+5. Error code scenarios — mỗi `errorCodes[section="main"]` → 1 test case với **exact message từ inventory**
+6. Business logic branches — mỗi `businessRules[]` branch → test TRUE + FALSE, mỗi có Response
 7. DB validations — exists/not exists → test both cases
-8. Mode variations — create/update/delete → test each mode
+8. Mode variations — mỗi `modes[]` item → test riêng
 9. Status transitions — valid/invalid transitions → test each
+10. External service failures — mỗi `externalServices[]` → test onFailure, rollback không INSERT DB
 
 **Verify — coverage checklist (API):**
 
@@ -487,6 +535,19 @@ Với modes[]:
 ```
 
 Nếu bất kỳ item nào NO → thêm bullet với `### [SỬA] Kiểm tra ...`
+
+**⚠️ PHẢI hiển thị coverage summary cho user sau khi verify (API mode):**
+```
+📊 Coverage Report (API):
+✓ Error codes [validate]: {N}/{N} covered
+✓ Error codes [main]:     {N}/{N} covered
+✓ Business rules:         {N}/{N} covered (BR1 → bullet X, BR2 → bullet Y, ...)
+✗ DB fields:              {N}/{N} — THÊM vào SQL: {field_name}
+✓ Modes:                  {N}/{N} covered
+✓ External services:      {N}/{N} covered
+
+[SỬA]: {N} bullets được thêm/sửa để đảm bảo coverage
+```
 
 #### Frontend Mode — Generation
 
@@ -564,23 +625,34 @@ Sau khi áp dụng template, supplement thêm với LLM: cross-field validation,
 
 **Pagination section (hardcoded):** Values, default, per-value test, page navigation. Only generate when pagination exists.
 
-**Function section (LLM-generated per screenType) — PHẢI dùng inventory từ Step 4c:**
+**Function section (LLM-generated per screenType) — PHẢI inject inventory từ Step 4c vào generation:**
 
-**⚠️ Section này phải cover TOÀN BỘ business logic từ inventory. Không được bỏ qua nghiệp vụ.**
+**⚠️ Section này phải cover TOÀN BỘ business logic. KHÔNG được sinh function section mà không có inventory items.**
 
-Dùng `businessRules[]`, `enableDisableRules[]`, `autoFillRules[]`, `statusTransitions[]`, `errorMessages[section="function"]` từ inventory:
+```
+Sinh ## Kiểm tra chức năng. BẮT BUỘC cover đủ các items sau từ inventory:
+
+Business rules [function]: {list inventory.businessRules[section="function"]}
+Error messages [function]:  {list inventory.errorMessages[section="function"] với exact message}
+Enable/disable rules:       {list inventory.enableDisableRules[] — mỗi rule cần test BOTH states}
+Auto-fill rules:            {list inventory.autoFillRules[]}
+Status transitions:         {list inventory.statusTransitions[] — valid + invalid transition}
+Permissions:                {list inventory.permissions[] — mỗi role cần test}
+
+KHÔNG bỏ sót bất kỳ item nào.
+```
 
 - **LIST:** Search per field (exists/not exists/partial), combined search, clear filter, add new button
 - **FORM/POPUP:**
   - Save success (form hợp lệ) → expected: thông báo thành công
-  - Save fail (form có lỗi) → expected: exact error message từ `errorMessages[]`
-  - Từng `enableDisableRules[]` → test case enable/disable
-  - Từng `autoFillRules[]` → test case auto-fill behavior
+  - Save fail (form có lỗi) → expected: **exact error message từ `errorMessages[]` trong inventory**
+  - Từng `enableDisableRules[]` → test case state enable VÀ state disable
+  - Từng `autoFillRules[]` → test case verify auto-fill behavior
   - Từng `businessRules[section="function"]` → test case cho mỗi condition
   - Cancel, back navigation
 - **DETAIL:** Button visibility by status/permission, click actions, navigation, status transitions
 - **All screen types:**
-  - Từng `statusTransitions[]` → test valid/invalid transition
+  - Từng `statusTransitions[]` → test valid transition + invalid transition (từ sai state)
   - Từng `permissions[]` → test action visibility/accessibility per role
   - Any button-related test cases belong in function section (not validate) — buttons test logic flow, not input validation
 
@@ -622,6 +694,19 @@ Verify against inventory JSON VÀ checklist cố định:
 - [ ] **Project AGENTS.md rules**: ALL project-specific rules satisfied
 
 If any item is NO → append missing test cases. Wrong expected result → `### [SỬA]` and replace.
+
+**⚠️ PHẢI hiển thị coverage summary cho user sau khi verify (Frontend mode):**
+```
+📊 Coverage Report (Frontend):
+✓ Fields covered:       {N}/{N} fields có validate test cases
+✓ Business rules:       {N}/{N} covered ({validate: N, function: N})
+✓ Error messages:       {N}/{N} covered với exact messages
+✗ Enable/disable rules: {N}/{N} — THÊM test case: "{field} khi {condition}"
+✓ Auto-fill rules:      {N}/{N} covered
+✓ Permissions:          {N}/{N} roles covered
+
+[SỬA]: {N} test cases được thêm/sửa để đảm bảo coverage
+```
 
 ### Step 5b: Final Project Rules Enforcement
 

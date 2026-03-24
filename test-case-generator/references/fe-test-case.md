@@ -241,6 +241,19 @@ Xem bảng mapping trong `output-format.md`.
 **Instruction thêm vào mỗi sub-batch:**
 > "Chỉ sinh test cases cho field: {field_name}. testSuiteName = 'Kiểm tra validate'. testCaseName lấy trực tiếp từ bullet items."
 
+**⚠️ Sau khi sinh xong mỗi field, tự kiểm tra số lượng:**
+
+| Field type | Min cases phải có |
+|-----------|-------------------|
+| Textbox | ≥18 |
+| Combobox (API data) | ≥15 |
+| Simple Dropdown | ≥8 |
+| Toggle | ≥4 |
+| DatePicker | ≥10 |
+| Upload/File | ≥8 |
+
+Nếu số cases sinh ra < min_cases → tự append cases còn thiếu dựa trên Standard Validate Cases bên dưới trước khi chuyển sang field tiếp theo.
+
 **Ví dụ sub-batch cho "Dropdown list Đối tượng khai báo":**
 ```json
 [
@@ -272,6 +285,20 @@ Xem bảng mapping trong `output-format.md`.
 
 **Instruction thêm vào prompt:**
 > "Chỉ sinh test cases cho các sections sau validate: {section_names}. KHÔNG sinh lại cases đã có ở validate hay giao diện chung."
+
+**⚠️ CHECKLIST trước khi kết thúc BATCH 3 (Frontend):**
+```
+□ Mỗi button action trong màn hình (Lưu, Hủy, Tìm kiếm, Xóa, Sửa, Export...)
+  → Có test case action thành công?
+  → Có test case action thất bại/cancel?
+  → Có test case không có quyền thực hiện action?
+□ Mỗi combobox/dropdown lấy data từ API
+  → Có test API timeout, API error, API rỗng? (nếu chưa cover ở BATCH 2)
+□ Mỗi điều kiện conditional disable/enable
+  → Có test verify cả 2 state?
+□ Mỗi cột trong lưới dữ liệu → có test case verify hiển thị?
+Nếu bất kỳ ô nào chưa tích → tự append trước khi kết thúc batch.
+```
 
 **Ví dụ Kiểm tra lưới dữ liệu:**
 ```json

@@ -478,6 +478,27 @@ Phải bao gồm **tất cả** — kể cả:
 
 **⚠️ CRITICAL:** Không được sinh test cases cho đến khi extraction JSON hoàn chỉnh. Đây là checklist sẽ dùng để verify coverage ở Step 6b.
 
+### Step 5d: Inventory Verification Gate
+
+**Sau khi hoàn thành Step 5c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
+
+```
+📋 Business Logic Inventory đã extract:
+- Error codes:        {N} (list: PCER_001, PCER_002, ...)
+- Business rules:     {N} if/else branches (list: BR1, BR2, ...)
+- Modes/flows:        {N} (list: Thêm mới, Xoá, ...)
+- DB operations:      {N} tables (list: TABLE_A INSERT, TABLE_B UPDATE, ...)
+- External services:  {N} (list: S3, Queue, ...)
+- Status transitions: {N}
+- Decision combos:    {N}
+```
+
+**Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận trước:**
+> "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không? (có thể tôi đọc bỏ sót phần nào đó)"
+
+**Nếu tất cả categories đều = 0:** Dừng lại ngay, hỏi user:
+> "Không extract được business logic nào từ tài liệu. Bạn có thể chỉ rõ section nào trong tài liệu chứa luồng xử lý / error codes / DB mapping không?"
+
 ### Step 6: Generate Test Cases in Batches
 
 #### Step 6a: Load Catalog Style Examples (MANDATORY)
@@ -579,10 +600,39 @@ Split mindmap into 3 batches, process sequentially:
 
 > **Why group?** Per-field sub-batch gọi LLM N lần (mỗi lần re-inject context). Gộp 3-5 fields giảm xuống N/4 calls, tiết kiệm overhead context đáng kể mà vẫn đủ rõ ràng cho LLM xử lý.
 
+**Minimum case count per field type — BATCH 2 enforcement:**
+
+| Field type | Min cases | Cases PHẢI có |
+|-----------|-----------|----------------|
+| String/Textbox (API) | ≥15 | empty, null, maxLen-1, maxLen, maxLen+1, XSS, SQL injection, emoji, wrong type (bool/array/obj) |
+| Number/Integer (API) | ≥12 | empty, null, negative, decimal, leading-zero, string, XSS, SQL injection |
+| Date (API) | ≥10 | empty, null, correct format, wrong format, invalid date, past/present/future |
+| Array (API) | ≥8 | missing, null, empty `[]`, `[{}]`, wrong type (string/number/bool/object) |
+| Textbox (Frontend) | ≥18 | default display, placeholder, icon X (hiển thị + clear), số, chữ, special chars, emoji, XSS, SQL, space đầu/cuối, all-space, maxLen-1, maxLen, maxLen+1 |
+| Combobox (Frontend) | ≥15 | default, placeholder, required, API timeout, API error, API rỗng, loading state, select 1, search keywords, hiển thị sau khi chọn |
+| Simple Dropdown (Frontend) | ≥8 | default, placeholder, danh sách values, chọn từng value, icon X, required |
+| Toggle (Frontend) | ≥4 | default, toggle A→B, toggle B→A, disabled state |
+
+**Sau khi sinh xong mỗi field, kiểm tra:**
+> Nếu số cases sinh ra < min_cases cho field type đó → tự append các cases còn thiếu trước khi chuyển sang field tiếp theo. KHÔNG được để thiếu.
+
 **BATCH 3 — Post-validate sections:**
 - All ## sections AFTER "Kiểm tra validate" (e.g., grid, functionality, timeout)
 - Force testSuiteName = section name, maxTokens: 65536
-- Instruction: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh lại cases đã có."
+- **Instruction PHẢI include toàn bộ inventory từ Step 5c** (không được dùng instruction ngắn chung chung):
+
+```
+Sinh test cases cho luồng chính. BẮT BUỘC apply đủ 6 kỹ thuật dựa trên inventory sau:
+
+1. Happy paths — sinh ≥1 test cho TỪNG mode/flow: {list modes từ inventory}
+2. Branch coverage — sinh test TRUE + test FALSE cho TỪNG if/else: {list branches từ inventory}
+3. Decision table — sinh test cho TỪNG combination có expected result khác nhau: {list decisionCombinations từ inventory}
+4. Error code coverage — sinh ≥1 test trigger TỪNG error code (copy exact message từ RSD): {list errorCodes từ inventory}
+5. DB verification — sinh test verify data TỪNG table/operation: {list dbOperations từ inventory}
+6. External service failures — sinh test onFailure + onTimeout cho TỪNG external service: {list externalServices từ inventory}
+
+KHÔNG được bỏ sót bất kỳ item nào. Inventory có N items → output phải cover ≥N items.
+```
 
 **After all batches:** Deduplicate testCaseNames (case-insensitive, keep first occurrence).
 
@@ -665,21 +715,62 @@ Với mỗi item trong decisionCombinations[]:
   → Nếu thiếu: APPEND
 ```
 
+---
+
+#### Frontend Mode — Traceability Matrix
+
+**A. Field Coverage**
+```
+Với mỗi field/component xuất hiện trong RSD/PTTK (textbox, combobox, dropdown, toggle...):
+  → Có sub-batch BATCH 2 tương ứng?
+  → Số cases của field đó ≥ min_cases theo type (xem bảng minimum case count)?
+  → Nếu không: APPEND field sub-batch còn thiếu
+```
+
+**B. Combobox/Dropdown API Coverage**
+```
+Với mỗi combobox/dropdown lấy data từ API trong RSD:
+  → Có test case API timeout? (combobox mở khi API timeout)
+  → Có test case API error? (combobox mở khi API trả lỗi)
+  → Có test case API trả rỗng? (combobox hiển thị "Không tìm thấy")
+  → Nếu thiếu: APPEND vào suite validate của field đó
+```
+
+**C. Conditional State Coverage (Disabled/Enabled)**
+```
+Với mỗi điều kiện conditional disable/enable/readonly trong RSD:
+  → Có test case verify state khi điều kiện = true?
+  → Có test case verify state khi điều kiện = false?
+  → Nếu thiếu: APPEND
+```
+
+**D. Screen Action Coverage**
+```
+Với mỗi button/action trong màn hình (Lưu, Hủy, Tìm kiếm, Xóa, Sửa, Export...):
+  → Có test case cho action thành công?
+  → Có test case cho action thất bại/cancel?
+  → Có test case cho permission (không có quyền thực hiện action)?
+  → Nếu thiếu: APPEND vào suite "Kiểm tra chức năng"
+```
+
+---
+
 #### Cách thực hiện
 
 1. Lấy inventory JSON từ Step 5c
 2. Duyệt từng mục A→G theo thứ tự
 3. Tìm test case tương ứng trong danh sách đã sinh
 4. Nếu thiếu → sinh ngay và append vào đúng suite
-5. Báo cáo gap summary (không hỏi user, tự xử lý):
+5. **PHẢI hiển thị coverage summary cho user** — bắt buộc, không được làm nội bộ, không được skip:
 
 ```
-Coverage check:
+📊 Coverage Report:
 ✓ Error codes:    6/6 covered
-✓ Business rules: 4/4 covered (BR1: TC_x, BR2: TC_y, ...)
-✗ DB operations:  1/2 covered — APPEND: "DB_FILE_STORAGE_INSERT"
-✗ External:       0/1 covered — APPEND: "S3_timeout", "S3_unavailable"
-→ Đã append 3 test cases.
+✓ Business rules: 4/4 covered (BR1 → TC_x, BR2 → TC_y, ...)
+✗ DB operations:  1/2 covered — tự APPEND: "DB_FILE_STORAGE_INSERT"
+✗ External:       0/1 covered — tự APPEND: "S3_timeout", "S3_unavailable"
+
+✅ Tổng: {N} test cases | Auto-appended: {M} cases để đảm bảo coverage
 ```
 
 > **Target:** Mọi item trong inventory đều có ít nhất 1 test case. 5% còn lại là undocumented implicit behaviors — chấp nhận được.
