@@ -44,15 +44,20 @@ TOKEN_PATH = TOKEN_DIR / 'token.json'
 
 
 def _is_valid_oauth_credentials(path):
-    """Check if a credentials.json is a valid OAuth (installed/web) type, not service_account."""
+    """Check if a credentials.json is a valid OAuth (installed/web) type, not service_account.
+    Also rejects unfilled templates (containing placeholder values like '<YOUR_')."""
     try:
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         # Valid OAuth credentials have 'installed' or 'web' top-level key
-        if 'installed' in data or 'web' in data:
-            return True
-        # Service account or empty placeholder — not usable for OAuth desktop flow
-        return False
+        if 'installed' not in data and 'web' not in data:
+            return False
+        # Check for unfilled template placeholders
+        oauth_data = data.get('installed') or data.get('web') or {}
+        client_id = oauth_data.get('client_id', '')
+        if not client_id or '<YOUR_' in client_id:
+            return False
+        return True
     except (json.JSONDecodeError, OSError):
         return False
 

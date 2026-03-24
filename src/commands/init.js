@@ -169,19 +169,20 @@ function installProjectStructure() {
   const credentialsPath = join(projectRoot, 'credentials.json');
   if (!existsSync(credentialsPath)) {
     const credentialsTemplate = {
-      type: 'service_account',
-      project_id: '',
-      private_key_id: '',
-      private_key: '',
-      client_email: '',
-      client_id: '',
-      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-      client_x509_cert_url: '',
+      installed: {
+        client_id: '<YOUR_CLIENT_ID>.apps.googleusercontent.com',
+        project_id: '<YOUR_PROJECT_ID>',
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+        client_secret: '<YOUR_CLIENT_SECRET>',
+        redirect_uris: ['http://localhost'],
+      },
     };
     writeFileSync(credentialsPath, JSON.stringify(credentialsTemplate, null, 2), 'utf8');
-    logger.success('Created: credentials.json (fill in your Service Account details)');
+    logger.success('Created: credentials.json (OAuth Desktop App template)');
+    logger.dim('  Fill in client_id and client_secret from Google Cloud Console.');
+    logger.dim('  Or leave empty to use bundled credentials (default).');
   } else {
     logger.dim('credentials.json already exists (skipped)');
   }
