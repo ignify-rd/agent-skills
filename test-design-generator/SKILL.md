@@ -27,6 +27,39 @@ Python 3 installed. Check:
 python3 --version || python --version
 ```
 
+## ⚠️ Đọc file PDF — KHÔNG tự viết parser
+
+**TUYỆT ĐỐI KHÔNG được tự viết code parse PDF** (không tạo extract_pdf.py, extract_pdf.ps1, không parse xref table, không decode binary). Thay vào đó:
+
+**Cách 1 (ưu tiên): Dùng Read tool trực tiếp**
+- Hầu hết AI tools (Claude Code, Cursor, Windsurf) có thể đọc PDF trực tiếp bằng Read tool
+- Chỉ cần: `Read file: path/to/document.pdf`
+- Nếu file lớn, đọc theo pages: `Read file: path/to/document.pdf pages=1-10`
+
+**Cách 2 (fallback): Dùng Python + PyPDF2/pdfplumber**
+```bash
+# Cài đặt nếu chưa có
+python3 -m pip install PyPDF2
+
+# Extract text từ PDF
+python3 -c "
+import PyPDF2
+reader = PyPDF2.PdfReader('path/to/document.pdf')
+for page in reader.pages:
+    print(page.extract_text())
+"
+```
+
+**Cách 3 (fallback 2): pdftotext (nếu có sẵn)**
+```bash
+pdftotext "path/to/document.pdf" -
+```
+
+**KHÔNG BAO GIỜ:**
+- Tạo file script mới để parse PDF (extract_pdf.py, extract_pdf.ps1...)
+- Parse PDF binary format thủ công (xref table, byte offsets, content streams)
+- Mất hơn 30 giây để đọc 1 file PDF — nếu quá lâu, chuyển sang cách khác
+
 ## Rule Override Hierarchy
 
 Rules are resolved in this order (highest priority first):
@@ -72,10 +105,11 @@ Before starting generation, check project structure and **load project-level rul
 
 **If user provides a feature folder name** (e.g., `/generate-test-design feature-1` or `sinh test design cho feature-1`):
 1. Look inside `<feature-name>/` folder for input documents automatically:
-   - Scan for `.pdf` files — identify RSD and PTTK by filename (e.g., `RSD*.pdf`, `PTTK*.pdf`, or any `.pdf` files present)
+   - Scan for document files: `.pdf`, `.docx`, `.doc`, `.md`, `.txt` — identify RSD and PTTK by filename
 2. **DO NOT ask** the user for file paths — use whatever documents are found in the folder
-3. If no `.pdf` files found → inform user: "Folder `<feature-name>/` không có tài liệu RSD/PTTK. Hãy đặt file vào folder trước."
-4. Save output as `<feature-name>/test-design.md`
+3. **If folder is empty** → scan toàn bộ project root cho document files liên quan đến feature name
+4. If truly no documents found → inform user: "Không tìm thấy tài liệu RSD/PTTK. Hãy cung cấp đường dẫn hoặc upload file."
+5. Save output as `<feature-name>/test-design.md`
 
 ### Step 1: Determine Mode
 
