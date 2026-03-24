@@ -240,22 +240,30 @@ Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is availabl
 
 #### Frontend Mode — Extraction
 
-**Phase 1: Analyze images (if provided)**
-1. For each image: extract screenType, buttons, inputFields (label, type, placeholder, location), gridColumns, hasPagination
-2. Consolidate all image analyses into one structure
-3. **⚠️ CRITICAL merge rule:** Hình ảnh **CHỈ bổ sung** (placeholder, hasIconX, button labels, vị trí field). Hình ảnh **KHÔNG ĐƯỢC override** bất kỳ thông tin nào từ RSD/PTTK bao gồm: field names, maxLength, minLength, data types, required/optional, format constraints, enum values, API endpoints, validation rules. Nếu conflict → **LUÔN dùng giá trị từ RSD/PTTK**.
+**⚠️ THỨ TỰ BẮT BUỘC: Đọc RSD/PTTK TRƯỚC — ảnh CHỈ bổ sung SAU.** Không được đọc ảnh trước rồi dùng RSD để "sửa lại". RSD/PTTK là nguồn chính, ảnh chỉ thêm thông tin RSD/PTTK thiếu.
 
-**Phase 2: RSD → screen structure (always from RSD)**
+**Phase 1: RSD → screen structure + business logic (LUÔN đọc TRƯỚC TIÊN)**
 1. Extract: screenName, screenType (LIST/FORM/POPUP/DETAIL), breadcrumb, permissions, UI elements
 2. Extract: fields with types (textbox/combobox/dropdown/toggle/checkbox/button/icon_x)
-3. Extract: grid columns (name, dbColumn, dbTable, format), pagination values, sort order
-4. Extract: button visibility rules by status/permission, additional features
+3. Extract: **maxLength, minLength, data types, required/optional, format constraints, enum values** cho từng field — ghi lại chính xác từ RSD
+4. Extract: grid columns (name, dbColumn, dbTable, format), pagination values, sort order
+5. Extract: button visibility rules by status/permission, additional features
+6. **Extract business logic:** điều kiện enable/disable, auto-fill rules, cascading dependencies, validation rules nghiệp vụ (VD: "Ngày hiệu lực phải >= ngày hiện tại", "Mã SLA unique"), error messages, luồng save/submit, status transitions
 
-**Phase 3: PTTK → field definitions (if available)**
+**Phase 2: PTTK → field definitions (if available)**
 1. Find the exact screen/API in PTTK by name or endpoint
 2. Extract: field names, types, API endpoints, DB mappings, enum values, maxLength, format constraints
 3. **REPLACE** all field definitions from RSD with PTTK values (PTTK wins completely)
 4. **If no PTTK** → keep field definitions from RSD
+
+**Phase 3: Analyze images (if provided — CUỐI CÙNG)**
+1. For each image: extract screenType, buttons, inputFields (label, type, placeholder, location), gridColumns, hasPagination
+2. Consolidate all image analyses into one structure
+3. **⚠️ CRITICAL merge rule:** So sánh với data đã extract từ Phase 1+2:
+   - Hình ảnh **CHỈ bổ sung** thông tin mà RSD/PTTK **KHÔNG có**: placeholder text, hasIconX, button labels, vị trí field
+   - Hình ảnh **KHÔNG ĐƯỢC override** bất kỳ thông tin nào từ RSD/PTTK: field names, maxLength, minLength, data types, required/optional, format constraints, enum values, API endpoints, validation rules
+   - Nếu conflict → **LUÔN giữ giá trị từ RSD/PTTK (Phase 1+2)**
+   - Nếu ảnh có field/button không trong RSD → **hỏi user trước khi thêm**
 
 ### Step 4b: Validate Documents & Ask Clarification
 
@@ -284,10 +292,11 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - Priority rules already define the answer (e.g., PTTK wins for field definitions)
 - It's a formatting/style question covered by references
 
-### Step 4c: Business Logic Inventory (API mode only)
+### Step 4c: Business Logic Inventory (CẢ API và Frontend)
 
 **Before generating any section**, extract toàn bộ business logic thành inventory. Đây là checklist để đảm bảo mọi item đều xuất hiện trong mindmap đúng section.
 
+#### API Mode Inventory:
 ```json
 {
   "errorCodes": [
@@ -310,17 +319,76 @@ After extraction, check for issues and **proactively ask user** before proceedin
 }
 ```
 
-**Extraction rules:**
+#### Frontend Mode Inventory:
+
+**⚠️ Frontend CŨ̃NG PHẢI extract business logic từ RSD — KHÔNG được bỏ qua.**
+
+```json
+{
+  "screenName": "Tạo mới SLA",
+  "screenType": "FORM",
+  "fieldConstraints": [
+    { "field": "Tên cấu hình SLA", "type": "textbox", "maxLength": 100, "required": true, "unique": true, "source": "RSD" },
+    { "field": "Ngày hiệu lực", "type": "datepicker", "constraint": ">= ngày hiện tại", "required": true, "source": "RSD" }
+  ],
+  "businessRules": [
+    { "id": "BR1", "type": "validation", "condition": "Tên cấu hình SLA đã tồn tại", "expected": "Hiển thị cảnh báo 'Tên cấu hình SLA đã tồn tại'", "section": "validate" },
+    { "id": "BR2", "type": "condition", "condition": "Ngày hiệu lực < ngày hiện tại", "expected": "Không cho phép chọn", "section": "validate" },
+    { "id": "BR3", "type": "flow", "condition": "Click Lưu khi form hợp lệ", "expected": "Lưu thành công, hiển thị thông báo", "section": "function" },
+    { "id": "BR4", "type": "flow", "condition": "Click Lưu khi form có lỗi validate", "expected": "Hiển thị cảnh báo lỗi", "section": "function" }
+  ],
+  "errorMessages": [
+    { "trigger": "Bỏ trống field bắt buộc", "message": "exact message từ RSD", "section": "validate" },
+    { "trigger": "Nhập quá maxLength", "message": "exact message từ RSD", "section": "validate" },
+    { "trigger": "Lưu thất bại", "message": "exact message từ RSD", "section": "function" }
+  ],
+  "enableDisableRules": [
+    { "field": "Button Lưu", "condition": "Form chưa nhập đủ required fields", "state": "disable" },
+    { "field": "Dropdown X", "condition": "Chọn loại A", "state": "enable", "cascading": "load danh sách theo loại A" }
+  ],
+  "autoFillRules": [
+    { "trigger": "Chọn giá trị tại Dropdown X", "target": "Field Y", "action": "auto-fill giá trị tương ứng" }
+  ],
+  "statusTransitions": [
+    { "from": "Draft", "to": "Active", "trigger": "Click Phê duyệt" }
+  ],
+  "permissions": [
+    { "action": "Xem", "role": "Viewer" },
+    { "action": "Tạo mới", "role": "Maker" },
+    { "action": "Phê duyệt", "role": "Checker" }
+  ]
+}
+```
+
+**Extraction rules (API):**
 - `errorCodes[].section`: `"validate"` = thuộc section "Kiểm tra validate" trong mindmap; `"main"` = thuộc "Kiểm tra luồng chính"
 - `errorCodes[].desc`: copy **exact** từ bảng mã lỗi trong RSD/PTTK — **đọc toàn bộ bảng, không bỏ sót dòng nào**
 - `dbFields[]`: lấy từ bảng DB mapping trong PTTK — **list 100% columns** kể cả auto-generate và derived fields
 - `externalServices[].rollbackBehavior`: nếu RSD mô tả "không lưu DB khi lỗi" → ghi rõ, cần 1 bullet trong mindmap
 
-**Dùng inventory này khi sinh từng section:**
+**Dùng inventory này khi sinh từng section (API):**
 - Error codes có `section="validate"` → phải xuất hiện trong ## Kiểm tra validate
 - Error codes có `section="main"` → phải xuất hiện trong ## Kiểm tra luồng chính
 - `dbFields[]` → tất cả fields phải có trong SQL verify của luồng chính
 - `rollbackBehavior` → phải có bullet "S3 lỗi → không INSERT vào DB" trong luồng chính
+
+**Extraction rules (Frontend):**
+- `fieldConstraints[]`: lấy từ RSD/PTTK — **maxLength, minLength, required, unique, format** phải chính xác từ tài liệu, KHÔNG đoán từ ảnh
+- `businessRules[]`: đọc **toàn bộ mô tả nghiệp vụ** trong RSD — mỗi condition/if-else/validation rule = 1 entry
+- `errorMessages[]`: copy **exact** message từ RSD — đọc toàn bộ bảng thông báo lỗi, không bỏ sót
+- `enableDisableRules[]`: lấy từ RSD mô tả điều kiện enable/disable cho từng field/button
+- `autoFillRules[]`: lấy từ RSD mô tả auto-fill, cascading dependencies
+- `statusTransitions[]`: lấy từ RSD flow diagram hoặc mô tả luồng
+- `permissions[]`: lấy từ RSD phân quyền
+
+**Dùng inventory này khi sinh từng section (Frontend):**
+- `fieldConstraints[]` → mỗi field PHẢI dùng maxLength/minLength/required/unique từ inventory, KHÔNG từ ảnh
+- `businessRules[section="validate"]` → phải có bullet trong ## Kiểm tra validate
+- `businessRules[section="function"]` → phải có bullet trong ## Kiểm tra chức năng
+- `errorMessages[]` → mỗi error message phải có ≥1 bullet test case
+- `enableDisableRules[]` → phải có test case cho từng rule enable/disable
+- `autoFillRules[]` → phải có test case cho từng auto-fill behavior
+- `permissions[]` → mỗi role phải có test case trong ## Kiểm tra phân quyền
 
 ### Step 5: Generate Test Design Sections
 
@@ -474,30 +542,62 @@ Sau khi áp dụng template, supplement thêm với LLM: cross-field validation,
 
 **Pagination section (hardcoded):** Values, default, per-value test, page navigation. Only generate when pagination exists.
 
-**Function section (LLM-generated per screenType):**
+**Function section (LLM-generated per screenType) — PHẢI dùng inventory từ Step 4c:**
+
+**⚠️ Section này phải cover TOÀN BỘ business logic từ inventory. Không được bỏ qua nghiệp vụ.**
+
+Dùng `businessRules[]`, `enableDisableRules[]`, `autoFillRules[]`, `statusTransitions[]`, `errorMessages[section="function"]` từ inventory:
+
 - **LIST:** Search per field (exists/not exists/partial), combined search, clear filter, add new button
-- **FORM/POPUP:** Save success/fail, field interactions (enable/disable, auto-fill, dependent validation), cancel
-- **DETAIL:** Button visibility by status/permission, click actions, navigation
-- **All screen types:** Any button-related test cases belong in function section (not validate) — buttons test logic flow, not input validation
+- **FORM/POPUP:**
+  - Save success (form hợp lệ) → expected: thông báo thành công
+  - Save fail (form có lỗi) → expected: exact error message từ `errorMessages[]`
+  - Từng `enableDisableRules[]` → test case enable/disable
+  - Từng `autoFillRules[]` → test case auto-fill behavior
+  - Từng `businessRules[section="function"]` → test case cho mỗi condition
+  - Cancel, back navigation
+- **DETAIL:** Button visibility by status/permission, click actions, navigation, status transitions
+- **All screen types:**
+  - Từng `statusTransitions[]` → test valid/invalid transition
+  - Từng `permissions[]` → test action visibility/accessibility per role
+  - Any button-related test cases belong in function section (not validate) — buttons test logic flow, not input validation
 
 **⚠️ Project AGENTS.md override:** If project AGENTS.md defines additional function section rules (e.g., "buttons vào phần chức năng", custom section assignments), apply them here. Project rules take precedence over the defaults above.
 
-**Verify — coverage checklist (Frontend):**
+**Verify — coverage checklist (Frontend) — dùng inventory từ Step 4c:**
 
-Instead of re-reading the entire RSD, verify against this fixed checklist:
+Verify against inventory JSON VÀ checklist cố định:
 
-- [ ] **All fields covered**: Every field from RSD/PTTK has validate test cases (or explicitly skipped for DETAIL screens)
-- [ ] **All fields from images**: If user provided screenshots/wireframes, every visible field/button/column in images has test cases (except sidebar/header)
-- [ ] **Field types match templates**: Each field dispatched to correct template (textbox, combobox, etc.)
-- [ ] **Search scenarios**: Every searchable field has exists/not exists/partial test cases (LIST only)
-- [ ] **Button visibility**: Every button with conditional visibility has permission/status test cases
-- [ ] **Grid columns**: Every grid column has data verification + sort test cases (LIST only)
-- [ ] **Cross-field validation**: Dependent fields (cascading dropdowns, auto-fill) have interaction test cases
-- [ ] **Empty state**: Grid empty results, form default state tested
-- [ ] **Permissions**: Has permission / no permission test cases exist
-- [ ] **Test case granularity**: Each test case tests exactly 1 thing — no generic/vague cases (e.g., "Kiểm tra khi trạng thái không hợp lệ" should be split into specific status values)
-- [ ] **Section assignment**: Button/action test cases are in "Kiểm tra chức năng", not in "Kiểm tra validate"
-- [ ] **Project AGENTS.md rules**: ALL rules from project AGENTS.md `## Project-Specific Rules` are satisfied
+**A. Field Constraint Coverage (từ `fieldConstraints[]`):**
+- [ ] Mỗi field có test cases dùng **đúng maxLength/minLength/required từ inventory** (KHÔNG từ ảnh)
+- [ ] Field có `unique: true` → có test case "nhập giá trị đã tồn tại"
+- [ ] Field có `constraint` (VD: ">= ngày hiện tại") → có test case boundary cho constraint đó
+
+**B. Business Rule Coverage (từ `businessRules[]`):**
+- [ ] Mỗi `businessRules[]` có ≥1 test case trong đúng section (validate/function)
+- [ ] Mỗi condition có test case cho BOTH true/false paths
+
+**C. Error Message Coverage (từ `errorMessages[]`):**
+- [ ] Mỗi `errorMessages[]` có test case với **exact message** từ inventory
+- [ ] Error messages nằm đúng section (validate/function)
+
+**D. Enable/Disable Coverage (từ `enableDisableRules[]`):**
+- [ ] Mỗi rule có test case cho state enable VÀ disable
+
+**E. Auto-fill/Cascading Coverage (từ `autoFillRules[]`):**
+- [ ] Mỗi auto-fill rule có test case verify auto-fill behavior
+
+**F. Standard Coverage:**
+- [ ] **All fields covered**: Every field from RSD/PTTK has validate test cases
+- [ ] **All fields from images**: Every visible field in images has test cases (nếu có trong RSD)
+- [ ] **Field types match templates**: Each field dispatched to correct template
+- [ ] **Search scenarios**: Every searchable field has exists/not exists/partial (LIST only)
+- [ ] **Grid columns**: Every column has data verification + sort (LIST only)
+- [ ] **Empty state**: Grid empty, form default state tested
+- [ ] **Permissions**: Has/no permission test cases exist
+- [ ] **Test case granularity**: 1 test = 1 check, no vague cases
+- [ ] **Section assignment**: Buttons in "chức năng", not "validate"
+- [ ] **Project AGENTS.md rules**: ALL project-specific rules satisfied
 
 If any item is NO → append missing test cases. Wrong expected result → `### [SỬA]` and replace.
 
