@@ -1,0 +1,459 @@
+Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Note,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,StepExecType,Spec Title,Document ID,Estimated exec. Duration,,,,,
+Kiểm tra giao diện chung,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_1,"Kiểm tra điều hướng đến popup Chi tiết bản ghi giảm, tăng phí đang hiệu lực","Kiểm tra điều hướng đến popup Chi tiết bản ghi giảm, tăng phí đang hiệu lực","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+2. Quan sát điều hướng màn hình.","Điều hướng thành công đến màn hình Chi tiết bản ghi giảm, tăng phí đang hiệu lực",,,,,,,,,,
+,,WEB_2,Kiểm tra bố cục giao diện tổng thể,Kiểm tra bố cục giao diện tổng thể,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Low,,,,,"1. Quan sát toàn bộ giao diện popup Chi tiết bản ghi giảm, tăng phí đang hiệu lực","Hiển thị theo đúng figma
+Màn hình Chi tiết bản ghi giảm, tăng phí đang hiệu lực hiển thị đầy đủ các thông tin:
+- Label : “Chi tiết” + “ badge thẻ trạng thái”
+- Button - x (Đóng popup)
+- Label Đối tượng khai báo 
+- Label Dịch vụ thu phí/ Gói SPDV
+- Label CIF/ Tài khoản
+- Label Loại giảm, tăng
+- Label Hình thức giảm, tăng
+- Label Lỗi kiểm tra
+- Label Loại tiền
+- Label Mức giảm, tăng
+- Label Mức tối thiểu
+- Label Mức tối đa
+- Label Hiệu lực 
+- Label Số kỳ đã áp dụng
+- Label Mã lô Upload
+- Label Ghi chú
+- Label Chi nhánh
+- Label Người tạo  
+- Label Ngày tạo
+- Label Người cập nhật
+- Label Ngày cập nhật
+- Label Người duyệt 
+- Label Ngày duyệt
+- Button Xóa ",,,,,,https://bidv-vn.atlassian.net/browse/PS0112025-2222,,,,
+,,WEB_3,Kiểm tra hiển thị bố cục layout cân đối,Kiểm tra hiển thị bố cục layout cân đối,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Low,,,,,"1. Quan sát font chữ, màu sắc, khoảng cách giữa các phần tử.","Hiển thị đúng cỡ chữ, màu chữ, bố cục cân đối, kích thước chính xác, đúng chính tả",,,,,,,,,,
+,,WEB_4,Kiểm tra phóng to/thu nhỏ,Kiểm tra phóng to/thu nhỏ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Low,,,,,1. Sử dụng phím tắt Ctrl + và Ctrl - để phóng to/thu nhỏ trình duyệt.,Màn hình không bị vỡ form,,,,,,,,,,
+Kiểm tra phân quyền,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_5,Kiểm tra login user không có quyền,Kiểm tra login user không có quyền,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,1. Kiểm tra login user không có quyền, User không vào được popup,,,,,,,,,,
+,,WEB_6,Kiểm tra login user có quyền,Kiểm tra login user có quyền,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Đăng nhập tài khoản GDV, mở Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+2. Đăng nhập tài khoản KSV/BCV, mở Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+","Update: Hiển thị popup và hiển thị nút Xóa
+Không có update: Hiển thị popup và chỉ xem chi tiết.",,,,,,,,,,
+Kiểm tra validate,,,,,,,,,,,,,,,,,,,,,,,,
+Kiểm tra button x,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_7,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,1. Quan sát button x trên giao diện.,Hiển thị hiển thị và enable,,,,,,,,,,
+,,WEB_8,Kiểm tra click button x,Kiểm tra click button x,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát button x trên giao diện.
+2. Click button x ","Đóng popup Chi tiết, hiển thị màn hình đang thao tác trước đó",,,,,,,,,,
+ Kiểm tra Label Đối tượng khai báo,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_9,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Đối tượng khai báo"" trên giao diện.",Hiển thị thông tin domainTypeName do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động,,,,,,,,,,
+,,WEB_10,Kiểm tra khi nhập vào trường Đối tượng khai báo,Kiểm tra khi nhập vào trường Đối tượng khai báo,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường ""Đối tượng khai báo"".
+2. Cố gắng nhập liệu từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Dịch vụ thu phí/ Gói SPDV,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_11,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Mở popup 
+2. Quan sát label ""Dịch vụ thu phí/ Gói SPDV"".",Hiển thị thông tin {feeService} - {feeServiceName} do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động,,,,,,https://bidv-vn.atlassian.net/browse/PS0112025-2222,,,,
+,,WEB_12,Kiểm tra khi nhập vào trường Dịch vụ thu phí/ Gói SPDV,Kiểm tra khi nhập vào trường Dịch vụ thu phí/ Gói SPDV,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào trường ""Dịch vụ thu phí/ Gói SPDV"".
+2. Thử nhập dữ liệu hoặc thay đổi giá trị.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label CIF/ Tài khoản,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_13,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,1. Quan sát trường CIF/ Tài khoản trên giao diện chi tiết.,"	
+Hiển thị thông tin customerId do server trả về tại API Chi tiết bản ghi giảm tăng đang hoạt động",,,,,,,,,,
+,,WEB_14,Kiểm tra khi nhập vào trường CIF/ Tài khoản,Kiểm tra khi nhập vào trường CIF/ Tài khoản,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào trường CIF/ Tài khoản
+2. Cố gắng nhập ký tự bất kỳ từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+"Kiểm tra Label Loại giảm, tăng",,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_15,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường Loại giảm, tăng trên popup.",Hiển thị discountTypeName do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động,,,,,,,,,,
+,,WEB_16,"Kiểm tra khi nhập vào trường Loại giảm, tăng","Kiểm tra khi nhập vào trường Loại giảm, tăng","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào trường Loại giảm, tăng
+2. Cố gắng nhập liệu hoặc chỉnh sửa giá trị.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+"Kiểm tra Hình thức giảm, tăng",,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_17,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Hình thức giảm, tăng"" trên giao diện.",Hiển thị discountMethodName do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động,,,,,,,,,,
+,,WEB_18,"Kiểm tra khi nhập vào trường Hình thức giảm, tăng","Kiểm tra khi nhập vào trường Hình thức giảm, tăng","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường ""Hình thức giảm, tăng"".
+2. Cố gắng nhập ký tự bất kỳ từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Loại tiền,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_19,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết segment
+2. Quan sát trường Loại tiền",Hiển thị currCode do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động,,,,,,,,,,
+,,WEB_20,Kiểm tra khi nhập vào trường Loại tiền,Kiểm tra khi nhập vào trường Loại tiền,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào trường ""Loại tiền""
+2. Thử nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+"Kiểm tra Label ""Mức giảm, tăng""",,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_21,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát hiển thị của trường ""Mức giảm, tăng"".","Hiển thị  discountAmt do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- discountMethod = 0 (Cố định)
++ Với currCode = VND : Tối đa 15 ký tự số . Các hàng đơn vị ngăn cách bởi dấu “,” 
++ Với currCode = USD : Tối đa 13 ký tự số phần nguyên +  2 ký tự số phần thập phân. Các hàng đơn vị ngăn cách bởi dấu “,”
+- discountMethod = 1 (Tỷ lệ): Là dạng số trong khoảng (0;100] không chứa phần thập phân",,,,,,,,,,
+,,WEB_22,"Kiểm tra khi nhập vào trường Mức giảm, tăng","Kiểm tra khi nhập vào trường Mức giảm, tăng","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào trường Mức giảm, tăng.
+2. Cố gắng nhập liệu từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra trường Mức tối thiểu,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_23,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Mức tối thiểu"" trên popup Chi tiết ","Hiển thị discountMin do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị
+- Nếu server trả về khác null/empty:
++ currCode = VND: Tối đa 15 ký tự số. Các hàng đơn vị ngăn cách bởi dấu “,” (không tính vào số lượng ký tự)
++ currCode = USD : Tối đa 13 ký tự số phần nguyên +  2 ký tự số phần thập phân. Các hàng đơn vị ngăn cách bởi dấu “,” (không tính vào số lượng ký tự). Ký tự . ngăn cách phần nguyên và phần thập phân",,,,,,,,,,
+,,WEB_24,Kiểm tra khi nhập vào trường Mức tối thiểu,Kiểm tra khi nhập vào trường Mức tối thiểu,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào trường ""Mức tối thiểu"".
+2. Cố gắng nhập liệu hoặc thay đổi giá trị.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Mức tối đa,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_25,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Mức tối đa"" trên giao diện.","Hiển thị discountMax do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị
+- Nếu server trả về khác null/empty:
++ currCode = VND: Tối đa 15 ký tự số. Các hàng đơn vị ngăn cách bởi dấu “,” (không tính vào số lượng ký tự)
++ currCode = USD : Tối đa 13 ký tự số phần nguyên +  2 ký tự số phần thập phân. Các hàng đơn vị ngăn cách bởi dấu “,” (không tính vào số lượng ký tự). Ký tự . ngăn cách phần nguyên và phần thập phân",,,,,,,,,,
+,,WEB_26,Kiểm tra khi nhập vào trường Mức tối đa,Kiểm tra khi nhập vào trường Mức tối đa,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường ""Mức tối đa"".
+2. Thử nhập ký tự từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Hiệu lực ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_27,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Mở popup Chi tiết 
+2. Quan sát field ""Hiệu lực"".","Hiển thị {startDate} - {endDate} do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Hiển thị hiệu lực từ - đến của bản ghi theo format (mm/yyyy - mm/yyyy)",,,,,,,,,,
+,,WEB_28,Kiểm tra khi nhập vào trường Hiệu lực ,Kiểm tra khi nhập vào trường Hiệu lực ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào field ""Hiệu lực""
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Số kỳ đã áp dụng,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_29,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,1. Quan sát hiển thị của trường Số kỳ đã áp dụng,"Hiển thị usedPeriod do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_30,Kiểm tra khi nhập vào trường Số kỳ đã áp dụng,Kiểm tra khi nhập vào trường Số kỳ đã áp dụng,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click vào trường Số kỳ đã áp dụng.
+2. Cố gắng nhập hoặc thay đổi giá trị trong trường này.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Mã lô Upload,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_31,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Mã lô Upload"" trên giao diện.","Hiển thị thông tin batchId do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Mã lô upload với bản ghi được upload theo lô
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_32,Kiểm tra khi nhập vào trường Mã lô Upload,Kiểm tra khi nhập vào trường Mã lô Upload,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường ""Mã lô Upload"".
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Ghi chú,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_33,Kiểm tra hiển thị mặc định,Kiểm tra hiển thị mặc định,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết 
+2. Quan sát hiển thị của trường Ghi chú","Hiển thị thông tin lý do miễn giảm description do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_34,Kiểm tra khi nhập ký tự,Kiểm tra khi nhập ký tự,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,1. Nhập ký tự vào Ghi chú,Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Chi nhánh,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_35,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Chi nhánh"" trên giao diện.",Hiển thị thông tin {branch} - {branchName} do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động,,,,,,,,,,
+,,WEB_36,Kiểm tra khi nhập vào trường Chi nhánh,Kiểm tra khi nhập vào trường Chi nhánh,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường ""Chi nhánh"".
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra label Người tạo,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_37,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Người tạo"" trên giao diện.","Hiển thị mã cán bộ khởi tạo createdUser  do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_38,Kiểm tra khi nhập vào trường Người tạo,Kiểm tra khi nhập vào trường Người tạo,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường Người tạo.
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Ngày tạo ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_39,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Quan sát trường ""Ngày tạo"" trên giao diện.","Hiển thị thông tin createdTime  do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Định dạng: dd/mm/yyyy HH:mm:ss
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_40,Kiểm tra khi nhập vào trường Ngày tạo,Kiểm tra khi nhập vào trường Ngày tạo,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường Ngày tạo.
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Người cập nhật ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_41,Kiểm tra giá trị mặc định,Kiểm tra giá trị mặc định,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết 
+2. Quan sát Người cập nhật ","Hiển thị thông tin updatedUser do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Nếu server trả về null/empty  thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_42,Kiểm tra khi nhập vào trường Người cập nhật ,Kiểm tra khi nhập vào trường Người cập nhật ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường Người cập nhật 
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Ngày cập nhật ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_43,Kiểm tra giá trị mặc định,Kiểm tra giá trị mặc định,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết 
+2. Quan sát Ngày cập nhật ","Hiển thị thông tin updatedTime do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Định dạng: dd/mm/yyyy HH:mm:ss
+- Nếu server trả về null/empty thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_44,Kiểm tra khi nhập vào trường Ngày cập nhật ,Kiểm tra khi nhập vào trường Ngày cập nhật ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường Ngày cập nhật 
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Người duyệt ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_45,Kiểm tra giá trị mặc định,Kiểm tra giá trị mặc định,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết 
+2. Quan sát Người duyệt ","Hiển thị approvedUser do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Nếu server trả về null thì không hiển thị trường này cả label và giá trị",,,,,,,,,,
+,,WEB_46,Kiểm tra khi nhập vào trường Người duyệt ,Kiểm tra khi nhập vào trường Người duyệt ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường Người duyệt 
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Label Ngày duyệt ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_47,Kiểm tra giá trị mặc định,Kiểm tra giá trị mặc định,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết 
+2. Quan sát Ngày duyệt ","Hiển thị thông tin approvedTime do server trả về ở API Chi tiết bản ghi giảm tăng đang hoạt động
+- Định dạng: dd/mm/yyyy HH:mm:ss
+- Nếu server trả null/empty hoặc không trả: không hiển thị cả label và giá trị",,,,,,,,,,
+,,WEB_48,Kiểm tra khi nhập vào trường Ngày duyệt ,Kiểm tra khi nhập vào trường Ngày duyệt ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Click chuột vào trường Ngày duyệt 
+2. Cố gắng nhập giá trị từ bàn phím.",Hiển thị trạng thái Read Only / Disabled,,,,,,,,,,
+Kiểm tra Button Xóa ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_49,Kiểm tra hiển thị ,Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+2. Quan sát button Xóa","Hiển thị và mặc định enable khi thỏa mãn điều kiện : 
++ Người dùng có functionCode delete (Giao dịch viên)
++ Bản ghi có trạng thái status = 1
+
+- Không hiển thị khi gười dùng có functionCode delete (Kiểm soát viên/ báo cáo viên) ",,,,,,,,,,
+,,WEB_50,"Kiểm tra hiển thị text, thiết kế của button","Kiểm tra hiển thị text, thiết kế của button","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Medium,,,,,"1. Truy cập màn hình Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+2. Quan sát hiển thị ","Hiển thị text ""Xóa"", thiết kết theo figma",,,,,,,,,,
+Kiểm tra chức năng,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_51,Kiểm tra click đúp bản ghi để xem chi tiết,Kiểm tra click đúp bản ghi để xem chi tiết,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,High,,,,,"1. Truy cập vào màn hình  Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lự
+2. Hệ thống hiển thị danh sách bản ghi
+3. Click đúp vào 1 bản ghi",Client gửi request API /bo-service/v1/category/promotion-customer/get-detail với id của bản ghi được chọn,,,,,,,,,,
+,,WEB_52,Kiểm tra khi gọi API thành công,Kiểm tra khi gọi API thành công,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,High,,,,,1. Gửi request API /bo-service/v1/category/promotion-customer/get-detail với id của bản ghi được chọn,Server trả HTTP Status 200 và dữ liệu chi tiết bản ghi tương ứng,,,,,,,,,,
+,,WEB_53,"Kiểm tra khi click button ""Xóa"" ","Kiểm tra khi click button ""Xóa"" ","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,High,,,,,"1. Truy cập màn hình Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+2. Quan sát dữ liệu hiển thị 
+3. Click button Xóa",Hiển thị modal Xác nhận xoá,,,,,,,,,,
+Kiểm tra timeout,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_54,Kiểm tra khi Client BO gọi Server nhưng không nhận được phản hồi,Kiểm tra khi Client BO gọi Server nhưng không nhận được phản hồi,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Low,,,,,"1. Thực hiện thao tác gọi 
+2. Server không phản hồi / timeout.",Hiển thị popup thông báo lỗi theo design modal lỗi với nội dung “Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.”,,,,,,,,,,
+,,WEB_55,Kiểm tra khi Client BO gọi Server nhưng nhận phản hồi lỗi ,Kiểm tra khi Client BO gọi Server nhưng nhận phản hồi lỗi ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 143853/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Giảm, tăng phí thủ công > Tab Danh sách đang hiệu lực > Chi tiết bản ghi giảm, tăng phí đang hiệu lực
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+",,,Low,,,,,"1. Thực hiện thao tác
+2. Server trả về lỗi .","Hiển thị popup thông báo lỗi theo design modal lỗi với nội dung poErrorDesc server trả về
+icon theo design
+- Tiêu đề: Lỗi
+- Content: nội dung poErrorDesc server trả về
+- Button: “Đóng”: Nhấn client thực hiện Đóng popup thông báo lỗi",,,,,,,,,,

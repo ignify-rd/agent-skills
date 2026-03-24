@@ -1,24 +1,20 @@
 ---
-name: generate-test-design
-description: Generate test design documents (mindmap .md) from RSD/PTTK. Searches catalog of real examples by keyword to find matching reference. Use when user says "generate test design", "generate mindmap", "sinh test design", "tao mindmap", "tạo test design", "tạo mindmap", or provides RSD/PTTK documents for mindmap generation.
+name: generate-test-design-frontend
+description: Generate Frontend test design mindmap from RSD/PTTK. For UI screens only. Use when user says "sinh test design frontend", "sinh test design giao diện", "tao mindmap màn hình", or provides RSD/PTTK for a UI screen.
 ---
 
-# Test Design Generator
+# Test Design Generator — Frontend Mode
 
-Generate comprehensive test design documents (.md) from RSD and optional PTTK. Uses a searchable catalog of real test design examples to ensure output matches the correct format per project.
+Generate comprehensive test design documents (.md) for Frontend UI screens from RSD and optional PTTK. Uses a searchable catalog of real test design examples to ensure output matches the correct format per project.
 
-> **Scope**: This skill covers **test design** (mindmap output) for two pages:
-> - `src/pages/rsd-to-mindmap.vue` — API test design
-> - `src/pages/rsd-to-mindmap-frontend.vue` — Frontend test design (with optional image analysis)
->
-> It does **NOT** cover test case generation (JSON/Excel output) — that is handled by `api-test-generation.vue` and `fe-test-generation.vue`.
+> **Scope**: This skill covers **test design** (mindmap output) for Frontend UI screens only. It does NOT cover API test design or test case generation (JSON/Excel output).
 
 ## When to Apply
 
-- User provides RSD/PTTK and asks to generate test design or mindmap
-- User says "sinh test design", "tạo test design", "tạo mindmap", "tao mindmap"
-- User uploads .pdf/.txt/.md files for test design / mindmap generation
-- Called internally by `test-case-generator` skill when user provides only RSD+PTTK without a mindmap
+- User provides RSD/PTTK for a UI screen and asks to generate test design or mindmap
+- User says "sinh test design frontend", "sinh test design giao diện", "tạo test design màn hình", "tao mindmap"
+- User uploads .pdf/.txt/.md files for Frontend test design / mindmap generation
+- Called internally by `test-case-generator-frontend` skill when user provides only RSD+PTTK without a mindmap
 
 ## Prerequisites
 
@@ -27,7 +23,7 @@ Python 3 installed. Check:
 python3 --version || python --version
 ```
 
-## ⚠️ Đọc file PDF — CHỈ dùng Read tool
+## Đọc file PDF — CHỈ dùng Read tool
 
 **Đọc PDF bằng Read tool. Không có ngoại lệ.**
 
@@ -71,7 +67,7 @@ Read tool của AI tools (Claude Code, Cursor, Windsurf, Copilot, Roo Code...) �
 
 Before starting generation, check project structure and **load project-level rules**:
 
-1. **Check catalog** — look for `catalog/` directory at project root (contains `api/`, `frontend/`, `mobile/`)
+1. **Check catalog** — look for `catalog/` directory at project root (contains `frontend/` subdirectory)
 2. **Check & READ AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
 
 **If catalog directory does not exist:**
@@ -89,44 +85,38 @@ Before starting generation, check project structure and **load project-level rul
 - Use skill-level `AGENTS.md` (default rules)
 - Inform user: "Project chưa có AGENTS.md. Đang dùng rules mặc định."
 
-**If catalog exists but has no examples (empty api/ and frontend/):**
+**If catalog exists but has no examples (empty frontend/):**
 - Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm examples trước không?"
 - Proceed with skill references as fallback
 
-**⚠️ CRITICAL: Project AGENTS.md rules take precedence when explicitly defined.** Every subsequent step (mode detection, extraction, generation, verification) MUST check `projectRules` and apply them. If a project rule is explicitly defined, use that rule.
+**⚠️ CRITICAL: Project AGENTS.md rules take precedence when explicitly defined.** Every subsequent step must check `projectRules` and apply them.
 
 ### Step 0b: Resolve Input Documents
 
-**If user provides a feature folder name** (e.g., `/generate-test-design feature-1` or `sinh test design cho feature-1`):
+**If user provides a feature folder name** (e.g., `/generate-test-design-frontend feature-1` or `sinh test design frontend cho feature-1`):
 1. Look inside `<feature-name>/` folder for input documents automatically:
    - Scan for document files: `.pdf`, `.docx`, `.doc`, `.md`, `.txt` — identify RSD and PTTK by filename
 2. **DO NOT ask** the user for file paths — use whatever documents are found in the folder
 3. **If folder is empty** → scan toàn bộ project root cho document files liên quan đến feature name
 4. If truly no documents found → inform user: "Không tìm thấy tài liệu RSD/PTTK. Hãy cung cấp đường dẫn hoặc upload file."
-5. Save output as `<feature-name>/test-design.md`
+5. Save output as `<feature-name>/test-design-frontend.md`
 
-### Step 1: Determine Mode
+### Step 1: Mode Detection (Frontend Mode Only)
 
-| Input | Mode | Output |
-|-------|------|--------|
-| RSD describes an API endpoint | API | Markdown test design for API |
-| RSD describes a UI screen | Frontend | Markdown test design for Frontend |
+This skill is **Frontend-only**. The input RSD must describe a UI screen.
 
-#### Heuristic-first detection (rule-based, no LLM needed)
+**Heuristic-first detection (rule-based, no LLM needed):**
 
-Apply these regex/keyword checks on the RSD **before** asking LLM:
-
-| Heuristic | Mode | Confidence |
-|-----------|------|------------|
-| Title/heading matches `(GET\|POST\|PUT\|DELETE\|PATCH)\s+/` | API | High |
-| Document contains `endpoint`, `request body`, `response body`, `API` (case-insensitive) in first 2 pages | API | Medium |
-| Document contains `màn hình`, `screen`, `giao diện`, `button`, `textbox`, `combobox`, `lưới` | Frontend | Medium |
-| Title contains `Danh sách`, `Chi tiết`, `Thêm mới`, `Cập nhật` + UI element names | Frontend | Medium |
+| Heuristic | Confidence |
+|-----------|------------|
+| Document contains `màn hình`, `screen`, `giao diện`, `button`, `textbox`, `combobox`, `lưới` | High |
+| Title contains `Danh sách`, `Chi tiết`, `Thêm mới`, `Cập nhật` + UI element names | High |
+| Document describes UI layout, form fields, grid display | High |
 
 **Decision logic:**
-1. If heuristic returns **High confidence** → use that mode, skip LLM detection
-2. If heuristic returns **Medium confidence** → use that mode but note in output: "Mode detected by heuristic: {mode}"
-3. If **no heuristic matches** or **conflicting signals** → fallback to LLM to read RSD and determine mode
+1. If heuristic returns **High confidence** → proceed as Frontend
+2. If document appears to be API/RSD → inform user: "Tài liệu này là API, không phải Frontend. Sử dụng skill `generate-test-design-api` thay thế."
+3. If **no heuristic matches** → ask user for clarification
 
 ### Step 2: Load Rules & References
 
@@ -140,11 +130,9 @@ Before loading any references, review `projectRules` from Step 0. Project rules 
 - **Image analysis behavior** — project may require analyzing images before reading RSD
 - **Custom field types** — project may define field types not in default templates
 
-All rules from project AGENTS.md apply as overrides throughout the remaining steps. If project AGENTS.md explicitly defines a rule, use that rule.
+All rules from project AGENTS.md apply as overrides throughout the remaining steps.
 
-**Step 2b: Load skill references (mode-specific)**
-
-**Load ONLY the references needed for the detected mode.** Do NOT load all references upfront.
+**Step 2b: Load skill references (Frontend mode)**
 
 #### Resolve SKILL_SCRIPTS path
 
@@ -152,18 +140,18 @@ Scripts are installed alongside this SKILL.md file in a `scripts/` subdirectory.
 
 **Method 1 — Recursive find from project root:**
 ```bash
-SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-design-generator/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-design-generator-frontend/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
 echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
 ```
 
 **Method 2 — Direct path check (if Method 1 returns empty):**
 ```bash
 for d in \
-  ".claude/skills/test-design-generator/scripts" \
-  ".cursor/skills/test-design-generator/scripts" \
-  ".windsurf/skills/test-design-generator/scripts" \
-  ".roo/skills/test-design-generator/scripts" \
-  ".kiro/skills/test-design-generator/scripts"; do
+  ".claude/skills/test-design-generator-frontend/scripts" \
+  ".cursor/skills/test-design-generator-frontend/scripts" \
+  ".windsurf/skills/test-design-generator-frontend/scripts" \
+  ".roo/skills/test-design-generator-frontend/scripts" \
+  ".kiro/skills/test-design-generator-frontend/scripts"; do
   [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
 done
 echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
@@ -172,20 +160,20 @@ echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
 **Method 3 — Global npm (if Method 2 returns empty):**
 ```bash
 npm_root=$(npm root -g 2>/dev/null)
-[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-design-generator/scripts/search.py" ] && \
-  SKILL_SCRIPTS="$npm_root/test-genie/test-design-generator/scripts"
+[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-design-generator-frontend/scripts/search.py" ] && \
+  SKILL_SCRIPTS="$npm_root/test-genie/test-design-generator-frontend/scripts"
 ```
 
 **Method 4 — CRITICAL FALLBACK (if all above fail): Read reference files directly**
 
-If `SKILL_SCRIPTS` is still empty after all methods, **DO NOT skip loading references**. Instead, read the reference files directly using the Read tool (or equivalent file reading capability):
+If `SKILL_SCRIPTS` is still empty after all methods, **DO NOT skip loading references**. Instead, read the reference files directly:
 
 ```
-READ: <skills-dir>/test-design-generator/references/priority-rules.md
-READ: <skills-dir>/test-design-generator/references/quality-rules.md
-READ: <skills-dir>/test-design-generator/references/api-test-design.md      (API mode only)
-READ: <skills-dir>/test-design-generator/references/frontend-test-design.md  (Frontend mode only)
-READ: <skills-dir>/test-design-generator/references/field-templates.md       (Frontend mode only)
+READ: <skills-dir>/test-design-generator-frontend/references/frontend-test-design.md
+READ: <skills-dir>/test-design-generator-frontend/references/field-templates.md
+READ: <skills-dir>/test-design-generator-frontend/references/priority-rules.md
+READ: <skills-dir>/test-design-generator-frontend/references/quality-rules.md
+READ: <skills-dir>/test-design-generator-frontend/references/output-examples.md
 ```
 
 Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is found. Try common paths:
@@ -193,37 +181,23 @@ Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is f
 - `.cursor/skills/`
 - `.windsurf/skills/`
 
-**⚠️ NEVER proceed without loading references.** The format template in `api-test-design.md` is mandatory — without it the output will be in wrong format. If you truly cannot find any reference file, inform the user: "Không tìm thấy skill scripts. Bạn có thể chạy `test-genie init` để khởi tạo lại không?"
+**⚠️ NEVER proceed without loading references.** The format templates in `frontend-test-design.md` and `field-templates.md` are mandatory.
 
 **Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
 
-#### Load by mode (lazy-load)
+#### Load Frontend references
 
-**Always load first (both modes):**
+**Always load first (Frontend mode):**
 ```bash
 python $SKILL_SCRIPTS/search.py --ref priority-rules
 python $SKILL_SCRIPTS/search.py --ref quality-rules
-```
-
-**API mode — load this only:**
-```bash
-python $SKILL_SCRIPTS/search.py --ref api-test-design
-```
-
-**Frontend mode — load these only:**
-```bash
 python $SKILL_SCRIPTS/search.py --ref frontend-test-design
 python $SKILL_SCRIPTS/search.py --ref field-templates
 ```
 
-> **Why lazy-load?** Loading all references regardless of mode wastes 30-50% tokens on rules that won't be used. Only load what the detected mode requires.
-
 #### Search examples & utilities
 
 ```bash
-# Search API examples by keyword (searches catalog/api/ in project root)
-python $SKILL_SCRIPTS/search.py "search list api" --domain api
-
 # Search Frontend examples (searches catalog/frontend/ in project root)
 python $SKILL_SCRIPTS/search.py "danh sach list screen" --domain frontend
 
@@ -237,7 +211,7 @@ python $SKILL_SCRIPTS/search.py --list-refs
 python $SKILL_SCRIPTS/search.py --list
 
 # Read full content of top match
-python $SKILL_SCRIPTS/search.py "export excel" --domain api --full
+python $SKILL_SCRIPTS/search.py "export excel" --domain frontend --full
 ```
 
 ### Step 3: Read the Top-Matching Example
@@ -252,19 +226,7 @@ After search returns results, **read the full example file** to understand the e
 
 Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is available, IGNORE field definitions, request body, and response body in RSD.
 
-#### API Mode — Extraction
-
-**Phase 1: RSD → business logic only (always from RSD)**
-1. Find the exact API section in RSD by endpoint or name
-2. Extract: title, endpoint, method, errorCodes (description → status code mapping), dbMapping (table, conditions, orderBy)
-3. Extract: if/else branches, mode variations (create/update/delete), status transitions
-
-**Phase 2: PTTK → field definitions (if available)**
-1. Find the EXACT API by endpoint in PTTK (PTTK is usually a large document with many APIs)
-2. Extract inputFields: name, type (Date/Integer/Long/String — exact from PTTK), maxLength, required (Y/N), nullBehavior, validationRules (allowedSpecialChars, allowSpaces, allowAccents)
-3. Extract outputFields: name, type, nesting structure
-4. Extract response body structure (field names, data types, nesting) — this defines the response format for ALL test cases
-5. **If no PTTK** → fallback: extract field definitions AND business logic from RSD
+### Step 4: Extract Data from RSD, PTTK & Images
 
 #### Frontend Mode — Extraction
 
@@ -298,56 +260,23 @@ Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is availabl
 After extraction, check for issues and **proactively ask user** before proceeding:
 
 **Missing information (MUST ask):**
-- RSD has no error codes or error code table is empty → ask: "RSD không có bảng mã lỗi. Bạn có tài liệu bổ sung không, hay bỏ qua phần error codes?"
-- Cannot find the exact API/screen in PTTK → ask: "PTTK có nhiều API, không tìm thấy endpoint `{endpoint}`. Bạn muốn dùng API nào?" (list candidates)
-- Field type unclear (RSD says "text" but no maxLength, no format) → ask: "Field `{name}` không có maxLength/format trong tài liệu. Giá trị mặc định nào phù hợp?"
 - screenType ambiguous (has both grid and form elements) → ask: "Màn hình này vừa có lưới vừa có form. screenType là LIST hay FORM?"
 - No permissions section in RSD → ask: "RSD không mô tả phân quyền. Bỏ qua section phân quyền hay tạo mặc định?"
 
 **Conflicts between documents (MUST ask):**
 - PTTK field name differs from RSD field name → ask: "PTTK gọi là `{pttk_name}` nhưng RSD gọi là `{rsd_name}`. Dùng tên nào?"
 - PTTK says required but RSD says optional (or vice versa) → ask: "Field `{name}`: PTTK = required, RSD = optional. Theo tài liệu nào?"
-- Different data types between documents → ask: "Field `{name}`: PTTK type = `{type1}`, RSD type = `{type2}`. Dùng type nào?"
-- Response structure differs between PTTK and RSD → follow PTTK (per priority rules), but note the difference
 
 **Suspicious/unclear content (SHOULD ask):**
 - Business logic description is vague or uses ambiguous words ("có thể", "tùy trường hợp") → ask: "Logic `{description}` không rõ ràng. Cụ thể điều kiện là gì?"
 - Image shows field/button not in RSD → ask: "Hình ảnh có `{element}` nhưng RSD không đề cập. Thêm vào test design không?"
-- Duplicate fields with different specs → ask: "Field `{name}` xuất hiện 2 lần với spec khác nhau. Dùng spec nào?"
 
 **DO NOT ask if:**
-- Information can be reasonably inferred (e.g., WRONG_METHODS from API method)
-- Priority rules already define the answer (e.g., PTTK wins for field definitions)
+- Information can be reasonably inferred
+- Priority rules already define the answer
 - It's a formatting/style question covered by references
 
-### Step 4c: Business Logic Inventory (CẢ API và Frontend)
-
-**Before generating any section**, extract toàn bộ business logic thành inventory. Đây là checklist để đảm bảo mọi item đều xuất hiện trong mindmap đúng section.
-
-#### API Mode Inventory:
-```json
-{
-  "errorCodes": [
-    { "code": "PCER_UPLOAD_001", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file format sai" },
-    { "code": "PCER_UPLOAD_004", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file sai template" },
-    { "code": "2", "desc": "Có lỗi xảy ra trong quá trình xử lý", "section": "main", "triggerCondition": "S3 error hoặc DB error" }
-  ],
-  "businessRules": [
-    { "id": "BR1", "condition": "uploadType = 1", "trueBranch": "INSERT với action=ADD", "falseBranch": null, "section": "main" },
-    { "id": "BR2", "condition": "uploadType = 2", "trueBranch": "INSERT với action=DELETE", "falseBranch": null, "section": "main" }
-  ],
-  "dbFields": [
-    "ID (auto)", "DOMAIN_TYPE", "FEE_SERVICE", "CUSTOMER_ID", "BRANCH (= bdsCode + '000')",
-    "STATUS (= 1)", "UPLOAD_TYPE", "CREATED_USER", "CREATED_TIME", "TOTAL_UPLOAD", "FILE_NAME", "S3_FILE_KEY"
-  ],
-  "externalServices": [
-    { "name": "S3", "onFailure": "error code 2", "rollbackBehavior": "không INSERT DB" }
-  ],
-  "modes": ["uploadType=1 (Thêm mới)", "uploadType=2 (Xoá)"]
-}
-```
-
-#### Frontend Mode Inventory:
+### Step 4c: Business Logic Inventory (Frontend Mode)
 
 **⚠️ Frontend CŨ̃NG PHẢI extract business logic từ RSD — KHÔNG được bỏ qua.**
 
@@ -388,18 +317,6 @@ After extraction, check for issues and **proactively ask user** before proceedin
 }
 ```
 
-**Extraction rules (API):**
-- `errorCodes[].section`: `"validate"` = thuộc section "Kiểm tra validate" trong mindmap; `"main"` = thuộc "Kiểm tra luồng chính"
-- `errorCodes[].desc`: copy **exact** từ bảng mã lỗi trong RSD/PTTK — **đọc toàn bộ bảng, không bỏ sót dòng nào**
-- `dbFields[]`: lấy từ bảng DB mapping trong PTTK — **list 100% columns** kể cả auto-generate và derived fields
-- `externalServices[].rollbackBehavior`: nếu RSD mô tả "không lưu DB khi lỗi" → ghi rõ, cần 1 bullet trong mindmap
-
-**Dùng inventory này khi sinh từng section (API):**
-- Error codes có `section="validate"` → phải xuất hiện trong ## Kiểm tra validate
-- Error codes có `section="main"` → phải xuất hiện trong ## Kiểm tra luồng chính
-- `dbFields[]` → tất cả fields phải có trong SQL verify của luồng chính
-- `rollbackBehavior` → phải có bullet "S3 lỗi → không INSERT vào DB" trong luồng chính
-
 **Extraction rules (Frontend):**
 - `fieldConstraints[]`: lấy từ RSD/PTTK — **maxLength, minLength, required, unique, format** phải chính xác từ tài liệu, KHÔNG đoán từ ảnh
 - `businessRules[]`: đọc **toàn bộ mô tả nghiệp vụ** trong RSD — mỗi condition/if-else/validation rule = 1 entry
@@ -422,17 +339,6 @@ After extraction, check for issues and **proactively ask user** before proceedin
 
 **Sau khi hoàn thành Step 4c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
 
-**API mode:**
-```
-📋 Business Logic Inventory đã extract:
-- Error codes:        {N} (list: PCER_001 [validate], PCER_002 [main], ...)
-- Business rules:     {N} if/else branches (list: BR1, BR2, ...)
-- Modes/flows:        {N} (list: uploadType=1, uploadType=2, ...)
-- DB fields:          {N} columns cần verify (list: ID, STATUS, FILE_NAME, ...)
-- External services:  {N} (list: S3, Queue, ...)
-```
-
-**Frontend mode:**
 ```
 📋 Business Logic Inventory đã extract:
 - Fields:             {N} fields cần generate validate cases (list tên + type)
@@ -446,10 +352,7 @@ After extraction, check for issues and **proactively ask user** before proceedin
 **Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận trước khi tiếp tục:**
 > "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không? (có thể tôi đọc bỏ sót phần nào đó)"
 
-**Nếu API mode và errorCodes = 0:** Dừng lại, hỏi user:
-> "Không tìm thấy bảng mã lỗi trong tài liệu. Bạn có thể chỉ rõ section nào chứa error codes không?"
-
-### Step 5: Generate Test Design Sections
+### Step 5: Generate Test Design Sections (Frontend Mode)
 
 Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
 
@@ -459,80 +362,6 @@ Generate the test design following the rules loaded via `--ref` and the format o
 - If project defines image analysis behavior (e.g., "phân tích hình ảnh trước") → follow that
 - If project defines custom field handling not in default templates → follow that
 - If project defines any `## Project-Specific Rules` → apply ALL of them to every section
-#### API Mode — Generation
-
-**Common section (hardcoded):** Copy the base template exactly — only replace `{API_NAME}` and `{WRONG_METHODS}`. Format: `- status: 107` (simple). NEVER use `1\. Check api trả về:` in common.
-
-**Post-section checkpoint — Common:** Có đủ Method + URL + Authorization test cases? Thiếu → thêm bullet.
-
-**Validate section (per-field):** For each inputField from Phase 2, generate test cases using the field templates in `--ref api-test-design`:
-- String Required → test: empty, missing, null, maxLen-1/maxLen/maxLen+1, numeric, accented chars, special chars, spaces, emoji, unicode, boolean, array, object, XSS, SQL injection
-- Integer with default → test: empty/missing/null (uses default), valid value, negative, decimal, string
-- Optional Integer → test: empty/missing/null (returns all), valid/invalid value, string
-- ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
-- JSON response must be multiline WITHOUT backtick fence
-
-**Post-section checkpoint — Validate (API):** TỪNG field trong `inventory.errorCodes[section="validate"]` → có bullet với exact error code? Thiếu → THÊM bullet `### [SỬA]`.
-
-**Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format.
-
-**⚠️ PHẢI sinh dựa trên inventory từ Step 4c — inject các items cụ thể vào generation:**
-
-```
-Sinh test cases cho ## Kiểm tra luồng chính. BẮT BUỘC cover đủ các items sau từ inventory:
-
-Modes:            {list inventory.modes[] — mỗi mode cần ≥1 happy path}
-Business rules:   {list inventory.businessRules[] — mỗi branch cần test TRUE + FALSE}
-Error codes:      {list inventory.errorCodes[section="main"] — mỗi code cần 1 test với exact message}
-DB fields:        {list inventory.dbFields[] — TẤT CẢ fields phải có trong SQL verify}
-External services:{list inventory.externalServices[] — cần test onFailure + rollback}
-
-KHÔNG bỏ sót bất kỳ item nào.
-```
-
-Thứ tự sinh:
-1. Response fields verification — list ALL output fields (camelCase) với sample values
-2. DB mapping verification — full SQL: SELECT/FROM/WHERE/ORDER BY với concrete values, verify **tất cả `dbFields[]`**
-3. Search scenarios — exact, approximate (LIKE), combined conditions, not found
-4. Sort order verification — ORDER BY clause
-5. Error code scenarios — mỗi `errorCodes[section="main"]` → 1 test case với **exact message từ inventory**
-6. Business logic branches — mỗi `businessRules[]` branch → test TRUE + FALSE, mỗi có Response
-7. DB validations — exists/not exists → test both cases
-8. Mode variations — mỗi `modes[]` item → test riêng
-9. Status transitions — valid/invalid transitions → test each
-10. External service failures — mỗi `externalServices[]` → test onFailure, rollback không INSERT DB
-
-**Post-section checkpoint — Main flow (API):**
-- TỪNG mode trong `inventory.modes[]` → có ≥1 happy path bullet?
-- TỪNG branch trong `inventory.businessRules[]` → có bullet TRUE + FALSE?
-- TỪNG error code `section="main"` → có bullet với exact message?
-- TỪNG dbField trong `inventory.dbFields[]` → có trong SQL SELECT?
-- TỪNG `externalServices[]` → có bullet onFailure + rollback?
-- Item nào thiếu → THÊM bullet `### [SỬA]` ngay.
-
-**Verify — coverage summary (API mode):**
-
-Kiểm tra nhanh đã cover đủ:
-- [ ] `inventory.errorCodes[section="validate"]` → mỗi code có bullet trong ## Kiểm tra validate
-- [ ] `inventory.errorCodes[section="main"]` → mỗi code có bullet trong ## Kiểm tra luồng chính
-- [ ] `inventory.businessRules[]` → mỗi branch có bullet TRUE + FALSE
-- [ ] `inventory.dbFields[]` → tất cả fields có trong SQL SELECT
-- [ ] `inventory.externalServices[]` → mỗi service có bullet onFailure + rollback
-- [ ] `inventory.modes[]` → mỗi mode có ≥1 happy path
-
-Item nào thiếu → THÊM bullet `### [SỬA] Kiểm tra ...`
-
-**⚠️ PHẢI hiển thị coverage summary cho user sau khi verify (API mode):**
-```
-📊 Coverage Report (API):
-✓ Error codes [validate]: {N}/{N} covered
-✓ Error codes [main]:     {N}/{N} covered
-✓ Business rules:         {N}/{N} covered
-✓ DB fields:              {N}/{N} covered
-✓ Modes:                  {N}/{N} covered
-✓ External services:      {N}/{N} covered
-[SỬA]: {N} bullets thêm/sửa
-```
 
 #### Frontend Mode — Generation
 
@@ -646,7 +475,7 @@ KHÔNG bỏ sót bất kỳ item nào.
   - Từng `permissions[]` → test action visibility/accessibility per role
   - Any button-related test cases belong in function section (not validate) — buttons test logic flow, not input validation
 
-**⚠️ Project AGENTS.md override:** If project AGENTS.md defines additional function section rules (e.g., "buttons vào phần chức năng", custom section assignments), apply them here. Project rules take precedence over the defaults above.
+**⚠️ Project AGENTS.md override:** If project AGENTS.md defines additional function section rules (e.g., "buttons vào phần chức năng", custom section assignments), apply them here.
 
 **Post-section checkpoint — Function (Frontend):**
 - TỪNG `inventory.businessRules[section="function"]` → có bullet?
@@ -699,17 +528,16 @@ Item nào thiếu → THÊM bullet `### [SỬA]`. Wrong expected → `### [SỬA
 
 Load quality rules and verify:
 ```bash
-python <skills-root>/test-design-generator/scripts/search.py --ref quality-rules
+python <skills-root>/test-design-generator-frontend/scripts/search.py --ref quality-rules
 ```
 
 Checklist:
 - 100% Vietnamese, keep field/button names exactly as in RSD/PTTK
-- No placeholders — use concrete sample values in SQL and responses
+- No placeholders — use concrete sample values
 - 1 test = 1 check (atomic)
 - Forbidden words: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
-- SQL: concrete values (`WHERE ID = 10001`), UPPERCASE columns, NO placeholders
-- Output starts with `# {API_NAME}` or `# {SCREEN_NAME}` — NO blockquote header, NO `---` horizontal rules
-- **Project AGENTS.md quality rules**: If project defines additional quality constraints (e.g., "viết ngắn gọn", custom forbidden phrases, writing style) → apply them on top of defaults
+- Output starts with `# {SCREEN_NAME}` — NO blockquote header, NO `---` horizontal rules
+- **Project AGENTS.md quality rules**: If project defines additional quality constraints (e.g., "viết ngắn gọn", custom forbidden phrases, writing style) → apply them
 
 ## Catalog Management
 
@@ -717,13 +545,13 @@ Checklist:
 
 To add new reference examples:
 1. Save the test design output as a `.md` file
-2. Place it in `catalog/api/` or `catalog/frontend/` at your project root
+2. Place it in `catalog/frontend/` at your project root
 3. The search engine will automatically index new files
 
 ### List Available Examples
 
 ```bash
-python <skills-root>/test-design-generator/scripts/search.py --list
+python <skills-root>/test-design-generator-frontend/scripts/search.py --list
 ```
 
 ## Project Structure
@@ -733,182 +561,51 @@ After running `test-genie init`, your project has this structure:
 ```
 <project-root>/
 ├── node_modules/test-genie/           ← Skills live here (managed by npm)
-│   ├── test-design-generator/
+│   ├── test-design-generator-frontend/
 │   │   ├── SKILL.md                      ← Workflow instructions (this file)
 │   │   ├── AGENTS.md                     ← Skill-level default rules
 │   │   ├── references/                   ← Detailed rules (dev-managed)
-│   │   │   ├── priority-rules.md
-│   │   │   ├── api-test-design.md
 │   │   │   ├── frontend-test-design.md
 │   │   │   ├── field-templates.md
-│   │   │   ├── output-examples.md
-│   │   │   └── quality-rules.md
-│   │   ├── data/rules/
-│   │   │   └── api-rules.csv             ← Format rules (searchable via --domain rules)
+│   │   │   ├── priority-rules.md
+│   │   │   ├── quality-rules.md
+│   │   │   └── output-examples.md
 │   │   └── scripts/
 │   │       └── search.py                 ← Catalog search (auto-detects project root)
-│   └── test-case-generator/
+│   └── test-case-generator-frontend/
 │       └── ...
 ├── .claude/commands/                  ← Claude slash commands (auto-generated)
-│   ├── generate-test-case.md
-│   └── generate-test-design.md
+│   └── generate-test-design-frontend.md
 ├── catalog/                           ← Managed by user/tester
-│   ├── api/                              ← API test design .md examples
 │   ├── frontend/                         ← Frontend test design .md examples
 │   └── mobile/                           ← Mobile test design examples
 ├── excel_template/
 │   ├── template.xlsx                  ← Spreadsheet template
-│   └── structure.json                 ← Template structure (generated by extract_structure.py)
+│   └── structure.json                 ← Template structure
 ├── <tên-test-case>/                   ← Per-feature test folder
 │   ├── RSD.pdf                           ← Input: requirement spec
 │   ├── PTTK.pdf                          ← Input: technical spec (optional)
-│   ├── test-design.md                    ← Output: test design mindmap
-│   └── test-cases.json                   ← Output: test cases (from test-case-generator)
-├── credentials.json                   ← OAuth Desktop App credentials (DO NOT COMMIT)
+│   └── test-design-frontend.md          ← Output: test design mindmap
+├── credentials.json                   ← OAuth credentials (DO NOT COMMIT)
 └── AGENTS.md                          ← Project-specific rules (user-managed)
 ```
 
-**Output location:** Save the generated test design `.md` file into the `<tên-test-case>/` folder alongside the input documents. The folder name should match the feature/API being tested.
+**Output location:** Save the generated test design `.md` file into the `<tên-test-case>/` folder alongside the input documents. The folder name should match the feature/screen being tested.
 
 ## Key Format Rules (Quick Reference)
 
 ### Critical Rules
-- Output starts with `# {API_NAME}` or `# {SCREEN_NAME}` — NO blockquote header, NO `---` horizontal rules
-- **ONLY test sections** — NO "thông tin chung", "headers", "request body", "response", "bảng mã lỗi" sections. These are API spec, NOT test design.
-- ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
-- SQL uses concrete values, UPPERCASE columns, NO placeholders
-- Response body format comes from PTTK (no fixed format)
+- Output starts with `# {SCREEN_NAME}` — NO blockquote header, NO `---` horizontal rules
+- **ONLY test sections** — NO "thông tin chung", "headers", "request body", "response" sections
 - Sections NOT numbered — use `## Kiểm tra ...` NOT `## 1. Kiểm tra ...`
 
-### API Test Design — Inline Format Example
+### Frontend Screen Type Rules
 
-This is the REQUIRED output format. AI MUST follow this structure even when catalog/references are unavailable.
-
-```markdown
-# API Tên API ở đây
-
-## Kiểm tra các case common
-
-### Method
-
-#### Kiểm tra truyền sai method (GET/PUT/DELETE)
-- status: 107
-- {
-  "message": "Error retrieving AuthorInfo..."
-  }
-
-### URL
-
-#### Kiểm tra truyền sai url
-- status: 500
-- {
-  "message": "Access denied"
-  }
-
-### Kiểm tra phân quyền
-
-#### Không có quyền
-- status: 500
-- {
-  "message": "Access denied"
-  }
-
-#### Được phân quyền
-- status: 200
-
-## Kiểm tra validate
-
-### FIELD_NAME: type (Required)
-
-#### Để trống
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Không truyền
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền null
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền FIELD_NAME = 99 ký tự
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền FIELD_NAME = 100 ký tự (maxLength)
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền FIELD_NAME = 101 ký tự (vượt maxLength)
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền FIELD_NAME là ký tự số
-#### Truyền FIELD_NAME là chữ(thường/hoa) không dấu
-#### Truyền FIELD_NAME là chữ(thường/hoa) có dấu
-#### Truyền FIELD_NAME là ký tự đặc biệt cho phép _
-#### Truyền FIELD_NAME là ký tự đặc biệt không cho phép
-#### Truyền FIELD_NAME là all space
-#### Truyền FIELD_NAME có space đầu / cuối
-#### Truyền FIELD_NAME là emoji/icons
-#### Truyền FIELD_NAME là ký tự Unicode đặc biệt
-#### Truyền FIELD_NAME là boolean (true/false)
-#### Truyền FIELD_NAME là mảng
-#### Truyền FIELD_NAME là object
-#### Truyền FIELD_NAME là XSS
-#### Truyền FIELD_NAME là SQL INJECTION
-
-## Kiểm tra luồng chính
-
-### Kiểm tra response khi truyền FIELD_NAME tồn tại kết quả
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        "errorCode": "0",
-        "errorDesc": "",
-        "data": [...]
-      }
-      SQL:
-      SELECT * FROM TABLE_NAME
-      WHERE FIELD = 'VALUE'
-      ORDER BY FIELD ASC;
-
-### Kiểm tra response khi truyền FIELD_NAME không tồn tại kết quả
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        "errorCode": "0",
-        "errorDesc": "",
-        "total": 0,
-        "items": []
-      }
-```
-
-**Format rules summary:**
-
-| Section | Heading level | Response format |
-|---------|--------------|-----------------|
-| Common (method/url/phân quyền) | `## > ### > ####` | `- status: {code}` + JSON (simple, NO `1\.`) |
-| Validate (per field) | `## > ### FIELD: type > ####` | `- 1\. Check api trả về:` + `1\.1. Status:` + `1\.2. Response:` |
-| Luồng chính | `## > ###` | Same as validate + SQL |
+| Screen Type | Has validate? | Has grid? | Has pagination? | Function section |
+|-------------|--------------|-----------|-----------------|------------------|
+| LIST | Yes | Yes | Yes | Search per field, combined, clear filter |
+| FORM/POPUP | Yes | No | No | Save success/fail, field interactions, cancel |
+| DETAIL | No (→ "dữ liệu hiển thị") | No | No | Button visibility by status/permission |
 
 ### Frontend Test Design — Inline Format Example
 

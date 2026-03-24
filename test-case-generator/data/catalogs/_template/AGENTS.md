@@ -27,7 +27,7 @@ Only define rules that DIFFER from the defaults. Undefined rules fall back to sk
 ## Test Account
 
 <!-- Uncomment and modify to override the default test account used in preConditions -->
-<!-- This has the HIGHEST priority — overrides both catalog examples and skill defaults -->
+<!-- Project AGENTS.md overrides: use this if explicitly defined -->
 <!-- - Frontend: "Người dùng đăng nhập thành công {system} trên Web với account: {your_account}" -->
 <!-- - API: "Send API login thành công với account: {your_account}" -->
 

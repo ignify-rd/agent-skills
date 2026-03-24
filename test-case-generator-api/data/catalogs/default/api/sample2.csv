@@ -1,0 +1,598 @@
+Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Note,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,StepExecType,Spec Title,Document ID,Estimated exec. Duration,,,,,
+Kiểm tra các case common,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_1,Kiểm tra truyền sai method (PUT/DELETE),Kiểm tra truyền sai method (GET/PUT/DELETE),"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Low,,,,,"1. Nhập inValid Method: PUT :{{baseUrl}}/v1/category/segment-fee-config/get-detail?inputSegConfId=MID2026022500000181
+2. Truyền params:
+""inputSegConfId"": MID2026022500000181
+3. Send API","1. Check api trả về:
+ 1.1.Status: 107
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""2"",
+    ""poErrorDesc"": ""Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại."",
+    ""traceId"": null,
+    ""responseTime"": null
+}",,,,,PASS,,,,,
+,,API_2,URL_Kiểm tra truyền sai url,URL_Kiểm tra truyền sai url,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Low,,,,,"1. Nhập sai endpoint : GET {{baseUrl}}/v1/category/segment-fee-config/get-detail/1?inputSegConfId=MID2026022500000181
+2. Send API","1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""500"",
+    ""poErrorDesc"": ""Access denied"",
+    ""traceId"": ""1772763907605-4db2e5ca-c6ba-43ff-8cc5-4ee4c768599f"",
+    ""responseTime"": ""2026-03-06T09:25:07.606+07:00""
+}",,,,,PASS,,,,,
+,,API_3,Token_Kiểm tra token không hợp lệ,Token_Kiểm tra token không hợp lệ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Low,,,,,"1. Truyền token không hợp lệ
+2. Send API","1. Check api trả về:
+ 1.1.Status: 107
+ 1.2.Response: 
+{
+ ""message"": ""Error retrieving AuthoInfo for token from TokenLib: Token is invalid signature""
+}",,,,,FAIL,https://bidv-vn.atlassian.net/browse/PS0112025-2274,,,,
+,,API_4,Token_Kiểm tra token hết hạn,Token_Kiểm tra token hết hạn,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Low,,,,,"1. Truyền Token hết hạn
+2. Send API","1. Check api trả về:
+ 1.1.Status: 107
+ 1.2.Response: 
+{
+ ""message"": ""Error retrieving AuthoInfo for token from TokenLib: Token is invalid signature""
+}",,,,,FAIL,https://bidv-vn.atlassian.net/browse/PS0112025-2274,,,,
+Kiểm tra phân quyền,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_5,Phân quyền_Kiểm tra user không có quyền,Phân quyền_Kiểm tra user không có quyền,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,1. Send API với user không có quyền,"1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+    ""message"": ""Access denied
+}",,,,,PENDING,,,,,
+,,API_6,Phân quyền_Kiểm tra user được phân quyền,Phân quyền_Kiểm tra user được phân quyền,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,1. Send API,"1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""poErrorCode"": ""0"",
+  ""poErrorDesc"": ""Thành công"",
+  ""traceId"": ""1769414644121-4013bc88-0efa-4ef9-b5cf-c5e19b6b3823"",
+  ""responseTime"": ""2026-01-26T15:04:04.125+07:00"",
+  ""data"": {
+    ""total"": 1,
+    ""inputSegConfId"": ""MID2026010700000004"",
+    ""domainType"": 1,
+    ""domainTypeName"": ""Dịch vụ thu phí"",
+    ""feeService"": ""BSMSCN"",
+    ""feeServiceName"": ""BSMS cá nhân"",
+    ""maxFeeVnd"": 201888,
+    ""status"": 4,
+    ""statusName"": ""Chờ duyệt sửa"",
+    ""rejectedMessage"": ""tu choi"",
+    ""updatedUser"": ""143853"",
+    ""updatedTime"": 1768460720000,
+    ""approvedUser"": ""143853"",
+    ""approvedTime"": 1768443570000,
+    ""listSegment"": [
+      {
+        ""inputSegConfId"": ""DID2026010700000005"",
+        ""feeCodeId"": ""8"",
+        ""feeCode"": ""CN708"",
+        ""segmentName"": ""BSMS cá nhân"",
+        ""masterId"": ""MID2026010700000004"",
+        ""priceType"": 0,
+        ""priceTypeName"": ""Cố định"",
+        ""priceVnd"": 10012,
+        ""priceUsd"": 124.34,
+        ""status"": 1,
+        ""statusName"": ""Hoạt động"",
+        ""updatedUser"": ""admin"",
+        ""updatedTime"": 1768289743000,
+        ""approvedUser"": ""anonymousUser"",
+        ""approvedTime"": null
+      }
+    ]
+  }
+}",,,,,PASS,,,,,
+Kiểm tra validate,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_7,Validate_Kiểm tra để trống inputSegConfId,Validate_Kiểm tra để trống inputSegConfId,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1.Truyền params:
+""inputSegConfId"": 
+2. Send API","1. Check api trả về:
+ 1.1.Status: 105
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""105"",
+    ""poErrorDesc"": ""Validate Field Request Error"",
+    ""traceId"": ""1772764299218-7fb39dec-9a5d-4afa-8423-9830541b831a"",
+    ""responseTime"": ""2026-03-06T09:31:39.219+07:00""
+}",,,,,PASS,,,,,
+,,API_8,Validate_Kiểm tra không truyền inputSegConfId,Validate_Kiểm tra không truyền inputSegConfId,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,1.Send API,"1. Check api trả về:
+ 1.1.Status: 105
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""105"",
+    ""poErrorDesc"": ""Validate Field Request Error"",
+    ""traceId"": ""1772764447853-b418956e-3a54-4aeb-aa65-4b566b264403"",
+    ""responseTime"": ""2026-03-06T09:34:07.855+07:00""
+}",,,,,PASS,,,,,
+,,API_9,Validate_Kiểm tra truyền inputSegConfId là ký tự số,Validate_Kiểm tra truyền inputSegConfId là ký tự số,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1.Truyền params:
+""inputSegConfId"": 123456789
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""SFCD1"",
+    ""poErrorDesc"": ""Bản ghi không tồn tại"",
+    ""traceId"": ""1772764568367-e647c6a7-252c-4d98-bc72-c28bdedc0275"",
+    ""responseTime"": ""2026-03-06T09:36:08.379+07:00""
+}",,,,,PASS,,,,,
+,,API_10,Validate_Kiểm tra truyền inputSegConfId là chữ (thường/hoa) ,Validate_Kiểm tra truyền inputSegConfId là chữ (thường/hoa) ,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1.Truyền params:
+""inputSegConfId"": MãDinhDanh
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""SFCD1"",
+    ""poErrorDesc"": ""Bản ghi không tồn tại"",
+    ""traceId"": ""1772764750682-975e8369-9b7e-400e-b817-37f729b6380e"",
+    ""responseTime"": ""2026-03-06T09:39:10.691+07:00""
+}",,,,,PASS,,,,,
+,,API_11,Validate_Kiểm tra truyền inputSegConfId là ký tự đặc biệt,Validate_Kiểm tra truyền inputSegConfId là ký tự đặc biệt,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1. Truyền Params:
+inputSegConfId : !@#
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""SFCD1"",
+    ""poErrorDesc"": ""Bản ghi không tồn tại"",
+    ""traceId"": ""1772764880298-c0a68f9f-ea4c-45db-a809-7a8490e820b2"",
+    ""responseTime"": ""2026-03-06T09:41:20.308+07:00""
+}",,,,,PASS,,,,,
+,,API_12,Validate_Kiểm tra truyền inputSegConfId là all space,Validate_Kiểm tra truyền inputSegConfId là all space,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1. Truyền Params:
+""inputSegConfId"": ""     ""
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""105"",
+    ""poErrorDesc"": ""Validate Field Request Error"",
+    ""traceId"": ""1772765256702-660fa8b5-c677-426c-9c10-d29b6cd56301"",
+    ""responseTime"": ""2026-03-06T09:47:36.703+07:00""
+}",,,,,PASS,,,,,
+,,API_13,Validate_Kiểm tra truyền inputSegConfId có space đầu/cuối,Validate_Kiểm tra truyền inputSegConfId có space đầu/cuối,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1. Truyền Params:
+""inputSegConfId"":   MID2026022500000181   
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""0"",
+    ""poErrorDesc"": ""Thành công"",
+    ""traceId"": ""1772765176693-478cf6fe-2b24-4fcb-a693-5242dbc1357e"",
+    ""responseTime"": ""2026-03-06T09:46:16.702+07:00"",
+    ""data"": {
+        ""total"": 1,
+        ""segConfId"": ""MID2026022500000181"",
+        ""domainType"": 1,
+        ""domainTypeName"": ""Dịch vụ thu phí"",
+        ""feeService"": ""HOATEST2"",
+        ""feeServiceName"": ""NAME HOATEST1 upload chéo, max 2 kì"",
+        ""maxFeeVnd"": null,
+        ""status"": 1,
+        ""statusName"": ""Hoạt động"",
+        ""rejectedMessage"": null,
+        ""updatedUser"": ""143853"",
+        ""updatedTime"": ""05/03/2026 18:23:01"",
+        ""approvedUser"": ""143853"",
+        ""approvedTime"": ""05/03/2026 18:23:04"",
+        ""listSegment"": [
+            {
+                ""segConfId"": ""DID2026022500000182"",
+                ""feeCodeId"": ""19"",
+                ""feeCode"": ""HOATEST1"",
+                ""segmentName"": ""CN102 ưu tiên 1 KHCC"",
+                ""masterId"": ""MID2026022500000181"",
+                ""priceType"": 0,
+                ""priceTypeName"": ""Cố định"",
+                ""priceVnd"": 2000,
+                ""priceUsd"": 0.0,
+                ""status"": 1,
+                ""statusName"": ""Hoạt động"",
+                ""updatedUser"": ""143853"",
+                ""updatedTime"": ""05/03/2026 15:37:07"",
+                ""approvedUser"": null,
+                ""approvedTime"": null
+            }
+        ]
+    }
+}",,,,,PASS,,,,,
+,,API_14,Validate_Kiểm tra truyền inputSegConfId là object,Validate_Kiểm tra truyền inputSegConfId là object,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1. ""inputSegConfId"": {""id"": ""1""}
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""message"": ""Dữ liệu không hợp lệ""
+}",,,,,PENDING,,,,,
+,,API_15,Validate_Kiểm tra truyền inputSegConfId là mảng,Validate_Kiểm tra truyền inputSegConfId là mảng,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Medium,,,,,"1. ""inputSegConfId"": [""MID2026010700000004""]
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+  ""message"": ""Dữ liệu không hợp lệ""
+}",,,,,PENDING,,,,,
+Kiểm tra luồng chính,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_16,Luồng chính_Kiểm tra khi truyền inputSegConfId không tồn tại trong hệ thống,Luồng chính_Kiểm tra khi truyền inputSegConfId không tồn tại trong hệ thống,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,High,,,,,"1. Truyền Params:
+""inputSegConfId"": 1001 
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""SFCD1"",
+    ""poErrorDesc"": ""Bản ghi không tồn tại"",
+    ""traceId"": ""1772765345579-671039af-7be8-4bd5-af3a-4a0a148c42d1"",
+    ""responseTime"": ""2026-03-06T09:49:05.585+07:00""
+}",,,,,PASS,,,,,
+,,API_17,Luồng chính_Kiểm tra khi truyền inputSegConfId tồn tại trong hệ thống,Luồng chính_Kiểm tra khi truyền inputSegConfId tồn tại trong hệ thống,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,High,,,,,"1. Truyền Params:
+""inputSegConfId"":  MID2026022500000181   
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""0"",
+    ""poErrorDesc"": ""Thành công"",
+    ""traceId"": ""1772765418744-8ff11c3d-7b3b-4f51-bea1-1b0c1ef00a36"",
+    ""responseTime"": ""2026-03-06T09:50:18.754+07:00"",
+    ""data"": {
+        ""total"": 1,
+        ""segConfId"": ""MID2026022500000181"",
+        ""domainType"": 1,
+        ""domainTypeName"": ""Dịch vụ thu phí"",
+        ""feeService"": ""HOATEST2"",
+        ""feeServiceName"": ""NAME HOATEST1 upload chéo, max 2 kì"",
+        ""maxFeeVnd"": null,
+        ""status"": 1,
+        ""statusName"": ""Hoạt động"",
+        ""rejectedMessage"": null,
+        ""updatedUser"": ""143853"",
+        ""updatedTime"": ""05/03/2026 18:23:01"",
+        ""approvedUser"": ""143853"",
+        ""approvedTime"": ""05/03/2026 18:23:04"",
+        ""listSegment"": [
+            {
+                ""segConfId"": ""DID2026022500000182"",
+                ""feeCodeId"": ""19"",
+                ""feeCode"": ""HOATEST1"",
+                ""segmentName"": ""CN102 ưu tiên 1 KHCC"",
+                ""masterId"": ""MID2026022500000181"",
+                ""priceType"": 0,
+                ""priceTypeName"": ""Cố định"",
+                ""priceVnd"": 2000,
+                ""priceUsd"": 0.0,
+                ""status"": 1,
+                ""statusName"": ""Hoạt động"",
+                ""updatedUser"": ""143853"",
+                ""updatedTime"": ""05/03/2026 15:37:07"",
+                ""approvedUser"": null,
+                ""approvedTime"": null
+            }
+        ]
+    }
+}",,,,,PASS,,,,,
+,,API_18,Luồng chính_Kiểm tra response trả ra,Luồng chính_Kiểm tra response trả ra,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,High,,,,,"1. Truyền Params:
+""inputSegConfId"":  MID2026022500000181   
+2. Send API","Response trả ra đúng id truyền lên của bảng SEGMENT_FEE_CONFIG.SEG_CONF_ID
+
+SELECT * FROM FEE_ENGINE_SIT.SEGMENT_FEE_CONFIG 
+WHERE SEG_CONF_ID = 'MID2026022500000181'
+
+1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""0"",
+    ""poErrorDesc"": ""Thành công"",
+    ""traceId"": ""1772765418744-8ff11c3d-7b3b-4f51-bea1-1b0c1ef00a36"",
+    ""responseTime"": ""2026-03-06T09:50:18.754+07:00"",
+    ""data"": {
+        ""total"": 1,
+        ""segConfId"": ""MID2026022500000181"",
+        ""domainType"": 1,
+        ""domainTypeName"": ""Dịch vụ thu phí"",
+        ""feeService"": ""HOATEST2"",
+        ""feeServiceName"": ""NAME HOATEST1 upload chéo, max 2 kì"",
+        ""maxFeeVnd"": null,
+        ""status"": 1,
+        ""statusName"": ""Hoạt động"",
+        ""rejectedMessage"": null,
+        ""updatedUser"": ""143853"",
+        ""updatedTime"": ""05/03/2026 18:23:01"",
+        ""approvedUser"": ""143853"",
+        ""approvedTime"": ""05/03/2026 18:23:04"",
+        ""listSegment"": [
+            {
+                ""segConfId"": ""DID2026022500000182"",
+                ""feeCodeId"": ""19"",
+                ""feeCode"": ""HOATEST1"",
+                ""segmentName"": ""CN102 ưu tiên 1 KHCC"",
+                ""masterId"": ""MID2026022500000181"",
+                ""priceType"": 0,
+                ""priceTypeName"": ""Cố định"",
+                ""priceVnd"": 2000,
+                ""priceUsd"": 0.0,
+                ""status"": 1,
+                ""statusName"": ""Hoạt động"",
+                ""updatedUser"": ""143853"",
+                ""updatedTime"": ""05/03/2026 15:37:07"",
+                ""approvedUser"": null,
+                ""approvedTime"": null
+            }
+        ]
+    }
+}",,,,,PASS,,,,,
+,,API_19,Kiểm tra response khi poErrorCode = 0,Kiểm tra response khi poErrorCode = 0,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,High,,,,,"1. Truyền Params:
+""inputSegConfId"":  MID2026022500000181   
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""0"",
+    ""poErrorDesc"": ""Thành công"",
+    ""traceId"": ""1772766396431-f9fd993a-5493-410d-aa80-b43b3389f2e4"",
+    ""responseTime"": ""2026-03-06T10:06:36.438+07:00"",
+    ""data"": {
+        ""total"": 1,
+        ""segConfId"": ""MID2026022500000181"",
+        ""domainType"": 1,
+        ""domainTypeName"": ""Dịch vụ thu phí"",
+        ""feeService"": ""HOATEST2"",
+        ""feeServiceName"": ""NAME HOATEST1 upload chéo, max 2 kì"",
+        ""maxFeeVnd"": null,
+        ""status"": 1,
+        ""statusName"": ""Hoạt động"",
+        ""rejectedMessage"": null,
+        ""updatedUser"": ""143853"",
+        ""updatedTime"": ""05/03/2026 18:23:01"",
+        ""approvedUser"": ""143853"",
+        ""approvedTime"": ""05/03/2026 18:23:04"",
+        ""listSegment"": [
+            {
+                ""segConfId"": ""DID2026022500000182"",
+                ""feeCodeId"": ""19"",
+                ""feeCode"": ""HOATEST1"",
+                ""segmentName"": ""CN102 ưu tiên 1 KHCC"",
+                ""masterId"": ""MID2026022500000181"",
+                ""priceType"": 0,
+                ""priceTypeName"": ""Cố định"",
+                ""priceVnd"": 2000,
+                ""priceUsd"": 0.0,
+                ""status"": 1,
+                ""statusName"": ""Hoạt động"",
+                ""updatedUser"": ""143853"",
+                ""updatedTime"": ""05/03/2026 15:37:07"",
+                ""approvedUser"": null,
+                ""approvedTime"": null
+            }
+        ]
+    }
+}",,,,,PASS,,,,,
+,,API_20,Kiểm tra response khi poErrorCode != 0,Kiểm tra response khi poErrorCode != 0,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,High,,,,,"1. Truyền Params:
+""inputSegConfId"":  
+2. Send API","1. Check api trả về:
+ 1.1.Status: 200
+ 1.2.Response: 
+{
+    ""poErrorCode"": ""105"",
+    ""poErrorDesc"": ""Validate Field Request Error"",
+    ""traceId"": ""1772766533604-c7c70888-7824-4f88-afa9-397469ddbe4d"",
+    ""responseTime"": ""2026-03-06T10:08:53.605+07:00""
+}",,,,,PASS,,,,,
+Kiểm tra khi bị timeout,,,,,,,,,,,,,,,,,,,,,,,,
+,,API_21,Timeout_Kiểm tra khi lấy dữ liệu DB không thành công do lỗi DB,Timeout_Kiểm tra khi lấy dữ liệu DB không thành công do lỗi DB,"1. Send API login thành công
+2. Chuẩn bị request hợp lệ 
+ 2.1 Endpoint : GET {{BASE_URL}}/v1/category/segment-fee-config/get-detail
+ 2.2 Header :
+{
+  ""Authorization"": ""Bearer {JWT_TOKEN}"",
+  ""Content-Type"": ""application/json""
+}
+ 2.3 Request Param {
+""inputSegConfId"":""""
+}",,,Low,,,,,1. Send API,"1. Check api trả về:
+ 1.1.Status: 500
+ 1.2.Response: 
+{
+  ""message"": ""Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.""
+}",,,,,PENDING,,,,,

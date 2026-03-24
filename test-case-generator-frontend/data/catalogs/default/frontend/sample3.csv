@@ -1,0 +1,626 @@
+Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Note,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,StepExecType,Spec Title,Document ID,Estimated exec. Duration,,,,,
+"RSD: https://bidv-vn.atlassian.net/wiki/spaces/PS0112025/pages/1946289346/2.7.3.+BO+Ph+nh+k+Ph+ch+nh+s+ch+t+ng+Chi+ti+t#3.-Mockup-v%C3%A0-m%C3%B4-t%E1%BA%A3-m%C3%A0n-h%C3%ACnh
+PTTK: ",,,,,,,,,,,,,,,,,,,,,,,,
+Kiểm tra giao diện chung,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_2,Kiểm tra điều hướng đến màn hình Chi tiết chính sách phí tự động,Kiểm tra điều hướng đến màn hình Chi tiết chính sách phí tự động,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động
+2. Tại section Danh sách, click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động
+3. Quan sát điều hướng màn hình.",Điều hướng thành công đến màn hình Chi tiết chính sách phí tự động,,,,,PASS,,,,,
+,,WEB_3,Kiểm tra bố cục giao diện tổng thể,Kiểm tra bố cục giao diện tổng thể,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,1. Quan sát toàn bộ giao diện Chi tiết Phí chính sách tự động.,"Hiển thị theo đúng figma
+Màn hình Chi tiết Phí chính sách tự động hiển thị đầy đủ các thông tin:
+- Button Chỉnh sửa (phân quyền = GDV và functionCode = update)
+- Button Từ chối (phân quyền là KSV và functionCode = reject)
+- Button Phê duyệt (phân quyền là KSV và functionCode = approve)
+
+- Label : “Thông tin chi tiết” + “ badge thẻ trạng thái”
++ Đối tượng khai báo
++ Dịch vụ thu phí/ Gói SPDV
++ Mức phí tối đa VND/CIF
++ Người cập nhật
++ Ngày cập nhật
++ Người duyệt
++ Ngày duyệt
++ Lý do từ chối
+
+- Danh sách giá segment
++ STT
++ Mã phí
++ Mã segment
++ Tên segment
++ Trạng thái
++ Loại giá phí
++ Mức phí VND
++ Mức phí USD
++ Người cập nhật
++ Ngày cập nhật
++ Người duyệt
++ Ngày duyệt
++ Thao tác (bản ghi có trạng thái != Không hoạt động (0 -INACTIVE))
++ Cụm Phân trang
+
+",,,,,PASS,,,,,
+,,WEB_4,Giao diện_Kiểm tra bố cục giao diện màn hình,Kiểm tra hiển thị breadcrumb,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động
+2. Tại section Danh sách, click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động
+3. Quan sát breadcrumb",Hiển thị Phí định kỳ > Phí chính sách tự động > Chi tiết,,,,,PASS,,,,,
+,,WEB_5,Kiểm tra hiển thị bố cục layout cân đối,Kiểm tra hiển thị bố cục layout cân đối,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Quan sát font chữ, màu sắc, khoảng cách giữa các phần tử.","Hiển thị đúng cỡ chữ, màu chữ, bố cục cân đối, kích thước chính xác, đúng chính tả",,,,,PASS,,,,,
+,,WEB_6,Kiểm tra phóng to/thu nhỏ,Kiểm tra phóng to/thu nhỏ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,1. Sử dụng phím tắt Ctrl + và Ctrl - để phóng to/thu nhỏ trình duyệt.,Màn hình không bị vỡ form,,,,,PASS,,,,,
+Kiểm tra phân quyền,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_7,Kiểm tra login user không có quyền,Kiểm tra login user không có quyền,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User không được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,1. Kiểm tra login user không có quyền,User không view được màn hình,,,,,PASS,,,,,
+,,WEB_8,Quyền update (GDV) và quyền approve/reject (KSV),Quyền update (GDV) và quyền approve/reject (KSV),"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Đăng nhập tài khoản GDV, mở Chi tiết Phí chính sách tự động.
+2. Đăng nhập tài khoản KSV, mở Chi tiết Phí chính sách tự động.
+","GDV: Hiển thị chi tiết và hiển thị button Chỉnh sửa (theo điều kiện status). 
+KSV: Hiển thị chi tiết và hiển thị button Từ chối/Phê duyệt (theo điều kiện status)",,,,,PASS,[PS0112025-2344] [NT][QC][BUG] BO_Chi tiết chính sách phí tự động -> Hiển thị chức năng Từ chối/Phê duyệt đối với account GDV - Jira,,,,
+Kiểm tra validate,,,,,,,,,,,,,,,,,,,,,,,,
+Kiểm tra button chỉnh sửa,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_9,Kiểm tra hiển thị ,Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát button Chỉnh sửa ","- Nếu functionCode = update và bản ghi có trạng thái != Không hoạt động (0 -INACTIVE): 
+Hiển thị nút Chỉnh sửa và Button mặc định ở trạng thái Enable
+- Nếu phân quyền không có functionCode = update và bản ghi  ở all các trạng thái:  Không hiển thị nút Chỉnh sửa",,,,,PASS,,,,,
+,,WEB_10,"Kiểm tra hiển thị text, thiết kế của button","Kiểm tra hiển thị text, thiết kế của button","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Low,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát hiển thị ","Hiển thị text ""Chỉnh sửa"", thiết kết theo figma",,,,,PASS,,,,,
+Kiểm tra button Từ chối,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_11,Kiểm tra hiển thị ,Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát button Từ chối ","- Nếu phân quyền không có functionCode reject tại chức năng này và all các bản ghi ở các trạng thái: Không hiển thị button: Từ chối
+- Nếu phân quyền là có functionCode = reject và bản ghi có trạng thái Chờ duyệt sửa (4 - PENDING_EDIT):  
+Hiển thị button Từ chối và mặc định ở trạng thái Enable",,,,,PASS,,,,,
+,,WEB_12,"Kiểm tra hiển thị text, thiết kế của button","Kiểm tra hiển thị text, thiết kế của button","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Low,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát hiển thị ","Hiển thị text ""Từ chối"", thiết kết theo figma",,,,,PASS,,,,,
+Kiểm tra button Phê duyệt,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_13,Kiểm tra hiển thị ,Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát button Phê duyệt","- Nếu phân quyền không có functionCode approve tại chức năng này và all các bản ghi ở các trạng thái: Không hiển thị button Phê duyệt
+- Nếu phân quyền là có functionCode = approve tại chức năng này và bản ghi có trạng thái Chờ duyệt sửa (4 - PENDING_EDIT):  
+Hiển thị button Phê duyệt và mặc định ở trạng thái Enable",,,,,PASS,,,,,
+,,WEB_14,"Kiểm tra hiển thị text, thiết kế của button","Kiểm tra hiển thị text, thiết kế của button","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Low,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát hiển thị ","Hiển thị text ""Phê duyệt"", thiết kết theo figma",,,,,PASS,,,,,
+ Kiểm tra Tiêu đề màn hình,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_15,Kiểm tra hiển thị,Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,1. Quan sát Tiêu đề màn hình trên giao diện.,"Hiển thị ""Chi tiết""",,,,,PASS,,,,,
+Kiểm tra Section Thông tin chi tiết,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_16,"Kiểm tra ""Badge thẻ trạng thái""",Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát ""Badge thẻ trạng thái""",Hiển thị statusName server trả về ở API Lấy chi tiết giá tự động,,,,,PASS,,,,,
+,,WEB_17,"Kiểm tra label ""Đối tượng khai báo""",Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Đối tượng khai báo"".",Hiển thị thông tin domainTypeName do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_18,"Kiểm tra label ""Dịch vụ thu phí/ Gói SPDV""",Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Dịch vụ thu phí/ Gói SPDV""",Hiển thị thông tin {feeService} - {feeServiceName} do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_19,"Kiểm tra label ""Mức phí tối đa VND/CIF""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Mức phí tối đa VND/CIF""","Hiển thị dạng {Số tiền} {loại tiền}
+Trong đó: 
+-  Số tiền: hiển thị giá trị maxFeeVnd do server trả về, ngăn cách hàng đơn vị bởi dấu "",""
+- Loại tiền: ""VND""",,,,,PASS,,,,,
+,,WEB_20,"Kiểm tra label ""Mức phí tối đa VND/CIF""",Kiểm tra hiển thị khi server trả null/empty hoặc không trả,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Mức phí tối đa VND/CIF""",Không hiển thị cả label và giá trị,,,,,PASS,,,,,
+,,WEB_21,"Kiểm tra label ""Người cập nhật""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Người cập nhật""",Hiển thị thông tin updatedUser do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_22,"Kiểm tra label ""Người cập nhật""",Kiểm tra hiển thị khi server trả null/empty hoặc không trả,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Người cập nhật""",Không hiển thị cả label và giá trị,,,,,PASS,,,,,
+,,WEB_23,"Kiểm tra label ""Ngày cập nhật""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Ngày cập nhật""","Hiển thị thông tin updatedTime do server trả về ở API lấy chi tiết giá phí tự động
+- Định dạng: dd/mm/yyyy HH:mm:ss",,,,,PASS,,,,,
+,,WEB_24,"Kiểm tra label ""Ngày cập nhật""",Kiểm tra hiển thị khi server trả null/empty hoặc không trả,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Ngày cập nhật""",Không hiển thị cả label và giá trị,,,,,PASS,,,,,
+,,WEB_25,"Kiểm tra label ""Người duyệt""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Người duyệt""",Hiển thị approvedUser bản ghi do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_26,"Kiểm tra label ""Người duyệt""",Kiểm tra hiển thị khi server trả null/empty hoặc không trả,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Người duyệt""",Không hiển thị cả label và giá trị,,,,,PASS,,,,,
+,,WEB_27,"Kiểm tra label ""Ngày duyệt""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Ngày duyệt""","Hiển thị thông tin approvedTime do server trả về ở API lấy chi tiết giá phí tự động
+- Định dạng: dd/mm/yyyy HH:mm:ss",,,,,PASS,,,,,
+,,WEB_28,"Kiểm tra label ""Ngày duyệt""",Kiểm tra hiển thị khi server trả null/empty hoặc không trả,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Ngày duyệt""",Không hiển thị cả label và giá trị,,,,,PASS,,,,,
+,,WEB_29,"Kiểm tra label ""Lý do từ chối""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Lý do từ chối""",Hiển thị giá trị rejectedMessage server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_30,"Kiểm tra label ""Lý do từ chối""",Kiểm tra hiển thị khi server trả null/empty hoặc không trả,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1. Click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động.
+2. Quan sát label ""Lý do từ chối""",Không hiển thị cả label và giá trị,,,,,PASS,,,,,
+"Kiểm tra Section ""Danh sách phí segment""",,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_31,"Kiểm tra label ""Tiêu đề""",Kiểm tra hiển thị Badge tổng số lượng bản ghi khi danh sách trống,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Tiêu đề ""Danh sách phí segment"", quan sát Badge tổng số lượng bản ghi ",Hiển thị với label số lượng = 0,,,,,PASS,,,,,
+,,WEB_32,"Kiểm tra label ""Tiêu đề""",Kiểm tra hiển thị Badge tổng số lượng bản ghi khi danh sách có dữ liệu segment,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Tiêu đề ""Danh sách phí segment"", quan sát Badge tổng số lượng bản ghi ",Hiển thị label số lượng = số lượng segment trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_33,"Kiểm tra label ""STT""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""STT"" ",Hiển thị số thứ tự bản ghi từ 1 và tự động tăng dần,,,,,PASS,https://bidv-vn.atlassian.net/browse/PS0112025-2351,,,,
+,,WEB_34,"Kiểm tra label ""Mã phí""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Mã phí"" ",Hiển thị feeCode do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_35,"Kiểm tra label ""Mã segment""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Mã segment"" ",Hiển thị thông tin segConfId của bản ghi do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_36,"Kiểm tra label ""Tên segment""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Tên segment"" ",Hiển thị thông tin segmentName của bản ghi do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_37,"Kiểm tra label ""Trạng thái""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Trạng thái"" ",Hiển thị thông tin statusName của bản ghi do server trả về ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_38,"Kiểm tra label ""Loại giá phí""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Loại giá phí"" ",Hiển thị thông tin priceTypeName của bản ghi do server trả về  ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_39,"Kiểm tra label ""Mức phí VND""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Mức phí VND"" ","Hiển thị thông tin priceVnd của bản ghi do server trả về, ngăn cách hàng đơn vị bởi dấu "",""
+- Giá trị được căn lề phải",,,,,PASS,https://bidv-vn.atlassian.net/browse/PS0112025-2361,,,,
+,,WEB_40,"Kiểm tra label ""Mức phí USD""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Mức phí USD"" ","Hiển thị thông tin priceUsd của bản ghi do server trả về, ngăn cách hàng đơn vị bởi dấu "","" và ký tự ""."" ngăn cách phần nguyên và thập phân
+- Giá trị được căn lề phải",,,,,PASS,https://bidv-vn.atlassian.net/browse/PS0112025-2361,,,,
+,,WEB_41,"Kiểm tra label ""Người cập nhật""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Người cập nhật"" ",Hiển thị thông tin updatedUser của bản ghi do server trả về  ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_42,"Kiểm tra label ""Người cập nhật""",Kiểm tra hiển thị khi server trả null,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Người cập nhật"" ",Không hiển thị dữ liệu,,,,,PASS,,,,,
+,,WEB_43,"Kiểm tra label ""Ngày cập nhật""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Ngày cập nhật"" ","Hiển thị thông tin updatedTime của bản ghi do server trả về  ở API lấy chi tiết giá phí tự động
+- Định dạng: dd/mm/yyyy HH:mm:ss",,,,,PASS,,,,,
+,,WEB_44,"Kiểm tra label ""Ngày cập nhật""",Kiểm tra hiển thị khi server trả null,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Ngày cập nhật"" ",Không hiển thị dữ liệu,,,,,PASS,,,,,
+,,WEB_45,"Kiểm tra label ""Người duyệt""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Người duyệt"" ",Hiển thị approvedUser của bản ghi do server trả về  ở API lấy chi tiết giá phí tự động,,,,,PASS,,,,,
+,,WEB_46,"Kiểm tra label ""Người duyệt""",Kiểm tra hiển thị khi server trả null,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Người duyệt"" ",Không hiển thị dữ liệu,,,,,PASS,,,,,
+,,WEB_47,"Kiểm tra label ""Ngày duyệt""",Kiểm tra hiển thị,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Ngày duyệt"" ","Hiển thị thông tin approvedTime của bản ghi do server trả về  ở API lấy chi tiết giá phí tự động
+- Định dạng: dd/mm/yyyy HH:mm:ss",,,,,PASS,,,,,
+,,WEB_48,"Kiểm tra label ""Ngày duyệt""",Kiểm tra hiển thị khi server trả null,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát label ""Ngày duyệt"" ",Không hiển thị dữ liệu,,,,,PASS,,,,,
+,,WEB_49,Kiểm tra cụm Phân trang,Kiểm tra hiển thị mặc định,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát cụm Phân trang",Hiển thị giá trị mặc định là 5,,,,,PASS,,,,,
+,,WEB_50,Kiểm tra cụm Phân trang,Kiểm tra hiển thị khi lưới danh sách segment không có dữ liệu ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Medium,,,,,"1.Tại Section ""Danh sách phí segment"", quan sát cụm Phân trang",Ẩn cụm phân trang,,,,,PASS,,,,,
+Kiểm tra Icon Chỉnh sửa ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_51,Kiểm tra hiển thị ,Kiểm tra hiển thị ,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát Icon Chỉnh sửa "," Nếu phân quyền = GDV và functionCode = update và  status bản ghi master != 5 : Hiển thị nút Chỉnh sửa và Button mặc định ở trạng thái Enable
++ Nếu phân quyền không có functionCode = update hoặc  status = 5 : Không hiển thị nút Chỉnh sửa",,,,,PASS,,,,,
+,,WEB_52,"Kiểm tra hiển thị text, thiết kế của button","Kiểm tra hiển thị text, thiết kế của button","Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Hover 1 bản ghi bất kỳ trên lưới danh sách segment","Hiển thị text ""Chỉnh sửa"", thiết kết theo figma",,,,,PASS,,,,,
+Kiểm tra chức năng,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_53,Kiểm tra hiển thị dữ liệu tại màn Chi tiết Phí chính sách tự động,Kiểm tra hiển thị dữ liệu tại màn Chi tiết Phí chính sách tự động,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,High,,,,,"1. Truy cập màn hình Chi tiết Phí chính sách tự động
+2. Quan sát dữ liệu hiển thị ","Hiển thị đúng dữ liệu trả về từ server, khớp với database đúng id truyền lên của bảng
+SEGMENT_FEE_CONFIG.SEG_CONF_ID
+select pc.par_name,     sc.FEE_SERVICE, --pg.GRP_NAME,
+    fs.SRV_NAME AS FEE_SERVICE_NAME, sfc.MAX_FEE_VND, sfc.STATUS, sfc.REJECTED_MESSAGE,
+    sfc.UPDATED_USER, sfc.UPDATED_TIME, sfc.APPROVED_USER, sfc.APPROVED_TIME,
+    sc.FEE_CODE_ID, sfc.PRICE_TYPE, sc.FEE_CODE_ID, cf.FEE_CODE
+
+from SEGMENT_CONFIG sc
+join SEGMENT_FEE_CONFIG sfc on sc.ID = sfc.SEG_CONF_ID
+LEFT JOIN PAR_COMMON pc
+       ON sc.DOMAIN_TYPE = pc.PAR_CODE 
+      AND pc.PAR_TYPE  = 'DOMAIN_TYPE'
+LEFT JOIN CAT_FEESERVICE fs
+       ON sc.FEE_SERVICE = fs.srv_CODE
+LEFT JOIN CAT_FEECODE cf
+       ON sc.FEE_CODE_ID  = cf.ID
+--LEFT JOIN CAT_PKG_GRP pg
+      -- ON sc.FEE_SERVICE = pg.GRP_CODE 
+
+where sfc.SEG_CONF_ID = 'MID2026010700000005'
+-  Các trường không có thông tin ko hiển thị cả label và giá trị",,,,,PASS,,,,,
+"Kiểm tra chức năng ""breadcrumb""",,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_54,Kiểm tra click vào 'Phí định kỳ' trên breadcrumb,Kiểm tra click vào 'Phí định kỳ' trên breadcrumb,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập vào Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Click 'Phí định kỳ' trên breadcrumb",Điều hướng tới menu con đầu tiên của tab 'Phí định kỳ',,,,,PASS,,,,,
+,,WEB_55,Kiểm tra click vào 'Phí chính sách tự động' trên breadcrumb,Kiểm tra click vào 'Phí chính sách tự động' trên breadcrumb,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập vào Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Click 'Phí chính sách tự động' trên breadcrumb",Điều hướng tới màn danh sách Phí chính sách tự động,,,,,PASS,,,,,
+,,WEB_56,Kiểm tra click vào 'Chi tiết' trên breadcrumb,Kiểm tra click vào 'Chi tiết' trên breadcrumb,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập vào Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Click 'Chi tiết' trên breadcrumb",Không xảy ra action,,,,,PASS,,,,,
+Kiểm tra chức năng button ,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_57,Kiểm tra click button Chỉnh sửa,Kiểm tra click button Chỉnh sửa,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,High,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động
+2. Tại section Danh sách, click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động
+3. Click button Chỉnh sửa",Hiển thị màn hình Chỉnh sửa segment,,,,,PASS,,,,,
+,,WEB_58,Kiểm tra click button Phê duyệt,Kiểm tra click button Phê duyệt,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,High,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động
+2. Tại section Danh sách, click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động
+3. Click button Phê duyệt",Hiển thị popup Xác nhận duyệt,,,,,PASS,,,,,
+,,WEB_59,Kiểm tra click button Từ chối,Kiểm tra click button Từ chối,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,High,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động
+2. Tại section Danh sách, click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động
+3. Click button Từ chối",Hiển thị popup Xác nhận từ chối,,,,,PASS,,,,,
+,,WEB_60,Kiểm tra click icon Chỉnh sửa,Kiểm tra click icon Chỉnh sửa,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,High,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động
+2. Tại section Danh sách, click đúp 1 bản ghi cần xem Chi tiết Phí chính sách tự động
+3. Hover bản ghi giá segment có trạng thái khác Không hoạt động (!= 0 - INACTIVE)",Hiển thị Popup Chỉnh sửa giá segment,,,,,PASS,,,,,
+Kiểm tra phân trang,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_61,Kiểm tra khi chọn 5/ trang,Kiểm tra khi chọn 5/ trang,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Tại phân trang, click vào danh mục bản ghi
+3. Chọn '5/trang'","Danh sách hiển thị tối đa 5 bản ghi, dòng hiển thị cập nhật từ 1 - 5",,,,,PASS,,,,,
+,,WEB_62,Kiểm tra khi chọn 10/ trang,Kiểm tra khi chọn 10/ trang,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Tại phân trang, click vào danh mục bản ghi
+3. Chọn '10/trang'","Danh sách hiển thị tối đa 10 bản ghi, dòng hiển thị cập nhật từ 1 - 10",,,,,PASS,,,,,
+,,WEB_63,Kiểm tra khi chọn 20/ trang,Kiểm tra khi chọn 20/ trang,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Tại phân trang, click vào danh mục bản ghi
+3. Chọn '20/trang'","Danh sách hiển thị tối đa 20 bản ghi, dòng hiển thị cập nhật từ 1 - 20 ",,,,,PASS,,,,,
+,,WEB_64,Kiểm tra hiển thị trang mặc định,Kiểm tra hiển thị trang mặc định,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Kiểm tra phân trang mặc định
+
+",Mặc định hiển thị giá trị 5,,,,,PASS,,,,,
+,,WEB_65,Kiểm tra hiển thị các giá trị trong danh mục bản ghi,Kiểm tra hiển thị các giá trị trong danh mục bản ghi,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Click dropdown danh mục bản ghi
+3. Quan sát giá trj hiển thị
+
+","Hiển thị:
+- 5/ Trang
+- 10/ Trang
+- 20/ Trang",,,,,PASS,,,,,
+,,WEB_66,Kiểm tra hiển thị phân trang khi lưới dữ liệu có dữ liệu trả về,Kiểm tra hiển thị phân trang khi lưới dữ liệu có dữ liệu trả về,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Quan sát hiển thị phân trang khi có dữ liệu trên lưới danh sách
+
+",Hiển thị phân trang,,,,,PASS,,,,,
+,,WEB_67,Kiểm tra hiển thị phân trang khi lưới dữ liệu không dữ liệu trả về,Kiểm tra hiển thị phân trang khi lưới dữ liệu không dữ liệu trả về,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Quan sát hiển thị phân trang khi không có dữ liệu trên lưới danh sách
+
+",Ẩn khi lưới dữ liệu không có thông tin,,,,,PASS,,,,,
+,,WEB_68,Kiểm tra click vào số trang hiện tại,Kiểm tra click vào số trang hiện tại,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Đang ở trang 1, click lại trang 1
+
+",Không có action nào xảy ra,,,,,PASS,,,,,
+,,WEB_69,Kiểm tra khi click vào vào trang bất kỳ (Khác với trang hiện tại),Kiểm tra khi click vào vào trang bất kỳ (Khác với trang hiện tại),"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Đang ở trang 1, click lại trang 3
+
+","Chuyển đến trang 3, dữ liệu trang 3 hiển thị đúng",,,,,PASS,,,,,
+,,WEB_70,Kiểm tra click button next khi chỉ có một trang,Kiểm tra click button next khi chỉ có một trang,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Đang ở trang 1, click lại trang 3
+
+",Nút '>' bị disable,,,,,PASS,,,,,
+,,WEB_71,Kiểm tra click button back khi chỉ có một trang,Kiểm tra click button back khi chỉ có một trang,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Có 1 trang duy nhất, click nút next
+
+
+",Nút '<' bị disable,,,,,PASS,,,,,
+,,WEB_72,Kiểm tra khi button 'next' khi có nhiều hơn 1 trang,Kiểm tra khi button 'next' khi có nhiều hơn 1 trang,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Có 2 trang > User ở trạng 1 > Click nút next
+
+
+","Chuyển đến trang tiếp theo, số trang và cập nhật tương ứng",,,,,PASS,,,,,
+,,WEB_73,Kiểm tra khi button 'back' khi có nhiều hơn 1 trang,Kiểm tra khi button 'back' khi có nhiều hơn 1 trang,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu trong danh sách",,,Low,,,,,"1. Truy cập màn hình Phí định kỳ > Phí chính sách tự động > Chi tiết
+2. Có 2 trang > User ở trạng 2 > Click nút back
+
+
+","Chuyển về trang trước, số trang và cập nhật tương ứng",,,,,PASS,,,,,
+Kiểm tra timeout,,,,,,,,,,,,,,,,,,,,,,,,
+,,WEB_74,Kiểm tra khi Client BO gọi Server nhưng không nhận được phản hồi,Kiểm tra khi Client BO gọi Server nhưng không nhận được phản hồi,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Low,,,,,"1. Thực hiện thao tác gọi 
+2. Server không phản hồi / timeout.","Hiển thị popup lỗi: ""Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại.""",,,,,PENDING,test cuối dự án,,,,
+,,WEB_75,Kiểm tra khi gọi API không thành công,Kiểm tra khi gọi API không thành công,"Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Phí định kỳ > Bộ lọc chính sách phí > Chi tiết bộ lọc > Chi tiết Phí chính sách tự động
+Đ/k2: Phân quyền
+3. User được phân quyền truy cập
+4. Có dữ liệu Segment trong danh sách",,,Low,,,,,"1. Thực hiện thao tác gọi API.
+2. Server trả về lỗi .","Hiển thị popup thông báo lỗi theo design modal lỗi
+
++ icon theo design
+
++ Tiêu đề: Lỗi
+
++ Content: nội dung lỗi của 1 API bất kì do server phản hồi
+
++ Button: “Đóng”",,,,,PENDING,test cuối dự án,,,,

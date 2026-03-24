@@ -1,0 +1,619 @@
+---
+name: generate-test-design-api
+description: Generate API test design mindmap from RSD/PTTK. For API endpoints only. Use when user says "sinh test design api", "tao mindmap api", "tạo test design api", or provides RSD/PTTK for an API endpoint.
+---
+
+# Test Design Generator — API Mode
+
+Generate comprehensive test design documents (.md) for API endpoints from RSD and optional PTTK. Uses a searchable catalog of real test design examples to ensure output matches the correct format per project.
+
+> **Scope**: This skill covers **test design** (mindmap output) for API endpoints only. It does NOT cover Frontend test design or test case generation (JSON/Excel output).
+
+## When to Apply
+
+- User provides RSD/PTTK for an API endpoint and asks to generate test design or mindmap
+- User says "sinh test design api", "tạo test design api", "tao mindmap api"
+- User uploads .pdf/.txt/.md files for API test design / mindmap generation
+- Called internally by `test-case-generator-api` skill when user provides only RSD+PTTK without a mindmap
+
+## Prerequisites
+
+Python 3 installed. Check:
+```bash
+python3 --version || python --version
+```
+
+## Đọc file PDF — CHỈ dùng Read tool
+
+**Đọc PDF bằng Read tool. Không có ngoại lệ.**
+
+```
+Read file: path/to/document.pdf
+Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
+```
+
+Read tool của AI tools (Claude Code, Cursor, Windsurf, Copilot, Roo Code...) đều hỗ trợ đọc PDF trực tiếp. File lớn thì chia pages (VD: pages 1-10, rồi 11-20...).
+
+**CẤM TUYỆT ĐỐI — vi phạm bất kỳ điều nào = DỪNG LẠI ngay:**
+- ❌ KHÔNG tạo file mới: `.py`, `.ps1`, `.sh`, `.js` — dù chỉ 1 file
+- ❌ KHÔNG chạy `python`, `python3`, `pip install` để đọc PDF
+- ❌ KHÔNG import PyPDF2, pdfplumber, fitz, hoặc bất kỳ thư viện nào
+- ❌ KHÔNG parse binary, xref table, byte offsets, content streams
+- ❌ KHÔNG tạo find_us05.py, extract_pdf.py, read_pdf.ps1 hay bất kỳ script nào tương tự
+- ❌ KHÔNG dùng Bash/PowerShell để đọc PDF
+
+**Nếu Read tool trả về binary/garbled text:** Đọc lại với `pages` parameter (VD: `pages="1-5"`). Nếu vẫn không đọc được → HỎI USER cung cấp nội dung text hoặc copy-paste section cần thiết. **KHÔNG BAO GIỜ tự tạo script.**
+
+## Project AGENTS.md Override
+
+**Scope — what project `AGENTS.md` CAN override:**
+
+| Category | Can override? |
+|----------|--------------|
+| `testAccount` | Yes |
+| testSuiteName convention | Yes |
+| Writing style (ngắn/dài, cách viết step) | Yes |
+| Section assignment | Yes |
+| Output JSON field names | No |
+| Batch strategy (BATCH 1/2/3 split) | No |
+| Field type dispatch table | No |
+| Importance mapping | No |
+
+**How it works:** If project `AGENTS.md` defines a rule → use that rule. If not → use the skill defaults below. Project AGENTS.md only overrides sections/rules it explicitly defines; everything else falls back to skill defaults.
+
+## Workflow
+
+### Step 0: Validate Project Setup & Load Project Rules
+
+Before starting generation, check project structure and **load project-level rules**:
+
+1. **Check catalog** — look for `catalog/` directory at project root (contains `api/` subdirectory)
+2. **Check & READ AGENTS.md** — look for `AGENTS.md` at project root (project-level rules)
+
+**If catalog directory does not exist:**
+- Ask user: "Chưa có thư mục `catalog/`. Bạn đã chạy `test-genie init` chưa?"
+- If not → guide user to run `test-genie init` to set up project structure
+
+**If AGENTS.md exists at project root:**
+- **READ the entire file content** — extract ALL sections and rules defined by the project
+- Store these rules as `projectRules` — they will be applied throughout the entire generation workflow when explicitly defined
+- Any rule in project AGENTS.md **overrides** the corresponding rule in skill-level AGENTS.md and references
+- Sections in project AGENTS.md that don't exist in defaults are **ADDED** (not ignored)
+- Pay special attention to `## Project-Specific Rules` — these are custom rules that MUST be followed in every step
+
+**If AGENTS.md does not exist at project root:**
+- Use skill-level `AGENTS.md` (default rules)
+- Inform user: "Project chưa có AGENTS.md. Đang dùng rules mặc định."
+
+**If catalog exists but has no examples (empty api/):**
+- Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm examples trước không?"
+- Proceed with skill references as fallback
+
+**⚠️ CRITICAL: Project AGENTS.md rules take precedence when explicitly defined.** Every subsequent step must check `projectRules` and apply them.
+
+### Step 0b: Resolve Input Documents
+
+**If user provides a feature folder name** (e.g., `/generate-test-design-api feature-1` or `sinh test design api cho feature-1`):
+1. Look inside `<feature-name>/` folder for input documents automatically:
+   - Scan for document files: `.pdf`, `.docx`, `.doc`, `.md`, `.txt` — identify RSD and PTTK by filename
+2. **DO NOT ask** the user for file paths — use whatever documents are found in the folder
+3. **If folder is empty** → scan toàn bộ project root cho document files liên quan đến feature name
+4. If truly no documents found → inform user: "Không tìm thấy tài liệu RSD/PTTK. Hãy cung cấp đường dẫn hoặc upload file."
+5. Save output as `<feature-name>/test-design-api.md`
+
+### Step 1: Mode Detection (API Mode Only)
+
+This skill is **API-only**. The input RSD must describe an API endpoint.
+
+**Heuristic-first detection (rule-based, no LLM needed):**
+
+| Heuristic | Confidence |
+|-----------|------------|
+| Title/heading matches `(GET\|POST\|PUT\|DELETE\|PATCH)\s+/` | High |
+| Document contains `endpoint`, `request body`, `response body`, `API` (case-insensitive) in first 2 pages | Medium |
+| Document contains `màn hình`, `screen`, `giao diện` | Low (may be mixed) |
+
+**Decision logic:**
+1. If heuristic returns **High confidence** → proceed as API
+2. If document appears to be Frontend/RSD → inform user: "Tài liệu này là Frontend, không phải API. Sử dụng skill `generate-test-design-frontend` thay thế."
+3. If **no heuristic matches** → ask user for clarification
+
+### Step 2: Load Rules & References
+
+**Step 2a: Apply project AGENTS.md rules (loaded in Step 0)**
+
+Before loading any references, review `projectRules` from Step 0. Project rules affect:
+- **Which sections to generate** — project may add/remove/rename sections
+- **How to generate each section** — project may override format rules
+- **Quality/style constraints** — project may define custom forbidden phrases, naming conventions, writing style
+- **Test case granularity** — project may require splitting cases differently
+
+All rules from project AGENTS.md apply as overrides throughout the remaining steps.
+
+**Step 2b: Load skill references (API mode)**
+
+#### Resolve SKILL_SCRIPTS path
+
+Scripts are installed alongside this SKILL.md file in a `scripts/` subdirectory. Try these methods in order:
+
+**Method 1 — Recursive find from project root:**
+```bash
+SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-design-generator-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
+```
+
+**Method 2 — Direct path check (if Method 1 returns empty):**
+```bash
+for d in \
+  ".claude/skills/test-design-generator-api/scripts" \
+  ".cursor/skills/test-design-generator-api/scripts" \
+  ".windsurf/skills/test-design-generator-api/scripts" \
+  ".roo/skills/test-design-generator-api/scripts" \
+  ".kiro/skills/test-design-generator-api/scripts"; do
+  [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
+done
+echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
+```
+
+**Method 3 — Global npm (if Method 2 returns empty):**
+```bash
+npm_root=$(npm root -g 2>/dev/null)
+[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-design-generator-api/scripts/search.py" ] && \
+  SKILL_SCRIPTS="$npm_root/test-genie/test-design-generator-api/scripts"
+```
+
+**Method 4 — CRITICAL FALLBACK (if all above fail): Read reference files directly**
+
+If `SKILL_SCRIPTS` is still empty after all methods, **DO NOT skip loading references**. Instead, read the reference files directly:
+
+```
+READ: <skills-dir>/test-design-generator-api/references/api-test-design.md
+READ: <skills-dir>/test-design-generator-api/references/priority-rules.md
+READ: <skills-dir>/test-design-generator-api/references/quality-rules.md
+READ: <skills-dir>/test-design-generator-api/references/output-examples.md
+```
+
+Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is found. Try common paths:
+- `.claude/skills/`
+- `.cursor/skills/`
+- `.windsurf/skills/`
+
+**⚠️ NEVER proceed without loading references.** The format template in `api-test-design.md` is mandatory.
+
+**Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
+
+#### Load API references
+
+**Always load first (API mode):**
+```bash
+python $SKILL_SCRIPTS/search.py --ref priority-rules
+python $SKILL_SCRIPTS/search.py --ref quality-rules
+python $SKILL_SCRIPTS/search.py --ref api-test-design
+```
+
+#### Search examples & utilities
+
+```bash
+# Search API examples by keyword (searches catalog/api/ in project root)
+python $SKILL_SCRIPTS/search.py "search list api" --domain api
+
+# Search format rules (skill-bundled, not in project catalog)
+python $SKILL_SCRIPTS/search.py "common section status" --domain rules
+
+# List all available references
+python $SKILL_SCRIPTS/search.py --list-refs
+
+# List all available examples
+python $SKILL_SCRIPTS/search.py --list
+
+# Read full content of top match
+python $SKILL_SCRIPTS/search.py "export excel" --domain api --full
+```
+
+### Step 3: Read the Top-Matching Example
+
+After search returns results, **read the full example file** to understand the exact format:
+
+```bash
+# search.py returns the full_path — use view_file on it
+```
+
+### Step 4: Extract Data from RSD & PTTK
+
+Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is available, IGNORE field definitions, request body, and response body in RSD.
+
+#### API Mode — Extraction
+
+**Phase 1: RSD → business logic only (always from RSD)**
+1. Find the exact API section in RSD by endpoint or name
+2. Extract: title, endpoint, method, errorCodes (description → status code mapping), dbMapping (table, conditions, orderBy)
+3. Extract: if/else branches, mode variations (create/update/delete), status transitions
+
+**Phase 2: PTTK → field definitions (if available)**
+1. Find the EXACT API by endpoint in PTTK (PTTK is usually a large document with many APIs)
+2. Extract inputFields: name, type (Date/Integer/Long/String — exact from PTTK), maxLength, required (Y/N), nullBehavior, validationRules (allowedSpecialChars, allowSpaces, allowAccents)
+3. Extract outputFields: name, type, nesting structure
+4. Extract response body structure (field names, data types, nesting) — this defines the response format for ALL test cases
+5. **If no PTTK** → fallback: extract field definitions AND business logic from RSD
+
+### Step 4b: Validate Documents & Ask Clarification
+
+After extraction, check for issues and **proactively ask user** before proceeding:
+
+**Missing information (MUST ask):**
+- RSD has no error codes or error code table is empty → ask: "RSD không có bảng mã lỗi. Bạn có tài liệu bổ sung không, hay bỏ qua phần error codes?"
+- Cannot find the exact API/screen in PTTK → ask: "PTTK có nhiều API, không tìm thấy endpoint `{endpoint}`. Bạn muốn dùng API nào?" (list candidates)
+- Field type unclear (RSD says "text" but no maxLength, no format) → ask: "Field `{name}` không có maxLength/format trong tài liệu. Giá trị mặc định nào phù hợp?"
+
+**Conflicts between documents (MUST ask):**
+- PTTK field name differs from RSD field name → ask: "PTTK gọi là `{pttk_name}` nhưng RSD gọi là `{rsd_name}`. Dùng tên nào?"
+- PTTK says required but RSD says optional (or vice versa) → ask: "Field `{name}`: PTTK = required, RSD = optional. Theo tài liệu nào?"
+- Different data types between documents → ask: "Field `{name}`: PTTK type = `{type1}`, RSD type = `{type2}`. Dùng type nào?"
+- Response structure differs between PTTK and RSD → follow PTTK (per priority rules), but note the difference
+
+**Suspicious/unclear content (SHOULD ask):**
+- Business logic description is vague or uses ambiguous words ("có thể", "tùy trường hợp") → ask: "Logic `{description}` không rõ ràng. Cụ thể điều kiện là gì?"
+
+**DO NOT ask if:**
+- Information can be reasonably inferred (e.g., WRONG_METHODS from API method)
+- Priority rules already define the answer (e.g., PTTK wins for field definitions)
+- It's a formatting/style question covered by references
+
+### Step 4c: Business Logic Inventory (API Mode)
+
+**Before generating any section**, extract toàn bộ business logic thành inventory. Đây là checklist để đảm bảo mọi item đều xuất hiện trong mindmap đúng section.
+
+```json
+{
+  "errorCodes": [
+    { "code": "PCER_UPLOAD_001", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file format sai" },
+    { "code": "PCER_UPLOAD_004", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file sai template" },
+    { "code": "2", "desc": "Có lỗi xảy ra trong quá trình xử lý", "section": "main", "triggerCondition": "S3 error hoặc DB error" }
+  ],
+  "businessRules": [
+    { "id": "BR1", "condition": "uploadType = 1", "trueBranch": "INSERT với action=ADD", "falseBranch": null, "section": "main" },
+    { "id": "BR2", "condition": "uploadType = 2", "trueBranch": "INSERT với action=DELETE", "falseBranch": null, "section": "main" }
+  ],
+  "dbFields": [
+    "ID (auto)", "DOMAIN_TYPE", "FEE_SERVICE", "CUSTOMER_ID", "BRANCH (= bdsCode + '000')",
+    "STATUS (= 1)", "UPLOAD_TYPE", "CREATED_USER", "CREATED_TIME", "TOTAL_UPLOAD", "FILE_NAME", "S3_FILE_KEY"
+  ],
+  "externalServices": [
+    { "name": "S3", "onFailure": "error code 2", "rollbackBehavior": "không INSERT DB" }
+  ],
+  "modes": ["uploadType=1 (Thêm mới)", "uploadType=2 (Xoá)"]
+}
+```
+
+**Extraction rules (API):**
+- `errorCodes[].section`: `"validate"` = thuộc section "Kiểm tra validate" trong mindmap; `"main"` = thuộc "Kiểm tra luồng chính"
+- `errorCodes[].desc`: copy **exact** từ bảng mã lỗi trong RSD/PTTK — **đọc toàn bộ bảng, không bỏ sót dòng nào**
+- `dbFields[]`: lấy từ bảng DB mapping trong PTTK — **list 100% columns** kể cả auto-generate và derived fields
+- `externalServices[].rollbackBehavior`: nếu RSD mô tả "không lưu DB khi lỗi" → ghi rõ, cần 1 bullet trong mindmap
+
+**Dùng inventory này khi sinh từng section (API):**
+- Error codes có `section="validate"` → phải xuất hiện trong ## Kiểm tra validate
+- Error codes có `section="main"` → phải xuất hiện trong ## Kiểm tra luồng chính
+- `dbFields[]` → tất cả fields phải có trong SQL verify của luồng chính
+- `rollbackBehavior` → phải có bullet "S3 lỗi → không INSERT vào DB" trong luồng chính
+
+### Step 4d: Inventory Verification Gate
+
+**Sau khi hoàn thành Step 4c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
+
+```
+📋 Business Logic Inventory đã extract:
+- Error codes:        {N} (list: PCER_001 [validate], PCER_002 [main], ...)
+- Business rules:     {N} if/else branches (list: BR1, BR2, ...)
+- Modes/flows:        {N} (list: uploadType=1, uploadType=2, ...)
+- DB fields:          {N} columns cần verify (list: ID, STATUS, FILE_NAME, ...)
+- External services:  {N} (list: S3, Queue, ...)
+```
+
+**Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận trước khi tiếp tục:**
+> "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không? (có thể tôi đọc bỏ sót phần nào đó)"
+
+**Nếu errorCodes = 0:** Dừng lại, hỏi user:
+> "Không tìm thấy bảng mã lỗi trong tài liệu. Bạn có thể chỉ rõ section nào chứa error codes không?"
+
+### Step 5: Generate Test Design Sections (API Mode)
+
+Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
+
+**⚠️ BEFORE generating any section, review `projectRules` from Step 0.** Project AGENTS.md rules MUST be applied throughout generation:
+- If project defines custom section structure → follow that
+- If project defines writing style (e.g., "viết ngắn gọn") → follow that
+- If project defines any `## Project-Specific Rules` → apply ALL of them to every section
+
+#### API Mode — Generation
+
+**Common section (hardcoded):** Copy the base template exactly — only replace `{API_NAME}` and `{WRONG_METHODS}`. Format: `- status: 107` (simple). NEVER use `1\. Check api trả về:` in common.
+
+**Post-section checkpoint — Common:** Có đủ Method + URL + Authorization test cases? Thiếu → thêm bullet.
+
+**Validate section (per-field):** For each inputField from Phase 2, generate test cases using the field templates in `--ref api-test-design`:
+- String Required → test: empty, missing, null, maxLen-1/maxLen/maxLen+1, numeric, accented chars, special chars, spaces, emoji, unicode, boolean, array, object, XSS, SQL injection
+- Integer with default → test: empty/missing/null (uses default), valid value, negative, decimal, string
+- Optional Integer → test: empty/missing/null (returns all), valid/invalid value, string
+- ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
+- JSON response must be multiline WITHOUT backtick fence
+
+**Post-section checkpoint — Validate (API):** TỪNG field trong `inventory.errorCodes[section="validate"]` → có bullet với exact error code? Thiếu → THÊM bullet `### [SỬA]`.
+
+**Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format.
+
+**⚠️ PHẢI sinh dựa trên inventory từ Step 4c — inject các items cụ thể vào generation:**
+
+```
+Sinh test cases cho ## Kiểm tra luồng chính. BẮT BUỘC cover đủ các items sau từ inventory:
+
+Modes:            {list inventory.modes[] — mỗi mode cần ≥1 happy path}
+Business rules:   {list inventory.businessRules[] — mỗi branch cần test TRUE + FALSE}
+Error codes:      {list inventory.errorCodes[section="main"] — mỗi code cần 1 test với exact message}
+DB fields:        {list inventory.dbFields[] — TẤT CẢ fields phải có trong SQL verify}
+External services:{list inventory.externalServices[] — cần test onFailure + rollback}
+
+KHÔNG bỏ sót bất kỳ item nào.
+```
+
+Thứ tự sinh:
+1. Response fields verification — list ALL output fields (camelCase) với sample values
+2. DB mapping verification — full SQL: SELECT/FROM/WHERE/ORDER BY với concrete values, verify **tất cả `dbFields[]`**
+3. Search scenarios — exact, approximate (LIKE), combined conditions, not found
+4. Sort order verification — ORDER BY clause
+5. Error code scenarios — mỗi `errorCodes[section="main"]` → 1 test case với **exact message từ inventory**
+6. Business logic branches — mỗi `businessRules[]` branch → test TRUE + FALSE, mỗi có Response
+7. DB validations — exists/not exists → test both cases
+8. Mode variations — mỗi `modes[]` item → test riêng
+9. Status transitions — valid/invalid transitions → test each
+10. External service failures — mỗi `externalServices[]` → test onFailure, rollback không INSERT DB
+
+**Post-section checkpoint — Main flow (API):**
+- TỪNG mode trong `inventory.modes[]` → có ≥1 happy path bullet?
+- TỪNG branch trong `inventory.businessRules[]` → có bullet TRUE + FALSE?
+- TỪNG error code `section="main"` → có bullet với exact message?
+- TỪNG dbField trong `inventory.dbFields[]` → có trong SQL SELECT?
+- TỪNG `externalServices[]` → có bullet onFailure + rollback?
+- Item nào thiếu → THÊM bullet `### [SỬA]` ngay.
+
+**Verify — coverage summary (API mode):**
+
+Kiểm tra nhanh đã cover đủ:
+- [ ] `inventory.errorCodes[section="validate"]` → mỗi code có bullet trong ## Kiểm tra validate
+- [ ] `inventory.errorCodes[section="main"]` → mỗi code có bullet trong ## Kiểm tra luồng chính
+- [ ] `inventory.businessRules[]` → mỗi branch có bullet TRUE + FALSE
+- [ ] `inventory.dbFields[]` → tất cả fields có trong SQL SELECT
+- [ ] `inventory.externalServices[]` → mỗi service có bullet onFailure + rollback
+- [ ] `inventory.modes[]` → mỗi mode có ≥1 happy path
+
+Item nào thiếu → THÊM bullet `### [SỬA] Kiểm tra ...`
+
+**⚠️ PHẢI hiển thị coverage summary cho user sau khi verify (API mode):**
+```
+📊 Coverage Report (API):
+✓ Error codes [validate]: {N}/{N} covered
+✓ Error codes [main]:     {N}/{N} covered
+✓ Business rules:         {N}/{N} covered
+✓ DB fields:              {N}/{N} covered
+✓ Modes:                  {N}/{N} covered
+✓ External services:      {N}/{N} covered
+[SỬA]: {N} bullets thêm/sửa
+```
+
+### Step 5b: Final Project Rules Enforcement
+
+**⚠️ MANDATORY — Đọc lại TOÀN BỘ `projectRules` (từ Step 0) và kiểm tra output lần cuối:**
+
+1. Đọc lại `## Project-Specific Rules` trong project AGENTS.md
+2. Duyệt từng rule → kiểm tra output đã tuân thủ chưa
+3. Nếu vi phạm → sửa ngay trước khi chuyển Step 6
+
+### Step 6: Apply Quality Rules
+
+Load quality rules and verify:
+```bash
+python <skills-root>/test-design-generator-api/scripts/search.py --ref quality-rules
+```
+
+Checklist:
+- 100% Vietnamese, keep field/button names exactly as in RSD/PTTK
+- No placeholders — use concrete sample values in SQL and responses
+- 1 test = 1 check (atomic)
+- Forbidden words: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
+- SQL: concrete values (`WHERE ID = 10001`), UPPERCASE columns, NO placeholders
+- Output starts with `# {API_NAME}` — NO blockquote header, NO `---` horizontal rules
+- **Project AGENTS.md quality rules**: If project defines additional quality constraints → apply them
+
+## Catalog Management
+
+### Add Examples to Catalog
+
+To add new reference examples:
+1. Save the test design output as a `.md` file
+2. Place it in `catalog/api/` at your project root
+3. The search engine will automatically index new files
+
+### List Available Examples
+
+```bash
+python <skills-root>/test-design-generator-api/scripts/search.py --list
+```
+
+## Project Structure
+
+After running `test-genie init`, your project has this structure:
+
+```
+<project-root>/
+├── node_modules/test-genie/           ← Skills live here (managed by npm)
+│   ├── test-design-generator-api/
+│   │   ├── SKILL.md                      ← Workflow instructions (this file)
+│   │   ├── AGENTS.md                     ← Skill-level default rules
+│   │   ├── references/                   ← Detailed rules (dev-managed)
+│   │   │   ├── api-test-design.md
+│   │   │   ├── priority-rules.md
+│   │   │   ├── quality-rules.md
+│   │   │   └── output-examples.md
+│   │   ├── data/rules/
+│   │   │   └── api-rules.csv             ← Format rules (searchable via --domain rules)
+│   │   └── scripts/
+│   │       └── search.py                 ← Catalog search (auto-detects project root)
+│   └── test-case-generator-api/
+│       └── ...
+├── .claude/commands/                  ← Claude slash commands (auto-generated)
+│   └── generate-test-design-api.md
+├── catalog/                           ← Managed by user/tester
+│   ├── api/                              ← API test design .md examples
+│   └── mobile/                           ← Mobile test design examples
+├── excel_template/
+│   ├── template.xlsx                  ← Spreadsheet template
+│   └── structure.json                 ← Template structure
+├── <tên-test-case>/                   ← Per-feature test folder
+│   ├── RSD.pdf                           ← Input: requirement spec
+│   ├── PTTK.pdf                          ← Input: technical spec (optional)
+│   └── test-design-api.md               ← Output: test design mindmap
+├── credentials.json                   ← OAuth credentials (DO NOT COMMIT)
+└── AGENTS.md                          ← Project-specific rules (user-managed)
+```
+
+**Output location:** Save the generated test design `.md` file into the `<tên-test-case>/` folder alongside the input documents. The folder name should match the feature/API being tested.
+
+## Key Format Rules (Quick Reference)
+
+### Critical Rules
+- Output starts with `# {API_NAME}` — NO blockquote header, NO `---` horizontal rules
+- **ONLY test sections** — NO "thông tin chung", "headers", "request body", "response", "bảng mã lỗi" sections. These are API spec, NOT test design.
+- ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
+- SQL uses concrete values, UPPERCASE columns, NO placeholders
+- Response body format comes from PTTK (no fixed format)
+- Sections NOT numbered — use `## Kiểm tra ...` NOT `## 1. Kiểm tra ...`
+
+### API Test Design — Inline Format Example
+
+This is the REQUIRED output format. AI MUST follow this structure even when catalog/references are unavailable.
+
+```markdown
+# API Tên API ở đây
+
+## Kiểm tra các case common
+
+### Method
+
+#### Kiểm tra truyền sai method (GET/PUT/DELETE)
+- status: 107
+- {
+  "message": "Error retrieving AuthorInfo..."
+  }
+
+### URL
+
+#### Kiểm tra truyền sai url
+- status: 500
+- {
+  "message": "Access denied"
+  }
+
+### Kiểm tra phân quyền
+
+#### Không có quyền
+- status: 500
+- {
+  "message": "Access denied"
+  }
+
+#### Được phân quyền
+- status: 200
+
+## Kiểm tra validate
+
+### FIELD_NAME: type (Required)
+
+#### Để trống
+- 1\. Check api trả về:
+  1\.1. Status: 200
+  1\.2. Response:
+  {
+    "message": "Dữ liệu không hợp lệ"
+  }
+
+#### Không truyền
+- 1\. Check api trả về:
+  1\.1. Status: 200
+  1\.2. Response:
+  {
+    "message": "Dữ liệu không hợp lệ"
+  }
+
+#### Truyền null
+- 1\. Check api trả về:
+  1\.1. Status: 200
+  1\.2. Response: Trả về response body đúng cấu trúc
+
+#### Truyền FIELD_NAME = 99 ký tự
+- 1\. Check api trả về:
+  1\.1. Status: 200
+  1\.2. Response: Trả về response body đúng cấu trúc
+
+#### Truyền FIELD_NAME = 100 ký tự (maxLength)
+- 1\. Check api trả về:
+  1\.1. Status: 200
+  1\.2. Response: Trả về response body đúng cấu trúc
+
+#### Truyền FIELD_NAME = 101 ký tự (vượt maxLength)
+- 1\. Check api trả về:
+  1\.1. Status: 200
+  1\.2. Response:
+  {
+    "message": "Dữ liệu không hợp lệ"
+  }
+
+#### Truyền FIELD_NAME là ký tự số
+#### Truyền FIELD_NAME là chữ(thường/hoa) không dấu
+#### Truyền FIELD_NAME là chữ(thường/hoa) có dấu
+#### Truyền FIELD_NAME là ký tự đặc biệt cho phép _
+#### Truyền FIELD_NAME là ký tự đặc biệt không cho phép
+#### Truyền FIELD_NAME là all space
+#### Truyền FIELD_NAME có space đầu / cuối
+#### Truyền FIELD_NAME là emoji/icons
+#### Truyền FIELD_NAME là ký tự Unicode đặc biệt
+#### Truyền FIELD_NAME là boolean (true/false)
+#### Truyền FIELD_NAME là mảng
+#### Truyền FIELD_NAME là object
+#### Truyền FIELD_NAME là XSS
+#### Truyền FIELD_NAME là SQL INJECTION
+
+## Kiểm tra luồng chính
+
+### Kiểm tra response khi truyền FIELD_NAME tồn tại kết quả
+- 1\. Check api trả về:
+      1\.1. Status: 200
+      1\.2. Response:
+      {
+        "errorCode": "0",
+        "errorDesc": "",
+        "data": [...]
+      }
+      SQL:
+      SELECT * FROM TABLE_NAME
+      WHERE FIELD = 'VALUE'
+      ORDER BY FIELD ASC;
+
+### Kiểm tra response khi truyền FIELD_NAME không tồn tại kết quả
+- 1\. Check api trả về:
+      1\.1. Status: 200
+      1\.2. Response:
+      {
+        "errorCode": "0",
+        "errorDesc": "",
+        "total": 0,
+        "items": []
+      }
+```
+
+**Format rules summary:**
+
+| Section | Heading level | Response format |
+|---------|--------------|-----------------|
+| Common (method/url/phân quyền) | `## > ### > ####` | `- status: {code}` + JSON (simple, NO `1\.`) |
+| Validate (per field) | `## > ### FIELD: type > ####` | `- 1\. Check api trả về:` + `1\.1. Status:` + `1\.2. Response:` |
+| Luồng chính | `## > ###` | Same as validate + SQL |
