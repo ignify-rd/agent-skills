@@ -10,6 +10,32 @@ const __dirname = dirname(__filename);
 const PACKAGE_ROOT = join(__dirname, '..', '..');
 const SCRIPTS_DIR = join(PACKAGE_ROOT, 'test-case-generator', 'scripts');
 
+function getPythonCommand() {
+  // On Windows, also check 'py -3' (Python Launcher)
+  const candidates = process.platform === 'win32'
+    ? ['py -3', 'python3', 'python']
+    : ['python3', 'python'];
+
+  for (const cmd of candidates) {
+    try {
+      const ver = execSync(`${cmd} --version`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      const match = ver.match(/Python (\d+)\.(\d+)/);
+      if (match && parseInt(match[1]) >= 3 && parseInt(match[2]) >= 6) {
+        return cmd;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+function getPythonVersion(cmd) {
+  try {
+    return execSync(`${cmd} --version`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+  } catch {
+    return null;
+  }
+}
+
 export function uploadCommand(testCaseName, options) {
   const projectRoot = options.projectRoot || process.cwd();
   const scriptPath = join(SCRIPTS_DIR, 'upload_gsheet.py');
@@ -28,10 +54,27 @@ export function uploadCommand(testCaseName, options) {
     process.exit(1);
   }
 
+  const pythonCmd = getPythonCommand();
+  if (!pythonCmd) {
+    // Show what python version is currently installed
+    const currentVer = getPythonVersion('python');
+    if (currentVer) {
+      logger.error(`${currentVer} detected — Python 3.6+ is required.`);
+    } else {
+      logger.error('Python is not installed.');
+    }
+    logger.info('');
+    logger.info('Fix: Install Python 3.6+ from https://www.python.org/downloads/');
+    logger.info('  Windows: Download installer, check "Add Python to PATH"');
+    logger.info('  After install, close and reopen terminal, then retry.');
+    process.exit(1);
+  }
+
   logger.info(`Uploading ${testCaseName}/test-cases.json to Google Sheets...`);
+  logger.info(`Using: ${getPythonVersion(pythonCmd)}`);
 
   try {
-    const cmd = `python "${scriptPath}" "${testCaseName}" --project-root "${projectRoot}"`;
+    const cmd = `${pythonCmd} "${scriptPath}" "${testCaseName}" --project-root "${projectRoot}"`;
     const output = execSync(cmd, {
       cwd: projectRoot,
       encoding: 'utf-8',
@@ -46,8 +89,9 @@ export function uploadCommand(testCaseName, options) {
     if (err.stderr) {
       console.error(err.stderr);
     }
-    logger.info('Check that Python dependencies are installed:');
-    logger.info('  pip install google-auth-oauthlib google-auth google-api-python-client openpyxl');
+    logger.info('');
+    logger.info('Check that Python 3 dependencies are installed:');
+    logger.info(`  ${pythonCmd} -m pip install google-auth-oauthlib google-auth google-api-python-client openpyxl`);
     process.exit(1);
   }
 }
