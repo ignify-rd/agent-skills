@@ -44,6 +44,7 @@ Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
 
 | Category | Can override? |
 |----------|--------------|
+| Chat input / user request | **Always — HIGHEST PRIORITY** |
 | `testAccount` | Yes |
 | testSuiteName convention | Yes |
 | Writing style (ngắn/dài, cách viết step) | Yes |
@@ -53,31 +54,43 @@ Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
 | Field type dispatch table | No |
 | Importance mapping | No |
 
-**How it works:** Chat input from the user → Project `AGENTS.md` → Skill defaults. User says "viết ngắn gọn" or "chỉ generate test case cho chức năng ..." → do it, even if it contradicts AGENTS.md or skill defaults.
+**How it works:** Chat input from the user → Project `AGENTS.md` → Skill defaults. User says "viết ngắn gọn" → do it, even if it contradicts AGENTS.md or skill defaults.
 
 ## Workflow
 
 ### Step 0: Validate Project Setup & Load Project Rules
 
-1. **Check catalog** — look for `catalog/` directory at project root (contains `api/`, `frontend/`)
+Before starting generation, check project structure and **load project-level rules**:
+
+1. **Check catalog** — look for `catalog/` directory at project root (contains `frontend/` subdirectory)
 2. **Check & READ AGENTS.md** — look for `AGENTS.md` at project root
 3. **Check template structure** — look for `excel_template/structure.json`
 
 **If catalog directory does not exist:**
 - Ask user: "Chưa có thư mục `catalog/`. Bạn đã chạy `test-genie init` chưa?"
+- If not → guide user to run `test-genie init` to set up project structure
 
 **If AGENTS.md exists at project root:**
 - **READ the entire file content** — extract ALL sections and rules defined by the project
-- Store as `projectRules` — apply throughout generation when explicitly defined
-- Sections not mentioned fall back to skill-level defaults
+- Store these rules as `projectRules` — they will be applied throughout the entire generation workflow when explicitly defined
+- Any rule in project AGENTS.md **overrides** the corresponding rule in skill-level AGENTS.md and references
+- Sections in project AGENTS.md that don't exist in defaults are **ADDED** (not ignored)
+- Pay special attention to `## Project-Specific Rules` — these are custom rules that MUST be followed in every step
 
 **If AGENTS.md does not exist at project root:**
 - Use skill-level defaults
 - Inform user: "Project chưa có AGENTS.md. Đang dùng rules mặc định."
 
+**If catalog exists but has no examples (empty frontend/):**
+- Warn user: "Catalog chưa có examples. Output có thể không chính xác format. Bạn có muốn thêm CSV examples trước không?"
+- Proceed with skill references as fallback
+
+**⚠️ CRITICAL: Project AGENTS.md rules take precedence when explicitly defined.** Every subsequent step must check `projectRules` and apply them.
+
 **If `excel_template/structure.json` does not exist:**
 - Check if `excel_template/template.xlsx` exists
-- If yes → run `python <skills-root>/scripts/extract_structure.py` to generate it
+- If yes → run `python <skills-root>/test-case-generator-frontend/scripts/extract_structure.py --project-root .` to generate it
+- If no → inform user: "Chưa có template. Bạn cần đặt file template.xlsx vào excel_template/"
 
 ### Step 1: Check Input Type
 
@@ -212,12 +225,31 @@ Extract complete inventory before generating. Output as internal JSON:
 
 #### Step 5a: Load Catalog Style Examples (MANDATORY)
 
-Search catalog for style reference:
+**⚠️ CRITICAL — Catalog examples là nguồn chuẩn cho style/wording. PHẢI load trước khi sinh bất kỳ test case nào.**
+
+Search catalog to get 2-3 real examples. This is the **primary style reference** — output PHẢI follow catalog format, KHÔNG follow reference examples.
+
 ```bash
-python $SKILL_SCRIPTS/search.py "{keyword}" --domain frontend --full --top 3
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain frontend --full --top 3
 ```
 
-**Catalog style = primary.** References only provide rules/logic.
+**Nếu catalog có examples:**
+1. Đọc 10-15 examples đầu tiên (full content: preConditions, steps, expectedResults)
+2. **Extract style patterns:**
+   - **testSuiteName convention** — field sub-suites `"Textbox: Tên"` hay fallback `"Kiểm tra validate"`?
+   - **preConditions format** — format Đ/k, numbering, wording
+   - **steps format** — động từ, cấu trúc câu
+   - **expectedResults format** — format, wording
+   - **testCaseName convention** — KHÔNG có prefix, lấy trực tiếp từ mindmap
+3. Lưu patterns làm `catalogStyle` — dùng cho TOÀN BỘ batches
+
+**Catalog style override TOÀN BỘ format mặc định trong references.**
+
+**References chỉ cung cấp: LOẠI cases nào cần check (rules/logic). Catalog quyết định: VIẾT như thế nào (format/style).**
+
+**Nếu catalog KHÔNG có examples:**
+- Warn user: "Catalog chưa có examples, sẽ dùng format mặc định từ references."
+- Fall back to reference examples as style guide
 
 ---
 
@@ -284,6 +316,21 @@ Sinh ## Kiểm tra chức năng. BẮT BUỘC cover đủ:
 ✓ BATCH 3: {N}/{N} actions, {N}/{N} enable/disable rules
 ✅ Tổng: {total} test cases | Auto-appended: {M} cases
 ```
+
+### Step 5c: Final Project Rules Enforcement
+
+**⚠️ MANDATORY — Đọc lại TOÀN BỘ `projectRules` (từ Step 0) và kiểm tra output lần cuối:**
+
+1. Đọc lại `## Project-Specific Rules` trong project AGENTS.md
+2. Duyệt từng rule → kiểm tra output đã tuân thủ chưa
+3. Nếu vi phạm → sửa ngay trước khi chuyển Step 6
+
+**Các lỗi thường gặp khi quên projectRules:**
+- Button test cases nằm trong "Kiểm tra validate" thay vì "Kiểm tra chức năng"
+- Test case viết dài dòng thay vì ngắn gọn
+- Case chung chung thay vì tách riêng từng giá trị cụ thể
+- Section assignment sai (buttons vào section khác với quy định của project)
+- Ảnh có field nhưng thiếu test case
 
 ### Step 6: Output to JSON File
 

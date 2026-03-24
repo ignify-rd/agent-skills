@@ -10,8 +10,10 @@
     "bin/",
     "src/",
     "templates/",
-    "test-case-generator/",
-    "test-design-generator/"
+    "test-design-generator-api/",
+    "test-design-generator-frontend/",
+    "test-case-generator-api/",
+    "test-case-generator-frontend/"
   ],
   "scripts": {
     "test": "node bin/test-genie.js --help && node bin/test-genie.js versions --help && node bin/test-genie.js init --help && node bin/test-genie.js update --help"

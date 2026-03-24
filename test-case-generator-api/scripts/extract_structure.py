@@ -322,21 +322,39 @@ def _scan_sheet(ws):
     return row_values_list, header_row, data_start_row, column_mapping, best_score
 
 
-def find_best_sheet(wb, sheet_name_hint=None):
+def find_best_sheet(wb, sheet_hint=None):
     """Find the best worksheet for test case data.
 
+    sheet_hint:
+      - int (1-based): use that sheet index (1 = first sheet)
+      - str: use that sheet name (exact match, then case-insensitive)
+      - None: auto-detect based on column headers
+
     Priority:
-    1. Explicit sheet name (--sheet)
-    2. Sheet with the most recognized column headers
+    1. Explicit sheet name or index (--sheet)
+    2. Sheet with the most recognized column headers (auto-detect)
     3. First sheet (fallback)
     """
-    if sheet_name_hint:
-        if sheet_name_hint in wb.sheetnames:
-            return wb[sheet_name_hint]
+    # Handle integer index (1-based)
+    if isinstance(sheet_hint, int):
+        if 1 <= sheet_hint <= len(wb.worksheets):
+            return wb.worksheets[sheet_hint - 1]
+        return wb.worksheets[0]
+
+    if sheet_hint:
+        if sheet_hint in wb.sheetnames:
+            return wb[sheet_hint]
         # Try case-insensitive match
         for name in wb.sheetnames:
-            if name.lower() == sheet_name_hint.lower():
+            if name.lower() == sheet_hint.lower():
                 return wb[name]
+        # Try converting to int (user might pass "1" as index by mistake)
+        try:
+            idx = int(sheet_hint)
+            if 1 <= idx <= len(wb.worksheets):
+                return wb.worksheets[idx - 1]
+        except (ValueError, TypeError):
+            pass
         # Not found — fall through to auto-detect
 
     best_ws = wb.worksheets[0]
@@ -352,13 +370,13 @@ def find_best_sheet(wb, sheet_name_hint=None):
 
 
 # ============ MAIN EXTRACTION ============
-def extract_structure(template_path, output_path=None, sheet_name_hint=None):
+def extract_structure(template_path, output_path=None, sheet_hint=None):
     """Extract full template structure from .xlsx file."""
     if not os.path.isfile(template_path):
         return {"error": f"Template file not found: {template_path}"}
 
     wb = openpyxl.load_workbook(template_path, data_only=False)
-    ws = find_best_sheet(wb, sheet_name_hint)
+    ws = find_best_sheet(wb, sheet_hint)
     sheet_name = ws.title
 
     # Read all rows as values for header detection (max 20 rows)
@@ -474,7 +492,7 @@ def main():
     )
     parser.add_argument('--template', help='Path to .xlsx template file (default: excel_template/template.xlsx)')
     parser.add_argument('--output', help='Output path for structure.json (default: excel_template/structure.json)')
-    parser.add_argument('--sheet', help='Sheet name to extract (auto-detected if omitted)')
+    parser.add_argument('--sheet', help='Sheet index (1, 2, 3...) or sheet name (auto-detected if omitted)')
     parser.add_argument('--project-root', help='Explicit project root path (auto-detected if omitted)')
     args = parser.parse_args()
 
@@ -483,8 +501,16 @@ def main():
     template_path = args.template or str(project_root / 'excel_template' / 'template.xlsx')
     output_path = args.output or str(project_root / 'excel_template' / 'structure.json')
 
+    # Parse sheet hint: try int first, then string
+    sheet_hint = None
+    if args.sheet is not None:
+        try:
+            sheet_hint = int(args.sheet)
+        except (ValueError, TypeError):
+            sheet_hint = str(args.sheet)
+
     try:
-        extract_structure(template_path, output_path, sheet_name_hint=args.sheet)
+        extract_structure(template_path, output_path, sheet_hint=sheet_hint)
     except Exception as e:
         print(json.dumps({"error": str(e)}))
         sys.exit(1)

@@ -217,15 +217,12 @@ python $SKILL_SCRIPTS/search.py "export excel" --domain frontend --full
 
 ### Step 3: Read the Top-Matching Example
 
-After search returns results, **read the full example file** to understand the exact format:
-
-```bash
-# search.py returns the full_path — use view_file on it
-```
-
-### Step 4: Extract Data from RSD & PTTK
-
-Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is available, IGNORE field definitions, request body, and response body in RSD.
+After search returns results, **read the full example file** to understand the exact format. The example shows:
+- Section structure (which ## and ### headings are used)
+- Writing style (bullet density, wording patterns for validate vs function)
+- How field templates are applied per field type
+- How function section is organized per screenType (LIST vs FORM vs DETAIL)
+- How grid/pagination sections are formatted
 
 ### Step 4: Extract Data from RSD, PTTK & Images
 

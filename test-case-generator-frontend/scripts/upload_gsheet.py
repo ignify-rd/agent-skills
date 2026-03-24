@@ -570,6 +570,7 @@ def main():
     parser.add_argument('--data', help='Path to test-cases.json (default: <test-case-name>/test-cases.json)')
     parser.add_argument('--credentials', help='Path to credentials.json')
     parser.add_argument('--project-root', help='Explicit project root path')
+    parser.add_argument('--sheet', help='Sheet index (1, 2, 3...) or sheet name to use (from structure.json if omitted)')
     parser.add_argument('--title', help='Custom spreadsheet title (auto-generated if omitted)')
     parser.add_argument('--no-share', action='store_true', help='Skip sharing the file')
     args = parser.parse_args()
@@ -622,7 +623,8 @@ def main():
         total_columns = structure.get('totalColumns', 13)
         data_start_row = structure.get('dataStartRow', 3)
         last_col = structure.get('lastCol', col_index_to_letter(total_columns - 1))
-        sheet_name = structure.get('sheetName', 'Sheet1')
+        # Resolve sheet name: --sheet overrides structure.json
+        sheet_name = args.sheet if args.sheet else structure.get('sheetName', 'Sheet1')
 
         # Generate title
         date_str = datetime.now().strftime('%d%m%y')

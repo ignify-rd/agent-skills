@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const PACKAGE_ROOT = join(__dirname, '..', '..');
-const SCRIPTS_DIR = join(PACKAGE_ROOT, 'test-case-generator', 'scripts');
+const SCRIPTS_DIR = join(PACKAGE_ROOT, 'test-case-generator-api', 'scripts');
 
 function getPythonCommand() {
   // On Windows, also check 'py -3' (Python Launcher)
@@ -78,7 +78,10 @@ export function uploadCommand(testCaseName, options) {
   logger.info(`Using: ${getPythonVersion(pythonCmd)}`);
 
   try {
-    const cmd = `${pythonCmd} "${scriptPath}" "${testCaseName}" --project-root "${projectRoot}"`;
+    let cmd = `${pythonCmd} "${scriptPath}" "${testCaseName}" --project-root "${projectRoot}"`;
+    if (options.sheet) {
+      cmd += ` --sheet "${options.sheet}"`;
+    }
     const output = execSync(cmd, {
       cwd: projectRoot,
       encoding: 'utf-8',

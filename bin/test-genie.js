@@ -39,11 +39,11 @@ program
   .action((options) => updateCommand(options));
 
 program
-  .command('extract')
-  .description('Extract structure.json from excel_template/template.xlsx')
+  .command('extract-template')
+  .description('Extract structure.json from excel_template/template.xlsx (which sheet to use)')
   .option('--template <path>', 'Path to .xlsx template (default: excel_template/template.xlsx)')
   .option('--output <path>', 'Output path for structure.json (default: excel_template/structure.json)')
-  .option('--sheet <name>', 'Sheet name to extract (auto-detected if omitted)')
+  .option('--sheet <index>', 'Sheet index (1, 2, 3...) or sheet name (auto-detected if omitted)')
   .option('--project-root <path>', 'Project root directory (default: current directory)')
   .action((options) => extractCommand(options));
 
@@ -51,6 +51,7 @@ program
   .command('upload <test-case-name>')
   .description('Upload test-cases.json to Google Sheets')
   .option('--project-root <path>', 'Project root directory (default: current directory)')
+  .option('--sheet <index>', 'Sheet index (1, 2, 3...) or sheet name to use')
   .action((testCaseName, options) => uploadCommand(testCaseName, options));
 
 program.parse();

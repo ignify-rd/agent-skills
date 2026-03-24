@@ -213,11 +213,12 @@ python $SKILL_SCRIPTS/search.py "export excel" --domain api --full
 
 ### Step 3: Read the Top-Matching Example
 
-After search returns results, **read the full example file** to understand the exact format:
-
-```bash
-# search.py returns the full_path — use view_file on it
-```
+After search returns results, **read the full example file** to understand the exact format. The example shows:
+- Section structure (which ## and ### headings are used)
+- Writing style (bullet density, wording patterns)
+- SQL format conventions (table names, column names, WHERE clause style)
+- Response body format (which fields appear, nesting style)
+- How validate section is organized per field type
 
 ### Step 4: Extract Data from RSD & PTTK
 
@@ -408,6 +409,13 @@ Item nào thiếu → THÊM bullet `### [SỬA] Kiểm tra ...`
 1. Đọc lại `## Project-Specific Rules` trong project AGENTS.md
 2. Duyệt từng rule → kiểm tra output đã tuân thủ chưa
 3. Nếu vi phạm → sửa ngay trước khi chuyển Step 6
+
+**Các lỗi thường gặp khi quên projectRules:**
+- maxLength/minLength lấy sai nguồn (từ ảnh thay vì RSD/PTTK)
+- Button test cases nằm trong "Kiểm tra validate" thay vì "Kiểm tra chức năng"
+- Test case viết dài dòng thay vì ngắn gọn
+- Case chung chung thay vì tách riêng từng giá trị cụ thể
+- Ảnh có field nhưng thiếu test case (chưa cover toàn bộ màn hình)
 
 ### Step 6: Apply Quality Rules
 
