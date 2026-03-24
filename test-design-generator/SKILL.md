@@ -27,38 +27,26 @@ Python 3 installed. Check:
 python3 --version || python --version
 ```
 
-## ⚠️ Đọc file PDF — KHÔNG tự viết parser
+## ⚠️ Đọc file PDF — CHỈ dùng Read tool
 
-**TUYỆT ĐỐI KHÔNG được tự viết code parse PDF** (không tạo extract_pdf.py, extract_pdf.ps1, không parse xref table, không decode binary). Thay vào đó:
+**Đọc PDF bằng Read tool. Không có ngoại lệ.**
 
-**Cách 1 (ưu tiên): Dùng Read tool trực tiếp**
-- Hầu hết AI tools (Claude Code, Cursor, Windsurf) có thể đọc PDF trực tiếp bằng Read tool
-- Chỉ cần: `Read file: path/to/document.pdf`
-- Nếu file lớn, đọc theo pages: `Read file: path/to/document.pdf pages=1-10`
-
-**Cách 2 (fallback): Dùng Python + PyPDF2/pdfplumber**
-```bash
-# Cài đặt nếu chưa có
-python3 -m pip install PyPDF2
-
-# Extract text từ PDF
-python3 -c "
-import PyPDF2
-reader = PyPDF2.PdfReader('path/to/document.pdf')
-for page in reader.pages:
-    print(page.extract_text())
-"
+```
+Read file: path/to/document.pdf
+Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
 ```
 
-**Cách 3 (fallback 2): pdftotext (nếu có sẵn)**
-```bash
-pdftotext "path/to/document.pdf" -
-```
+Read tool của AI tools (Claude Code, Cursor, Windsurf, Copilot, Roo Code...) đều hỗ trợ đọc PDF trực tiếp. File lớn thì chia pages (VD: pages 1-10, rồi 11-20...).
 
-**KHÔNG BAO GIỜ:**
-- Tạo file script mới để parse PDF (extract_pdf.py, extract_pdf.ps1...)
-- Parse PDF binary format thủ công (xref table, byte offsets, content streams)
-- Mất hơn 30 giây để đọc 1 file PDF — nếu quá lâu, chuyển sang cách khác
+**CẤM TUYỆT ĐỐI — vi phạm bất kỳ điều nào = DỪNG LẠI ngay:**
+- ❌ KHÔNG tạo file mới: `.py`, `.ps1`, `.sh`, `.js` — dù chỉ 1 file
+- ❌ KHÔNG chạy `python`, `python3`, `pip install` để đọc PDF
+- ❌ KHÔNG import PyPDF2, pdfplumber, fitz, hoặc bất kỳ thư viện nào
+- ❌ KHÔNG parse binary, xref table, byte offsets, content streams
+- ❌ KHÔNG tạo find_us05.py, extract_pdf.py, read_pdf.ps1 hay bất kỳ script nào tương tự
+- ❌ KHÔNG dùng Bash/PowerShell để đọc PDF
+
+**Nếu Read tool trả về binary/garbled text:** Đọc lại với `pages` parameter (VD: `pages="1-5"`). Nếu vẫn không đọc được → HỎI USER cung cấp nội dung text hoặc copy-paste section cần thiết. **KHÔNG BAO GIỜ tự tạo script.**
 
 ## Rule Override Hierarchy
 
