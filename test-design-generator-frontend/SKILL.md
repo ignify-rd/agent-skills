@@ -50,6 +50,7 @@ Read tool của AI tools (Claude Code, Cursor, Windsurf, Copilot, Roo Code...) �
 
 | Category | Can override? |
 |----------|--------------|
+| Chat input / user request | **Always — HIGHEST PRIORITY** |
 | `testAccount` | Yes |
 | testSuiteName convention | Yes |
 | Writing style (ngắn/dài, cách viết step) | Yes |
@@ -59,7 +60,7 @@ Read tool của AI tools (Claude Code, Cursor, Windsurf, Copilot, Roo Code...) �
 | Field type dispatch table | No |
 | Importance mapping | No |
 
-**How it works:** If project `AGENTS.md` defines a rule → use that rule. If not → use the skill defaults below. Project AGENTS.md only overrides sections/rules it explicitly defines; everything else falls back to skill defaults.
+**How it works:** Chat input from the user → Project `AGENTS.md` → Skill defaults. User says "viết ngắn gọn" or "chỉ generate test case cho chức năng ..." → do it, even if it contradicts AGENTS.md or skill defaults.
 
 ## Workflow
 

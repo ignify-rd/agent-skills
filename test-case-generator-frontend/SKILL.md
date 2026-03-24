@@ -53,7 +53,7 @@ Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
 | Field type dispatch table | No |
 | Importance mapping | No |
 
-**How it works:** If project `AGENTS.md` defines a rule → use that rule. If not → use the skill defaults below.
+**How it works:** Chat input from the user → Project `AGENTS.md` → Skill defaults. User says "viết ngắn gọn" or "chỉ generate test case cho chức năng ..." → do it, even if it contradicts AGENTS.md or skill defaults.
 
 ## Workflow
 

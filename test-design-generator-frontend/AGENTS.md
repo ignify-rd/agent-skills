@@ -8,6 +8,7 @@ Rules that override default behavior. Loaded automatically by AI agents.
 
 | Category | Project AGENTS.md can override? |
 |----------|-------------------------------|
+| Chat input / user request | **Always — HIGHEST PRIORITY** |
 | testAccount | Yes |
 | testSuiteName convention | Yes |
 | Writing style (ngắn/dài, cách viết step) | Yes |
@@ -114,4 +115,4 @@ Templates generate ~80% of test cases (19 field types). LLM supplements business
 - No placeholders — use concrete sample values
 - 1 test = 1 check (atomic)
 - Forbidden: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
-- Response body format comes from PTTK (no fixed format)
+- API Response body format comes from PTTK (no fixed format)

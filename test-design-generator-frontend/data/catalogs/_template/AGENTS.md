@@ -3,40 +3,46 @@
 Project-specific rules that override the skill-level AGENTS.md.
 Only define rules that DIFFER from the defaults. Undefined rules fall back to skill-level.
 
-## Input Priority (PTTK vs RSD)
+## Override Scope
 
-<!-- Uncomment and modify if this project has different priority rules -->
-<!-- | Source | Priority | Used for | -->
-<!-- |--------|----------|----------| -->
-<!-- | **PTTK** | **Highest** for field definitions | Field names, data types, required/optional, maxLength | -->
-<!-- | **RSD** | **Highest** for business logic | Main flow, error codes, DB mapping | -->
+| Category | Can override? |
+|----------|--------------|
+| Chat input / user request | **Always — HIGHEST PRIORITY** |
+| `testAccount` | Yes |
+| testSuiteName convention | Yes |
+| Writing style (ngắn/dài, cách viết step) | Yes |
+| Section assignment (buttons vào section nào) | Yes |
+| Output JSON field names | No |
+| Batch strategy (BATCH 1/2/3 split) | No |
+| Field type dispatch table | No |
 
-## API Mode — Format Rules
+## Test Design — Frontend Only
 
-<!-- Uncomment and modify if this project has different format conventions -->
-<!-- - Common section format: `- status: 107` -->
-<!-- - Validate response status: always 200 -->
-<!-- - SQL column naming: UPPERCASE -->
+<!-- Uncomment and modify only what differs from defaults: -->
 
-## Frontend Mode — Screen Type Rules
-
-<!-- Uncomment and modify if this project has different screen type conventions -->
+<!-- **Screen Type Convention** -->
 <!-- | Screen Type | Has validate? | Has grid? | Has pagination? | -->
 <!-- |-------------|--------------|-----------|------------------| -->
 <!-- | LIST | Yes | Yes | Yes | -->
 <!-- | FORM/POPUP | Yes | No | No | -->
 <!-- | DETAIL | No | No | No | -->
 
+<!-- **Section Assignment** -->
+<!-- - Buttons go in ## Kiểm tra chức năng (not in validate) -->
+<!-- - Error messages go in ## Kiểm tra validate -->
+
+<!-- **Image Analysis** -->
+<!-- - Always analyze images before reading RSD text -->
+<!-- - Ignore fields visible only in images (not in RSD) -->
+
 ## Quality Rules
 
 <!-- Uncomment and modify if this project has different quality standards -->
 <!-- - Language: 100% Vietnamese -->
 <!-- - Forbidden phrases: "và/hoặc", "hoặc", "có thể" -->
+<!-- - testCaseName max length: 100 chars (default: 80) -->
 
-## Project-Specific Rules
+## Test Account
 
-<!-- Add any rules unique to this project -->
-<!-- Example: -->
-<!-- - Response body uses "code"/"message" instead of "errorCode"/"errorDesc" -->
-<!-- - All SQL queries must include schema prefix: SCHEMA_NAME.TABLE_NAME -->
-<!-- - Error status code 500 is used for server errors (not 200) -->
+<!-- Override the default test account used in preConditions: -->
+<!-- testAccount: "username/ password" -->

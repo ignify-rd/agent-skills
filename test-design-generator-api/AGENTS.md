@@ -8,6 +8,7 @@ Rules that override default behavior. Loaded automatically by AI agents.
 
 | Category | Project AGENTS.md can override? |
 |----------|-------------------------------|
+| Chat input / user request | **Always — HIGHEST PRIORITY** |
 | testAccount | Yes |
 | testSuiteName convention | Yes |
 | Writing style (ngắn/dài, cách viết step) | Yes |
