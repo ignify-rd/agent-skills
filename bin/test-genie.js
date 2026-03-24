@@ -13,6 +13,7 @@ const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8
 import { initCommand } from '../src/commands/init.js';
 import { versionsCommand } from '../src/commands/versions.js';
 import { updateCommand } from '../src/commands/update.js';
+import { uploadCommand } from '../src/commands/upload.js';
 
 program
   .name('test-genie')
@@ -35,5 +36,11 @@ program
   .description('Update skills to the latest version')
   .option('--ai <type>', 'AI assistant type (claude|cursor|windsurf|copilot|kiro|codex|roocode|gemini|trae|opencode|continue|codebuddy|all)')
   .action((options) => updateCommand(options));
+
+program
+  .command('upload <test-case-name>')
+  .description('Upload test-cases.json to Google Sheets')
+  .option('--project-root <path>', 'Project root directory (default: current directory)')
+  .action((testCaseName, options) => uploadCommand(testCaseName, options));
 
 program.parse();
