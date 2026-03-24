@@ -1,11 +1,11 @@
 ---
 name: generate-test-case
-description: Generate test cases from mindmap + RSD/PTTK and output to test-cases.json. Use when user says "sinh test case", "sinh test cases", "generate test case", "generate test cases", "tạo test case", "tạo test cases", "xuất test case", "xuất json", or provides a mindmap file (.txt/.md) for test case generation.
+description: Generate test cases from RSD/PTTK (or mindmap) and output to test-cases.json. Đọc trực tiếp RSD/PTTK — không yêu cầu tạo test design trước. Use when user says "sinh test case", "sinh test cases", "generate test case", "generate test cases", "tạo test case", "tạo test cases", "xuất test case", "xuất json", or provides RSD/PTTK/.pdf documents or a mindmap file.
 ---
 
 # Test Case Generator
 
-Generate test cases from a parsed mindmap file (exported from `.gmind`) and output to a JSON file. Uses a searchable catalog of real test cases (CSV format exported from spreadsheet) to ensure output matches the expected format per project.
+Generate test cases from RSD/PTTK documents (or mindmap) and output to a JSON file. Đọc trực tiếp RSD/PTTK — KHÔNG yêu cầu user tạo test design/mindmap trước. Uses a searchable catalog of real test cases (CSV format exported from spreadsheet) to ensure output matches the expected format per project.
 
 Output: **`<tên-test-case>/test-cases.json`** — a JSON array of test case objects. To upload to Google Sheets, use: `python upload_gsheet.py <tên-test-case>`
 
@@ -17,10 +17,11 @@ Output: **`<tên-test-case>/test-cases.json`** — a JSON array of test case obj
 
 ## When to Apply
 
-- User provides a mindmap file (.txt or .md exported from .gmind) and asks to generate test cases
 - User says "sinh test case", "sinh test cases", "tạo test case", "tạo test cases", "generate test case", "generate test cases", "xuất json", "xuất test case"
+- User provides RSD/PTTK and asks to generate test cases → **đọc RSD trực tiếp, KHÔNG yêu cầu tạo test design trước**
+- User provides a mindmap file (.txt or .md exported from .gmind) and asks to generate test cases
 - User uploads mindmap + optional RSD/PTTK for test case generation
-- **User provides only RSD + PTTK (no mindmap)** — skill auto-generates mindmap structure internally, then generates test cases from it
+- User provides a feature folder containing .pdf files → scan và đọc trực tiếp
 
 ## Prerequisites
 
@@ -87,15 +88,27 @@ Before starting generation, check project structure and **load project-level rul
 
 | Input found in folder | Flow |
 |----------------------|------|
-| `test-design.md` exists (mindmap) | **Standard flow** — go to Step 2 |
-| `.pdf` files found but no `test-design.md` | **Auto flow** — invoke `test-design-generator` first, then go to Step 2 |
-| Mindmap (.md/.txt) provided directly by user | **Standard flow** — go to Step 2 |
-| RSD + PTTK provided directly by user (no mindmap) | **Auto flow** — invoke `test-design-generator` first, then go to Step 2 |
+| `.pdf` files (RSD/PTTK) found | **Direct flow** — đọc RSD/PTTK trực tiếp, go to Step 2. Nếu có `test-design.md` thì dùng làm **tham khảo bổ sung**, KHÔNG bắt buộc |
+| Only `test-design.md` (no .pdf) | **Mindmap-only flow** — dùng mindmap, go to Step 2 |
+| Mindmap (.md/.txt) provided directly by user | **Mindmap flow** — go to Step 2 |
+| RSD + PTTK provided directly by user | **Direct flow** — đọc RSD/PTTK trực tiếp, go to Step 2 |
 
-**Auto flow (no mindmap):**
-1. Invoke `test-design-generator` skill with the RSD + PTTK from the feature folder
-2. The skill generates a complete test design mindmap → saved as `<feature-name>/test-design.md`
-3. Use that generated mindmap as input for the standard flow below
+**⚠️ QUAN TRỌNG — LUÔN đọc RSD/PTTK nếu có:**
+- Khi folder có CẢ `.pdf` VÀ `test-design.md` → **ĐỌC RSD/PTTK LÀ CHÍNH**, dùng test-design.md làm tham khảo cấu trúc sections
+- Khi folder chỉ có `.pdf` → đọc RSD/PTTK trực tiếp, tự sinh cấu trúc test cases từ đó
+- Khi user cung cấp RSD/PTTK trực tiếp → đọc ngay, KHÔNG yêu cầu user tạo/upload test design trước
+- **KHÔNG BAO GIỜ** yêu cầu user "hãy tạo test design trước" hay "upload mindmap" khi đã có RSD/PTTK
+
+**Direct flow (có RSD/PTTK):**
+1. Đọc RSD/PTTK trực tiếp — extract tất cả fields, business logic, error codes, constraints
+2. Nếu có `test-design.md` → đọc thêm để lấy cấu trúc sections (nhưng data field vẫn từ RSD/PTTK)
+3. Nếu không có `test-design.md` → tự tạo cấu trúc sections dựa trên RSD content
+4. Go to Step 2
+
+**Mindmap-only flow (chỉ có mindmap, không có RSD):**
+1. Dùng mindmap làm nguồn chính
+2. Sinh test cases theo cấu trúc mindmap — nhưng sẽ thiếu field constraints cụ thể
+3. Warn user: "Không có RSD/PTTK — test cases sẽ thiếu thông tin maxLength, data types, business logic cụ thể."
 
 ### Step 2: Determine Mode
 
