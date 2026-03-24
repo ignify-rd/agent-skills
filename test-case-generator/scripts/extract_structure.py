@@ -301,17 +301,9 @@ def parse_cell_value(cell):
     return str(val), None
 
 
-# ============ MAIN EXTRACTION ============
-def extract_structure(template_path, output_path=None):
-    """Extract full template structure from .xlsx file."""
-    if not os.path.isfile(template_path):
-        return {"error": f"Template file not found: {template_path}"}
-
-    wb = openpyxl.load_workbook(template_path, data_only=False)
-    ws = wb.worksheets[0]
-    sheet_name = ws.title
-
-    # Read all rows as values for header detection (max 20 rows)
+# ============ SHEET DETECTION ============
+def _scan_sheet(ws):
+    """Scan a worksheet and return (row_values_list, header_row, data_start_row, column_mapping, best_score)."""
     max_scan = min(20, ws.max_row or 20)
     row_values_list = []
     for row_idx in range(1, max_scan + 1):
@@ -321,12 +313,57 @@ def extract_structure(template_path, output_path=None):
             vals.append(cell.value)
         row_values_list.append(vals)
 
-    # Detect header row
     header_row, data_start_row = find_header_row(row_values_list)
-
-    # Build column mapping from header row
     header_vals = row_values_list[header_row - 1] if header_row <= len(row_values_list) else []
     column_mapping = build_column_mapping(header_vals)
+
+    # Score = number of mapped columns (more mapped columns = more likely the test case sheet)
+    best_score = len(column_mapping)
+    return row_values_list, header_row, data_start_row, column_mapping, best_score
+
+
+def find_best_sheet(wb, sheet_name_hint=None):
+    """Find the best worksheet for test case data.
+
+    Priority:
+    1. Explicit sheet name (--sheet)
+    2. Sheet with the most recognized column headers
+    3. First sheet (fallback)
+    """
+    if sheet_name_hint:
+        if sheet_name_hint in wb.sheetnames:
+            return wb[sheet_name_hint]
+        # Try case-insensitive match
+        for name in wb.sheetnames:
+            if name.lower() == sheet_name_hint.lower():
+                return wb[name]
+        # Not found — fall through to auto-detect
+
+    best_ws = wb.worksheets[0]
+    best_score = -1
+
+    for ws in wb.worksheets:
+        _, _, _, mapping, score = _scan_sheet(ws)
+        if score > best_score:
+            best_score = score
+            best_ws = ws
+
+    return best_ws
+
+
+# ============ MAIN EXTRACTION ============
+def extract_structure(template_path, output_path=None, sheet_name_hint=None):
+    """Extract full template structure from .xlsx file."""
+    if not os.path.isfile(template_path):
+        return {"error": f"Template file not found: {template_path}"}
+
+    wb = openpyxl.load_workbook(template_path, data_only=False)
+    ws = find_best_sheet(wb, sheet_name_hint)
+    sheet_name = ws.title
+
+    # Read all rows as values for header detection (max 20 rows)
+    row_values_list, header_row, data_start_row, column_mapping, _ = _scan_sheet(ws)
+    header_vals = row_values_list[header_row - 1] if header_row <= len(row_values_list) else []
 
     # Total columns: count up to last non-empty cell in header row
     total_columns = len(header_vals)
@@ -437,6 +474,7 @@ def main():
     )
     parser.add_argument('--template', help='Path to .xlsx template file (default: excel_template/template.xlsx)')
     parser.add_argument('--output', help='Output path for structure.json (default: excel_template/structure.json)')
+    parser.add_argument('--sheet', help='Sheet name to extract (auto-detected if omitted)')
     parser.add_argument('--project-root', help='Explicit project root path (auto-detected if omitted)')
     args = parser.parse_args()
 
@@ -446,7 +484,7 @@ def main():
     output_path = args.output or str(project_root / 'excel_template' / 'structure.json')
 
     try:
-        extract_structure(template_path, output_path)
+        extract_structure(template_path, output_path, sheet_name_hint=args.sheet)
     except Exception as e:
         print(json.dumps({"error": str(e)}))
         sys.exit(1)

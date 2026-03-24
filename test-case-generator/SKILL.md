@@ -444,13 +444,84 @@ Phải bao gồm **tất cả** — kể cả:
 
 ### Step 6: Generate Test Cases in Batches
 
+#### Step 6a: Load Catalog Style Examples (MANDATORY)
+
+**⚠️ CRITICAL — Catalog examples là nguồn chuẩn cho style/wording. PHẢI load trước khi sinh bất kỳ test case nào.**
+
+Trước khi sinh test cases, search catalog để lấy 2-3 examples thực tế. Đây là **style reference chính** — output PHẢI follow đúng cách viết của catalog, KHÔNG follow cách viết của ví dụ trong references.
+
+```bash
+# Search catalog examples matching the current feature/section
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain {mode} --full --top 3
+```
+
+**Nếu catalog có examples:**
+1. Đọc 2-3 examples đầu tiên (full content: preConditions, steps, expectedResults)
+2. **Extract style patterns** từ catalog:
+   - **testSuiteName convention** — catalog chia suite thế nào? Ví dụ: field sub-suites `"Textbox: Tên cấu hình SLA"` hay chung `"Kiểm tra validate"`?
+   - **preConditions format** — catalog viết preconditions thế nào? (format Đ/k, numbering, wording, số dòng, chi tiết level)
+   - **steps format** — catalog viết steps thế nào? (động từ, cấu trúc câu, chi tiết level)
+   - **expectedResults format** — catalog viết expected results thế nào? (format, wording, numbering)
+   - **testCaseName convention** — catalog đặt tên test case thế nào? (prefix, wording)
+   - **Cấu trúc phân nhóm** — catalog nhóm test cases theo trường/field riêng hay chung?
+3. Lưu các patterns này làm `catalogStyle` — dùng cho TOÀN BỘ batches
+4. **Khi generate:** "Viết theo đúng style/wording/structure của catalog examples dưới đây. References chỉ cung cấp rules/logic — KHÔNG copy format/wording/structure từ ví dụ trong references."
+
+> **⚠️ QUAN TRỌNG:** `catalogStyle` override TOÀN BỘ format mặc định trong references. Nếu catalog dùng:
+> - Field sub-suites → dùng field sub-suites (bỏ qua rule "KHÔNG có field sub-suites" trong refs)
+> - PreConditions 1 dòng → dùng 1 dòng (bỏ qua format multi-line trong refs)
+> - Steps/ExpectedResults format khác → follow catalog format
+> **References chỉ cung cấp: LOẠI cases nào cần check (rules/logic). Catalog quyết định: VIẾT như thế nào (format/style).**
+
+**Nếu catalog KHÔNG có examples (rỗng):**
+- Warn user: "Catalog chưa có examples, sẽ dùng format mặc định từ references."
+- Fall back to reference examples as style guide
+
+**Quy tắc ưu tiên style:**
+1. **Project AGENTS.md** — nếu có quy định style cụ thể → override tất cả
+2. **Catalog examples** — style/wording chính, PHẢI follow
+3. **References (fe-test-case.md, api-test-case.md)** — chỉ dùng cho RULES và LOGIC, KHÔNG dùng format/wording mẫu
+
+**Ví dụ áp dụng catalog style:**
+
+Nếu catalog viết preConditions:
+```
+Đ/k1: Vào màn hình:
+1. Đăng nhập vào hệ thống BO bằng tài khoản: 164987/ Test@147258369
+2. Truy cập màn hình: Danh mục > Tần suất thu phí
+```
+
+Thì output PHẢI viết:
+```
+Đ/k1: Vào màn hình:
+1. Đăng nhập vào hệ thống BO bằng tài khoản: 164987/ Test@147258369
+2. Truy cập màn hình: Danh mục > Tần suất thu phí
+```
+
+KHÔNG được viết theo format ví dụ trong references (nếu khác):
+```
+Đ/k1: Vào màn hình:
+1. Người dùng đăng nhập thành công BO trên Web với account: 164987/ Test@147258369
+2. Tại sitemap, người dùng truy cập màn hình Danh mục > Tần suất thu phí
+```
+
+→ Khác cách viết = SAI. Phải match **exact wording style** của catalog.
+
+---
+
 Split mindmap into 3 batches, process sequentially:
 
-**Quy tắc bắt buộc cho testSuiteName — áp dụng cho CẢ API và Frontend:**
+**Quy tắc testSuiteName — Catalog convention ưu tiên:**
 
-> Chỉ được dùng các tên suite trong danh sách này. **KHÔNG được tạo suite tên khác** (kể cả khi traceability check append thêm test cases):
+> **⚠️ Nếu catalog có convention riêng cho testSuiteName → PHẢI follow catalog.** Danh sách dưới đây là fallback.
+>
+> **Catalog convention phổ biến:**
+> - BATCH 2 Frontend dùng **field sub-suites**: `"{FieldType}: {FieldName}"` (VD: `"Textbox: Tên cấu hình SLA"`, `"DatePicker: Ngày hiệu lực"`)
+> - BATCH 2 API dùng: `"Kiểm tra trường {fieldName}"`
+>
+> **Fallback (khi catalog không có examples):**
 > - API: `"Kiểm tra các case common"`, `"Kiểm tra phân quyền"`, `"Kiểm tra trường {fieldName}"` (BATCH 2), `"Kiểm tra luồng chính"`, `"Kiểm tra timeout"`
-> - Frontend: `"Kiểm tra giao diện chung"`, `"Kiểm tra phân quyền"`, `"Kiểm tra validate"`, `"Kiểm tra chức năng"`, `"Kiểm tra lưới dữ liệu"`, `"Kiểm tra phân trang"`, `"Kiểm tra timeout"`
+> - Frontend: `"Kiểm tra giao diện chung"`, `"Kiểm tra phân quyền"`, `"Kiểm tra validate"` hoặc field sub-suites (BATCH 2), `"Kiểm tra chức năng"`, `"Kiểm tra lưới dữ liệu"`, `"Kiểm tra phân trang"`, `"Kiểm tra timeout"`
 > - SAI: `"Kiểm tra bảo mật"`, `"Kiểm tra lỗi nghiệp vụ"`, `"Kiểm tra security"`, `"String : id"`, `"file: MultipartFile (Required)"`, v.v.
 
 **BATCH 1 — Pre-validate sections:**
@@ -461,8 +532,8 @@ Split mindmap into 3 batches, process sequentially:
 **BATCH 2 — Validate section (grouped fields):**
 - "Kiểm tra validate" and all ### subsections inside
 - **Group 3-5 fields per sub-batch** instead of 1 field per sub-batch to reduce LLM round-trips
-- Force testSuiteName per catalog convention (search catalog first)
-- Instruction per sub-batch: "Sinh test cases validate cho các fields sau: {field_1}, {field_2}, {field_3}. Mỗi field xử lý riêng biệt, KHÔNG trộn test cases giữa các fields."
+- **testSuiteName per field:** Nếu `catalogStyle` có field sub-suites (VD: `"Textbox: Tên cấu hình SLA"`) → mỗi field PHẢI có testSuiteName riêng theo format catalog: `"{FieldType}: {FieldName}"`. Nếu catalog không có → dùng `"Kiểm tra validate"` cho tất cả.
+- Instruction per sub-batch: "Sinh test cases validate cho các fields sau: {field_1}, {field_2}, {field_3}. Mỗi field xử lý riêng biệt, KHÔNG trộn test cases giữa các fields. testSuiteName = theo catalog convention."
 
 **Grouping rules:**
 - Group fields with **similar types** together (e.g., 3 textbox fields in 1 call, 2 combobox + 1 dropdown in 1 call)
@@ -480,6 +551,10 @@ Split mindmap into 3 batches, process sequentially:
 **After all batches:** Deduplicate testCaseNames (case-insensitive, keep first occurrence).
 
 Generate following rules loaded via `--ref api-test-case` (API) or `--ref fe-test-case` (Frontend).
+
+**⚠️ REMINDER mỗi batch:** Inject `catalogStyle` (từ Step 6a) vào prompt. Format instruction cho mỗi batch:
+> "Viết test cases theo đúng style/wording từ catalog examples sau. References chỉ cung cấp rules — KHÔNG copy wording/format từ ví dụ trong references nếu khác catalog."
+> [Paste 1-2 catalog examples here as style reference]
 
 ### Step 6b: Traceability Check — Coverage Verification
 

@@ -51,7 +51,7 @@ Source: PTTK if available, fallback RSD.
 ## Batch Strategy
 
 - **BATCH 1**: Pre-validate sections (common, permissions) — testSuiteName = section name
-- **BATCH 2**: Validate section — 1 sub-batch PER FIELD (### heading) — testSuiteName = field type + name OR "Kiểm tra validate"
+- **BATCH 2**: Validate section — 1 sub-batch PER FIELD (### heading) — testSuiteName = theo catalog convention (field sub-suites `"{FieldType}: {FieldName}"` nếu catalog dùng, hoặc `"Kiểm tra validate"` nếu không)
 - **BATCH 3**: Post-validate sections (grid, functionality, timeout) — testSuiteName = section name, maxTokens: 65536
 
 Each batch: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho sections khác."
@@ -71,7 +71,19 @@ Test account used in preConditions. Resolved by priority:
 2. **Catalog examples** — if catalog CSV files contain a specific account in preConditions, use that
 3. **Default** — `164987/ Test@147258369`
 
-Cách diễn đạt, hành văn trong preConditions tuân theo catalog — nếu catalog dùng cách viết/format cụ thể, output phải theo đúng style đó.
+**⚠️ Catalog là nguồn chuẩn cho FORMAT/STYLE — References chỉ là nguồn RULES/LOGIC.**
+
+Phân biệt rõ 2 nguồn:
+- **Catalog** quyết định: **VIẾT như thế nào** — format preConditions, steps, expectedResults, testSuiteName convention, testCaseName style, cấu trúc phân nhóm (field sub-suites hay không)
+- **References** quyết định: **CHECK cái gì** — loại cases nào cần sinh (maxLength, empty, XSS, emoji...), rules logic, importance mapping
+
+**Khi catalog ≠ references:**
+- Catalog dùng field sub-suites `"Textbox: Tên"` → dùng field sub-suites (bỏ qua rule "KHÔNG có field sub-suites" trong refs)
+- Catalog viết preConditions 1 dòng → viết 1 dòng (bỏ qua format multi-line trong refs)
+- Catalog viết steps/expectedResults khác → follow catalog format
+- **References chỉ có ví dụ mẫu = FALLBACK khi catalog rỗng**
+
+Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.md) và inject vào mỗi batch prompt
 
 <!-- Projects can override by adding this section in their own AGENTS.md: -->
 <!-- testAccount: "your_username/ your_password" -->

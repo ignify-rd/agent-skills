@@ -1,5 +1,7 @@
 # API Test Case — Hướng dẫn sinh chi tiết
 
+> **⚠️ Style/wording**: Các ví dụ trong file này là **format mặc định** (fallback). Nếu project có catalog examples → output PHẢI follow style/wording của catalog, KHÔNG copy format mẫu từ file này. File này chỉ cung cấp **rules và logic**.
+
 ## Pipeline tổng thể
 
 ```
@@ -109,7 +111,9 @@ Ví dụ sai:
 
 ## R4: preConditions
 
-**Format bắt buộc:**
+**Format mặc định (fallback — dùng khi catalog KHÔNG có examples):**
+
+> **⚠️ Nếu catalog có examples:** PHẢI follow đúng cách viết preConditions của catalog. Format dưới đây chỉ là fallback.
 ```
 1. Send API login thành công{loginDetail}
 2. Chuẩn bị request hợp lệ
@@ -130,7 +134,7 @@ Ví dụ sai:
   1. **Project AGENTS.md** (ưu tiên cao nhất) — nếu định nghĩa `testAccount` trong section `## Test Account`
   2. **Catalog examples** — nếu project có catalog CSV với account/login cụ thể trong preConditions, extract và dùng format đó
   3. **Default** — để trống (chỉ ghi "Send API login thành công")
-- Cách diễn đạt, hành văn trong preConditions phải **tuân theo catalog** — nếu catalog dùng cách viết/format cụ thể, output phải theo đúng style đó
+- Cách diễn đạt, hành văn trong preConditions phải **tuân theo catalog** — nếu catalog dùng cách viết/format cụ thể, output phải theo đúng style đó (catalog style > format ví dụ ở trên)
 - Luôn dùng endpoint user cung cấp (nếu có). KHÔNG tự đặt endpoint khác.
 - Body = request hợp lệ hoàn chỉnh (baseline). Step sẽ mô tả sự thay đổi.
 - Body KHÔNG được để trống nếu API có input fields.
@@ -139,6 +143,8 @@ Ví dụ sai:
 - Account phải **nhất quán** trong toàn bộ output — KHÔNG dùng account khác nhau giữa các test cases.
 
 ## R5: step
+
+> **⚠️ Catalog style ưu tiên:** Nếu catalog dùng cách viết steps khác ví dụ dưới đây → follow catalog.
 
 Format: numbered steps
 ```
@@ -158,7 +164,9 @@ Ví dụ theo section:
 
 ## R6: expectedResult
 
-**Format bắt buộc:**
+> **⚠️ Catalog style ưu tiên:** Nếu catalog dùng cách viết expectedResult khác ví dụ dưới đây → follow catalog.
+
+**Format mặc định (fallback):**
 ```
 1. Check api trả về:
    1.1. Status: {code}

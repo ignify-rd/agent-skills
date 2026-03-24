@@ -1,6 +1,8 @@
 # Frontend Test Case — Hướng dẫn sinh chi tiết
 
 > **Quy tắc ưu tiên nguồn dữ liệu**: Xem `--ref priority-rules`
+>
+> **⚠️ Style/wording**: Các ví dụ trong file này là **format mặc định** (fallback). Nếu project có catalog examples → output PHẢI follow style/wording của catalog, KHÔNG copy format mẫu từ file này. File này chỉ cung cấp **rules và logic**.
 
 ## Pipeline tổng thể
 
@@ -27,22 +29,27 @@ Nếu không xác định được từ mindmap, dùng header dòng 1 làm scree
 
 ## R0: testSuiteName
 
-**5 tên suite cố định dùng cho Frontend** (KHÔNG được tạo suite mới ngoài danh sách này):
+**⚠️ Catalog convention ưu tiên:** Nếu catalog dùng cách đặt tên suite khác (ví dụ: field sub-suites như `"Textbox: Tên cấu hình SLA"`, `"DatePicker: Ngày hiệu lực"`) → **PHẢI follow catalog**. Danh sách dưới đây chỉ là fallback khi không có catalog.
+
+**Tên suite mặc định cho Frontend** (fallback — dùng khi catalog KHÔNG có examples):
 
 | Batch | testSuiteName |
 |-------|--------------|
 | BATCH 1 | `"Kiểm tra giao diện chung"` |
 | BATCH 1 | `"Kiểm tra phân quyền"` |
-| BATCH 2 | `"Kiểm tra validate"` _(tất cả test cases validate đều dùng tên này, kể cả XSS/emoji/SQL injection)_ |
+| BATCH 2 | `"Kiểm tra validate"` hoặc **field sub-suites theo catalog** |
 | BATCH 3 | `"Kiểm tra chức năng"` |
 | BATCH 3 | `"Kiểm tra lưới dữ liệu"` |
 | BATCH 3 | `"Kiểm tra phân trang"` |
 | BATCH 3 | `"Kiểm tra timeout"` |
 
-**Quy tắc bắt buộc:**
-- **KHÔNG được tạo** suite tên mới: "Kiểm tra bảo mật", "Kiểm tra lỗi nghiệp vụ", "Kiểm tra security", v.v.
-- **Security tests** (XSS, SQL injection, emoji): testSuiteName = `"Kiểm tra validate"` — KHÔNG tạo suite riêng
-- **Frontend validate KHÔNG có field sub-suites**: tất cả test cases validate đều dùng `"Kiểm tra validate"` (khác API mode)
+**Quy tắc BATCH 2 (validate) — testSuiteName:**
+- **Nếu catalog có field sub-suites** (ví dụ: `"Textbox: Tên cấu hình SLA"`, `"DatePicker: Ngày hiệu lực"`) → dùng field sub-suites theo đúng format catalog: `"{FieldType}: {FieldName}"`
+- **Nếu catalog KHÔNG có field sub-suites** → dùng `"Kiểm tra validate"` cho tất cả
+
+**Quy tắc chung:**
+- **KHÔNG được tạo** suite tên mới ngoài: danh sách trên + field sub-suites theo catalog
+- **Security tests** (XSS, SQL injection, emoji): nằm trong suite validate của field tương ứng
 
 ## R1: externalId
 
@@ -73,7 +80,7 @@ Ví dụ SAI:
 "Kiểm tra khi nhập 101 ký tự - Tần suất thu phí"  ← KHÔNG thêm screen name
 ```
 
-**Trường hợp validate field:** testSuiteName = "Kiểm tra validate", testCaseName = text của bullet bên dưới ### field_name
+**Trường hợp validate field:** testSuiteName = theo catalog convention (field sub-suites hoặc "Kiểm tra validate"), testCaseName = text của bullet bên dưới ### field_name
 
 ## R3: summary
 
@@ -81,7 +88,7 @@ Ví dụ SAI:
 
 ## R4: preConditions
 
-**Format bắt buộc:**
+**Format mặc định (fallback — dùng khi catalog KHÔNG có examples):**
 ```
 Đ/k1: Vào màn hình:
 1. Người dùng đăng nhập thành công {system} trên Web với account: {account}
@@ -89,6 +96,8 @@ Ví dụ SAI:
 Đ/k2: Phân quyền
 3. User được phân quyền truy cập
 ```
+
+> **⚠️ Nếu catalog có examples:** PHẢI follow đúng cách viết preConditions của catalog. Format trên chỉ là fallback. Ví dụ: nếu catalog viết "Đăng nhập vào hệ thống BO bằng tài khoản:" thay vì "Người dùng đăng nhập thành công BO trên Web với account:" → output phải viết theo catalog.
 
 **Thêm dòng 4 khi test cần dữ liệu:**
 ```
@@ -118,6 +127,8 @@ Ví dụ SAI:
 
 ## R5: step
 
+> **⚠️ Catalog style ưu tiên:** Nếu catalog dùng cách viết steps khác ví dụ dưới đây → follow catalog.
+
 Format: numbered steps, mô tả hành động UI
 
 ```
@@ -146,6 +157,8 @@ Ví dụ theo loại test:
 - **Phân trang**: `"1. Click button >\n2. Quan sát"` hoặc `"1. Chọn giá trị 10 từ dropdown phân trang"`
 
 ## R6: expectedResult
+
+> **⚠️ Catalog style ưu tiên:** Nếu catalog dùng cách viết expectedResult khác ví dụ dưới đây → follow catalog.
 
 Mô tả trạng thái UI mong đợi. KHÔNG dùng HTTP status code.
 

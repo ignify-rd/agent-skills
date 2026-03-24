@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'path';
 import { existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { logger } from '../utils/logger.js';
+import { autoExtractIfNeeded } from './extract.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,6 +70,9 @@ export function uploadCommand(testCaseName, options) {
     logger.info('  After install, close and reopen terminal, then retry.');
     process.exit(1);
   }
+
+  // Auto-regenerate structure.json if template.xlsx changed
+  autoExtractIfNeeded(projectRoot);
 
   logger.info(`Uploading ${testCaseName}/test-cases.json to Google Sheets...`);
   logger.info(`Using: ${getPythonVersion(pythonCmd)}`);
