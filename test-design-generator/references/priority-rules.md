@@ -42,10 +42,19 @@
 | Hình ảnh | **Bổ sung** | Placeholder text, field positions, UI layout hints, icon X, button labels thực tế |
 
 ### Merge rules (hình ảnh):
-- Hình ảnh **KHÔNG** override field names từ PTTK hoặc RSD
-- Hình ảnh **CÓ THỂ** bổ sung: placeholder thực tế, hasIconX, button labels
+- Hình ảnh **KHÔNG ĐƯỢC** override bất kỳ thông tin nào từ RSD/PTTK, bao gồm:
+  - Field names, data types, required/optional
+  - **maxLength, minLength, format constraints** ← quan trọng: KHÔNG đoán từ ảnh
+  - API endpoints, enum values, error codes
+  - Business logic, conditions, validation rules
+- Hình ảnh **CHỈ ĐƯỢC** bổ sung những thông tin **RSD/PTTK không đề cập**:
+  - placeholder text thực tế (nếu RSD không ghi)
+  - hasIconX (nếu RSD không ghi)
+  - button labels thực tế (nếu RSD không ghi)
+  - vị trí field trên màn hình (filter/form/popup)
 - Hình ảnh **CÓ THỂ** phát hiện thêm fields/buttons không trong RSD → **hỏi user trước khi thêm**
 - Nếu hình ảnh hiện field không có trong RSD → note lại, KHÔNG tự ý thêm vào test design
+- **⚠️ Nếu hình ảnh và RSD/PTTK conflict** (ví dụ: ảnh gợi ý maxLength=100 nhưng RSD ghi maxLength=200) → **LUÔN dùng giá trị từ RSD/PTTK**
 
 ## Lưu ý quan trọng
 

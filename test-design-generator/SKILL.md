@@ -243,7 +243,7 @@ Priority rules: see `AGENTS.md` or `--ref priority-rules`. When PTTK is availabl
 **Phase 1: Analyze images (if provided)**
 1. For each image: extract screenType, buttons, inputFields (label, type, placeholder, location), gridColumns, hasPagination
 2. Consolidate all image analyses into one structure
-3. Merge with RSD: images only supplement (placeholder text, hasIconX, button labels) — images CANNOT override field names from RSD/PTTK
+3. **⚠️ CRITICAL merge rule:** Hình ảnh **CHỈ bổ sung** (placeholder, hasIconX, button labels, vị trí field). Hình ảnh **KHÔNG ĐƯỢC override** bất kỳ thông tin nào từ RSD/PTTK bao gồm: field names, maxLength, minLength, data types, required/optional, format constraints, enum values, API endpoints, validation rules. Nếu conflict → **LUÔN dùng giá trị từ RSD/PTTK**.
 
 **Phase 2: RSD → screen structure (always from RSD)**
 1. Extract: screenName, screenType (LIST/FORM/POPUP/DETAIL), breadcrumb, permissions, UI elements
@@ -500,6 +500,21 @@ Instead of re-reading the entire RSD, verify against this fixed checklist:
 - [ ] **Project AGENTS.md rules**: ALL rules from project AGENTS.md `## Project-Specific Rules` are satisfied
 
 If any item is NO → append missing test cases. Wrong expected result → `### [SỬA]` and replace.
+
+### Step 5b: Final Project Rules Enforcement
+
+**⚠️ MANDATORY — Đọc lại TOÀN BỘ `projectRules` (từ Step 0) và kiểm tra output lần cuối:**
+
+1. Đọc lại `## Project-Specific Rules` trong project AGENTS.md
+2. Duyệt từng rule → kiểm tra output đã tuân thủ chưa
+3. Nếu vi phạm → sửa ngay trước khi chuyển Step 6
+
+**Các lỗi thường gặp khi quên projectRules:**
+- maxLength/minLength lấy sai nguồn (từ ảnh thay vì RSD/PTTK)
+- Button test cases nằm trong "Kiểm tra validate" thay vì "Kiểm tra chức năng"
+- Test case viết dài dòng thay vì ngắn gọn
+- Case chung chung thay vì tách riêng từng giá trị cụ thể
+- Ảnh có field nhưng thiếu test case (chưa cover toàn bộ màn hình)
 
 ### Step 6: Apply Quality Rules
 

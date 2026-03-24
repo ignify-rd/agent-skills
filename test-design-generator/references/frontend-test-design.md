@@ -106,10 +106,11 @@ Sau khi phân tích từng ảnh, tổng hợp lại thành một cấu trúc du
 **Nguyên tắc merge**: Theo `--ref priority-rules`. Hình ảnh chỉ bổ sung, không override PTTK/RSD.
 
 **Merge rules:**
-- Hình ảnh **KHÔNG** override field names từ RSD
-- Hình ảnh **CÓ THỂ** bổ sung: placeholder thực tế, hasIconX, button labels
+- Hình ảnh **KHÔNG ĐƯỢC** override bất kỳ thông tin nào từ RSD/PTTK bao gồm: field names, **maxLength, minLength, data types, required/optional, format constraints, enum values, validation rules**
+- Hình ảnh **CHỈ ĐƯỢC** bổ sung những thông tin RSD/PTTK không đề cập: placeholder thực tế, hasIconX, button labels, vị trí field
 - Hình ảnh **CÓ THỂ** phát hiện thêm: fields hoặc buttons không được đề cập trong RSD → **hỏi user trước khi thêm**
 - Nếu hình ảnh hiện field không có trong RSD → note lại trong `additionalFeatures`, KHÔNG tự ý thêm vào test design
+- **⚠️ Nếu conflict** (ví dụ: ảnh gợi ý maxLength=100 nhưng RSD ghi maxLength=200) → **LUÔN dùng RSD/PTTK**
 
 ### Ví dụ: Hình ảnh bổ sung gì cho RSD
 
