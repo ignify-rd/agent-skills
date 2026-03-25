@@ -265,10 +265,17 @@ After search returns results, **read the full example file** to understand the e
 - RSD chỉ mô tả validate rule (VD: "bắt buộc", "tối đa 100 ký tự") → KHÔNG phải điều kiện hiển thị → `always`
 - `always` + `conditional` đều phải có validate cases — field `always` KHÔNG được bỏ validate cases
 
+**⛔ KHÔNG propagate condition từ block/section xuống field bên trong:**
+- Nếu RSD ghi "Khối X ẩn khi điều kiện A" → **chỉ Khối X** là `conditional` với điều kiện A
+- Các field bên trong Khối X (field Y, field Z) → vẫn là `always` TRỪ KHI RSD ghi rõ riêng field đó cũng có điều kiện
+- KHÔNG được suy luận: "Khối X ẩn → field Y trong Khối X cũng ẩn theo điều kiện A"
+- Condition của field phải được quote từ ĐÚNG đoạn RSD nói về FIELD ĐÓ, không phải đoạn nói về block chứa nó
+
 **Sau Phase 1, với mỗi field in ra:**
 ```
 - Tên SLA:          type=textbox,  displayBehavior=always     → source: "không có điều kiện"
 - Loại nghiệp vụ:   type=dropdown, displayBehavior=always     → source: "không có điều kiện"
+- Ngày hết hiệu lực: type=datepicker, displayBehavior=always  → source: "không có điều kiện riêng — Khối X có điều kiện nhưng field này không có"
 - Kỳ hạn:           type=dropdown, displayBehavior=conditional → source: RSD tr.5 "Hiển thị khi Loại NV = X"
 ```
 
@@ -337,8 +344,10 @@ After extraction, check for issues and **proactively ask user** before proceedin
     { "trigger": "Lưu thất bại", "message": "exact message từ RSD", "section": "function" }
   ],
   "enableDisableRules": [
-    { "field": "Button Lưu", "condition": "Form chưa nhập đủ required fields", "state": "disable" },
-    { "field": "Dropdown X", "condition": "Chọn loại A", "state": "enable", "cascading": "load danh sách theo loại A" }
+    { "target": "Button Lưu",              "targetType": "button",  "condition": "Form chưa nhập đủ required fields", "state": "disable",  "section": "function" },
+    { "target": "Dropdown X",             "targetType": "field",   "condition": "Chọn loại A",                       "state": "enable",   "section": "validate" },
+    { "target": "Khối Luồng trình X",     "targetType": "block",   "condition": "Loại nghiệp vụ = Cấp tín dụng",    "state": "visible",  "section": "ui_common" },
+    { "target": "Nhóm Thông tin thêm",    "targetType": "block",   "condition": "Loại nghiệp vụ chưa được chọn",    "state": "hidden",   "section": "ui_common" }
   ],
   "autoFillRules": [
     { "trigger": "Chọn giá trị tại Dropdown X", "target": "Field Y", "action": "auto-fill giá trị tương ứng" }
@@ -367,7 +376,13 @@ After extraction, check for issues and **proactively ask user** before proceedin
   **Extraction rule:**
   - **Nếu có trong bảng** → copy **exact** nội dung cột message/thông báo, lưu vào `message` field
   - **Nếu không có trong tài liệu** → lưu `message: null`, khi gen expected result dùng mô tả hành vi (không đặt trong `""`, không bịa nội dung)
-- `enableDisableRules[]`: lấy từ RSD mô tả điều kiện enable/disable cho từng field/button
+- `enableDisableRules[]`: lấy từ RSD — **bắt buộc gán `targetType` và `section` cho từng rule:**
+
+  | targetType | Đối tượng | section | Generate vào đâu |
+  |---|---|---|---|
+  | `block` | Khối, Nhóm, Section ẩn/hiện | `ui_common` | ## Kiểm tra giao diện chung |
+  | `field` | Field đơn lẻ enable/disable | `validate` | #### field tương ứng trong validate |
+  | `button` | Button enable/disable | `function` | ## Kiểm tra chức năng |
 - `autoFillRules[]`: lấy từ RSD mô tả auto-fill, cascading dependencies
 - `statusTransitions[]`: lấy từ RSD flow diagram hoặc mô tả luồng
 - `permissions[]`: lấy từ RSD phân quyền
@@ -377,7 +392,9 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - `businessRules[section="validate"]` → phải có bullet trong ## Kiểm tra validate
 - `businessRules[section="function"]` → phải có bullet trong ## Kiểm tra chức năng
 - `errorMessages[]` → mỗi error message phải có ≥1 bullet test case
-- `enableDisableRules[]` → phải có test case cho từng rule enable/disable
+- `enableDisableRules[section="ui_common"]` → generate vào ## Kiểm tra giao diện chung (1 `###` case per condition)
+- `enableDisableRules[section="validate"]` → generate vào `####` field tương ứng trong validate
+- `enableDisableRules[section="function"]` → generate vào ## Kiểm tra chức năng
 - `autoFillRules[]` → phải có test case cho từng auto-fill behavior
 - `permissions[]` → mỗi role phải có test case trong ## Kiểm tra phân quyền
 
@@ -416,7 +433,25 @@ Generate the test design following the format of the catalog examples (highest p
 
 #### Frontend Mode — Generation
 
-**Common UI section (hardcoded):** Navigation, layout, breadcrumb, zoom — copy template from `--ref frontend-test-design`.
+**Common UI section — đọc toàn bộ spec, sinh đủ các trạng thái UI:**
+
+1. **Trạng thái mặc định** — "Kiểm tra giao diện khi mới vào màn hình": liệt kê toàn bộ nhóm/field/button mặc định hiển thị hoặc ẩn
+2. **Mỗi điều kiện làm UI thay đổi** — 1 case riêng: đọc từ bảng luồng xử lý, mục enable/disable, hiển thị có điều kiện trong spec
+3. **Mỗi popup/modal** — 1 case riêng: liệt kê field/button bên trong
+
+**⚠️ Indentation — `  +` giữ trong cùng 1 bullet, `    -` tạo node con riêng (SAI):**
+```
+ĐÚNG:
+- Màn hình hiển thị:
+  + Nhóm Thông tin chung: Tên SLA, Loại nghiệp vụ
+  + Nhóm Luồng trình: ẩn
+  + Button: Lưu, Đẩy duyệt
+
+SAI:
+- Màn hình hiển thị:
+    - Nhóm Thông tin chung
+    - Button Lưu
+```
 
 **Permission section (hardcoded):** No permission / has permission — 2 test cases.
 
@@ -497,6 +532,7 @@ Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
 - TỪNG field trong `inventory.fieldConstraints[]` → phải có `####` heading với validate cases
 - Field `displayBehavior=always` → KHÔNG được có enable/disable cases, CHỈ validate cases
 - Field `displayBehavior=conditional` → CÓ validate cases (khi field đang enable) + enable/disable cases
+- **⛔ KHÔNG đưa điều kiện ẩn/hiện của block/nhóm vào validate** — `targetType=block` chỉ thuộc giao diện chung
 - TỪNG combobox/dropdown → có API timeout/error/rỗng cases?
 - **Expected result cho error messages:** `message != null` → dùng exact text trong `""` / `message = null` → mô tả hành vi, KHÔNG đặt trong `""`
 - Item nào sai hoặc thiếu → THÊM/SỬA bullet `### [SỬA]` ngay.

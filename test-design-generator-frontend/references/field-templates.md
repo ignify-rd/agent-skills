@@ -420,9 +420,7 @@ field.type → template function:
 
     - Dropdown ở trạng thái Disabled, không thể chọn
 
-#### Icon X
-
-- Kiểm tra hiển thị khi chọn giá trị
+- Kiểm tra icon X hiển thị khi chọn giá trị
 
     - Hiển thị icon X xóa nhanh ký tự nhập
 
@@ -449,8 +447,6 @@ field.type → template function:
 - Kiểm tra placeholder
 
     - Hiển thị placeholder "{placeholder}"
-
-#### Icon X
 
 - Kiểm tra icon X hiển thị khi nhập/chọn dữ liệu
 
@@ -842,9 +838,27 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
     - Hệ thống chặn không cho phép nhập
 
-#### Icon X
+- Kiểm tra khi paste ngày hợp lệ đúng định dạng
 
-- Kiểm tra hiển thị icon X khi có giá trị
+    - Hệ thống cho phép, hiển thị ngày theo định dạng {dateFormat || "dd/MM/yyyy"}
+
+- Kiểm tra khi paste ngày sai định dạng
+
+    - Hiển thị thông báo lỗi validate "{formatErrorMessage || "Vui lòng nhập đúng định dạng dd/MM/yyyy"}"
+
+- Kiểm tra khi paste ký tự chữ / ký tự đặc biệt
+
+    - Hệ thống chặn không cho phép nhập
+
+- Kiểm tra khi paste XSS script
+
+    - Hệ thống chặn không cho phép nhập
+
+- Kiểm tra khi paste SQL injection
+
+    - Hệ thống chặn không cho phép nhập
+
+- Kiểm tra icon X hiển thị khi có giá trị
 
     - Hiển thị icon X xóa nhanh giá trị đã chọn
 
@@ -943,9 +957,27 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
     - Hệ thống chặn không cho phép nhập
 
-#### Icon X
+- Kiểm tra khi paste ngày hợp lệ đúng định dạng
 
-- Kiểm tra hiển thị icon X khi có giá trị
+    - Hệ thống cho phép, hiển thị ngày theo đúng định dạng
+
+- Kiểm tra khi paste ngày sai định dạng
+
+    - Hiển thị thông báo lỗi validate "Vui lòng nhập đúng định dạng dd/MM/yyyy"
+
+- Kiểm tra khi paste ký tự chữ / ký tự đặc biệt
+
+    - Hệ thống chặn không cho phép nhập
+
+- Kiểm tra khi paste XSS script
+
+    - Hệ thống chặn không cho phép nhập
+
+- Kiểm tra khi paste SQL injection
+
+    - Hệ thống chặn không cho phép nhập
+
+- Kiểm tra icon X hiển thị khi có giá trị
 
     - Hiển thị icon X xóa nhanh
 
@@ -1104,8 +1136,16 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
     - {allowDecimal ? "Hệ thống cho phép nhập" : "Hệ thống chặn không cho phép nhập"}
 
-{Nếu allowDecimal:}
-- Kiểm tra khi nhập quá {maxDecimalPlaces} chữ số thập phân
+{Nếu allowDecimal và có maxDecimalPlaces — bắt buộc dùng giá trị số CỤ THỂ, test biên N-1, N, N+1:}
+- Kiểm tra khi nhập {sampleValue với maxDecimalPlaces-1 chữ số thập phân, VD maxDecimalPlaces=2 → "1.5"}
+
+    - Hệ thống cho phép nhập
+
+- Kiểm tra khi nhập {sampleValue với maxDecimalPlaces chữ số thập phân, VD maxDecimalPlaces=2 → "1.55"}
+
+    - Hệ thống cho phép nhập
+
+- Kiểm tra khi nhập {sampleValue với maxDecimalPlaces+1 chữ số thập phân, VD maxDecimalPlaces=2 → "1.555"}
 
     - Hệ thống chặn không cho nhập quá {maxDecimalPlaces} chữ số thập phân
 
@@ -1180,9 +1220,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
     - Nút tăng bị disable hoặc giá trị không thay đổi
 
-#### Icon X
-
-- Kiểm tra hiển thị icon X khi có giá trị
+- Kiểm tra icon X hiển thị khi có giá trị
 
     - Hiển thị icon X xóa nhanh
 

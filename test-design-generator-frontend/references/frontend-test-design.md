@@ -227,7 +227,14 @@ Theo `priority-rules.md`: khi có PTTK chỉ lấy từ RSD business logic/scree
 
 ## {COMMON_UI_SECTION} — Kiểm tra giao diện chung
 
-Hardcoded template:
+Section này mô tả **tất cả các trạng thái UI** của màn hình — đọc toàn bộ spec để xác định:
+1. UI khi mới vào màn hình (trạng thái mặc định)
+2. UI thay đổi theo từng điều kiện (field ẩn/hiện, enable/disable theo giá trị đã chọn)
+3. UI của từng popup/modal có trong màn hình
+
+**KHÔNG** viết thao tác vào đây — chỉ mô tả UI đang hiển thị gì.
+
+Template:
 
 ```markdown
 ## Kiểm tra giao diện chung
@@ -236,17 +243,33 @@ Hardcoded template:
 
 - Điều hướng thành công đến màn hình {screenTitle}
 
-### Kiểm tra bố cục giao diện tổng thể
-
-- + Hiển thị theo đúng figma
-  + Màn hình {screenTitle} hiển thị đầy đủ các thông tin:
-  + {element 1}
-  + {element 2}
-  + ...
-
 ### Kiểm tra hiển thị breadcrumb
 
-- {breadcrumb}
+- {breadcrumb path}
+
+### Kiểm tra giao diện khi mới vào màn hình
+
+- Màn hình {screenTitle} hiển thị:
+  + {Nhóm/Section hiển thị mặc định 1}: {danh sách field}
+  + {Nhóm/Section hiển thị mặc định 2}: {danh sách field}
+  + {Nhóm/Section ẩn mặc định}: ẩn
+  + Button: {Button A}, {Button B}, {Button C}
+
+{Với mỗi điều kiện làm UI thay đổi — 1 case riêng:}
+### Kiểm tra giao diện khi {điều kiện, VD: Loại nghiệp vụ = "Cấp tín dụng"}
+
+- Màn hình hiển thị:
+  + {Nhóm/field hiện ra}: hiển thị
+  + {Nhóm/field ẩn đi}: ẩn
+  + Button: {danh sách button lúc này}
+
+{Với mỗi popup/modal — 1 case riêng:}
+### Kiểm tra giao diện {popup/modal} "{tên popup/modal}"
+
+- {Popup/Modal} hiển thị:
+  + {field/element 1}
+  + {field/element 2}
+  + Button: {Button X}, {Button Y}
 
 ### Kiểm tra hiển thị bố cục layout cân đối
 
@@ -257,12 +280,25 @@ Hardcoded template:
 - Màn hình không bị vỡ form
 ```
 
-Cho DETAIL screen: thêm section display tests:
-```markdown
-### Kiểm tra hiển thị Section "{section.name}"
+**⚠️ Indentation — `  +` (2 spaces + plus) giữ nội dung trong cùng 1 bullet, `    -` (4 spaces + dash) tạo node con riêng:**
 
-- Hiển thị đầy đủ Section "{section.name}" với các trường dữ liệu theo thiết kế
 ```
+ĐÚNG:
+- Màn hình hiển thị:
+  + Nhóm Thông tin chung: Tên SLA, Loại nghiệp vụ
+  + Nhóm Luồng trình: ẩn
+  + Button: Lưu, Đẩy duyệt, Thoát
+
+SAI:
+- Màn hình hiển thị:
+    - Nhóm Thông tin chung    ← node con riêng
+    - Button Lưu              ← node con riêng
+```
+
+**Nguồn để extract — đọc toàn bộ spec:**
+- Trạng thái mặc định: mục mô tả màn hình khi mới vào
+- Điều kiện thay đổi UI: bảng luồng xử lý, mục enable/disable, mục hiển thị có điều kiện
+- Popup/modal: mọi chỗ trong spec đề cập popup, modal, dialog
 
 ## {PERMISSION_SECTION} — Kiểm tra phân quyền
 
