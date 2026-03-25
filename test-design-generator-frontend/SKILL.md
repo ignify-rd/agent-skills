@@ -92,7 +92,7 @@ Before starting generation, check project structure and **load project-level rul
 
 **⚠️ CRITICAL: Project AGENTS.md rules take precedence when explicitly defined.** Every subsequent step must check `projectRules` and apply them.
 
-### Step 0b: Resolve Input Documents
+### Step 0b: Resolve Input Documents & Extract Scope
 
 **If user provides a feature folder name** (e.g., `/generate-test-design-frontend feature-1` or `sinh test design frontend cho feature-1`):
 1. Look inside `<feature-name>/` folder for input documents automatically:
@@ -101,6 +101,16 @@ Before starting generation, check project structure and **load project-level rul
 3. **If folder is empty** → scan toàn bộ project root cho document files liên quan đến feature name
 4. If truly no documents found → inform user: "Không tìm thấy tài liệu RSD/PTTK. Hãy cung cấp đường dẫn hoặc upload file."
 5. Save output as `<feature-name>/test-design-frontend.md`
+
+**⛔ Extract & enforce user scope:**
+
+Trước khi làm bất cứ điều gì, kiểm tra user request có chỉ định phạm vi không:
+- "chỉ gen US05.2", "chỉ gen phần validate", "chỉ gen chức năng Thêm mới" → lưu vào `userScope`
+- Nếu có `userScope` → **chỉ generate đúng phần đó, dừng lại và không gen thêm bất cứ section/feature nào khác**
+- Nếu không có `userScope` → generate toàn bộ màn hình
+
+Confirm scope với user trước khi bắt đầu nếu request mơ hồ:
+> "Bạn muốn gen test design cho toàn bộ màn hình hay chỉ phần `{phần cụ thể}`?"
 
 ### Step 1: Mode Detection (Frontend Mode Only)
 
@@ -224,6 +234,11 @@ After search returns results, **read the full example file** to understand the e
 - How function section is organized per screenType (LIST vs FORM vs DETAIL)
 - How grid/pagination sections are formatted
 
+**⚠️ Catalog là nguồn WORDING & FORMAT cao nhất — cao hơn cả references:**
+- Output PHẢI giống catalog về: cách đặt tên bullet, cách viết expected result, density của cases, structure của heading
+- References (`--ref field-templates`, `--ref frontend-test-design`) cung cấp **danh sách cases cần gen** — KHÔNG copy wording từ references nếu catalog có cách viết khác
+- **Nếu không tìm thấy catalog phù hợp** → thông báo user: "Không tìm thấy catalog phù hợp. Đang dùng format mặc định từ references." rồi mới tiếp tục
+
 ### Step 4: Extract Data from RSD, PTTK & Images
 
 #### Frontend Mode — Extraction
@@ -240,9 +255,14 @@ After search returns results, **read the full example file** to understand the e
 
 **Phase 2: PTTK → field definitions (if available)**
 1. Find the exact screen/API in PTTK by name or endpoint
-2. Extract: field names, types, API endpoints, DB mappings, enum values, maxLength, format constraints
+2. **Extract ALL fields — không được bỏ sót bất kỳ field nào:**
+   - Duyệt TỪNG dòng trong PTTK, liệt kê mọi field theo thứ tự xuất hiện
+   - Xác định loại type chính xác: `textbox`, `dropdown (values[])`, `dropdown (apiEndpoint)`, `number`, `datepicker`, `toggle`, `checkbox`, `button`, `file`, `textarea`...
+   - **"Dropdown list" hoặc "Danh sách"** trong RSD/PTTK = `dropdown (values[])` nếu có danh sách cố định, = `dropdown (apiEndpoint)` nếu load từ API
+   - Extract: field names, types, API endpoints, DB mappings, enum values, maxLength, format constraints
 3. **REPLACE** all field definitions from RSD with PTTK values (PTTK wins completely)
 4. **If no PTTK** → keep field definitions from RSD
+5. **Sau Phase 2: in ra danh sách tất cả fields đã extract** (tên + type) để verify trước khi tiếp tục
 
 **Phase 3: Analyze images (if provided — CUỐI CÙNG)**
 1. For each image: extract screenType, buttons, inputFields (label, type, placeholder, location), gridColumns, hasPagination
@@ -318,7 +338,16 @@ After extraction, check for issues and **proactively ask user** before proceedin
 **Extraction rules (Frontend):**
 - `fieldConstraints[]`: lấy từ RSD/PTTK — **maxLength, minLength, required, unique, format** phải chính xác từ tài liệu, KHÔNG đoán từ ảnh
 - `businessRules[]`: đọc **toàn bộ mô tả nghiệp vụ** trong RSD — mỗi condition/if-else/validation rule = 1 entry
-- `errorMessages[]`: copy **exact** message từ RSD — đọc toàn bộ bảng thông báo lỗi, không bỏ sót
+- `errorMessages[]`: messages thường nằm trong **bảng mô tả luồng xử lý** của RSD/PTTK — PHẢI đọc toàn bộ các bảng này, không bỏ sót
+
+  **Cách nhận diện bảng chứa message:**
+  - Bảng có cột dạng: `Thao tác / Điều kiện / Kết quả`, `Hành động / Xử lý / Thông báo`, `Trường hợp / Message`, `Nếu... thì...`
+  - Thường xuất hiện trong mục "Mô tả luồng xử lý", "Xử lý nghiệp vụ", "Validate", "Điều kiện xử lý"
+  - Mỗi row trong bảng = 1 entry trong `errorMessages[]`
+
+  **Extraction rule:**
+  - **Nếu có trong bảng** → copy **exact** nội dung cột message/thông báo, lưu vào `message` field
+  - **Nếu không có trong tài liệu** → lưu `message: null`, khi gen expected result dùng mô tả hành vi (không đặt trong `""`, không bịa nội dung)
 - `enableDisableRules[]`: lấy từ RSD mô tả điều kiện enable/disable cho từng field/button
 - `autoFillRules[]`: lấy từ RSD mô tả auto-fill, cascading dependencies
 - `statusTransitions[]`: lấy từ RSD flow diagram hoặc mô tả luồng
@@ -352,7 +381,12 @@ After extraction, check for issues and **proactively ask user** before proceedin
 
 ### Step 5: Generate Test Design Sections (Frontend Mode)
 
-Generate the test design following the rules loaded via `--ref` and the format of the catalog examples.
+**⛔ TRƯỚC KHI generate bất cứ section nào:**
+1. Kiểm tra `userScope` (từ Step 0b) — nếu có scope → chỉ gen sections trong scope, skip toàn bộ phần khác
+2. Xem lại catalog example từ Step 3 — wording và format của output PHẢI theo catalog
+3. Review `projectRules` (từ Step 0) — apply tất cả project-specific rules
+
+Generate the test design following the format of the catalog examples (highest priority) and rules loaded via `--ref` (for case completeness).
 
 **⚠️ BEFORE generating any section, review `projectRules` from Step 0.** Project AGENTS.md rules MUST be applied throughout generation:
 - If project defines custom section structure (e.g., "buttons vào phần chức năng thay vì validate") → follow that
@@ -432,8 +466,18 @@ Với mỗi textarea, bắt buộc sinh ĐỦ:
 Sau khi áp dụng template, supplement thêm với LLM: cross-field validation, cascading fields, auto-fill rules.
 
 **Post-section checkpoint — Validate (Frontend):**
-- TỪNG field trong `inventory.fieldConstraints[]` → có bullet trong ## Kiểm tra validate?
-- TỪNG combobox → có API timeout/error/rỗng cases?
+
+In ra checklist đối chiếu sau khi generate xong validate section:
+```
+Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
+[x] Textbox Tên SLA          → có #### heading
+[x] Dropdown Loại nghiệp vụ  → có #### heading
+[ ] Searchable Dropdown Luồng phê duyệt  ← THIẾU → THÊM NGAY
+[ ] Dropdown Kỳ hạn                      ← THIẾU → THÊM NGAY
+```
+- TỪNG field trong `inventory.fieldConstraints[]` → phải có `####` heading
+- TỪNG combobox/dropdown → có API timeout/error/rỗng cases?
+- **Expected result cho error messages:** `message != null` → dùng exact text trong `""` / `message = null` → mô tả hành vi, KHÔNG đặt trong `""`
 - Item nào thiếu → THÊM bullet `### [SỬA]` ngay.
 
 **For DETAIL screens:** Do NOT use field templates. Use `generateDetailDataSection()` — test data display, null/empty handling, SQL queries per field.
