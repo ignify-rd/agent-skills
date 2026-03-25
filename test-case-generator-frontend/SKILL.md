@@ -25,18 +25,7 @@ python3 --version || python --version
 
 ## Đọc file PDF — CHỈ dùng Read tool
 
-**Đọc PDF bằng Read tool. Không có ngoại lệ.**
-
-```
-Read file: path/to/document.pdf
-Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
-```
-
-**CẤM TUYỆT ĐỐI:**
-- ❌ KHÔNG tạo file mới: `.py`, `.ps1`, `.sh`, `.js`
-- ❌ KHÔNG chạy `python`, `python3`, `pip install` để đọc PDF
-- ❌ KHÔNG import PyPDF2, pdfplumber, fitz
-- ❌ KHÔNG tạo script để đọc PDF
+Đọc PDF bằng Read tool (`pages` parameter cho file lớn). **CẤM TUYỆT ĐỐI** tạo script (.py/.ps1/.sh/.js), chạy python/pip, import thư viện PDF.
 
 ## Project AGENTS.md Override
 
@@ -114,33 +103,10 @@ Before starting generation, check project structure and **load project-level rul
 
 ```bash
 SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-case-generator-frontend/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+# Fallback: check .cursor/skills, .claude/skills, .windsurf/skills, or global npm
 ```
 
-If empty, try direct paths:
-```bash
-for d in \
-  ".cursor/skills/test-case-generator-frontend/scripts" \
-  ".claude/skills/test-case-generator-frontend/scripts" \
-  ".windsurf/skills/test-case-generator-frontend/scripts"; do
-  [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
-done
-```
-
-Or global npm:
-```bash
-npm_root=$(npm root -g 2>/dev/null)
-[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-case-generator-frontend/scripts/search.py" ] && \
-  SKILL_SCRIPTS="$npm_root/test-genie/test-case-generator-frontend/scripts"
-```
-
-**Fallback:** Read reference files directly:
-```
-READ: <skills-dir>/test-case-generator-frontend/references/priority-rules.md
-READ: <skills-dir>/test-case-generator-frontend/references/quality-rules.md
-READ: <skills-dir>/test-case-generator-frontend/references/output-format.md
-READ: <skills-dir>/test-case-generator-frontend/references/fe-test-case.md
-READ: <skills-dir>/test-case-generator-frontend/references/field-templates.md
-```
+If all fail → Read reference files directly from `<skills-dir>/test-case-generator-frontend/references/`.
 
 #### Load references
 ```bash
@@ -148,8 +114,9 @@ python $SKILL_SCRIPTS/search.py --ref priority-rules
 python $SKILL_SCRIPTS/search.py --ref output-format
 python $SKILL_SCRIPTS/search.py --ref quality-rules
 python $SKILL_SCRIPTS/search.py --ref fe-test-case
-# field-templates.md: used internally for field type dispatch, load via search or direct read
 ```
+
+**⚠️ field-templates.md: KHÔNG load toàn bộ ở đây.** Load theo field type trong BATCH 2 (lazy-load).
 
 #### Extract test account
 Priority: 1. Project AGENTS.md `testAccount` → 2. Catalog examples → 3. Default: `164987/ Test@147258369`
@@ -206,6 +173,20 @@ Extract complete inventory before generating. Output as internal JSON:
 }
 ```
 
+**⚠️ Inventory = Mandatory Checklist:**
+Mỗi item trong inventory PHẢI map đến ≥1 test case trong output:
+
+| Inventory Item | Required Test Cases | Generated? |
+|---|---|---|
+| Mỗi fieldConstraint | validate cases ≥ min_cases per type | ☐ |
+| Mỗi businessRule | test condition met + not met | ☐ |
+| Mỗi errorMessage | test trigger với exact message | ☐ |
+| Mỗi enableDisableRule | test state enable + disable | ☐ |
+| Mỗi autoFillRule | test auto-fill behavior | ☐ |
+| Mỗi permission | test per role | ☐ |
+
+**Sau mỗi batch, update table. Cuối cùng tất cả phải = ☑.**
+
 ### Step 4d: Inventory Verification Gate
 
 **Sau khi extract xong, PHẢI báo cáo cho user:**
@@ -227,14 +208,14 @@ Extract complete inventory before generating. Output as internal JSON:
 
 **⚠️ CRITICAL — Catalog examples là nguồn chuẩn cho style/wording. PHẢI load trước khi sinh bất kỳ test case nào.**
 
-Search catalog to get 2-3 real examples. This is the **primary style reference** — output PHẢI follow catalog format, KHÔNG follow reference examples.
+Search catalog to get 1 real example. This is the **primary style reference** — output PHẢI follow catalog format, KHÔNG follow reference examples.
 
 ```bash
-python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain frontend --full --top 3
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain frontend --full --top 1
 ```
 
 **Nếu catalog có examples:**
-1. Đọc 10-15 examples đầu tiên (full content: preConditions, steps, expectedResults)
+1. Đọc 3-5 examples đầu tiên (full content: preConditions, steps, expectedResults)
 2. **Extract style patterns:**
    - **testSuiteName convention** — field sub-suites `"Textbox: Tên"` hay fallback `"Kiểm tra validate"`?
    - **preConditions format** — format Đ/k, numbering, wording
@@ -263,12 +244,20 @@ Split into 3 batches:
 **Post-batch checkpoint — BATCH 1:**
 - Mỗi section đã có test cases? (navigation, layout, permission)
 - Thiếu → tự APPEND ngay.
+→ Count: {generated}/{expected}. If any missing → APPEND immediately, do NOT proceed to BATCH 2.
 
 **BATCH 2 — Validate section:**
 - "Kiểm tra validate" and all ### subsections
 - Group 3-5 fields per sub-batch (similar types together)
 - Max 5 fields per sub-batch
-- Load `field-templates.md` for field-specific test cases
+
+**Lazy-load field templates:** Sau khi extract field types từ RSD/PTTK (Step 4), xác định danh sách unique field types (VD: textbox, combobox, datepicker). CHỈ load sections tương ứng từ field-templates.md:
+```bash
+# Chỉ load template cho field types có trong RSD, VD:
+python $SKILL_SCRIPTS/search.py --ref field-templates --section "textbox,combobox,datepicker"
+# HOẶC Read trực tiếp chỉ phần cần thiết từ field-templates.md
+```
+Nếu search.py chưa hỗ trợ `--section`, đọc file và CHỈ áp dụng template cho field types có trong RSD. **KHÔNG đọc toàn bộ 19 templates.**
 
 **Minimum case count per field type:**
 
@@ -284,25 +273,38 @@ Split into 3 batches:
 **Post-batch checkpoint — BATCH 2:**
 - Mỗi field đã có test cases? Field nào < min_cases → APPEND cases còn thiếu.
 - Mỗi combobox đã có API timeout/error/rỗng cases?
+→ Count per field: {field}: {generated}/{min_cases}. If any field < min → APPEND immediately, do NOT proceed to BATCH 3.
 
-**BATCH 3 — Post-validate sections:**
+**BATCH 3 — Post-validate sections (split by technique):**
 - All ## sections AFTER "Kiểm tra validate" (grid, pagination, chức năng, timeout)
-- Combine all post-sections in 1 LLM call
-- Inject inventory items:
+- **Split into sub-batches by technique:**
 
-```
-Sinh ## Kiểm tra chức năng. BẮT BUỘC cover đủ:
-- TỪNG button/action → test success + fail + permission
-- TỪNG enable/disable rule → test cả 2 states
-- TỪNG auto-fill rule → verify auto-fill behavior
-- TỪNG error message → test với exact message
-- TỪNG permission → test visibility/accessibility per role
-```
+**Sub-batch 3a — Button/Action success + fail:**
+- Inject: `inventory.businessRules[section="function"]`
+- Sinh test success + fail cho TỪNG button/action
+- Include exact error messages từ `inventory.errorMessages[section="function"]`
 
-**Post-batch checkpoint — BATCH 3:**
-- [ ] TỪNG button/action → có success + fail + permission cases?
-- [ ] TỪNG enable/disable rule → có state enable VÀ disable?
-- Item thiếu → tự APPEND.
+**Sub-batch 3b — Enable/Disable rules:**
+- Inject: `inventory.enableDisableRules[]`
+- Sinh test state enable VÀ state disable cho TỪNG rule
+
+**Sub-batch 3c — Auto-fill + Cascading:**
+- Inject: `inventory.autoFillRules[]`
+- Sinh test verify auto-fill behavior cho TỪNG rule
+
+**Sub-batch 3d — Permissions + Status transitions:**
+- Inject: `inventory.permissions[]` + `inventory.statusTransitions[]`
+- Sinh test visibility/accessibility cho TỪNG role
+- Sinh test valid + invalid transition cho TỪNG status transition
+
+**Per-sub-batch checkpoint (MANDATORY after each sub-batch):**
+```
+Sub-batch 3a: {generated}/{total} actions covered
+Sub-batch 3b: {generated}/{total} enable/disable rules covered
+Sub-batch 3c: {generated}/{total} auto-fill rules covered
+Sub-batch 3d: {generated}/{total} permissions + transitions covered
+→ Missing items: [list] → AUTO-APPEND immediately
+```
 
 **After all batches:** Deduplicate testCaseNames (case-insensitive, keep first).
 
@@ -316,6 +318,25 @@ Sinh ## Kiểm tra chức năng. BẮT BUỘC cover đủ:
 ✓ BATCH 3: {N}/{N} actions, {N}/{N} enable/disable rules
 ✅ Tổng: {total} test cases | Auto-appended: {M} cases
 ```
+
+### Step 5b2: Pass 2 — Gap Analysis & Auto-Fill
+
+**Re-read inventory từ Step 4c. Cross-check từng item:**
+
+1. **Scan output** — với MỖI item trong inventory:
+   - Search testCaseName/step/expectedResult chứa item keyword
+   - Nếu KHÔNG TÌM THẤY → flag as gap
+2. **Gap list:**
+```
+🔍 Gap Analysis:
+- ☐ field "Tên SLA" → chỉ có 12/18 min cases
+- ☐ enableDisableRule "Button Lưu disable" → chưa có test case
+- ☐ errorMessage "Tên SLA đã tồn tại" → chưa có test trigger
+```
+3. **Auto-fill:** Sinh test cases cho TẤT CẢ gaps → APPEND vào output
+4. **Verify:** Re-count → tất cả items phải covered
+
+**Chỉ proceed khi Gap list = empty.**
 
 ### Step 5c: Final Project Rules Enforcement
 

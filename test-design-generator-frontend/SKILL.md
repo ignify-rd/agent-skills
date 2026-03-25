@@ -25,24 +25,9 @@ python3 --version || python --version
 
 ## Đọc file PDF — CHỈ dùng Read tool
 
-**Đọc PDF bằng Read tool. Không có ngoại lệ.**
+Đọc PDF bằng Read tool (`pages` parameter cho file lớn). Nếu Read tool trả về binary/garbled → đọc lại với `pages`. Nếu vẫn fail → hỏi user copy-paste.
 
-```
-Read file: path/to/document.pdf
-Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
-```
-
-Read tool của AI tools (Claude Code, Cursor, Windsurf, Copilot, Roo Code...) đều hỗ trợ đọc PDF trực tiếp. File lớn thì chia pages (VD: pages 1-10, rồi 11-20...).
-
-**CẤM TUYỆT ĐỐI — vi phạm bất kỳ điều nào = DỪNG LẠI ngay:**
-- ❌ KHÔNG tạo file mới: `.py`, `.ps1`, `.sh`, `.js` — dù chỉ 1 file
-- ❌ KHÔNG chạy `python`, `python3`, `pip install` để đọc PDF
-- ❌ KHÔNG import PyPDF2, pdfplumber, fitz, hoặc bất kỳ thư viện nào
-- ❌ KHÔNG parse binary, xref table, byte offsets, content streams
-- ❌ KHÔNG tạo find_us05.py, extract_pdf.py, read_pdf.ps1 hay bất kỳ script nào tương tự
-- ❌ KHÔNG dùng Bash/PowerShell để đọc PDF
-
-**Nếu Read tool trả về binary/garbled text:** Đọc lại với `pages` parameter (VD: `pages="1-5"`). Nếu vẫn không đọc được → HỎI USER cung cấp nội dung text hoặc copy-paste section cần thiết. **KHÔNG BAO GIỜ tự tạo script.**
+**CẤM TUYỆT ĐỐI** tạo script (.py/.ps1/.sh/.js), chạy python/pip, import thư viện PDF, parse binary.
 
 ## Project AGENTS.md Override
 
@@ -147,54 +132,12 @@ All rules from project AGENTS.md apply as overrides throughout the remaining ste
 
 #### Resolve SKILL_SCRIPTS path
 
-Scripts are installed alongside this SKILL.md file in a `scripts/` subdirectory. Try these methods in order:
-
-**Method 1 — Recursive find from project root:**
 ```bash
 SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-design-generator-frontend/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
-echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
+# Fallback: check .claude/skills, .cursor/skills, .windsurf/skills, .roo/skills, .kiro/skills, or global npm
 ```
 
-**Method 2 — Direct path check (if Method 1 returns empty):**
-```bash
-for d in \
-  ".claude/skills/test-design-generator-frontend/scripts" \
-  ".cursor/skills/test-design-generator-frontend/scripts" \
-  ".windsurf/skills/test-design-generator-frontend/scripts" \
-  ".roo/skills/test-design-generator-frontend/scripts" \
-  ".kiro/skills/test-design-generator-frontend/scripts"; do
-  [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
-done
-echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
-```
-
-**Method 3 — Global npm (if Method 2 returns empty):**
-```bash
-npm_root=$(npm root -g 2>/dev/null)
-[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-design-generator-frontend/scripts/search.py" ] && \
-  SKILL_SCRIPTS="$npm_root/test-genie/test-design-generator-frontend/scripts"
-```
-
-**Method 4 — CRITICAL FALLBACK (if all above fail): Read reference files directly**
-
-If `SKILL_SCRIPTS` is still empty after all methods, **DO NOT skip loading references**. Instead, read the reference files directly:
-
-```
-READ: <skills-dir>/test-design-generator-frontend/references/frontend-test-design.md
-READ: <skills-dir>/test-design-generator-frontend/references/field-templates.md
-READ: <skills-dir>/test-design-generator-frontend/references/priority-rules.md
-READ: <skills-dir>/test-design-generator-frontend/references/quality-rules.md
-READ: <skills-dir>/test-design-generator-frontend/references/output-examples.md
-```
-
-Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is found. Try common paths:
-- `.claude/skills/`
-- `.cursor/skills/`
-- `.windsurf/skills/`
-
-**⚠️ NEVER proceed without loading references.** The format templates in `frontend-test-design.md` and `field-templates.md` are mandatory.
-
-**Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
+If all fail → Read reference files directly from `<skills-dir>/test-design-generator-frontend/references/`. **⚠️ NEVER proceed without loading references.**
 
 #### Load Frontend references
 
@@ -203,7 +146,7 @@ Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is f
 python $SKILL_SCRIPTS/search.py --ref priority-rules
 python $SKILL_SCRIPTS/search.py --ref quality-rules
 python $SKILL_SCRIPTS/search.py --ref frontend-test-design
-python $SKILL_SCRIPTS/search.py --ref field-templates
+# ⚠️ field-templates.md: KHÔNG load toàn bộ ở đây — lazy-load per field type trong Step 5
 ```
 
 #### Search examples & utilities
@@ -225,19 +168,19 @@ python $SKILL_SCRIPTS/search.py --list
 python $SKILL_SCRIPTS/search.py "export excel" --domain frontend --full
 ```
 
-### Step 3: Read the Top-Matching Example
+### Step 3: Read the Top-1 Matching Example
 
-After search returns results, **read the full example file** to understand the exact format. The example shows:
-- Section structure (which ## and ### headings are used)
-- Writing style (bullet density, wording patterns for validate vs function)
-- How field templates are applied per field type
-- How function section is organized per screenType (LIST vs FORM vs DETAIL)
-- How grid/pagination sections are formatted
+Search top 1 match only. Đọc 1 example đầy đủ thay vì nhiều examples:
+```bash
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain frontend --full --top 1
+```
+
+The example shows: section structure, writing style, field template application, function section per screenType, grid/pagination format.
 
 **⚠️ Catalog là nguồn WORDING & FORMAT cao nhất — cao hơn cả references:**
 - Output PHẢI giống catalog về: cách đặt tên bullet, cách viết expected result, density của cases, structure của heading
-- References (`--ref field-templates`, `--ref frontend-test-design`) cung cấp **danh sách cases cần gen** — KHÔNG copy wording từ references nếu catalog có cách viết khác
-- **Nếu không tìm thấy catalog phù hợp** → thông báo user: "Không tìm thấy catalog phù hợp. Đang dùng format mặc định từ references." rồi mới tiếp tục
+- References cung cấp **danh sách cases cần gen** — KHÔNG copy wording từ references nếu catalog có cách viết khác
+- **Nếu không tìm thấy catalog phù hợp** → thông báo user rồi dùng format mặc định từ references
 
 ### Step 4: Extract Data from RSD, PTTK & Images
 
@@ -440,6 +383,20 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - `autoFillRules[]` → phải có test case cho từng auto-fill behavior
 - `permissions[]` → mỗi role phải có test case trong ## Kiểm tra phân quyền
 
+**⚠️ Inventory = Mandatory Checklist — mỗi item PHẢI có trong output:**
+
+| Inventory Item | Required Output | Section |
+|---|---|---|
+| Mỗi fieldConstraint | validate cases theo template | ## Kiểm tra validate |
+| Mỗi businessRule[validate] | ≥1 bullet | ## Kiểm tra validate |
+| Mỗi businessRule[function] | ≥1 bullet | ## Kiểm tra chức năng |
+| Mỗi errorMessage | bullet với exact message | Section tương ứng |
+| Mỗi enableDisableRule | bullet enable + disable | Section theo targetType |
+| Mỗi autoFillRule | bullet verify behavior | ## Kiểm tra chức năng |
+| Mỗi permission | bullet per role | ## Kiểm tra phân quyền |
+
+**Kết thúc generation: tất cả items phải ☑. Chưa ☑ = THÊM bullet.**
+
 ### Step 4d: Inventory Verification Gate
 
 **Sau khi hoàn thành Step 4c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
@@ -499,7 +456,19 @@ Generate the test design following the format of the catalog examples (highest p
 
 **Permission section (hardcoded):** No permission / has permission — 2 test cases.
 
-**Validate section (per-field templates):** Dispatch by field.type using `--ref field-templates`. **QUAN TRỌNG: Phải output ĐẦY ĐỦ TẤT CẢ cases có trong template — không được bỏ bớt, không được chọn lọc.**
+**Validate section (per-field templates):** **QUAN TRỌNG: Phải output ĐẦY ĐỦ TẤT CẢ cases có trong template — không được bỏ bớt, không được chọn lọc.**
+
+**⚠️ Lazy-load field templates — CHỈ load template cho field types có trong RSD:**
+1. Từ `inventory.fieldConstraints[]`, extract danh sách unique field types (VD: textbox, combobox, datepicker)
+2. CHỈ đọc sections tương ứng từ field-templates.md:
+```bash
+# Chỉ load templates cho types có trong RSD, VD:
+python $SKILL_SCRIPTS/search.py --ref field-templates --section "textbox,combobox,datepicker"
+# HOẶC Read file và CHỈ áp dụng template sections cho types có trong RSD
+```
+3. **KHÔNG đọc toàn bộ 19 templates** — chỉ đọc templates cho field types thực tế có trong tài liệu.
+
+Dispatch by field.type:
 
 | field.type | Template |
 |-----------|----------|
@@ -582,6 +551,7 @@ Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
 - TỪNG combobox/dropdown → có API timeout/error/rỗng cases?
 - **Expected result cho error messages:** `message != null` → dùng exact text trong `""` / `message = null` → mô tả hành vi, KHÔNG đặt trong `""`
 - Item nào sai hoặc thiếu → THÊM/SỬA bullet `### [SỬA]` ngay.
+→ Count: {generated}/{expected} fields covered. Missing → THÊM ngay, KHÔNG proceed đến section tiếp.
 
 **For DETAIL screens:** Do NOT use field templates. Use `generateDetailDataSection()` — test data display, null/empty handling, SQL queries per field.
 
@@ -593,34 +563,36 @@ Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
 
 **⚠️ Section này phải cover TOÀN BỘ business logic. KHÔNG được sinh function section mà không có inventory items.**
 
+**Split function generation thành sub-sections:**
+
+**Sub-section A — Button/Action flows:**
+- TỪNG `businessRules[section="function"]` → test condition met + not met
+- TỪNG `errorMessages[section="function"]` → test trigger với exact message
+- FORM: Save success + save fail + cancel + navigation
+
+**Sub-section B — Enable/Disable + Auto-fill:**
+- TỪNG `enableDisableRules[section="function"]` → test state enable VÀ disable
+- TỪNG `autoFillRules[]` → test verify auto-fill behavior
+
+**Sub-section C — Status transitions + Permissions:**
+- TỪNG `statusTransitions[]` → valid transition + invalid transition
+- TỪNG `permissions[]` → test visibility/accessibility per role
+
+**Per-sub-section checkpoint (MANDATORY):**
 ```
-Sinh ## Kiểm tra chức năng. BẮT BUỘC cover đủ các items sau từ inventory:
-
-Business rules [function]: {list inventory.businessRules[section="function"]}
-Error messages [function]:  {list inventory.errorMessages[section="function"] với exact message}
-Enable/disable rules:       {list inventory.enableDisableRules[] — mỗi rule cần test BOTH states}
-Auto-fill rules:            {list inventory.autoFillRules[]}
-Status transitions:         {list inventory.statusTransitions[] — valid + invalid transition}
-Permissions:                {list inventory.permissions[] — mỗi role cần test}
-
-KHÔNG bỏ sót bất kỳ item nào.
+Sub-A: {N}/{N} business rules, {N}/{N} error messages covered
+Sub-B: {N}/{N} enable/disable, {N}/{N} auto-fill covered
+Sub-C: {N}/{N} transitions, {N}/{N} permissions covered
+→ Missing: [list] → THÊM bullet `### [SỬA]` ngay
 ```
 
+**Screen type guidance:**
 - **LIST:** Search per field (exists/not exists/partial), combined search, clear filter, add new button
-- **FORM/POPUP:**
-  - Save success (form hợp lệ) → expected: thông báo thành công
-  - Save fail (form có lỗi) → expected: **exact error message từ `errorMessages[]` trong inventory**
-  - Từng `enableDisableRules[]` → test case state enable VÀ state disable
-  - Từng `autoFillRules[]` → test case verify auto-fill behavior
-  - Từng `businessRules[section="function"]` → test case cho mỗi condition
-  - Cancel, back navigation
+- **FORM/POPUP:** Save success/fail, field interactions, cancel, back navigation
 - **DETAIL:** Button visibility by status/permission, click actions, navigation, status transitions
-- **All screen types:**
-  - Từng `statusTransitions[]` → test valid transition + invalid transition (từ sai state)
-  - Từng `permissions[]` → test action visibility/accessibility per role
-  - Any button-related test cases belong in function section (not validate) — buttons test logic flow, not input validation
+- **All:** Buttons belong in function section (not validate)
 
-**⚠️ Project AGENTS.md override:** If project AGENTS.md defines additional function section rules (e.g., "buttons vào phần chức năng", custom section assignments), apply them here.
+**⚠️ Project AGENTS.md override:** If project AGENTS.md defines additional function section rules → apply them here.
 
 **Post-section checkpoint — Function (Frontend):**
 - TỪNG `inventory.businessRules[section="function"]` → có bullet?
@@ -629,6 +601,7 @@ KHÔNG bỏ sót bất kỳ item nào.
 - TỪNG `inventory.autoFillRules[]` → có bullet verify auto-fill?
 - TỪNG `inventory.permissions[]` → có bullet cho từng role?
 - Item nào thiếu → THÊM bullet `### [SỬA]` ngay.
+→ Count: {generated}/{expected}. Missing → THÊM ngay, KHÔNG proceed.
 
 **Verify — coverage summary (Frontend mode):**
 Kiểm tra nhanh đã cover đủ:
@@ -653,6 +626,26 @@ Item nào thiếu → THÊM bullet `### [SỬA]`. Wrong expected → `### [SỬA
 ✓ Permissions:           {N}/{N} roles covered
 [SỬA]: {N} bullets thêm/sửa
 ```
+
+### Step 5a2: Pass 2 — Gap Analysis & Auto-Fill
+
+**Sau khi generate xong tất cả sections, thực hiện pass 2:**
+
+1. **Re-read inventory** từ Step 4c
+2. **Scan output markdown** — với MỖI inventory item:
+   - Tìm keyword/field name/error message trong output
+   - Nếu KHÔNG TÌM THẤY → flag as gap
+3. **Gap list:**
+```
+🔍 Gap Analysis:
+- ☐ field "Luồng phê duyệt" → chưa có validate cases
+- ☐ enableDisableRule "Button Lưu disable" → chưa có test case
+- ☐ errorMessage "Tên SLA đã tồn tại" → chưa có bullet
+```
+4. **Auto-fill:** Sinh bullet cho TẤT CẢ gaps → THÊM vào output với `### [SỬA]`
+5. **Re-verify:** Tất cả items covered → proceed
+
+**Chỉ proceed khi Gap list = empty.**
 
 ### Step 5b: Final Project Rules Enforcement
 

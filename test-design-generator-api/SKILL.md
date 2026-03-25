@@ -25,24 +25,9 @@ python3 --version || python --version
 
 ## Đọc file PDF — CHỈ dùng Read tool
 
-**Đọc PDF bằng Read tool. Không có ngoại lệ.**
+Đọc PDF bằng Read tool (`pages` parameter cho file lớn). Nếu Read tool trả về binary/garbled → đọc lại với `pages`. Nếu vẫn fail → hỏi user copy-paste.
 
-```
-Read file: path/to/document.pdf
-Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
-```
-
-Read tool của AI tools (Claude Code, Cursor, Windsurf, Copilot, Roo Code...) đều hỗ trợ đọc PDF trực tiếp. File lớn thì chia pages (VD: pages 1-10, rồi 11-20...).
-
-**CẤM TUYỆT ĐỐI — vi phạm bất kỳ điều nào = DỪNG LẠI ngay:**
-- ❌ KHÔNG tạo file mới: `.py`, `.ps1`, `.sh`, `.js` — dù chỉ 1 file
-- ❌ KHÔNG chạy `python`, `python3`, `pip install` để đọc PDF
-- ❌ KHÔNG import PyPDF2, pdfplumber, fitz, hoặc bất kỳ thư viện nào
-- ❌ KHÔNG parse binary, xref table, byte offsets, content streams
-- ❌ KHÔNG tạo find_us05.py, extract_pdf.py, read_pdf.ps1 hay bất kỳ script nào tương tự
-- ❌ KHÔNG dùng Bash/PowerShell để đọc PDF
-
-**Nếu Read tool trả về binary/garbled text:** Đọc lại với `pages` parameter (VD: `pages="1-5"`). Nếu vẫn không đọc được → HỎI USER cung cấp nội dung text hoặc copy-paste section cần thiết. **KHÔNG BAO GIỜ tự tạo script.**
+**CẤM TUYỆT ĐỐI** tạo script (.py/.ps1/.sh/.js), chạy python/pip, import thư viện PDF, parse binary.
 
 ## Project AGENTS.md Override
 
@@ -135,51 +120,12 @@ All rules from project AGENTS.md apply as overrides throughout the remaining ste
 
 #### Resolve SKILL_SCRIPTS path
 
-Scripts are installed alongside this SKILL.md file in a `scripts/` subdirectory. Try these methods in order:
-
-**Method 1 — Recursive find from project root:**
 ```bash
 SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-design-generator-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
-echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
+# Fallback: check .claude/skills, .cursor/skills, .windsurf/skills, .roo/skills, .kiro/skills, or global npm
 ```
 
-**Method 2 — Direct path check (if Method 1 returns empty):**
-```bash
-for d in \
-  ".claude/skills/test-design-generator-api/scripts" \
-  ".cursor/skills/test-design-generator-api/scripts" \
-  ".windsurf/skills/test-design-generator-api/scripts" \
-  ".roo/skills/test-design-generator-api/scripts" \
-  ".kiro/skills/test-design-generator-api/scripts"; do
-  [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
-done
-echo "SKILL_SCRIPTS=$SKILL_SCRIPTS"
-```
-
-**Method 3 — Global npm (if Method 2 returns empty):**
-```bash
-npm_root=$(npm root -g 2>/dev/null)
-[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-design-generator-api/scripts/search.py" ] && \
-  SKILL_SCRIPTS="$npm_root/test-genie/test-design-generator-api/scripts"
-```
-
-**Method 4 — CRITICAL FALLBACK (if all above fail): Read reference files directly**
-
-If `SKILL_SCRIPTS` is still empty after all methods, **DO NOT skip loading references**. Instead, read the reference files directly:
-
-```
-READ: <skills-dir>/test-design-generator-api/references/api-test-design.md
-READ: <skills-dir>/test-design-generator-api/references/priority-rules.md
-READ: <skills-dir>/test-design-generator-api/references/quality-rules.md
-READ: <skills-dir>/test-design-generator-api/references/output-examples.md
-```
-
-Where `<skills-dir>` is wherever the `.claude/`, `.cursor/`, etc. directory is found. Try common paths:
-- `.claude/skills/`
-- `.cursor/skills/`
-- `.windsurf/skills/`
-
-**⚠️ NEVER proceed without loading references.** The format template in `api-test-design.md` is mandatory.
+If all fail → Read reference files directly from `<skills-dir>/test-design-generator-api/references/`. **⚠️ NEVER proceed without loading references.**
 
 **Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
 
@@ -211,14 +157,14 @@ python $SKILL_SCRIPTS/search.py --list
 python $SKILL_SCRIPTS/search.py "export excel" --domain api --full
 ```
 
-### Step 3: Read the Top-Matching Example
+### Step 3: Read the Top-1 Matching Example
 
-After search returns results, **read the full example file** to understand the exact format. The example shows:
-- Section structure (which ## and ### headings are used)
-- Writing style (bullet density, wording patterns)
-- SQL format conventions (table names, column names, WHERE clause style)
-- Response body format (which fields appear, nesting style)
-- How validate section is organized per field type
+Search top 1 match only. Đọc 1 example đầy đủ thay vì nhiều examples:
+```bash
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 1
+```
+
+The example shows: section structure, writing style, SQL format conventions, response body format, validate section per field type.
 
 ### Step 4: Extract Data from RSD & PTTK
 
@@ -299,6 +245,19 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - `dbFields[]` → tất cả fields phải có trong SQL verify của luồng chính
 - `rollbackBehavior` → phải có bullet "S3 lỗi → không INSERT vào DB" trong luồng chính
 
+**⚠️ Inventory = Mandatory Checklist — mỗi item PHẢI có trong output:**
+
+| Inventory Item | Required Output | Section |
+|---|---|---|
+| Mỗi errorCode[validate] | ≥1 bullet với exact message | ## Kiểm tra validate |
+| Mỗi errorCode[main] | ≥1 bullet với exact message | ## Kiểm tra luồng chính |
+| Mỗi businessRule | bullet TRUE + FALSE | ## Kiểm tra luồng chính |
+| Mỗi dbField | phải có trong SQL SELECT | ## Kiểm tra luồng chính |
+| Mỗi mode | ≥1 happy path bullet | ## Kiểm tra luồng chính |
+| Mỗi externalService | bullet onFailure + rollback | ## Kiểm tra luồng chính |
+
+**Kết thúc generation: tất cả items phải ☑. Chưa ☑ = THÊM bullet.**
+
 ### Step 4d: Inventory Verification Gate
 
 **Sau khi hoàn thành Step 4c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
@@ -332,6 +291,7 @@ Generate the test design following the rules loaded via `--ref` and the format o
 **Common section (hardcoded):** Copy the base template exactly — only replace `{API_NAME}` and `{WRONG_METHODS}`. Format: `- status: 107` (simple). NEVER use `1\. Check api trả về:` in common.
 
 **Post-section checkpoint — Common:** Có đủ Method + URL + Authorization test cases? Thiếu → thêm bullet.
+→ Count: {generated}/{expected}. Missing → THÊM bullet ngay, KHÔNG proceed đến section tiếp.
 
 **Validate section (per-field):** For each inputField from Phase 2, generate test cases using the field templates in `--ref api-test-design`:
 - String Required → test: empty, missing, null, maxLen-1/maxLen/maxLen+1, numeric, accented chars, special chars, spaces, emoji, unicode, boolean, array, object, XSS, SQL injection
@@ -341,6 +301,7 @@ Generate the test design following the rules loaded via `--ref` and the format o
 - JSON response must be multiline WITHOUT backtick fence
 
 **Post-section checkpoint — Validate (API):** TỪNG field trong `inventory.errorCodes[section="validate"]` → có bullet với exact error code? Thiếu → THÊM bullet `### [SỬA]`.
+→ Count per field: {generated}/{expected} error codes covered. Missing → THÊM `### [SỬA]` ngay, KHÔNG proceed đến main flow.
 
 **Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format.
 
@@ -358,25 +319,38 @@ External services:{list inventory.externalServices[] — cần test onFailure + 
 KHÔNG bỏ sót bất kỳ item nào.
 ```
 
-Thứ tự sinh:
-1. Response fields verification — list ALL output fields (camelCase) với sample values
-2. DB mapping verification — full SQL: SELECT/FROM/WHERE/ORDER BY với concrete values, verify **tất cả `dbFields[]`**
-3. Search scenarios — exact, approximate (LIKE), combined conditions, not found
-4. Sort order verification — ORDER BY clause
-5. Error code scenarios — mỗi `errorCodes[section="main"]` → 1 test case với **exact message từ inventory**
-6. Business logic branches — mỗi `businessRules[]` branch → test TRUE + FALSE, mỗi có Response
-7. DB validations — exists/not exists → test both cases
-8. Mode variations — mỗi `modes[]` item → test riêng
-9. Status transitions — valid/invalid transitions → test each
-10. External service failures — mỗi `externalServices[]` → test onFailure, rollback không INSERT DB
+**Split main flow thành sub-sections (mỗi sub = 1 generation step):**
 
-**Post-section checkpoint — Main flow (API):**
-- TỪNG mode trong `inventory.modes[]` → có ≥1 happy path bullet?
-- TỪNG branch trong `inventory.businessRules[]` → có bullet TRUE + FALSE?
-- TỪNG error code `section="main"` → có bullet với exact message?
-- TỪNG dbField trong `inventory.dbFields[]` → có trong SQL SELECT?
-- TỪNG `externalServices[]` → có bullet onFailure + rollback?
-- Item nào thiếu → THÊM bullet `### [SỬA]` ngay.
+**Sub-section A — Response fields + DB mapping:**
+- Response body verification — list ALL output fields (camelCase) với sample values
+- Full SQL: SELECT/FROM/WHERE/ORDER BY với concrete values, verify **tất cả `dbFields[]`**
+- Sort order verification
+
+**Sub-section B — Search/Query scenarios:**
+- Exact search, approximate (LIKE), combined conditions, not found
+- Mỗi search field → ≥2 bullets (exists + not exists)
+
+**Sub-section C — Error codes + Business logic:**
+- Mỗi `errorCodes[section="main"]` → 1 test case với **exact message từ inventory**
+- Mỗi `businessRules[]` branch → test TRUE + FALSE, mỗi có Response
+
+**Sub-section D — Mode variations + Status transitions:**
+- Mỗi `modes[]` item → ≥1 happy path test riêng
+- Valid/invalid transitions → test each
+
+**Sub-section E — External services + Rollback:**
+- Mỗi `externalServices[]` → test onFailure + rollback không INSERT DB
+- DB validations — exists/not exists → test both cases
+
+**Per-sub-section checkpoint (MANDATORY after each sub-section):**
+```
+Sub-A: {N}/{N} dbFields in SQL, {N}/{N} output fields
+Sub-B: {N}/{N} search fields covered
+Sub-C: {N}/{N} error codes, {N}/{N} branches
+Sub-D: {N}/{N} modes, {N}/{N} transitions
+Sub-E: {N}/{N} services, {N}/{N} rollback scenarios
+→ Missing: [list] → THÊM bullet `### [SỬA]` ngay
+```
 
 **Verify — coverage summary (API mode):**
 
@@ -401,6 +375,26 @@ Item nào thiếu → THÊM bullet `### [SỬA] Kiểm tra ...`
 ✓ External services:      {N}/{N} covered
 [SỬA]: {N} bullets thêm/sửa
 ```
+
+### Step 5a2: Pass 2 — Gap Analysis & Auto-Fill
+
+**Sau khi generate xong tất cả sections, thực hiện pass 2:**
+
+1. **Re-read inventory** từ Step 4c
+2. **Scan output markdown** — với MỖI inventory item:
+   - Tìm keyword/error code/field name trong output
+   - Nếu KHÔNG TÌM THẤY → flag as gap
+3. **Gap list:**
+```
+🔍 Gap Analysis:
+- ☐ errorCode "2" [main] → chưa có bullet
+- ☐ dbField "S3_FILE_KEY" → chưa có trong SQL SELECT
+- ☐ service "S3" rollback → chưa có bullet
+```
+4. **Auto-fill:** Sinh bullet cho TẤT CẢ gaps → THÊM vào output với `### [SỬA]`
+5. **Re-verify:** Tất cả items covered → proceed
+
+**Chỉ proceed khi Gap list = empty.**
 
 ### Step 5b: Final Project Rules Enforcement
 

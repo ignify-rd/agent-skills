@@ -25,18 +25,7 @@ python3 --version || python --version
 
 ## Đọc file PDF — CHỈ dùng Read tool
 
-**Đọc PDF bằng Read tool. Không có ngoại lệ.**
-
-```
-Read file: path/to/document.pdf
-Read file: path/to/document.pdf pages=1-10    (file lớn, đọc theo pages)
-```
-
-**CẤM TUYỆT ĐỐI:**
-- ❌ KHÔNG tạo file mới: `.py`, `.ps1`, `.sh`, `.js`
-- ❌ KHÔNG chạy `python`, `python3`, `pip install` để đọc PDF
-- ❌ KHÔNG import PyPDF2, pdfplumber, fitz
-- ❌ KHÔNG tạo script để đọc PDF
+Đọc PDF bằng Read tool (`pages` parameter cho file lớn). **CẤM TUYỆT ĐỐI** tạo script (.py/.ps1/.sh/.js), chạy python/pip, import thư viện PDF.
 
 ## Project AGENTS.md Override
 
@@ -113,32 +102,10 @@ Before starting generation, check project structure and **load project-level rul
 
 ```bash
 SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-case-generator-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+# Fallback: check .cursor/skills, .claude/skills, .windsurf/skills, or global npm
 ```
 
-If empty, try direct paths:
-```bash
-for d in \
-  ".cursor/skills/test-case-generator-api/scripts" \
-  ".claude/skills/test-case-generator-api/scripts" \
-  ".windsurf/skills/test-case-generator-api/scripts"; do
-  [ -f "$d/search.py" ] && SKILL_SCRIPTS="$d" && break
-done
-```
-
-Or global npm:
-```bash
-npm_root=$(npm root -g 2>/dev/null)
-[ -n "$npm_root" ] && [ -f "$npm_root/test-genie/test-case-generator-api/scripts/search.py" ] && \
-  SKILL_SCRIPTS="$npm_root/test-genie/test-case-generator-api/scripts"
-```
-
-**Fallback:** Read reference files directly:
-```
-READ: <skills-dir>/test-case-generator-api/references/priority-rules.md
-READ: <skills-dir>/test-case-generator-api/references/quality-rules.md
-READ: <skills-dir>/test-case-generator-api/references/output-format.md
-READ: <skills-dir>/test-case-generator-api/references/api-test-case.md
-```
+If all fail → Read reference files directly from `<skills-dir>/test-case-generator-api/references/`.
 
 #### Load references
 ```bash
@@ -215,6 +182,20 @@ Extract complete inventory before generating. Output as internal JSON:
 }
 ```
 
+**⚠️ Inventory = Mandatory Checklist:**
+Mỗi item trong inventory PHẢI map đến ≥1 test case trong output. Tracking table:
+
+| Inventory Item | Required Test Cases | Generated? |
+|---|---|---|
+| Mỗi errorCode | ≥1 test trigger | ☐ |
+| Mỗi businessRule | test TRUE + FALSE | ☐ |
+| Mỗi mode | ≥1 happy path | ☐ |
+| Mỗi dbOperation | SQL verify all columns | ☐ |
+| Mỗi externalService | onFailure + rollback | ☐ |
+| Mỗi decisionCombo | exact combo test | ☐ |
+
+**Sau mỗi batch, update table. Cuối cùng tất cả phải = ☑.**
+
 ### Step 4d: Inventory Verification Gate
 
 **Sau khi extract xong, PHẢI báo cáo cho user:**
@@ -237,14 +218,14 @@ Extract complete inventory before generating. Output as internal JSON:
 
 **⚠️ CRITICAL — Catalog examples là nguồn chuẩn cho style/wording. PHẢI load trước khi sinh bất kỳ test case nào.**
 
-Search catalog to get 2-3 real examples. This is the **primary style reference** — output PHẢI follow catalog format, KHÔNG follow reference examples.
+Search catalog to get 1 real example. This is the **primary style reference** — output PHẢI follow catalog format, KHÔNG follow reference examples.
 
 ```bash
-python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 3
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 1
 ```
 
 **Nếu catalog có examples:**
-1. Đọc 10-15 examples đầu tiên (full content: preConditions, steps, expectedResults)
+1. Đọc 3-5 examples đầu tiên (full content: preConditions, steps, expectedResults)
 2. **Extract style patterns:**
    - **testSuiteName convention** — catalog chia suite thế nào? field sub-suites `"FieldType: FieldName"` hay chung?
    - **preConditions format** — format Đ/k, numbering, wording
@@ -279,6 +260,7 @@ python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 3
 **Post-batch checkpoint — BATCH 1:**
 - Mỗi section đã có test cases? (Method, URL, Authorization)
 - Thiếu → tự APPEND ngay.
+→ Count: {generated}/{expected}. If any missing → APPEND immediately, do NOT proceed to BATCH 2.
 
 **BATCH 2 — Validate section:**
 - "Kiểm tra validate" and all ### subsections
@@ -296,32 +278,47 @@ python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 3
 
 **Post-batch checkpoint — BATCH 2:**
 - Mỗi field đã có test cases? Field nào < min_cases → APPEND cases còn thiếu.
+→ Count per field: {field}: {generated}/{min_cases}. If any field < min → APPEND immediately, do NOT proceed to BATCH 3.
 
-**BATCH 3 — Post-validate sections:**
+**BATCH 3 — Post-validate sections (split by technique):**
 - All ## sections AFTER "Kiểm tra validate" (grid, functionality, timeout)
-- Inject full inventory into generation instruction:
+- **Split into sub-batches by technique** to ensure thorough coverage:
 
+**Sub-batch 3a — Happy paths (1 per mode):**
+- Inject: `inventory.modes[]`
+- Sinh ≥1 happy path test cho TỪNG mode
+- Include full response body + SQL verify
+
+**Sub-batch 3b — Branch coverage:**
+- Inject: `inventory.businessRules[]`
+- Sinh test TRUE + FALSE cho TỪNG branch
+- Include response body cho mỗi case
+
+**Sub-batch 3c — Error code coverage:**
+- Inject: `inventory.errorCodes[section="main"]`
+- Sinh ≥1 test trigger TỪNG error code với **exact message**
+- testSuiteName = "Kiểm tra luồng chính"
+
+**Sub-batch 3d — DB verification + External services:**
+- Inject: `inventory.dbOperations[]` + `inventory.externalServices[]`
+- Sinh test verify TỪNG table/operation với full SQL SELECT (all columns)
+- Sinh test onFailure + onTimeout cho TỪNG external service
+- Include rollback behavior
+
+**Sub-batch 3e — Decision table:**
+- Inject: `inventory.decisionCombinations[]`
+- Sinh test cho TỪNG combination
+
+**Per-sub-batch checkpoint (MANDATORY after each sub-batch):**
+After each sub-batch, count generated items vs inventory items:
 ```
-Sinh test cases cho luồng chính. BẮT BUỘC apply đủ 6 kỹ thuật:
-
-1. Happy paths — ≥1 test cho TỪNG mode: {list modes}
-2. Branch coverage — test TRUE + FALSE cho TỪNG branch: {list}
-3. Decision table — test cho TỪNG combination: {list}
-4. Error code coverage — ≥1 test trigger TỪNG code (exact message): {list}
-5. DB verification — test verify TỪNG table/operation: {list}
-6. External service failures — test onFailure + onTimeout cho TỪNG service: {list}
-
-Inventory có N items → output phải cover ≥N items.
+Sub-batch 3a: {generated}/{total} modes covered
+Sub-batch 3b: {generated}/{total} branches covered
+Sub-batch 3c: {generated}/{total} error codes covered
+Sub-batch 3d: {generated}/{total} DB ops + {generated}/{total} services covered
+Sub-batch 3e: {generated}/{total} combinations covered
+→ Missing items: [list] → AUTO-APPEND immediately
 ```
-
-**Post-batch checkpoint — BATCH 3:**
-- [ ] TỪNG mode → có ≥1 happy path?
-- [ ] TỪNG branch → có test TRUE + FALSE?
-- [ ] TỪNG error code → có test với exact message?
-- [ ] TỪNG dbOperation → có test SELECT verify tất cả fields?
-- [ ] TỪNG service → có test onFailure + onTimeout?
-- [ ] TỪNG combination → có test với exact combo?
-- Item thiếu → tự APPEND.
 
 **After all batches:** Deduplicate testCaseNames (case-insensitive, keep first).
 
@@ -335,6 +332,25 @@ Inventory có N items → output phải cover ≥N items.
 ✓ BATCH 3: {N}/{N} modes, {N}/{N} branches, {N}/{N} error codes, {N}/{N} DB ops, {N}/{N} services
 ✅ Tổng: {total} test cases | Auto-appended: {M} cases
 ```
+
+### Step 5b2: Pass 2 — Gap Analysis & Auto-Fill
+
+**Re-read inventory từ Step 4c. Cross-check từng item:**
+
+1. **Scan output** — với MỖI item trong inventory:
+   - Search testCaseName/step/expectedResult chứa item keyword
+   - Nếu KHÔNG TÌM THẤY → flag as gap
+2. **Gap list:**
+```
+🔍 Gap Analysis:
+- ☐ errorCode "PCER_001" → chưa có test case trigger
+- ☐ branch BR2 FALSE → chưa có test case
+- ☐ mode "Xoá" → chưa có happy path
+```
+3. **Auto-fill:** Sinh test cases cho TẤT CẢ gaps → APPEND vào output
+4. **Verify:** Re-count → tất cả items phải covered
+
+**Chỉ proceed khi Gap list = empty.**
 
 ### Step 5c: Final Project Rules Enforcement
 
