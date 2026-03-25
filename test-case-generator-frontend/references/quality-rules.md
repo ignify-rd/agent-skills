@@ -22,6 +22,26 @@
 - Ví dụ SAI: `"Kiểm tra khi nhập 100 ký tự và 101 ký tự"`
 - Ví dụ ĐÚNG: `"Kiểm tra khi nhập 100 ký tự"` + `"Kiểm tra khi nhập 101 ký tự"` (2 cases riêng)
 
+## Bóc tách logic điều kiện phức tạp — BẮT BUỘC
+
+Khi một kết quả/lỗi có **nhiều điều kiện kích hoạt khác nhau** → mỗi điều kiện = 1 case riêng.
+KHÔNG được gộp tất cả vào 1 case chung chỉ vì outcome giống nhau.
+
+**Các dạng cần bóc tách:**
+
+| Dạng logic | Cách bóc tách |
+|---|---|
+| `if A → check set X` / `if B → check set Y` | 1 case cho nhánh A, 1 case cho nhánh B |
+| Date field có thể = `null` (open-ended) | 1 case khi record cũ null, 1 case khi record mới null, 1 case cả hai null |
+| Overlap boundary | 1 case riêng cho boundary |
+| Negative case (không thỏa điều kiện) | 1 case riêng — không lỗi, thao tác thành công |
+
+**Checklist khi gặp logic phức tạp trong mindmap:**
+1. Đếm số nhánh `if/else` → mỗi nhánh = 1 case
+2. Tìm field nào có thể = `null` → tạo case cho từng kịch bản null
+3. Tìm boundary condition → tạo case riêng cho boundary
+4. Tạo ít nhất 1 negative case (điều kiện không thỏa mãn → không lỗi)
+
 ## Giá trị cụ thể — KHÔNG placeholder
 
 - LUÔN dùng giá trị mẫu cụ thể trong preConditions body
