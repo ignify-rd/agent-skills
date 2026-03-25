@@ -114,8 +114,8 @@
 - Kiểm tra khi nhập 100 kí tự
     - Hệ thống cho phép nhập
 
-- Kiểm tra khi Paste 100 kí tự
-    - Hệ thống cho phép Paste
+- Kiểm tra khi Paste 101 kí tự
+    - Hệ thống chặn không cho phép Paste quá 100 kí tự
 
 - Kiểm tra khi nhập 101 kí tự
     - Hiển thị cảnh báo "Tên tần suất không được vượt quá 100 ký tự"

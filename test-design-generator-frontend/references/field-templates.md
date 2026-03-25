@@ -110,9 +110,9 @@ field.type → template function:
 
     - Hệ thống cho phép nhập
 
-- Kiểm tra khi Paste {maxLength} kí tự
+- Kiểm tra khi Paste {maxLength+1} kí tự
 
-    - Hệ thống cho phép Paste
+    - Hệ thống chặn không cho phép Paste quá {maxLength} kí tự
 
 - Kiểm tra khi nhập {maxLength+1} kí tự
 
@@ -1072,9 +1072,9 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
     - Hệ thống cho phép nhập
 
-- Kiểm tra khi Paste {maxLength} kí tự
+- Kiểm tra khi Paste {maxLength+1} kí tự
 
-    - Hệ thống cho phép Paste
+    - Hệ thống chặn không cho phép Paste quá {maxLength} kí tự
 
 - Kiểm tra khi nhập {maxLength+1} kí tự
 

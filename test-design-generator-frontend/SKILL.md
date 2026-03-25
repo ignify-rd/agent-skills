@@ -252,6 +252,16 @@ After search returns results, **read the full example file** to understand the e
 4. Extract: grid columns (name, dbColumn, dbTable, format), pagination values, sort order
 5. Extract: button visibility rules by status/permission, additional features
 6. **Extract business logic:** điều kiện enable/disable, auto-fill rules, cascading dependencies, validation rules nghiệp vụ (VD: "Ngày hiệu lực phải >= ngày hiện tại", "Mã SLA unique"), error messages, luồng save/submit, status transitions
+7. **⛔ Bắt buộc scan toàn bộ điều kiện của Button Lưu/Submit — KHÔNG được bỏ sót:**
+   Đọc kỹ phần mô tả luồng Save trong RSD, tìm TẤT CẢ các trường hợp đặc biệt:
+   - **Version conflict / phiên bản cũ:** "Nếu phiên bản không phải mới nhất", "version không khớp" → extract message + behavior
+   - **Concurrent lock / đang chỉnh sửa bởi người khác:** "SLA đang được chỉnh sửa", "record bị lock" → extract message + behavior
+   - **Trạng thái thay đổi khi đang edit:** "trạng thái giao dịch đã thay đổi", "status changed" → extract message + behavior
+   - **Trạng thái không hợp lệ:** "trạng thái không hợp lệ để thực hiện" → extract message + behavior
+   - **Lưu thất bại (hệ thống):** "không thể lưu dữ liệu", "system error when saving" → extract message + behavior
+
+   Mỗi điều kiện đặc biệt tìm được → thêm vào `inventory.businessRules[section="function"]` với exact message.
+   **Nếu RSD có bảng mô tả luồng Save với nhiều dòng điều kiện → đọc TỪNG DÒNG, không đọc lướt.**
 
 **⚠️ Với mỗi field, phân loại `displayBehavior` dựa trên TEXT CHÍNH XÁC trong RSD — KHÔNG suy diễn:**
 
@@ -265,14 +275,29 @@ After search returns results, **read the full example file** to understand the e
 - RSD chỉ mô tả validate rule (VD: "bắt buộc", "tối đa 100 ký tự") → KHÔNG phải điều kiện hiển thị → `always`
 - `always` + `conditional` đều phải có validate cases — field `always` KHÔNG được bỏ validate cases
 
-**⛔ Condition của block KHÔNG truyền xuống field bên trong — mỗi field phải có điều kiện riêng trong RSD:**
+**⛔ Condition của block KHÔNG truyền — không xuống field bên trong, không sang field ở block khác:**
 
-Ví dụ đúng khi RSD ghi "Khối Luồng trình ẩn khi Loại nghiệp vụ ≠ Cấp tín dụng":
-- Khối Luồng trình → `displayBehavior=conditional`, condition="Loại nghiệp vụ ≠ Cấp tín dụng", `section=ui_common`
-- Field "Mã luồng" bên trong Khối → `displayBehavior=always` (vì RSD không ghi điều kiện riêng cho field này)
-- Field "Tên luồng" bên trong Khối → `displayBehavior=always` (tương tự)
+Câu "Nếu X thì hiển thị Khối A gồm: [field1, field2, field3]" chỉ làm **Khối A** = `conditional`.
+→ field1, field2, field3 bên trong Khối A = `always` (không có điều kiện riêng)
+→ **Mọi field ở block khác trên cùng màn hình = `always`** — dù RSD có câu điều kiện về Khối A
 
-Ví dụ đúng khi cả block và field đều có điều kiện riêng:
+SAI — nhầm lan điều kiện của Khối Luồng trình sang field ở Khối khác:
+```
+RSD: "Nếu Loại nghiệp vụ = Cấp tín dụng thì hiển thị Khối Luồng trình gồm: Luồng phê duyệt, Kỳ hạn, Phương thức"
+
+Datepicker Ngày hết hiệu lực (thuộc Khối Thông tin chung)
+→ displayBehavior: conditional, condition: "Loại nghiệp vụ = Cấp tín dụng"  ← SAI
+```
+
+ĐÚNG:
+```
+Khối Luồng trình              → displayBehavior: conditional, condition: "Loại nghiệp vụ = Cấp tín dụng"
+Field Luồng phê duyệt (trong Khối Luồng trình) → displayBehavior: always
+Field Kỳ hạn (trong Khối Luồng trình)          → displayBehavior: always
+Datepicker Ngày hết hiệu lực (Khối Thông tin chung, không trong danh sách) → displayBehavior: always
+```
+
+Ví dụ khi cả block và field đều có điều kiện riêng:
 - RSD ghi "Khối Luồng trình ẩn khi ..." VÀ "Field Kỳ hạn ẩn khi Loại kỳ = Ngắn hạn"
 - Khối Luồng trình → `conditional`, source trỏ đoạn về Khối
 - Field Kỳ hạn → `conditional`, source trỏ đoạn về Field Kỳ hạn (KHÁC đoạn về Khối)
@@ -503,7 +528,7 @@ Với mỗi textbox editable, bắt buộc sinh ĐỦ các cases sau (lấy từ
 - Icon X: hiển thị khi nhập, xóa nhanh
 - Nhập số, nhập chữ, nhập ký tự đặc biệt (@#$%^&*)
 - Nhập ký tự chứa space đầu/cuối, Paste ký tự chứa space đầu/cuối, nhập all space
-- Boundary: nhập maxLen-1, maxLen, Paste maxLen, nhập maxLen+1 → cảnh báo
+- Boundary: nhập maxLen-1, maxLen, nhập maxLen+1 → cảnh báo; Paste maxLen+1 → chặn
 - **Bắt buộc (đã có trong template):** emoji, XSS (`<script>alert(1)</script>`), SQL injection (`' OR 1=1 --`), unicode đặc biệt, chữ có dấu tiếng Việt
 - MinLength boundary: minLen-1 → lỗi, minLen → ok (nếu có minLength)
 - Required validation: bỏ trống → lỗi (nếu isRequired)
