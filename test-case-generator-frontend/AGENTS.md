@@ -37,10 +37,17 @@ Rules that override default behavior. Loaded automatically by AI agents.
 
 ## Input Priority (PTTK vs RSD)
 
-| Source | Priority | Used for |
-|--------|----------|----------|
-| **PTTK** | **Highest** for field definitions | Field names, data types, required/optional, maxLength, format constraints, request/response structure |
-| **RSD** | **Highest** for business logic | Main flow, error codes, DB mapping, if/else branches |
+| Source | Priority | Field definitions / request body | Response body |
+|--------|----------|----------------------------------|---------------|
+| **PTTK** | **Highest** for field definitions | Field names, data types, required/optional, maxLength, format constraints, request body structure | **PTTK** — response body structure (field names, data types, nesting) |
+| **RSD** | **Highest** for business logic | Main flow, error codes, DB mapping, if/else branches | **RSD fallback** — nếu PTTK không có |
+
+> **⚠️ Response body:** Khi PTTK có mô tả response body → dùng PTTK. Khi PTTK không có → dùng RSD. Tuyệt đối không dùng format mặc định cố định.
+
+> **⚠️ Khi có PTTK → REPLACE hoàn toàn. KHÔNG dùng field/request/response từ RSD:**
+> - PTTK **REPLACES** toàn bộ field definitions, request body, response body từ RSD
+> - Field chỉ có trong RSD (không có trong PTTK) → **bỏ qua**, không dùng
+> - Khi upload PTTK → bỏ qua TẤT CẢ field definitions từ RSD, dùng PTTK
 
 **When PTTK is available, IGNORE field definitions, request body, and response body in RSD.**
 PTTK is typically the larger document — always find the EXACT API/screen by endpoint or name before extracting.
@@ -55,7 +62,7 @@ Source: PTTK if available, fallback RSD.
 2. Extract from source: field names (exact), data types, required/optional, maxLength, format constraints, example values
 3. Build body JSON with ALL required fields having concrete values
 
-### Phase 3 — Response Templates
+### Step 4 — Response Templates
 
 Source: PTTK if available, fallback RSD.
 
@@ -67,6 +74,24 @@ Source: PTTK if available, fallback RSD.
 - **BATCH 1**: Pre-validate sections (common, permissions) — testSuiteName = section name
 - **BATCH 2**: Validate section — 1 sub-batch PER FIELD (### heading) — testSuiteName = theo catalog convention (field sub-suites `"{FieldType}: {FieldName}"` nếu catalog dùng, hoặc `"Kiểm tra validate"` nếu không)
 - **BATCH 3**: Post-validate sections (grid, functionality, timeout) — testSuiteName = section name, maxTokens: 65536
+
+**⚠️ BATCH 3 bắt buộc chia thành 4 sub-batches — mỗi sub-batch phải có checkpoint riêng:**
+
+| Sub-batch | Nội dung | Inventory items |
+|-----------|---------|----------------|
+| **3a — Button/Action flows** | Success + fail cho TỪNG button/action | `inventory.businessRules[section="function"]`, `inventory.errorMessages[section="function"]` |
+| **3b — Enable/Disable rules** | Test state enable VÀ disable cho TỪNG rule | `inventory.enableDisableRules[]` |
+| **3c — Auto-fill + Cascading** | Test TỪNG auto-fill behavior | `inventory.autoFillRules[]` |
+| **3d — Permissions + Status transitions** | Visibility/accessibility cho TỪNG role + valid/invalid transition | `inventory.permissions[]`, `inventory.statusTransitions[]` |
+
+**Per-sub-batch checkpoint (bắt buộc sau mỗi sub-batch):**
+```
+Sub-batch 3a: {generated}/{total} actions covered
+Sub-batch 3b: {generated}/{total} enable/disable rules covered
+Sub-batch 3c: {generated}/{total} auto-fill rules covered
+Sub-batch 3d: {generated}/{total} permissions + transitions covered
+→ Missing items: [list] → AUTO-APPEND immediately
+```
 
 Each batch: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho sections khác."
 

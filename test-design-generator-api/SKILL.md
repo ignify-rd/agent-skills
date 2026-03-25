@@ -159,12 +159,27 @@ python $SKILL_SCRIPTS/search.py "export excel" --domain api --full
 
 ### Step 3: Read the Top-1 Matching Example
 
-Search top 1 match only. Đọc 1 example đầy đủ thay vì nhiều examples:
+**Criteria chọn catalog example (theo thứ tự ưu tiên):**
+1. **Keyword match chính xác nhất** — tên feature/API/screen trùng với request
+2. **Cùng project** — ưu tiên examples từ project hiện tại (catalog trong project)
+3. **Cùng domain** — ví dụ: upload API → ưu tiên upload, search API → ưu tiên search
+4. **Gần đây nhất** — nếu nhiều candidates cùng quality
+
+**Search strategy:**
 ```bash
+# Tìm keyword chính xác trước
 python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 1
+
+# Nếu top 1 không phù hợp (domain khác, quality thấp) → thử top 2
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 2
 ```
 
-The example shows: section structure, writing style, SQL format conventions, response body format, validate section per field type.
+**Fallback:** Nếu top 1 và top 2 đều không phù hợp → thông báo user và dùng format mặc định từ references.
+
+**⚠️ Catalog là nguồn WORDING & FORMAT cao nhất — cao hơn cả references:**
+- Output PHẢI giống catalog về: cách đặt tên bullet, cách viết expected result, SQL format, response body format
+- References cung cấp **danh sách cases cần gen** — KHÔNG copy wording từ references nếu catalog có cách viết khác
+- **Nếu không tìm thấy catalog phù hợp** → thông báo user rồi dùng format mặc định từ references
 
 ### Step 4: Extract Data from RSD & PTTK
 

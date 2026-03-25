@@ -5,8 +5,8 @@
 ## Pipeline tổng thể
 
 ```
-Phase 1:  Phân tích hình ảnh (nếu có) → consolidate → bổ sung vào UI structure
-Phase 2:  Extract UI structure từ RSD → JSON (screenName, screenType, permissions, UI layout, business logic)
+Phase 1:  Đọc RSD/PTTK TRƯỚC TIÊN → extract screen structure, business logic, field definitions
+Phase 2:  Phân tích hình ảnh (nếu có) → consolidate → bổ sung SAU RSD/PTTK
 Phase 3:  Extract fields từ PTTK (if available) → REPLACE field definitions từ RSD (PTTK wins hoàn toàn)
 Phase 4:  Generate validate section (per-field templates + LLM extra business cases)
 Phase 5:  Generate lưới dữ liệu section (LLM) + chức năng section (LLM)
@@ -14,6 +14,10 @@ Phase 6:  Verify & supplement chức năng against RSD (LLM re-read)
 Phase 7:  Combine with base template (common UI, permissions, pagination, timeout)
 Phase 8:  Validate and fix markdown
 ```
+
+> **⚠️ THỨ TỰ BẮT BUỘC — KHÔNG ĐƯỢC ĐẢO:**
+> RSD/PTTK LUÔN phải đọc TRƯỚC TIÊN (Phase 1). Hình ảnh (Phase 2) CHỈ bổ sung SAU khi đã đọc và extract từ RSD/PTTK.
+> KHÔNG BAO GIỜ analyze ảnh trước khi đọc RSD/PTTK — ảnh không được override thông tin từ tài liệu.
 
 ## Base Template (8 placeholders)
 
@@ -39,7 +43,7 @@ Phase 8:  Validate and fix markdown
 
 **DETAIL screen:** Rename `## Kiểm tra validate` → `## Kiểm tra dữ liệu hiển thị`
 
-## Phase 1: Phân tích hình ảnh (nếu có screenshots/wireframes)
+## Phase 2: Phân tích hình ảnh (nếu có screenshots/wireframes) — BỔ SUNG SAU RSD/PTTK
 
 Tương ứng với logic trong ứng dụng tại `rsd-to-mindmap-frontend.vue` — service `preImageAnalysisService`.
 
@@ -77,7 +81,7 @@ Sau khi phân tích từng ảnh, tổng hợp lại thành một cấu trúc du
 1. **Gộp** các field/button trùng nhau từ nhiều ảnh
 2. **Lọc bỏ** các UI component không liên quan đến yêu cầu trong RSD
 3. **Ưu tiên RSD** nếu có conflict với hình ảnh (hình ảnh chỉ là bổ sung)
-4. Kết quả consolidate là **input bổ sung** cho Phase 0
+4. Kết quả consolidate là **input bổ sung** cho Phase 1 (RSD extraction)
 
 ```json
 {
@@ -101,7 +105,7 @@ Sau khi phân tích từng ảnh, tổng hợp lại thành một cấu trúc du
 }
 ```
 
-### Bước 3: Merge với RSD extraction (Phase 2)
+### Bước 3: Merge với RSD extraction (Phase 1)
 
 **Nguyên tắc merge**: Theo `--ref priority-rules`. Hình ảnh chỉ bổ sung, không override PTTK/RSD.
 
@@ -127,9 +131,11 @@ RSD không đề cập button "Xuất Excel"
 
 ---
 
-## Phase 2: Trích xuất cấu trúc UI từ RSD
+## Phase 1: Trích xuất cấu trúc UI từ RSD/PTTK (LUÔN ĐỌC TRƯỚC TIÊN)
 
 Theo `priority-rules.md`: khi có PTTK chỉ lấy từ RSD business logic/screen structure. Khi không có PTTK, lấy tất cả.
+
+> **⚠️ BẮT BUỘC đọc RSD TRƯỚC TIÊN.** Không được analyze hình ảnh trước bước này.
 
 Đọc RSD và trích xuất JSON đầy đủ:
 

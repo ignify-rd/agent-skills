@@ -96,6 +96,34 @@ Before starting generation, check project structure and **load project-level rul
 
 **LUÔN đọc RSD/PTTK nếu có** — không yêu cầu user tạo test design trước.
 
+### Step 1b: Read Mindmap First (if available alongside RSD/PTTK)
+
+**⚠️ CRITICAL — Đọc mindmap TRƯỚC khi đọc RSD/PTTK khi có cả hai.**
+
+Khi user cung cấp CẢ mindmap (test-design đã sinh) VÀ RSD/PTTK:
+
+1. **Đọc mindmap TRƯỚC TIÊN** — extract vào inventory tạm:
+   - Exact error messages (đã extract từ bảng mã lỗi trong mindmap)
+   - Error codes với trigger conditions
+   - Business rules với exact descriptions
+   - Luồng chính đã được phân tích
+   - DB field mappings
+   - Mode variations
+   - External service behaviors
+
+2. **Khi đọc RSD/PTTK ở Step 4** — bổ sung inventory từ mindmap:
+   - Nếu RSD/PTTK có thông tin BỔ SUNG cho 1 item đã có trong mindmap → dùng RSD/PTTK (chi tiết hơn)
+   - Nếu RSD/PTTK có item MỚI không có trong mindmap → thêm vào inventory
+   - **Tuyệt đối KHÔNG bỏ qua** thông tin đã extract từ mindmap
+
+3. **Priority khi conflict:**
+   - Exact error message: dùng message từ RSD/PTTK (nếu chi tiết hơn)
+   - Error codes + trigger: **GIỮ NGUYÊN** từ mindmap
+   - Business logic: RSD thắng
+
+**Tại sao đọc mindmap trước?**
+Mindmap từ test-design đã trải qua quá trình extract kỹ lưỡng (Step 4c inventory trong test-design), bao gồm exact error messages từ bảng mã lỗi. Nếu bỏ qua mindmap và đọc lại RSD/PTTK, agent có thể miss exact messages vì phải tự extract lại.
+
 ### Step 2: Load Rules & References
 
 #### Resolve SKILL_SCRIPTS path

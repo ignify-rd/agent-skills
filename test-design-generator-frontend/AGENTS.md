@@ -37,13 +37,17 @@ Rules that override default behavior. Loaded automatically by AI agents.
 
 ## Input Priority (PTTK vs RSD)
 
-| Source | Priority | Used for |
-|--------|----------|----------|
-| **PTTK** | **Highest** for field definitions | Field names, data types, required/optional, maxLength, format constraints, request/response structure, API endpoints, DB mappings |
-| **RSD** | **Highest** for business logic | Main flow, error codes, if/else branches, screen flow, permissions |
+| Source | Priority | Field definitions / request body | Response body |
+|--------|----------|----------------------------------|---------------|
+| **PTTK** | **Highest** for field definitions | Field names, data types, required/optional, maxLength, format constraints, request body structure, API endpoints, DB mappings | **PTTK** — response body structure (field names, data types, nesting) |
+| **RSD** | **Highest** for business logic | Main flow, error codes, if/else branches, screen flow, permissions | **RSD fallback** — nếu PTTK không có |
 
-**When PTTK is available, IGNORE field definitions, request body, and response body in RSD.**
-PTTK is typically the larger document — always find the EXACT API/screen by endpoint or name before extracting.
+> **⚠️ Response body:** Khi PTTK có mô tả response body → dùng PTTK. Khi PTTK không có → dùng RSD. Tuyệt đối không dùng format mặc định cố định.
+
+> **⚠️ Khi có PTTK → REPLACE hoàn toàn. KHÔNG dùng field/request/response từ RSD:**
+> - PTTK **REPLACES** toàn bộ field definitions, request body, response body từ RSD
+> - Field chỉ có trong RSD (không có trong PTTK) → **bỏ qua**, không dùng
+> - Khi upload PTTK → bỏ qua TẤT CẢ field definitions từ RSD, dùng PTTK
 
 ## Image Priority (Frontend only)
 
@@ -100,6 +104,38 @@ Dispatch by field.type → template function (from `field-templates.md`):
 | richtext/rich_text_editor | generateRichTextEditorTests |
 
 Templates generate ~80% of test cases (19 field types). LLM supplements business-specific cases.
+
+## Frontend Mode — Field displayBehavior Classification
+
+**⚠️ Bắt buộc phân loại displayBehavior cho TỪNG field từ RSD — KHÔNG suy diễn.**
+
+|| displayBehavior | Điều kiện xác định | Cases cần gen |
+||---|---|---|
+| `always` | RSD không đề cập điều kiện hiển thị/ẩn/enable/disable, hoặc ghi rõ "luôn hiển thị" | **Chỉ validate cases** (maxLength, required, format...) — KHÔNG enable/disable cases |
+| `conditional` | RSD ghi rõ: "hiển thị khi...", "ẩn khi...", "enable khi...", "disable khi..." | Validate cases (khi enable) **+ enable/disable cases** |
+
+**Quy tắc phân loại — tránh nhầm lẫn:**
+- Không có câu nào trong RSD mô tả điều kiện → `always`
+- RSD chỉ mô tả validate rule (VD: "bắt buộc", "tối đa 100 ký tự") → `always` (không phải displayBehavior)
+- `always` + `conditional` đều phải có validate cases
+
+**⚠️ Điều kiện của block KHÔNG lan sang field bên ngoài block:**
+
+SAI — nhầm lan điều kiện của Khối Luồng trình sang field ở block khác:
+```
+RSD: "Nếu Loại nghiệp vụ = Cấp tín dụng thì hiển thị Khối A gồm: [A1, A2, A3]"
+
+Datepicker Ngày hết hiệu lực (thuộc Khối Thông tin chung, không trong danh sách)
+→ displayBehavior: conditional, condition: "Loại nghiệp vụ = Cấp tín dụng"  ← SAI
+```
+
+ĐÚNG:
+```
+Khối Luồng trình              → displayBehavior: conditional
+Field A1 (trong Khối Luồng trình) → displayBehavior: always
+Field A2 (trong Khối Luồng trình) → displayBehavior: always
+Datepicker Ngày hết hiệu lực (Khối Thông tin chung) → displayBehavior: always
+```
 
 ## Frontend Mode — Screen Type Rules
 

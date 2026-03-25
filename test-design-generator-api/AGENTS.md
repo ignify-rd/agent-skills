@@ -37,13 +37,17 @@ Rules that override default behavior. Loaded automatically by AI agents.
 
 ## Input Priority (PTTK vs RSD)
 
-| Source | Priority | Used for |
-|--------|----------|----------|
-| **PTTK** | **Highest** for field definitions | Field names, data types, required/optional, maxLength, format constraints, request/response structure, API endpoints, DB mappings |
-| **RSD** | **Highest** for business logic | Main flow, error codes, if/else branches, screen flow, permissions |
+| Source | Priority | Field definitions / request body | Response body |
+|--------|----------|----------------------------------|---------------|
+| **PTTK** | **Highest** for field definitions | Field names, data types, required/optional, maxLength, format constraints, request body structure, API endpoints, DB mappings | **PTTK** — response body structure (field names, data types, nesting) |
+| **RSD** | **Highest** for business logic | Main flow, error codes, if/else branches, screen flow, permissions | **RSD fallback** — nếu PTTK không có |
 
-**When PTTK is available, IGNORE field definitions, request body, and response body in RSD.**
-PTTK is typically the larger document — always find the EXACT API/screen by endpoint or name before extracting.
+> **⚠️ Response body:** Khi PTTK có mô tả response body → dùng PTTK. Khi PTTK không có → dùng RSD. Tuyệt đối không dùng format mặc định cố định.
+
+> **⚠️ Khi có PTTK → REPLACE hoàn toàn. KHÔNG dùng field/request/response từ RSD:**
+> - PTTK **REPLACES** toàn bộ field definitions, request body, response body từ RSD
+> - Field chỉ có trong RSD (không có trong PTTK) → **bỏ qua**, không dùng
+> - Khi upload PTTK → bỏ qua TẤT CẢ field definitions từ RSD, dùng PTTK
 
 ## Image Priority (Frontend only)
 

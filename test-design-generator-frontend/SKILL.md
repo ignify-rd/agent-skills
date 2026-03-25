@@ -170,12 +170,22 @@ python $SKILL_SCRIPTS/search.py "export excel" --domain frontend --full
 
 ### Step 3: Read the Top-1 Matching Example
 
-Search top 1 match only. Đọc 1 example đầy đủ thay vì nhiều examples:
+**Criteria chọn catalog example (theo thứ tự ưu tiên):**
+1. **Keyword match chính xác nhất** — tên feature/API/screen trùng với request
+2. **Cùng project** — ưu tiên examples từ project hiện tại (catalog trong project)
+3. **Cùng domain** — ví dụ: LIST screen → ưu tiên LIST, FORM → ưu tiên FORM
+4. **Gần đây nhất** — nếu nhiều candidates cùng quality
+
+**Search strategy:**
 ```bash
-python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain frontend --full --top 1
+# Tìm keyword chính xác trước
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 1
+
+# Nếu top 1 không phù hợp (domain khác, quality thấp) → thử top 2
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 2
 ```
 
-The example shows: section structure, writing style, field template application, function section per screenType, grid/pagination format.
+**Fallback:** Nếu top 1 và top 2 đều không phù hợp → thông báo user và dùng format mặc định từ references.
 
 **⚠️ Catalog là nguồn WORDING & FORMAT cao nhất — cao hơn cả references:**
 - Output PHẢI giống catalog về: cách đặt tên bullet, cách viết expected result, density của cases, structure của heading
@@ -404,12 +414,19 @@ After extraction, check for issues and **proactively ask user** before proceedin
 ```
 📋 Business Logic Inventory đã extract:
 - Fields:             {N} fields cần generate validate cases (list tên + type)
+- Fields displayBehavior: {N} fields (list: Tên [always/conditional])
+  → Kiểm tra: field always KHÔNG có enable/disable cases; field conditional CÓ cả validate + enable/disable
 - Business rules:     {N} (list: BR1 [validate], BR2 [function], ...)
 - Error messages:     {N} messages cần cover (list trigger)
 - Enable/disable:     {N} rules (list field + condition)
 - Auto-fill:          {N} cascading rules
 - Permissions:        {N} roles
 ```
+
+**⚠️ displayBehavior checklist bắt buộc:**
+- Field nào = `always` → verify: KHÔNG gen enable/disable cases, CHỈ validate cases
+- Field nào = `conditional` → verify: CÓ validate cases (khi enable) + CÓ enable/disable cases
+- Điều kiện của block KHÔNG lan sang field ở block khác
 
 **Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận trước khi tiếp tục:**
 > "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không? (có thể tôi đọc bỏ sót phần nào đó)"
@@ -459,14 +476,19 @@ Generate the test design following the format of the catalog examples (highest p
 **Validate section (per-field templates):** **QUAN TRỌNG: Phải output ĐẦY ĐỦ TẤT CẢ cases có trong template — không được bỏ bớt, không được chọn lọc.**
 
 **⚠️ Lazy-load field templates — CHỈ load template cho field types có trong RSD:**
+
+**Bắt buộc theo 3 bước:**
 1. Từ `inventory.fieldConstraints[]`, extract danh sách unique field types (VD: textbox, combobox, datepicker)
-2. CHỈ đọc sections tương ứng từ field-templates.md:
+2. CHỈ đọc sections tương ứng từ field-templates.md — mỗi section cho 1 field type
+3. **KHÔNG đọc toàn bộ 19 templates** — chỉ đọc template của field types thực tế có trong tài liệu
+
+**Cách đọc template:**
 ```bash
-# Chỉ load templates cho types có trong RSD, VD:
+# Dùng search.py nếu hỗ trợ --section:
 python $SKILL_SCRIPTS/search.py --ref field-templates --section "textbox,combobox,datepicker"
-# HOẶC Read file và CHỈ áp dụng template sections cho types có trong RSD
+
+# Nếu search.py không hỗ trợ --section → đọc file và CHỈ áp dụng template sections cho field types có trong RSD
 ```
-3. **KHÔNG đọc toàn bộ 19 templates** — chỉ đọc templates cho field types thực tế có trong tài liệu.
 
 Dispatch by field.type:
 
