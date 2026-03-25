@@ -73,9 +73,7 @@
 - Kiểm tra khi chọn giá trị = "Doanh nghiệp"
     - Hệ thống hiển thị text "Doanh nghiệp" tại dropdown list
 
-#### Icon X
-
-- Kiểm tra hiển thị khi chọn giá trị
+- Kiểm tra hiển thị icon X khi chọn giá trị
     - Hiển thị icon X xóa nhanh ký tự nhập
 
 - Kiểm tra hoạt động khi thực hiện thao tác xóa nhanh giá trị đã chọn
@@ -89,9 +87,7 @@
 - Kiểm tra giá trị mặc định
     - Mặc định rỗng
 
-#### Icon X
-
-- Kiểm tra hiển thị khi nhập 1 ký tự
+- Kiểm tra hiển thị icon X khi nhập 1 ký tự
     - Hiển thị icon X xóa nhanh ký tự nhập
 
 - Kiểm tra hoạt động khi thực hiện thao tác xóa nhanh ký tự nhập

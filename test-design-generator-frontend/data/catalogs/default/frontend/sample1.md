@@ -62,9 +62,7 @@
 
     - Hiển thị placeholder "Nhập lý do"
 
-#### Icon X
-
-- Kiểm tra hiển thị khi nhập 1 ký tự
+- Kiểm tra hiển thị icon X khi nhập 1 ký tự
 
     - Hiển thị icon X xóa nhanh ký tự nhập
 

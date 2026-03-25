@@ -280,7 +280,7 @@ Template:
 - Màn hình không bị vỡ form
 ```
 
-**⚠️ Indentation — `  +` (2 spaces + plus) giữ nội dung trong cùng 1 bullet, `    -` (4 spaces + dash) tạo node con riêng:**
+**⚠️ Indentation — dùng `  +` (2 spaces + plus) để giữ nội dung trong cùng 1 bullet. KHÔNG dùng `    -` (4 spaces + dash) cho các mục bên trong giao diện chung — điều đó tạo node con riêng trong mindmap:**
 
 ```
 ĐÚNG:
@@ -289,10 +289,18 @@ Template:
   + Nhóm Luồng trình: ẩn
   + Button: Lưu, Đẩy duyệt, Thoát
 
-SAI:
+ĐÚNG (screen có nhiều khối):
 - Màn hình hiển thị:
-    - Nhóm Thông tin chung    ← node con riêng
-    - Button Lưu              ← node con riêng
+  + Khối Thông tin chính: Tên SLA, Loại nghiệp vụ, Ngày hiệu lực
+  + Khối Luồng trình: ẩn
+  + Khối Ghi chú: ẩn
+  + Button: Lưu, Đẩy duyệt, Thoát
+
+ĐÚNG (khi điều kiện thay đổi):
+- Màn hình hiển thị:
+  + Khối Luồng trình: hiển thị
+  + Khối Ghi chú: hiển thị
+  + Button: Lưu, Đẩy duyệt, Thoát
 ```
 
 **Nguồn để extract — đọc toàn bộ spec:**

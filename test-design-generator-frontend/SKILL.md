@@ -265,11 +265,19 @@ After search returns results, **read the full example file** to understand the e
 - RSD chỉ mô tả validate rule (VD: "bắt buộc", "tối đa 100 ký tự") → KHÔNG phải điều kiện hiển thị → `always`
 - `always` + `conditional` đều phải có validate cases — field `always` KHÔNG được bỏ validate cases
 
-**⛔ KHÔNG propagate condition từ block/section xuống field bên trong:**
-- Nếu RSD ghi "Khối X ẩn khi điều kiện A" → **chỉ Khối X** là `conditional` với điều kiện A
-- Các field bên trong Khối X (field Y, field Z) → vẫn là `always` TRỪ KHI RSD ghi rõ riêng field đó cũng có điều kiện
-- KHÔNG được suy luận: "Khối X ẩn → field Y trong Khối X cũng ẩn theo điều kiện A"
-- Condition của field phải được quote từ ĐÚNG đoạn RSD nói về FIELD ĐÓ, không phải đoạn nói về block chứa nó
+**⛔ Condition của block KHÔNG truyền xuống field bên trong — mỗi field phải có điều kiện riêng trong RSD:**
+
+Ví dụ đúng khi RSD ghi "Khối Luồng trình ẩn khi Loại nghiệp vụ ≠ Cấp tín dụng":
+- Khối Luồng trình → `displayBehavior=conditional`, condition="Loại nghiệp vụ ≠ Cấp tín dụng", `section=ui_common`
+- Field "Mã luồng" bên trong Khối → `displayBehavior=always` (vì RSD không ghi điều kiện riêng cho field này)
+- Field "Tên luồng" bên trong Khối → `displayBehavior=always` (tương tự)
+
+Ví dụ đúng khi cả block và field đều có điều kiện riêng:
+- RSD ghi "Khối Luồng trình ẩn khi ..." VÀ "Field Kỳ hạn ẩn khi Loại kỳ = Ngắn hạn"
+- Khối Luồng trình → `conditional`, source trỏ đoạn về Khối
+- Field Kỳ hạn → `conditional`, source trỏ đoạn về Field Kỳ hạn (KHÁC đoạn về Khối)
+
+Condition của field phải được quote từ đúng đoạn RSD nói về FIELD ĐÓ, không phải đoạn nói về block chứa nó.
 
 **Sau Phase 1, với mỗi field in ra:**
 ```
@@ -376,6 +384,10 @@ After extraction, check for issues and **proactively ask user** before proceedin
   **Extraction rule:**
   - **Nếu có trong bảng** → copy **exact** nội dung cột message/thông báo, lưu vào `message` field
   - **Nếu không có trong tài liệu** → lưu `message: null`, khi gen expected result dùng mô tả hành vi (không đặt trong `""`, không bịa nội dung)
+
+  **Ví dụ đúng khi gen expected result:**
+  - RSD bảng có dòng: "Bỏ trống Tên SLA / Tên cấu hình SLA không được để trống" → `message="Tên cấu hình SLA không được để trống"` → expected: `Hiển thị lỗi: "Tên cấu hình SLA không được để trống"`
+  - RSD không đề cập message khi lưu thất bại → `message=null` → expected: `Hệ thống không lưu dữ liệu` (mô tả hành vi, không có `""` quanh message)
 - `enableDisableRules[]`: lấy từ RSD — **bắt buộc gán `targetType` và `section` cho từng rule:**
 
   | targetType | Đối tượng | section | Generate vào đâu |
@@ -383,6 +395,11 @@ After extraction, check for issues and **proactively ask user** before proceedin
   | `block` | Khối, Nhóm, Section ẩn/hiện | `ui_common` | ## Kiểm tra giao diện chung |
   | `field` | Field đơn lẻ enable/disable | `validate` | #### field tương ứng trong validate |
   | `button` | Button enable/disable | `function` | ## Kiểm tra chức năng |
+
+  **Ví dụ routing đúng:**
+  - RSD: "Khối Luồng trình ẩn khi Loại nghiệp vụ ≠ Cấp tín dụng" → `targetType=block`, `section=ui_common` → gen `### Kiểm tra giao diện khi Loại nghiệp vụ = "Cấp tín dụng"` trong "Kiểm tra giao diện chung"
+  - RSD: "Field Mã SLA disable khi trạng thái = Đã phê duyệt" → `targetType=field`, `section=validate` → gen case disable trong `#### Kiểm tra textbox "Mã SLA"`
+  - RSD: "Button Phê duyệt ẩn khi user không có quyền Checker" → `targetType=button`, `section=function` → gen case trong "Kiểm tra chức năng"
 - `autoFillRules[]`: lấy từ RSD mô tả auto-fill, cascading dependencies
 - `statusTransitions[]`: lấy từ RSD flow diagram hoặc mô tả luồng
 - `permissions[]`: lấy từ RSD phân quyền
@@ -439,7 +456,7 @@ Generate the test design following the format of the catalog examples (highest p
 2. **Mỗi điều kiện làm UI thay đổi** — 1 case riêng: đọc từ bảng luồng xử lý, mục enable/disable, hiển thị có điều kiện trong spec
 3. **Mỗi popup/modal** — 1 case riêng: liệt kê field/button bên trong
 
-**⚠️ Indentation — `  +` giữ trong cùng 1 bullet, `    -` tạo node con riêng (SAI):**
+**⚠️ Indentation — dùng `  +` (2 spaces + plus) để giữ nội dung trong cùng 1 bullet:**
 ```
 ĐÚNG:
 - Màn hình hiển thị:
@@ -447,10 +464,12 @@ Generate the test design following the format of the catalog examples (highest p
   + Nhóm Luồng trình: ẩn
   + Button: Lưu, Đẩy duyệt
 
-SAI:
+ĐÚNG:
 - Màn hình hiển thị:
-    - Nhóm Thông tin chung
-    - Button Lưu
+  + Khối Thông tin chính: Tên SLA, Loại nghiệp vụ, Ngày hiệu lực
+  + Khối Luồng trình: ẩn
+  + Khối Ghi chú: ẩn
+  + Button: Lưu, Đẩy duyệt, Thoát
 ```
 
 **Permission section (hardcoded):** No permission / has permission — 2 test cases.
@@ -532,7 +551,9 @@ Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
 - TỪNG field trong `inventory.fieldConstraints[]` → phải có `####` heading với validate cases
 - Field `displayBehavior=always` → KHÔNG được có enable/disable cases, CHỈ validate cases
 - Field `displayBehavior=conditional` → CÓ validate cases (khi field đang enable) + enable/disable cases
-- **⛔ KHÔNG đưa điều kiện ẩn/hiện của block/nhóm vào validate** — `targetType=block` chỉ thuộc giao diện chung
+- **⛔ Điều kiện ẩn/hiện của block/nhóm thuộc giao diện chung, KHÔNG vào validate:**
+  - ĐÚNG: "Khối Luồng trình ẩn khi Loại nghiệp vụ ≠ Cấp tín dụng" → `### Kiểm tra giao diện khi Loại nghiệp vụ = "Cấp tín dụng"` trong giao diện chung
+  - ĐÚNG: "Nhóm Thông tin thêm hiển thị khi chọn Loại = Ưu đãi" → `### Kiểm tra giao diện khi Loại = "Ưu đãi"` trong giao diện chung
 - TỪNG combobox/dropdown → có API timeout/error/rỗng cases?
 - **Expected result cho error messages:** `message != null` → dùng exact text trong `""` / `message = null` → mô tả hành vi, KHÔNG đặt trong `""`
 - Item nào sai hoặc thiếu → THÊM/SỬA bullet `### [SỬA]` ngay.
@@ -757,8 +778,7 @@ After running `test-genie init`, your project has this structure:
         - Giá trị 1
         - Giá trị 2
 
-#### Icon X
-- Kiểm tra hiển thị khi chọn giá trị
+- Kiểm tra hiển thị icon X khi chọn giá trị
     - Hiển thị icon X xóa nhanh
 - Kiểm tra hoạt động khi thực hiện thao tác xóa nhanh
     - Clear data đã chọn

@@ -85,12 +85,10 @@
     - Hệ thống hiển thị text "Dịch vụ thu phí" tại dropdown list  
   
 - Kiểm tra khi chọn giá trị = "Gói SPDV"
-  
+
     - Hệ thống hiển thị text "Gói SPDV" tại dropdown list
 
-#### Icon X
-
-- Kiểm tra hiển thị khi chọn giá trị
+- Kiểm tra hiển thị icon X khi chọn giá trị
 
     - Hiển thị icon X xóa nhanh ký tự nhập
 
@@ -187,12 +185,10 @@
     - Hệ thống hiển thị text "Tạo nháp (2)" tại dropdown list  
   
 - Kiểm tra khi chọn giá trị = "Chờ duyệt sửa (4)"
-  
+
     - Hệ thống hiển thị text "Chờ duyệt sửa (4)" tại dropdown list
 
-#### Icon X
-
-- Kiểm tra hiển thị khi chọn giá trị
+- Kiểm tra hiển thị icon X khi chọn giá trị
 
     - Hiển thị icon X xóa nhanh ký tự nhập
 
