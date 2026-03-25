@@ -253,6 +253,25 @@ After search returns results, **read the full example file** to understand the e
 5. Extract: button visibility rules by status/permission, additional features
 6. **Extract business logic:** điều kiện enable/disable, auto-fill rules, cascading dependencies, validation rules nghiệp vụ (VD: "Ngày hiệu lực phải >= ngày hiện tại", "Mã SLA unique"), error messages, luồng save/submit, status transitions
 
+**⚠️ Với mỗi field, phân loại `displayBehavior` dựa trên TEXT CHÍNH XÁC trong RSD — KHÔNG suy diễn:**
+
+| displayBehavior | Điều kiện xác định | Cases cần gen |
+|---|---|---|
+| `always` | RSD không đề cập điều kiện hiển thị, hoặc ghi rõ "luôn hiển thị" | **Chỉ validate cases** (maxLength, required, format...) |
+| `conditional` | RSD ghi rõ điều kiện: "hiển thị khi...", "ẩn khi...", "enable khi...", "disable khi..." | Validate cases (khi đang enable) **+ enable/disable cases** |
+
+**Quy tắc phân loại — tránh nhầm lẫn:**
+- Không có câu nào trong RSD mô tả điều kiện hiển thị/ẩn/enable/disable của field → `always`
+- RSD chỉ mô tả validate rule (VD: "bắt buộc", "tối đa 100 ký tự") → KHÔNG phải điều kiện hiển thị → `always`
+- `always` + `conditional` đều phải có validate cases — field `always` KHÔNG được bỏ validate cases
+
+**Sau Phase 1, với mỗi field in ra:**
+```
+- Tên SLA:          type=textbox,  displayBehavior=always     → source: "không có điều kiện"
+- Loại nghiệp vụ:   type=dropdown, displayBehavior=always     → source: "không có điều kiện"
+- Kỳ hạn:           type=dropdown, displayBehavior=conditional → source: RSD tr.5 "Hiển thị khi Loại NV = X"
+```
+
 **Phase 2: PTTK → field definitions (if available)**
 1. Find the exact screen/API in PTTK by name or endpoint
 2. **Extract ALL fields — không được bỏ sót bất kỳ field nào:**
@@ -470,15 +489,17 @@ Sau khi áp dụng template, supplement thêm với LLM: cross-field validation,
 In ra checklist đối chiếu sau khi generate xong validate section:
 ```
 Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
-[x] Textbox Tên SLA          → có #### heading
-[x] Dropdown Loại nghiệp vụ  → có #### heading
-[ ] Searchable Dropdown Luồng phê duyệt  ← THIẾU → THÊM NGAY
-[ ] Dropdown Kỳ hạn                      ← THIẾU → THÊM NGAY
+[x] Textbox Tên SLA          → always    → có #### validate cases
+[x] Dropdown Loại nghiệp vụ  → always    → có #### validate cases
+[ ] Searchable Dropdown Luồng phê duyệt → always ← THIẾU validate → THÊM NGAY
+[x] Dropdown Kỳ hạn          → conditional → có validate cases (khi enable) + enable/disable cases
 ```
-- TỪNG field trong `inventory.fieldConstraints[]` → phải có `####` heading
+- TỪNG field trong `inventory.fieldConstraints[]` → phải có `####` heading với validate cases
+- Field `displayBehavior=always` → KHÔNG được có enable/disable cases, CHỈ validate cases
+- Field `displayBehavior=conditional` → CÓ validate cases (khi field đang enable) + enable/disable cases
 - TỪNG combobox/dropdown → có API timeout/error/rỗng cases?
 - **Expected result cho error messages:** `message != null` → dùng exact text trong `""` / `message = null` → mô tả hành vi, KHÔNG đặt trong `""`
-- Item nào thiếu → THÊM bullet `### [SỬA]` ngay.
+- Item nào sai hoặc thiếu → THÊM/SỬA bullet `### [SỬA]` ngay.
 
 **For DETAIL screens:** Do NOT use field templates. Use `generateDetailDataSection()` — test data display, null/empty handling, SQL queries per field.
 
