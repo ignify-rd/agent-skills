@@ -76,3 +76,4 @@ This profile makes the generator reusable across different project templates.
 - `row_filters`: Guards to remove suite/header rows and metadata rows.
 - `bootstrap`: Sample first N test cases to infer base request signature (method/endpoint/headers/body) before full parsing.
 - `query_parsing`: Control whether to infer query params from `Step` for GET requests.
+- cURL source fields are parsed as a full baseline request when present (query/body/form-data/urlencoded), then step-level edits are applied.

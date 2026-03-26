@@ -21,11 +21,13 @@ import csv
 import json
 import logging
 import re
+import shlex
+import unicodedata
 import uuid
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import parse_qsl, urlencode, urlparse
 
 from google_sheet_input import is_google_sheet_url, read_google_sheet_rows
@@ -88,9 +90,9 @@ DEFAULT_PROFILE: Dict[str, Any] = {
             "test suite",
             "suite",
             "section",
-            "kiểm tra",
+            "kiem tra",
             "man hinh test",
-            "màn hình test",
+            "man hinh",
             "link pttk",
             "link rsd",
             "link jira",
@@ -347,7 +349,7 @@ def safe_json_loads(text: str) -> Optional[Any]:
 
 
 def parse_preconditions_context(preconditions_text: str) -> Dict[str, Any]:
-    context: Dict[str, Any] = {"method": "", "endpoint": "", "headers": {}, "body": {}}
+    context: Dict[str, Any] = {"method": "", "endpoint": "", "headers": {}, "body": {}, "query_params": {}}
     if not preconditions_text:
         return context
 
@@ -371,6 +373,10 @@ def parse_preconditions_context(preconditions_text: str) -> Dict[str, Any]:
     body_obj = safe_json_loads(body_block) if body_block else None
     if isinstance(body_obj, (dict, list)):
         context["body"] = body_obj
+
+    params_obj = parse_query_params(preconditions_text, require_marker=True)
+    if params_obj:
+        context["query_params"] = params_obj
 
     return context
 
@@ -413,15 +419,106 @@ def parse_loose_scalar(text: str) -> Any:
     return raw
 
 
+def to_query_string_value(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _extract_step_mutations(step_text: str) -> Tuple[Dict[str, Any], Set[str]]:
+    text = str(step_text or "")
+    if not text.strip():
+        return {}, set()
+
+    assignments: Dict[str, Any] = {}
+    deletions: Set[str] = set()
+
+    assign_patterns = [
+        r'"([A-Za-z0-9_]+)"\s*:\s*([^\n\r]+)',
+        r"^([A-Za-z0-9_.\-\[\]]+)\s*:\s*(.+)$"
+    ]
+
+    for pattern in assign_patterns:
+        for match in re.finditer(pattern, text, flags=re.MULTILINE):
+            key = match.group(1).strip()
+            value_raw = match.group(2).strip()
+            if not key:
+                continue
+            if re.match(r"^\d+\.$", key):
+                continue
+            lowered = key.lower()
+            if lowered in {"endpoint", "header", "headers", "params", "body"}:
+                continue
+            assignments[key] = parse_loose_scalar(value_raw)
+
+    for line in text.splitlines():
+        line_text = str(line).strip()
+        if not line_text:
+            continue
+        folded = unicodedata.normalize("NFKD", line_text)
+        folded = "".join(ch for ch in folded if not unicodedata.combining(ch)).lower()
+        if "xoa" not in folded and "khong truyen" not in folded:
+            continue
+        key_match = re.search(r'"([A-Za-z0-9_]+)"', line_text)
+        if not key_match:
+            key_match = re.search(r"([A-Za-z0-9_]+)\s*$", line_text)
+        if key_match:
+            deletions.add(key_match.group(1))
+
+    return assignments, deletions
+
+
+def _apply_mutations_to_kv_items(items: List[Dict[str, Any]], step_text: str) -> List[Dict[str, Any]]:
+    assignments, deletions = _extract_step_mutations(step_text)
+    if not assignments and not deletions:
+        return items
+
+    result: List[Dict[str, Any]] = []
+    seen: Set[str] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key", "")).strip()
+        if not key:
+            continue
+        if key in deletions:
+            continue
+        updated = dict(item)
+        if key in assignments:
+            updated["value"] = to_query_string_value(assignments[key])
+            seen.add(key)
+        result.append(updated)
+
+    for key, value in assignments.items():
+        if key in seen:
+            continue
+        result.append({"key": key, "value": to_query_string_value(value), "type": "text"})
+
+    return result
+
+
 def apply_step_body_mutations(base_body: Any, step_text: str) -> Any:
     if not step_text:
         return base_body
 
-    text = str(step_text)
-    assign_matches = list(re.finditer(r'"([A-Za-z0-9_]+)"\s*:\s*([^\n\r]+)', text))
-    delete_matches = list(re.finditer(r'(?i)x[oó]a\s+"?([A-Za-z0-9_]+)"?', text))
+    assignments, deletions = _extract_step_mutations(str(step_text))
+    if not assignments and not deletions:
+        return base_body
 
-    if not assign_matches and not delete_matches:
+    if isinstance(base_body, dict) and base_body.get("mode") == "formdata":
+        items = base_body.get("formdata", [])
+        if isinstance(items, list):
+            return {"mode": "formdata", "formdata": _apply_mutations_to_kv_items(items, step_text)}
+        return base_body
+
+    if isinstance(base_body, dict) and base_body.get("mode") == "urlencoded":
+        items = base_body.get("urlencoded", [])
+        if isinstance(items, list):
+            return {"mode": "urlencoded", "urlencoded": _apply_mutations_to_kv_items(items, step_text)}
         return base_body
 
     if isinstance(base_body, dict):
@@ -429,27 +526,28 @@ def apply_step_body_mutations(base_body: Any, step_text: str) -> Any:
     else:
         result = {}
 
-    for match in delete_matches:
-        key = match.group(1)
+    for key in deletions:
         if key in result:
             result.pop(key, None)
 
-    for match in assign_matches:
-        key = match.group(1)
-        value_raw = match.group(2).strip()
-        result[key] = parse_loose_scalar(value_raw)
+    for key, value in assignments.items():
+        result[key] = value
 
     return result
 
 
 def parse_query_params(value: Any, require_marker: bool = False) -> Dict[str, str]:
     if isinstance(value, dict):
-        return {str(k): str(v) for k, v in value.items() if str(k).strip()}
+        return {
+            str(k): to_query_string_value(v)
+            for k, v in value.items()
+            if str(k).strip()
+        }
     if isinstance(value, list):
         out: Dict[str, str] = {}
         for item in value:
             if isinstance(item, dict) and "key" in item:
-                out[str(item.get("key", "")).strip()] = str(item.get("value", ""))
+                out[str(item.get("key", "")).strip()] = to_query_string_value(item.get("value", ""))
         return {k: v for k, v in out.items() if k}
     if not isinstance(value, str):
         return {}
@@ -488,55 +586,156 @@ def parse_query_params(value: Any, require_marker: bool = False) -> Dict[str, st
         val = match.group(2).strip()
         if not key:
             continue
-        params[key] = str(parse_loose_scalar(val))
+        params[key] = to_query_string_value(parse_loose_scalar(val))
 
     return params
 
 
+def apply_step_query_mutations(base_params: Dict[str, str], step_text: str) -> Dict[str, str]:
+    if not isinstance(base_params, dict):
+        base_params = {}
+    result = dict(base_params)
+
+    assignments, deletions = _extract_step_mutations(str(step_text))
+    if not assignments and not deletions:
+        return result
+
+    for key in deletions:
+        result.pop(key, None)
+
+    for key, value in assignments.items():
+        result[key] = to_query_string_value(value)
+
+    return result
+
+
 def parse_curl_context(text: str) -> Dict[str, Any]:
-    context: Dict[str, Any] = {"method": "", "endpoint": "", "headers": {}, "body": {}}
+    context: Dict[str, Any] = {"method": "", "endpoint": "", "headers": {}, "body": {}, "query_params": {}}
     if not text or "curl" not in text.lower():
         return context
 
     normalized = re.sub(r"\\\s*[\r\n]+", " ", str(text))
     normalized = normalized.replace("\r", " ").replace("\n", " ")
 
-    method_match = re.search(r"(?:-X|--request)\s+([A-Za-z]+)", normalized, flags=re.IGNORECASE)
-    if method_match:
-        context["method"] = method_match.group(1).upper()
+    try:
+        tokens = shlex.split(normalized, posix=True)
+    except Exception:
+        tokens = normalized.split()
 
-    url_match = re.search(r"(https?://[^\s\"']+|\{\{[^}]+\}\}[^\s\"']+|/[-A-Za-z0-9_{}\/.?=&%]+)", normalized)
-    if url_match:
-        endpoint_raw = url_match.group(1).strip()
+    method = ""
+    endpoint_raw = ""
+    headers: Dict[str, str] = {}
+    query_params: Dict[str, str] = {}
+    raw_payloads: List[str] = []
+    urlencoded_entries: List[Dict[str, str]] = []
+    form_entries: List[Dict[str, str]] = []
+    force_query_mode = False
+
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else ""
+
+        if token in {"-X", "--request"} and nxt:
+            method = nxt.upper()
+            i += 2
+            continue
+        if token in {"-G", "--get"}:
+            force_query_mode = True
+            i += 1
+            continue
+        if token in {"-H", "--header"} and nxt:
+            if ":" in nxt:
+                k, v = nxt.split(":", 1)
+                headers[k.strip()] = v.strip()
+            i += 2
+            continue
+        if token in {"-d", "--data", "--data-raw", "--data-binary"} and nxt:
+            raw_payloads.append(nxt)
+            i += 2
+            continue
+        if token == "--data-urlencode" and nxt:
+            entry = nxt.strip()
+            if "=" in entry:
+                k, v = entry.split("=", 1)
+                urlencoded_entries.append({"key": k.strip(), "value": v.strip()})
+            elif entry:
+                urlencoded_entries.append({"key": entry, "value": ""})
+            i += 2
+            continue
+        if token in {"-F", "--form"} and nxt:
+            entry = nxt.strip()
+            if "=" in entry:
+                k, v = entry.split("=", 1)
+                value = v.strip()
+                item: Dict[str, str] = {"key": k.strip()}
+                if value.startswith("@"):
+                    item["type"] = "file"
+                    item["src"] = value[1:]
+                else:
+                    item["type"] = "text"
+                    item["value"] = value
+                form_entries.append(item)
+            i += 2
+            continue
+        if not endpoint_raw and (
+            token.startswith("http://")
+            or token.startswith("https://")
+            or token.startswith("/")
+            or token.startswith("{{")
+        ):
+            endpoint_raw = token
+        i += 1
+
+    if method:
+        context["method"] = method
+
+    if endpoint_raw:
+        parsed_url = urlparse(endpoint_raw)
+        if parsed_url.query:
+            for k, v in parse_qsl(parsed_url.query, keep_blank_values=True):
+                query_params[str(k)] = str(v)
         if endpoint_raw.startswith("http://") or endpoint_raw.startswith("https://"):
-            context["endpoint"] = endpoint_raw
+            context["endpoint"] = endpoint_raw.split("?", 1)[0]
         else:
-            endpoint_clean = re.sub(r"\{\{BASE_URL\}\}|\{BASE_URL\}", "", endpoint_raw, flags=re.IGNORECASE)
+            endpoint_clean = endpoint_raw.split("?", 1)[0]
+            endpoint_clean = re.sub(r"\{\{BASE_URL\}\}|\{BASE_URL\}", "", endpoint_clean, flags=re.IGNORECASE)
             context["endpoint"] = endpoint_clean if endpoint_clean.startswith("/") else f"/{endpoint_clean}"
 
-    headers: Dict[str, str] = {}
-    for header_match in re.finditer(r"(?:-H|--header)\s+(['\"])(.*?)\1", normalized):
-        header_text = header_match.group(2).strip()
-        if ":" in header_text:
-            k, v = header_text.split(":", 1)
-            headers[k.strip()] = v.strip()
     if headers:
         context["headers"] = headers
 
-    body_match = re.search(r"(?:--data-raw|--data-binary|--data|-d)\s+(['\"])(.*?)\1", normalized, flags=re.IGNORECASE)
-    if body_match:
-        payload = body_match.group(2)
-        parsed = safe_json_loads(payload)
-        if isinstance(parsed, (dict, list)):
-            context["body"] = parsed
-        elif payload.strip():
-            context["body"] = {"mode": "raw", "content": payload.strip()}
+    method_for_body = (method or context.get("method", "")).upper()
+    if force_query_mode or method_for_body == "GET":
+        for entry in urlencoded_entries:
+            key = str(entry.get("key", "")).strip()
+            if key:
+                query_params[key] = str(entry.get("value", ""))
+    elif urlencoded_entries:
+        context["body"] = {"mode": "urlencoded", "urlencoded": urlencoded_entries}
+
+    if form_entries:
+        context["body"] = {"mode": "formdata", "formdata": form_entries}
+    elif raw_payloads:
+        payload = raw_payloads[-1]
+        if force_query_mode or method_for_body == "GET":
+            for k, v in parse_qsl(payload, keep_blank_values=True):
+                query_params[str(k)] = str(v)
+        else:
+            parsed = safe_json_loads(payload)
+            if isinstance(parsed, (dict, list)):
+                context["body"] = parsed
+            elif payload.strip():
+                context["body"] = {"mode": "raw", "content": payload.strip()}
+
+    if query_params:
+        context["query_params"] = query_params
 
     return context
 
 
 def merge_request_context(*contexts: Dict[str, Any]) -> Dict[str, Any]:
-    merged: Dict[str, Any] = {"method": "", "endpoint": "", "headers": {}, "body": {}}
+    merged: Dict[str, Any] = {"method": "", "endpoint": "", "headers": {}, "body": {}, "query_params": {}}
     for ctx in contexts:
         if not isinstance(ctx, dict):
             continue
@@ -544,17 +743,19 @@ def merge_request_context(*contexts: Dict[str, Any]) -> Dict[str, Any]:
             merged["method"] = str(ctx.get("method", "")).upper()
         if not merged["endpoint"] and ctx.get("endpoint"):
             merged["endpoint"] = str(ctx.get("endpoint", "")).strip()
-        if not merged["headers"] and isinstance(ctx.get("headers"), dict) and ctx.get("headers"):
-            merged["headers"] = dict(ctx.get("headers", {}))
+        if isinstance(ctx.get("headers"), dict) and ctx.get("headers"):
+            merged["headers"].update({str(k): str(v) for k, v in dict(ctx.get("headers", {})).items()})
         if not merged["body"] and ctx.get("body"):
             merged["body"] = ctx.get("body")
+        if isinstance(ctx.get("query_params"), dict) and ctx.get("query_params"):
+            merged["query_params"].update({str(k): str(v) for k, v in dict(ctx.get("query_params", {})).items()})
     return merged
 
 
 def build_bootstrap_context(rows: List[Dict[str, Any]], profile: Dict[str, Any]) -> Dict[str, Any]:
     bootstrap_cfg = profile.get("bootstrap", {})
     if not bool(bootstrap_cfg.get("enabled", True)):
-        return {"method": "", "endpoint": "", "headers": {}, "body": {}}
+        return {"method": "", "endpoint": "", "headers": {}, "body": {}, "query_params": {}}
 
     sample_size = int(bootstrap_cfg.get("sample_size", 8))
     sample_rows = rows[: max(1, sample_size)]
@@ -574,7 +775,7 @@ def build_bootstrap_context(rows: List[Dict[str, Any]], profile: Dict[str, Any])
             or ""
         )
 
-        ctx = merge_request_context(parse_preconditions_context(str(pre_text)), parse_curl_context(str(curl_text)))
+        ctx = merge_request_context(parse_curl_context(str(curl_text)), parse_preconditions_context(str(pre_text)))
 
         method = str(ctx.get("method", "")).upper().strip()
         endpoint = str(ctx.get("endpoint", "")).strip()
@@ -593,6 +794,7 @@ def build_bootstrap_context(rows: List[Dict[str, Any]], profile: Dict[str, Any])
         "endpoint": endpoint_counter.most_common(1)[0][0] if endpoint_counter else "",
         "headers": headers_candidate or {},
         "body": body_candidate or {},
+        "query_params": {}
     }
 
 
@@ -746,7 +948,7 @@ def build_test_case(
 
     preconditions_context = parse_preconditions_context(str(raw_preconditions or ""))
     curl_context = parse_curl_context(str(_pick_from_aliases(row, profile, "curl") or raw_step_text or ""))
-    baseline_context = merge_request_context(preconditions_context, curl_context, bootstrap_context or {})
+    baseline_context = merge_request_context(curl_context, preconditions_context, bootstrap_context or {})
 
     method = str(raw_method or extracted.get("method") or baseline_context.get("method") or fallback_method(row)).upper()
     if method not in HTTP_METHODS:
@@ -773,6 +975,12 @@ def build_test_case(
     body = apply_step_body_mutations(body, str(raw_step_text or ""))
     expected_status = parse_expected_status(raw_expected_status, int(defaults.get("expected_status", 200)))
     query_params = parse_query_params(raw_query_params) if raw_query_params else {}
+    if not query_params and isinstance(baseline_context.get("query_params"), dict):
+        query_params = dict(baseline_context.get("query_params", {}))
+
+    if query_params or method == "GET":
+        query_params = apply_step_query_mutations(query_params, str(raw_step_text or ""))
+
     query_cfg = profile.get("query_parsing", {})
     from_step_when_get = bool(query_cfg.get("from_step_when_get", True))
     require_marker = bool(query_cfg.get("require_params_marker", True))
@@ -1265,3 +1473,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

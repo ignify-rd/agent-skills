@@ -36,6 +36,19 @@ Before full conversion, inspect the first 5-10 valid test cases to infer a base 
 
 This prevents wrong parsing when the template stores request details in mixed text blocks.
 
+### Request Reconstruction Strategy
+
+- Prefer full request baseline from cURL blocks when available.
+- Supported cURL extraction:
+  - method, endpoint, headers
+  - query from URL and `--data-urlencode`/`-G`
+  - raw JSON body (`-d`, `--data-raw`, `--data-binary`)
+  - `form-data` (`-F/--form`) including file entries (`@file`)
+  - `x-www-form-urlencoded` body (`--data-urlencode` for non-GET)
+- Apply `Step` mutations on top of the baseline request:
+  - replace key values (query/body/form fields)
+  - remove keys with phrases like `xoa` / `khong truyen` / ...
+
 ### Step 1: Build profile from a sample file
 
 Run:
