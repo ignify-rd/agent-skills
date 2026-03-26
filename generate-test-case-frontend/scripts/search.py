@@ -173,10 +173,10 @@ def parse_csv_file(filepath):
                 current_suite = safe_col(row, 0)
                 continue
 
-            # Test case row: must have externalId or testCaseName
+            # Test case row: must have testCaseName (rows with only externalId are metadata/legend rows)
             ext_id = safe_col(row, COL["externalId"])
             case_name = safe_col(row, COL["testCaseName"])
-            if not ext_id and not case_name:
+            if not case_name:
                 continue
 
             test_cases.append({
@@ -272,10 +272,9 @@ def search_cases(query, directory, max_results=MAX_RESULTS):
 
     results = []
     for idx, score in ranked[:max_results]:
-        if score > 0:
-            case = dict(cases[idx])
-            case['_score'] = round(score, 2)
-            results.append(case)
+        case = dict(cases[idx])
+        case['_score'] = round(score, 2)
+        results.append(case)
 
     return {
         "query": query,
@@ -389,7 +388,7 @@ if __name__ == "__main__":
     parser.add_argument("--domain", "-d", choices=["api", "frontend", "mobile"])
     parser.add_argument("--data-dir", help="Override catalog directory (default: auto-detect)")
     parser.add_argument("--project-root", help="Explicit project root path (auto-detected if omitted)")
-    parser.add_argument("--max-results", "-n", type=int, default=MAX_RESULTS)
+    parser.add_argument("--max-results", "-n", "--top", type=int, default=MAX_RESULTS, dest="max_results")
     parser.add_argument("--list", "-l", action="store_true")
     parser.add_argument("--full", "-f", action="store_true", help="Output top 3 as JSON")
     parser.add_argument("--ref", "-r", metavar="NAME", help="Read a reference file")
