@@ -13,7 +13,8 @@
     "test-design-generator-api/",
     "test-design-generator-frontend/",
     "test-case-generator-api/",
-    "test-case-generator-frontend/"
+    "test-case-generator-frontend/",
+    "postman-collection-generator/"
   ],
   "scripts": {
     "test": "node bin/test-genie.js --help && node bin/test-genie.js versions --help && node bin/test-genie.js init --help && node bin/test-genie.js update --help"

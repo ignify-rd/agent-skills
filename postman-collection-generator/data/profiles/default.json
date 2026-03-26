@@ -1,0 +1,71 @@
+{
+  "name": "default",
+  "aliases": {
+    "id": ["ID", "Test Case ID", "Case ID", "External ID"],
+    "name": ["Name", "Test Case Name", "Title", "Test Name"],
+    "method": ["Method", "HTTP Method", "Verb"],
+    "endpoint": ["Endpoint", "Path", "URL", "API"],
+    "headers": ["Headers", "Header", "Request Headers"],
+    "body": ["Body", "Request Body", "Payload"],
+    "auth_type": ["Auth Type", "Auth", "Authentication Type"],
+    "auth_token": ["Auth Token", "Token", "Access Token"],
+    "expected_status": ["Expected Status", "Status Code", "Expected Code"],
+    "description": ["Description", "Details", "Summary"],
+    "preconditions": ["PreConditions", "Pre-conditions", "Preconditions"],
+    "query_params": ["Params", "Query", "Query Params", "QueryParameters"],
+    "curl": ["cURL", "Curl", "Raw Request", "Request CURL", "Request"],
+    "prerequest_script": ["Pre-request Script", "Pre Script", "Prerequest"],
+    "test_script": ["Test Script", "Post Script", "Tests"],
+    "response_assertions": ["Response Assertions", "Assertions"]
+  },
+  "defaults": {
+    "auth_type": "bearer",
+    "auth_token": "{{globalToken}}",
+    "expected_status": 200,
+    "base_url_variable": "{{serviceUrl}}"
+  },
+  "regex_extractors": [
+    {
+      "target": "method",
+      "sources": ["Step", "Action", "Description", "Details"],
+      "pattern": "\\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\\b",
+      "group": 1
+    },
+    {
+      "target": "endpoint",
+      "sources": ["Step", "Action", "Description", "Details"],
+      "pattern": "(\\/[-A-Za-z0-9_{}\\/.]*)",
+      "group": 1
+    }
+  ],
+  "default_headers": {
+    "Content-Type": "application/json"
+  },
+  "row_filters": {
+    "allow_root_endpoint": false,
+    "allow_non_ascii_endpoint": false,
+    "skip_if_no_method_and_endpoint": true,
+    "skip_if_sparse_row": true,
+    "sparse_non_empty_threshold": 2,
+    "suite_header_keywords": [
+      "test suite",
+      "suite",
+      "section",
+      "kiểm tra",
+      "man hinh test",
+      "màn hình test",
+      "link pttk",
+      "link rsd",
+      "link jira",
+      "link jra"
+    ]
+  },
+  "bootstrap": {
+    "enabled": true,
+    "sample_size": 8
+  },
+  "query_parsing": {
+    "from_step_when_get": true,
+    "require_params_marker": true
+  }
+}

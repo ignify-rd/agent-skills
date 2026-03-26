@@ -14,6 +14,7 @@ const SKILLS = [
   'test-design-generator-frontend',
   'test-case-generator-api',
   'test-case-generator-frontend',
+  'postman-collection-generator',
 ];
 
 // Map AI name → subdirectory base (relative to cwd, or absolute for codex)

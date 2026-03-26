@@ -1,0 +1,124 @@
+---
+name: generate-postman-collection
+description: Generate Postman collection JSON from project-specific API test case templates (CSV/JSON) using configurable field mapping profiles. Use when user asks to export API test cases to Postman, convert spreadsheet or test case files to Postman, or support multiple project formats without hardcoding.
+---
+
+# Postman Collection Generator
+
+Generate a Postman Collection v2.1.0 from CSV or JSON input with a template-agnostic profile.
+
+## Core Idea
+
+- Do not hardcode per-project column names in code.
+- Normalize each project template through a profile JSON.
+- Keep generation logic stable and only adjust profile for each project.
+
+## Required Scripts
+
+- `scripts/build_profile.py`
+  - Detects likely field mapping from a sample template file.
+  - Outputs a profile JSON that can be edited for project-specific rules.
+- `scripts/generate_postman_collection.py`
+  - Reads input file + profile.
+  - Converts rows to canonical test cases.
+  - Outputs a `.postman_collection.json` file.
+
+## Workflow
+
+### Step 0: Bootstrap Request Signature (Mandatory)
+
+Before full conversion, inspect the first 5-10 valid test cases to infer a base request pattern:
+
+- method and endpoint
+- default headers
+- base body template
+- cURL/raw request style if present in `PreConditions` or `Details`
+
+This prevents wrong parsing when the template stores request details in mixed text blocks.
+
+### Step 1: Build profile from a sample file
+
+Run:
+
+```bash
+python scripts/build_profile.py --input <sample.csv|sample.json> --output data/profiles/<project>.json
+```
+
+Or build directly from Google Sheet URL:
+
+```bash
+python scripts/build_profile.py \
+  --sheet-url "https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit#gid=<GID>" \
+  --sheet-name "<Tab Name>" \
+  --output data/profiles/<project>.json
+```
+
+Then review and edit:
+
+- `aliases` for column mapping
+- `defaults` for missing values
+- `regex_extractors` when method/endpoint/body is embedded in text fields
+- `row_filters` to remove suite headers/metadata rows
+- `bootstrap` to control initial sample size for request signature inference
+
+### Step 2: Generate collection
+
+Run:
+
+```bash
+python scripts/generate_postman_collection.py \
+  --input <test-cases.csv|test-cases.json> \
+  --output <collection.postman_collection.json> \
+  --profile data/profiles/<project>.json \
+  --collection-name "<Project API Collection>"
+```
+
+Generate directly from Google Sheet URL:
+
+```bash
+python scripts/generate_postman_collection.py \
+  --sheet-url "https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit#gid=<GID>" \
+  --sheet-name "<Tab Name>" \
+  --output <collection.postman_collection.json> \
+  --profile data/profiles/<project>.json \
+  --collection-name "<Project API Collection>"
+```
+
+## Input Support
+
+- CSV with headers
+- JSON list of objects
+- JSON object containing one list value (`items`, `rows`, etc.)
+- Google Sheet URL (`docs.google.com/spreadsheets/...`) with OAuth Desktop authentication
+
+## Google Auth
+
+- Reuses shared `google_auth.py` from installed `test-case-generator-api` or `test-case-generator-frontend` skill.
+- Optional credentials override:
+  - `--credentials /path/to/credentials.json`
+- First run may open browser for OAuth consent.
+
+## Profile Rules
+
+Profile file structure and options are documented in:
+
+- `references/profile-schema.md`
+
+Default profile template:
+
+- `data/profiles/default.json`
+
+## Fallback Behavior
+
+- If profile is missing field aliases, script uses default aliases.
+- If method/endpoint columns are missing, script attempts regex extraction from text fields.
+- If headers/body cannot be parsed as JSON, script falls back to plain text raw body and key-value headers.
+- Query params are only extracted from `Step` when a clear `Params` marker exists (to avoid false positives).
+  - Disable this behavior by setting `query_parsing.from_step_when_get = false` in profile.
+
+## Validation
+
+After generation:
+
+- Verify collection has expected request count.
+- Spot-check auth, headers, URL paths, and request body mode in Postman UI.
