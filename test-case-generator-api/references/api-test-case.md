@@ -2,6 +2,11 @@
 
 > **⚠️ Style/wording**: Các ví dụ trong file này là **format mặc định** (fallback). Nếu project có catalog examples → output PHẢI follow style/wording của catalog, KHÔNG copy format mẫu từ file này. File này chỉ cung cấp **rules và logic**.
 
+> **🚫 NGUYÊN TẮC CHỐNG HALLUCINATION — BẮT BUỘC TUÂN THỦ:**
+> 1. Mọi giá trị cụ thể trong test case (error codes, error messages, field names, table names, response fields, DB fields, endpoint paths) PHẢI được trích dẫn trực tiếp từ tài liệu (RSD/PTTK/mindmap).
+> 2. Nếu thông tin **không có trong tài liệu** → DỪNG lại, thông báo cho user, KHÔNG tự suy luận hay điền giá trị tự đặt ra.
+> 3. Các giá trị trong ví dụ của file này (`PCER_001`, `PCER_009`, `PROMOTION_CUSTOMER_PENDING`, `poErrorCode`, `poErrorDesc`, `FEE_ENGINE.FEE_TABLE`, `batchId=10001`...) là từ **project demo cũ** — **TUYỆT ĐỐI KHÔNG copy sang output** của project khác.
+
 ## Pipeline tổng thể
 
 ```
@@ -320,7 +325,7 @@ expectedResult:
      1.3. DB: SELECT ... FROM {table} WHERE {condition} → verify {field} = {expected_value}
 ```
 
-**Ví dụ (Upload uploadType=1):**
+**Ví dụ** _(minh họa format — các giá trị uploadType, PTTK, QLTKCN, PROMOTION_CUSTOMER_PENDING là từ project demo, KHÔNG copy vào output thực)_:
 ```
 testCaseName: "Luồng chính_Upload file thêm mới thành công (uploadType=1)"
 step: "1. Chuẩn bị file .xlsx hợp lệ 5 bản ghi\n2. data: uploadType=1, domainType=\"1\", feeService=\"QLTKCN\"\n3. Send API"
@@ -345,7 +350,7 @@ step: "1. Tạo điều kiện: {điều kiện cụ thể}\n2. Send API"
 expectedResult: "1. Check api trả về:\n   1.1. Status: 200\n   1.2. Response: {expected cho nhánh này}\n   1.3. DB: {verify side effect của nhánh này}"
 ```
 
-**Ví dụ (uploadType phân nhánh):**
+**Ví dụ** _(minh họa format — các giá trị uploadType, PENDING là từ project demo, KHÔNG copy vào output thực)_:
 ```
 Branch TRUE  → testCaseName: "Luồng chính_uploadType=1 tạo bản ghi PENDING với action THÊM MỚI"
 Branch FALSE → testCaseName: "Luồng chính_uploadType=2 tạo bản ghi PENDING với action XOÁ"
@@ -368,7 +373,7 @@ Khi có **≥2 điều kiện** cùng ảnh hưởng output, tạo bảng quyế
 3. Prune: loại tổ hợp impossible (không bao giờ xảy ra trong thực tế)
 4. Nhóm các tổ hợp có cùng expected result → 1 test đại diện
 
-**Ví dụ (3 điều kiện: uploadType × domainType × feeService):**
+**Ví dụ** _(minh họa format — uploadType, domainType, PCER_009 là từ project demo, KHÔNG copy vào output thực. Điều kiện và error codes phải lấy từ RSD/PTTK của project hiện tại)_:
 
 | uploadType | domainType | feeService | Expected | Test case? |
 |-----------|-----------|------------|----------|-----------|
@@ -420,7 +425,7 @@ expectedResult: "1. Check DB:\n   SELECT {fields} FROM {TABLE}\n   WHERE {condit
 - Verify **dữ liệu input xuất hiện đúng** trong DB (file name, upload type, fee service...)
 - Nếu có **nhiều table**: mỗi table = 1 test case riêng
 
-**Ví dụ:**
+**Ví dụ** _(minh họa format — PROMOTION_CUSTOMER_PENDING, QLTKCN, batchId là từ project demo, KHÔNG copy vào output thực. Tên bảng và fields phải lấy từ RSD/PTTK của project hiện tại)_:
 ```
 testCaseName: "DB_PROMOTION_CUSTOMER_PENDING_Kiểm tra bản ghi được INSERT đúng"
 step: "1. Upload file với uploadType=1, domainType=\"1\", feeService=\"QLTKCN\"\n2. Send API thành công, nhận batchId=10001"
@@ -448,7 +453,7 @@ expectedResult: "1. Check api trả về:\n   1.1. Status: 200\n   1.2. Response
 ```
 
 **Quy tắc:**
-- Nếu RSD không mô tả error code cho external failure → dùng error code generic ("2", "500", hoặc theo convention project)
+- Nếu RSD không mô tả error code cho external failure → **DỪNG**, hỏi user: "RSD không định nghĩa error code khi {serviceName} thất bại — bạn muốn test case này dùng error code nào?" — **KHÔNG tự điền code generic hay bịa error code**.
 - Luôn verify **rollback behavior**: khi external call fail, data không bị ghi dở vào DB
 
 ---
@@ -482,6 +487,8 @@ Nếu bất kỳ ô nào chưa tích → tự append trước khi kết thúc ba
 ---
 
 ## Standard Validate Cases cho String Field
+
+> **⚠️ Quy tắc cho expectedResult = "Theo RSD":** Bắt buộc tìm giá trị này trong tài liệu trước khi sinh test case. Nếu không tìm thấy → **bỏ qua test case đó** và ghi vào coverage report: "⚠️ Không tìm thấy behavior cho [case] trong tài liệu — đã bỏ qua". **KHÔNG suy luận hay giả định kết quả.** Quy tắc này áp dụng cho tất cả các Standard Validate tables bên dưới.
 
 Mỗi string field cần cover các cases:
 

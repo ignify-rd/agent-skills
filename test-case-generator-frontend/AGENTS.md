@@ -134,6 +134,14 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 - 1 test = 1 check (atomic), max 80 chars testCaseName
 - Forbidden phrases: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
 
+## ⚠️ Anti-Hallucination Rules — BẮT BUỘC
+
+- **Mọi giá trị** trong output (field names, error messages, placeholder text, dropdown values, screen paths, API endpoints) PHẢI trích dẫn từ RSD/PTTK/mindmap.
+- **KHÔNG bao giờ** sử dụng kiến thức chung hoặc giá trị từ ví dụ trong references — đó là dữ liệu demo.
+- **Nếu thông tin không có trong tài liệu** → DỪNG lại, báo cáo user cụ thể phần nào còn thiếu, đợi bổ sung. KHÔNG tự điền hay suy luận.
+- **Template variables** (`{N}`, `{warning}`, `{requiredMessage}`, `{allowSpecialChars}`...) phải được điền từ tài liệu. Nếu không tìm thấy → bỏ qua test case đó hoặc hỏi user.
+- **Inventory items** (Step 4c) phải có `source` trỏ đến trang/section trong tài liệu — item không có nguồn → không được đưa vào inventory.
+
 ## Format Differences
 
 | Aspect | API | Frontend |

@@ -180,6 +180,11 @@ Parse: Line 1 = API name → `preConditions`; ## headings = test suites → `tes
 
 ### Step 4c: Business Logic Inventory
 
+**⚠️ NGUYÊN TẮC TRÍCH XUẤT — KHÔNG HALLUCINATE:**
+- Mỗi item trong inventory PHẢI có field `"source"` ghi rõ trang/section trong tài liệu.
+- Nếu không tìm thấy nguồn trong RSD/PTTK → **KHÔNG thêm item vào inventory**. Ghi nhận là missing và hỏi user.
+- **KHÔNG suy luận** error codes, table names, field names, hay business rules dựa trên kiến thức chung.
+
 Extract complete inventory before generating. Output as internal JSON:
 
 ```json
@@ -187,25 +192,25 @@ Extract complete inventory before generating. Output as internal JSON:
   "apiName": "string",
   "endpoint": "METHOD /path",
   "errorCodes": [
-    { "code": "PCER_001", "desc": "exact message", "triggerCondition": "condition", "section": "validate|main" }
+    { "code": "PCER_001", "desc": "exact message từ tài liệu", "triggerCondition": "condition", "section": "validate|main", "source": "RSD trang X / PTTK section Y" }
   ],
   "businessRules": [
-    { "id": "BR1", "type": "branch", "condition": "x = 1", "trueBranch": "do A", "falseBranch": "do B" }
+    { "id": "BR1", "type": "branch", "condition": "x = 1", "trueBranch": "do A", "falseBranch": "do B", "source": "RSD trang X" }
   ],
   "modes": [
-    { "name": "Thêm mới", "triggerValue": "type=1", "expectedAction": "INSERT" }
+    { "name": "Thêm mới", "triggerValue": "type=1", "expectedAction": "INSERT", "source": "Ảnh X" }
   ],
   "dbOperations": [
-    { "table": "TABLE_NAME", "operation": "INSERT", "fieldsToVerify": ["COL1", "COL2"] }
+    { "table": "TABLE_NAME", "operation": "INSERT", "fieldsToVerify": ["COL1", "COL2"], "source": "RSD trang X / PTTK section Y" }
   ],
   "externalServices": [
-    { "name": "S3", "onFailure": "error code 2", "rollbackBehavior": "không INSERT DB" }
+    { "name": "S3", "onFailure": "error code từ RSD", "rollbackBehavior": "mô tả từ RSD", "source": "RSD trang X" }
   ],
   "statusTransitions": [
-    { "from": "N/A", "to": "WAITING (1)", "trigger": "success" }
+    { "from": "N/A", "to": "WAITING (1)", "trigger": "success", "source": "PTTK trang X" }
   ],
   "decisionCombinations": [
-    { "conditions": {"type": 1, "flag": true}, "expected": "success" }
+    { "conditions": {"type": 1, "flag": true}, "expected": "success", "source": "RSD trang X" }
   ]
 }
 ```

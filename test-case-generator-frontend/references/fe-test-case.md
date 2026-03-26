@@ -4,6 +4,11 @@
 >
 > **⚠️ Style/wording**: Các ví dụ trong file này là **format mặc định** (fallback). Nếu project có catalog examples → output PHẢI follow style/wording của catalog, KHÔNG copy format mẫu từ file này. File này chỉ cung cấp **rules và logic**.
 
+> **🚫 NGUYÊN TẮC CHỐNG HALLUCINATION — BẮT BUỘC TUÂN THỦ:**
+> 1. Mọi giá trị cụ thể trong test case (field names, error messages, placeholder text, dropdown values, screen paths, API endpoints) PHẢI được trích dẫn trực tiếp từ tài liệu (RSD/PTTK/mindmap).
+> 2. Nếu thông tin **không có trong tài liệu** → DỪNG lại, thông báo cho user, KHÔNG tự suy luận hay điền giá trị tự đặt ra.
+> 3. **Template variables** trong bảng Standard Validate Cases (`{allowSpecialChars}`, `{isSingleSelect}`, `{requiredMessage}`, `{warning}`, `{text}`, `{N}`, `{maxSearchLen}`...) phải được điền bằng giá trị thực từ RSD/PTTK. Nếu không tìm thấy giá trị trong tài liệu → **bỏ qua test case đó**, ghi vào coverage report: "⚠️ Không tìm thấy [thông tin] trong tài liệu — đã bỏ qua". **KHÔNG tự đặt giá trị.**
+
 ## Pipeline tổng thể
 
 ```
@@ -361,6 +366,11 @@ Nếu bất kỳ ô nào chưa tích → tự append trước khi kết thúc ba
 - Emoji, XSS, SQL injection: luôn sinh, expectedResult = chặn (trừ khi tài liệu nói cho phép)
 - MinLen cases: chỉ sinh khi field có minLength constraint
 - Required/format cases: chỉ sinh khi field có isRequired/validationPattern
+
+**⚠️ Quy tắc cho template variables chưa rõ:**
+- `{N}` (maxLength), `{minLen}`, `{maxSearchLen}`: bắt buộc lấy từ PTTK/RSD. Nếu không có → **bỏ qua các test cases liên quan đến giới hạn ký tự**, ghi chú vào coverage report.
+- `{warning}`, `{requiredMessage}`, `{formatErrorMessage}`, `{text}` (placeholder): lấy từ RSD/PTTK. Nếu không có → dùng `"Hiển thị thông báo lỗi"` làm expectedResult tạm và đánh dấu `[cần xác nhận message]` trong note field.
+- `{allowSpecialChars}`, `{allowSpaces}`, `{isSingleSelect}`: xác định từ RSD/PTTK. Nếu không định nghĩa → **hỏi user** trước khi sinh test case.
 
 ---
 

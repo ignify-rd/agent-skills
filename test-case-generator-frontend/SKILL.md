@@ -175,6 +175,11 @@ Parse: Line 1 = Screen name → `preConditions`; ## headings = test suites → `
 
 ### Step 4c: Business Logic Inventory
 
+**⚠️ NGUYÊN TẮC TRÍCH XUẤT — KHÔNG HALLUCINATE:**
+- Mỗi item trong inventory PHẢI có field `"source"` ghi rõ trang/section trong tài liệu.
+- Nếu không tìm thấy nguồn trong RSD/PTTK → **KHÔNG thêm item vào inventory**. Ghi nhận là missing và hỏi user.
+- **KHÔNG suy luận** error messages, field names, hay business rules dựa trên kiến thức chung.
+
 Extract complete inventory before generating. Output as internal JSON:
 
 ```json
@@ -182,25 +187,25 @@ Extract complete inventory before generating. Output as internal JSON:
   "screenName": "Tên màn hình",
   "screenType": "FORM|LIST|POPUP|DETAIL",
   "fieldConstraints": [
-    { "field": "Tên cấu hình SLA", "type": "textbox", "maxLength": 100, "required": true, "source": "RSD" }
+    { "field": "Tên cấu hình SLA", "type": "textbox", "maxLength": 100, "required": true, "source": "RSD trang X / PTTK section Y" }
   ],
   "businessRules": [
-    { "id": "BR1", "type": "validation", "condition": "Tên đã tồn tại", "expected": "Hiển thị cảnh báo", "section": "validate" }
+    { "id": "BR1", "type": "validation", "condition": "Tên đã tồn tại", "expected": "Hiển thị cảnh báo", "section": "validate", "source": "RSD trang X" }
   ],
   "errorMessages": [
-    { "trigger": "Bỏ trống field bắt buộc", "message": "exact message", "section": "validate" }
+    { "trigger": "Bỏ trống field bắt buộc", "message": "exact message từ tài liệu", "section": "validate", "source": "RSD trang X" }
   ],
   "enableDisableRules": [
-    { "field": "Button Lưu", "condition": "Form chưa nhập đủ", "state": "disable" }
+    { "field": "Button Lưu", "condition": "Form chưa nhập đủ", "state": "disable", "source": "Ảnh 2" }
   ],
   "autoFillRules": [
-    { "trigger": "Chọn giá trị X", "target": "Field Y", "action": "auto-fill" }
+    { "trigger": "Chọn giá trị X", "target": "Field Y", "action": "auto-fill", "source": "RSD trang X" }
   ],
   "statusTransitions": [
-    { "from": "Draft", "to": "Active", "trigger": "Click Phê duyệt" }
+    { "from": "Draft", "to": "Active", "trigger": "Click Phê duyệt", "source": "PTTK trang X" }
   ],
   "permissions": [
-    { "action": "Tạo mới", "role": "Maker" }
+    { "action": "Tạo mới", "role": "Maker", "source": "RSD trang X" }
   ]
 }
 ```
