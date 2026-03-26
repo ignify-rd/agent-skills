@@ -14,7 +14,7 @@ Generate comprehensive test design documents (.md) for API endpoints from RSD an
 - User provides RSD/PTTK for an API endpoint and asks to generate test design or mindmap
 - User says "sinh test design api", "tạo test design api", "tao mindmap api"
 - User uploads .pdf/.txt/.md files for API test design / mindmap generation
-- Called internally by `test-case-generator-api` skill when user provides only RSD+PTTK without a mindmap
+- Called internally by `generate-test-case-api` skill when user provides only RSD+PTTK without a mindmap
 
 ## Prerequisites
 
@@ -121,11 +121,11 @@ All rules from project AGENTS.md apply as overrides throughout the remaining ste
 #### Resolve SKILL_SCRIPTS path
 
 ```bash
-SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-design-generator-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+SKILL_SCRIPTS=$(find . -name "search.py" -path "*/generate-test-design-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
 # Fallback: check .claude/skills, .cursor/skills, .windsurf/skills, .roo/skills, .kiro/skills, or global npm
 ```
 
-If all fail → Read reference files directly from `<skills-dir>/test-design-generator-api/references/`. **⚠️ NEVER proceed without loading references.**
+If all fail → Read reference files directly from `<skills-dir>/generate-test-design-api/references/`. **⚠️ NEVER proceed without loading references.**
 
 **Note:** `search.py` auto-detects the project root by looking for `catalog/` or `AGENTS.md`. You can also pass `--project-root /path/to/project` explicitly.
 
@@ -430,7 +430,7 @@ Item nào thiếu → THÊM bullet `### [SỬA] Kiểm tra ...`
 
 Load quality rules and verify:
 ```bash
-python <skills-root>/test-design-generator-api/scripts/search.py --ref quality-rules
+python <skills-root>/generate-test-design-api/scripts/search.py --ref quality-rules
 ```
 
 Checklist:
@@ -454,7 +454,7 @@ To add new reference examples:
 ### List Available Examples
 
 ```bash
-python <skills-root>/test-design-generator-api/scripts/search.py --list
+python <skills-root>/generate-test-design-api/scripts/search.py --list
 ```
 
 ## Project Structure
@@ -464,7 +464,7 @@ After running `test-genie init`, your project has this structure:
 ```
 <project-root>/
 ├── node_modules/test-genie/           ← Skills live here (managed by npm)
-│   ├── test-design-generator-api/
+│   ├── generate-test-design-api/
 │   │   ├── SKILL.md                      ← Workflow instructions (this file)
 │   │   ├── AGENTS.md                     ← Skill-level default rules
 │   │   ├── references/                   ← Detailed rules (dev-managed)
@@ -476,7 +476,7 @@ After running `test-genie init`, your project has this structure:
 │   │   │   └── api-rules.csv             ← Format rules (searchable via --domain rules)
 │   │   └── scripts/
 │   │       └── search.py                 ← Catalog search (auto-detects project root)
-│   └── test-case-generator-api/
+│   └── generate-test-case-api/
 │       └── ...
 ├── .claude/commands/                  ← Claude slash commands (auto-generated)
 │   └── generate-test-design-api.md

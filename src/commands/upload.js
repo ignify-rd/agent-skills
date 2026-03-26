@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const PACKAGE_ROOT = join(__dirname, '..', '..');
-const SCRIPTS_DIR = join(PACKAGE_ROOT, 'test-case-generator-api', 'scripts');
+const SCRIPTS_DIR = join(PACKAGE_ROOT, 'generate-test-case-api', 'scripts');
 
 function getPythonCommand() {
   // On Windows, also check 'py -3' (Python Launcher)

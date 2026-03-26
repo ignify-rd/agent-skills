@@ -106,7 +106,7 @@ python scripts/generate_postman_collection.py \
 
 ## Google Auth
 
-- Reuses shared `google_auth.py` from installed `test-case-generator-api` or `test-case-generator-frontend` skill.
+- Reuses shared `google_auth.py` from installed `generate-test-case-api` or `generate-test-case-frontend` skill.
 - Optional credentials override:
   - `--credentials /path/to/credentials.json`
 - First run may open browser for OAuth consent.
