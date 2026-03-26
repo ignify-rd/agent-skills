@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from 'fs';
 import os from 'os';
 import { logger } from '../utils/logger.js';
 
@@ -15,6 +15,8 @@ const SKILLS = [
   'generate-test-case-api',
   'generate-test-case-frontend',
   'generate-postman-collection',
+  'execute-test-case-api',
+  'execute-test-case-frontend',
 ];
 
 // Map AI name → subdirectory base (relative to cwd, or absolute for codex)
@@ -47,6 +49,14 @@ function getInstallBase(ai) {
 
 function installSkills(ai) {
   const installBase = getInstallBase(ai);
+
+  // Remove all existing skill folders first to prevent stale skills from lingering
+  if (existsSync(installBase)) {
+    rmSync(installBase, { recursive: true, force: true });
+    logger.dim(`Removed stale skills: ${installBase}`);
+  }
+  mkdirSync(installBase, { recursive: true });
+
   for (const skill of SKILLS) {
     const src = join(PACKAGE_ROOT, skill);
     const dest = join(installBase, skill);
@@ -56,6 +66,35 @@ function installSkills(ai) {
       filter: (srcPath) => !srcPath.startsWith(join(src, 'data', 'catalogs')),
     });
     logger.success(`Installed: ${skill} → ${dest}`);
+  }
+}
+
+function installWithAutoDetect(primaryAi) {
+  const toInstall = [primaryAi];
+
+  // Auto-detect other AI configs already present in the working directory
+  for (const [name, relPath] of Object.entries(AI_CONFIGS)) {
+    if (name === primaryAi) continue;
+    if (existsSync(join(process.cwd(), relPath))) {
+      toInstall.push(name);
+    }
+  }
+
+  // Auto-detect codex
+  if (primaryAi !== 'codex') {
+    const codexHome = process.env.CODEX_HOME || join(os.homedir(), '.codex');
+    if (existsSync(join(codexHome, 'skills'))) {
+      toInstall.push('codex');
+    }
+  }
+
+  if (toInstall.length > 1) {
+    logger.info(`Auto-detected existing configs: ${toInstall.slice(1).join(', ')}`);
+    console.log();
+  }
+
+  for (const ai of toInstall) {
+    installSkills(ai);
   }
 }
 
@@ -82,7 +121,7 @@ export function updateSkills(options = {}) {
     }
     installSkills('codex');
   } else {
-    installSkills(ai);
+    installWithAutoDetect(ai);
   }
 
   console.log();
@@ -115,7 +154,7 @@ export async function initCommand(options = {}) {
     }
     installSkills('codex');
   } else {
-    installSkills(ai);
+    installWithAutoDetect(ai);
   }
 
   console.log();
