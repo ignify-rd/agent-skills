@@ -13,14 +13,14 @@ export async function updateCommand(options = {}) {
   try {
     execSync(`npm install -g ${REPO_URL}`, { stdio: 'inherit' });
     console.log();
-    updateSkills(options);
-  } catch (error) {
-    logger.warn('Could not update from GitHub.');
+  } catch {
+    logger.warn('Could not pull latest version from GitHub.');
     logger.dim('Make sure you have access to the repository.');
     logger.dim(`  Manual update: npm install -g ${REPO_URL}`);
     console.log();
     logger.info('Updating skills from current local version...');
     console.log();
-    updateSkills(options);
   }
+
+  updateSkills(options);
 }

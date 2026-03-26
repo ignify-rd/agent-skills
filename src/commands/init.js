@@ -59,6 +59,10 @@ function installSkills(ai) {
 
   for (const skill of SKILLS) {
     const src = join(PACKAGE_ROOT, skill);
+    if (!existsSync(src)) {
+      logger.dim(`Skipped (not found in package): ${skill}`);
+      continue;
+    }
     const dest = join(installBase, skill);
     mkdirSync(dest, { recursive: true });
     cpSync(src, dest, {
