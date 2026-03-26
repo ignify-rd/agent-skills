@@ -56,8 +56,8 @@ def _resolve_google_auth_module():
 
     candidates = [
         script_dir,  # local first if one is provided later
-        skills_base / "test-case-generator-api" / "scripts",
-        skills_base / "test-case-generator-frontend" / "scripts",
+        skills_base / "generate-test-case-api" / "scripts",
+        skills_base / "generate-test-case-frontend" / "scripts",
     ]
 
     for candidate in candidates:
@@ -68,7 +68,7 @@ def _resolve_google_auth_module():
             return importlib.import_module("google_auth")
 
     raise RuntimeError(
-        "Cannot find google_auth.py. Install test-case-generator-api skill or place google_auth.py in this scripts directory."
+        "Cannot find google_auth.py. Install generate-test-case-api skill or place google_auth.py in this scripts directory."
     )
 
 

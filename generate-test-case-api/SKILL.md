@@ -77,7 +77,7 @@ Before starting generation, check project structure and **load project-level rul
 
 **If `excel_template/structure.json` does not exist:**
 - Check if `excel_template/template.xlsx` exists
-- If yes → run `python <skills-root>/test-case-generator-api/scripts/extract_structure.py --project-root .` to generate it
+- If yes → run `python <skills-root>/generate-test-case-api/scripts/extract_structure.py --project-root .` to generate it
 - If no → inform user: "Chưa có template. Bạn cần đặt file template.xlsx vào excel_template/"
 
 ### Step 1: Check Input Type
@@ -129,11 +129,11 @@ Mindmap từ test-design đã trải qua quá trình extract kỹ lưỡng (Step
 #### Resolve SKILL_SCRIPTS path
 
 ```bash
-SKILL_SCRIPTS=$(find . -name "search.py" -path "*/test-case-generator-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+SKILL_SCRIPTS=$(find . -name "search.py" -path "*/generate-test-case-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
 # Fallback: check .cursor/skills, .claude/skills, .windsurf/skills, or global npm
 ```
 
-If all fail → Read reference files directly from `<skills-dir>/test-case-generator-api/references/`.
+If all fail → Read reference files directly from `<skills-dir>/generate-test-case-api/references/`.
 
 #### Load references
 ```bash
@@ -413,7 +413,7 @@ Report both JSON file and Google Sheets link to user.
 ## Project Structure
 
 ```
-test-case-generator-api/
+generate-test-case-api/
 ├── SKILL.md                      ← Workflow instructions (API mode only)
 ├── AGENTS.md                     ← Skill-level default rules
 ├── references/

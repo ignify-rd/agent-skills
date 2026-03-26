@@ -105,7 +105,7 @@ my-project/
 **Gọi lệnh trong IDE:**
 
 ```
-/generate-test-design login-feature
+/generate-test-design-api login-feature
 ```
 
 Truyền tên thư mục → AI tự tìm file PDF bên trong, không cần chỉ đường dẫn thủ công.
@@ -130,7 +130,7 @@ Kết quả lưu tại `login-feature/test-design.md`.
 **Gọi lệnh trong IDE:**
 
 ```
-/generate-test-case login-feature
+/generate-test-case-api login-feature
 ```
 
 Truyền tên thư mục → AI tự tìm tài liệu bên trong. Nếu chưa có `test-design.md`, AI tự tạo trước.
@@ -168,7 +168,7 @@ File của bạn (`catalog/`, `AGENTS.md`) **sẽ không bị ảnh hưởng**.
 **Thay đổi quan trọng:**
 
 - **`test-genie init` và `update` bắt buộc truyền `--ai`** — trước đây mặc định là `claude`, giờ phải chỉ rõ IDE đang dùng
-- **Truyền tên thư mục thay vì đường dẫn file** — `/generate-test-case login-feature` thay vì phải chỉ từng file PDF
+- **Truyền tên thư mục thay vì đường dẫn file** — `/generate-test-case-api login-feature` thay vì phải chỉ từng file PDF
 - **Không cần credentials.json** — tool tự dùng OAuth mặc định nếu không tìm thấy credentials của bạn
 - **Tự động upload Google Sheets** sau khi sinh test case xong (không cần chạy lệnh riêng)
 - **Coverage cao hơn cho luồng chính:**

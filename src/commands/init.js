@@ -10,11 +10,11 @@ const __dirname = dirname(__filename);
 const PACKAGE_ROOT = join(__dirname, '..', '..'); // package root (node_modules/test-genie/)
 
 const SKILLS = [
-  'test-design-generator-api',
-  'test-design-generator-frontend',
-  'test-case-generator-api',
-  'test-case-generator-frontend',
-  'postman-collection-generator',
+  'generate-test-design-api',
+  'generate-test-design-frontend',
+  'generate-test-case-api',
+  'generate-test-case-frontend',
+  'generate-postman-collection',
 ];
 
 // Map AI name → subdirectory base (relative to cwd, or absolute for codex)
@@ -146,7 +146,7 @@ function installProjectStructure() {
 
   const excelTemplateDir = join(projectRoot, 'excel_template');
   mkdirSync(excelTemplateDir, { recursive: true });
-  const defaultTemplate = join(PACKAGE_ROOT, 'test-case-generator-api', 'data', 'templates', 'template.xlsx');
+  const defaultTemplate = join(PACKAGE_ROOT, 'generate-test-case-api', 'data', 'templates', 'template.xlsx');
   const destTemplate = join(excelTemplateDir, 'template.xlsx');
   if (existsSync(defaultTemplate) && !existsSync(destTemplate)) {
     cpSync(defaultTemplate, destTemplate);

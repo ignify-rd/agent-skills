@@ -11,7 +11,7 @@ Project-level overrides for test-genie skills.
 |----------|-------|
 | **User chat input** | Always — **HIGHEST PRIORITY**. Whatever the user says in their request overrides any rule below. |
 | Project `AGENTS.md` | Project-specific overrides — only applies when a rule is explicitly defined here |
-| Skill defaults | `test-*-generator*/AGENTS.md` + references — used when neither of the above provides a rule |
+| Skill defaults | `generate-*/AGENTS.md` + references — used when neither of the above provides a rule |
 
 **How it works:** If the user says "viết ngắn gọn" or "chỉ generate 10 cases" → do exactly that, even if it contradicts everything below. If the user is silent on a topic → fall back to project AGENTS.md if defined → else skill defaults.
 
@@ -28,7 +28,7 @@ Project-level overrides for test-genie skills.
 
 # Test Design Rules
 
-Override the `test-design-generator` skills. These rules only affect mindmap output.
+Override the `generate-test-design-*` skills. These rules only affect mindmap output.
 
 ## Test Design — API
 
@@ -65,7 +65,7 @@ Override the `test-design-generator` skills. These rules only affect mindmap out
 
 # Test Case Rules
 
-Override the `test-case-generator` skills. These rules only affect JSON output.
+Override the `generate-test-case-*` skills. These rules only affect JSON output.
 
 ## Test Case — API
 

@@ -327,7 +327,7 @@ Nếu bất kỳ ô nào chưa tích → tự append trước khi kết thúc ba
 
 ## Standard Validate Cases cho Frontend Fields
 
-> **Nguồn chuẩn**: Các cases dưới đây là tập đầy đủ — phải sinh ĐỦ, không bỏ sót. Xem thêm `field-templates.md` (trong test-design-generator/references) để biết format mindmap tương ứng.
+> **Nguồn chuẩn**: Các cases dưới đây là tập đầy đủ — phải sinh ĐỦ, không bỏ sót. Xem thêm `field-templates.md` (trong `generate-test-design-frontend/references`) để biết format mindmap tương ứng.
 
 ### Textbox (editable)
 
