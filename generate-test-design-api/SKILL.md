@@ -277,7 +277,28 @@ OUTPUT_FILE: {path}
 
 ---
 
-### Step 7: Final Output
+### Step 7: Cleanup + Final Output
+
+**Xóa các file tạm sau khi verify hoàn thành:**
+
+```python
+import os, glob
+
+output_dir = "{output-folder}"
+
+# Xóa validate batch files
+for f in glob.glob(f"{output_dir}/validate-batch-*.md"):
+    os.remove(f)
+
+# Xóa sentinel file
+sentinel = f"{output_dir}/.validate-done"
+if os.path.exists(sentinel):
+    os.remove(sentinel)
+
+print(f"Cleaned up temp files in {output_dir}/")
+```
+
+Giữ lại: `{INVENTORY_FILE}` (hữu ích cho re-run hoặc reference).
 
 Thông báo user:
 ```
