@@ -279,16 +279,90 @@ def format_output(result):
 
 
 # ============ REFERENCES ============
-def read_reference(ref_name):
-    """Read a reference file from the skill's references directory."""
+
+# Section markers in reference files: <!-- @section: name -->
+_SECTION_RE = re.compile(r'<!--\s*@section:\s*(.+?)\s*-->')
+
+
+def _parse_sections(content):
+    """Parse reference file into named sections using <!-- @section: name --> markers.
+
+    Returns dict: {section_name: section_content}.
+    Content before the first marker is keyed as '_preamble'.
+    """
+    sections = {}
+    current_name = '_preamble'
+    current_lines = []
+
+    for line in content.splitlines():
+        m = _SECTION_RE.match(line.strip())
+        if m:
+            # Save previous section
+            text = '\n'.join(current_lines).strip()
+            if text:
+                sections[current_name] = text
+            current_name = m.group(1).strip()
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    # Save last section
+    text = '\n'.join(current_lines).strip()
+    if text:
+        sections[current_name] = text
+
+    return sections
+
+
+def read_reference(ref_name, section_filter=None):
+    """Read a reference file, optionally filtered to specific sections.
+
+    Args:
+        ref_name: Reference file name (with or without .md)
+        section_filter: Comma-separated section names to include.
+                       If None, returns the entire file.
+    """
     if not ref_name.endswith('.md'):
         ref_name += '.md'
 
     ref_path = REFS_DIR / ref_name
     if not ref_path.exists():
         return f"Reference not found: {ref_name}\nSearched: {ref_path}"
+
     content = ref_path.read_text(encoding='utf-8')
-    return f"## Reference: {ref_path.name}\n**Path:** {ref_path}\n\n{content}"
+
+    if not section_filter:
+        return f"## Reference: {ref_path.name}\n**Path:** {ref_path}\n\n{content}"
+
+    # Parse sections and filter
+    sections = _parse_sections(content)
+    requested = [s.strip() for s in section_filter.split(',')]
+
+    matched = []
+    missing = []
+    for req in requested:
+        # Case-insensitive match
+        found = None
+        for name, text in sections.items():
+            if name.lower() == req.lower():
+                found = text
+                break
+        if found:
+            matched.append(f"<!-- section: {req} -->\n{found}")
+        else:
+            missing.append(req)
+
+    if not matched:
+        available = [k for k in sections.keys() if k != '_preamble']
+        return (f"No matching sections in {ref_name}.\n"
+                f"Requested: {requested}\n"
+                f"Available: {available}")
+
+    header = f"## Reference: {ref_path.name} (sections: {', '.join(requested)})\n"
+    if missing:
+        header += f"**Missing sections:** {missing}\n"
+    result = header + "\n" + "\n\n".join(matched)
+    return result
 
 
 def list_references():
@@ -315,6 +389,7 @@ if __name__ == "__main__":
     parser.add_argument("--list", "-l", action="store_true", help="List available examples")
     parser.add_argument("--full", "-f", action="store_true", help="Show full file content instead of preview")
     parser.add_argument("--ref", "-r", metavar="NAME", help="Read a reference file")
+    parser.add_argument("--section", "-s", metavar="SECTIONS", help="Comma-separated section names to filter (use with --ref)")
     parser.add_argument("--list-refs", action="store_true", help="List available references")
 
     args = parser.parse_args()
@@ -327,7 +402,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.ref:
-        print(read_reference(args.ref))
+        print(read_reference(args.ref, section_filter=args.section))
         sys.exit(0)
 
     if args.list:
