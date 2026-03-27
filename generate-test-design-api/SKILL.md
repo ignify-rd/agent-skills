@@ -169,10 +169,6 @@ import os
 output_dir = "{output-folder}"
 output_file = "{OUTPUT_FILE}"
 
-# Đọc nội dung đã có (common section)
-with open(output_file, encoding="utf-8") as f:
-    existing = f.read()
-
 # Collect batch files theo đúng thứ tự
 batch_parts = []
 n = 1
@@ -181,15 +177,40 @@ while os.path.exists(f"{output_dir}/validate-batch-{n}.md"):
         batch_parts.append(f.read().strip())
     n += 1
 
-# Append validate section
+# Append validate section vào output
 with open(output_file, "a", encoding="utf-8") as f:
     f.write("\n\n## Kiểm tra validate\n\n")
     f.write("\n\n".join(batch_parts))
+
+# Ghi sentinel để báo merge hoàn thành
+with open(f"{output_dir}/.validate-done", "w") as f:
+    f.write(f"merged {n-1} batches")
+
+print(f"Merged {n-1} validate batches → {output_file}")
 ```
 
 Nếu có ❌ trong batch checkpoint → re-spawn batch đó với note "Batch {N} thiếu cases cho fields: [list]".
 
-**Kết thúc Step 5b khi:** Tất cả batch files tồn tại, merge xong, `{OUTPUT_FILE}` chứa `## Kiểm tra validate`.
+**Kết thúc Step 5b khi:** File `{output-folder}/.validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra validate`.
+
+---
+
+> ⛔ **SEQUENTIAL BARRIER — KHÔNG proceed Step 5c cho đến khi:**
+> 1. File `{output-folder}/.validate-done` tồn tại
+> 2. `{OUTPUT_FILE}` chứa `## Kiểm tra validate`
+>
+> Kiểm tra bằng lệnh:
+> ```bash
+> python -c "
+> import sys
+> done = open('{output-folder}/.validate-done').read()
+> content = open('{OUTPUT_FILE}', encoding='utf-8').read()
+> ok = '## Kiểm tra validate' in content
+> print('READY' if ok else 'NOT READY')
+> sys.exit(0 if ok else 1)
+> "
+> ```
+> Nếu in ra `NOT READY` → DỪNG, debug Step 5b trước.
 
 ---
 
@@ -216,7 +237,25 @@ PROJECT_RULES: {projectRules hoặc "none"}
 
 ---
 
-### Step 6: Sub-agent — td-verify (Verify + Gap-fill + Self-check)
+> ⛔ **SEQUENTIAL BARRIER — KHÔNG proceed Step 6 cho đến khi `{OUTPUT_FILE}` chứa đủ 3 sections:**
+> ```bash
+> python -c "
+> import sys
+> c = open('{OUTPUT_FILE}', encoding='utf-8').read()
+> checks = ['## Kiểm tra các case common', '## Kiểm tra validate', '## Kiểm tra luồng chính']
+> missing = [s for s in checks if s not in c]
+> print('READY' if not missing else f'MISSING: {missing}')
+> sys.exit(0 if not missing else 1)
+> "
+> ```
+
+---
+
+### Step 6: Sub-agent — td-verify (Gap-fill + Cross-section check)
+
+> V1-V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-mainflow self-check.
+> td-verify CHỈ làm: gap analysis, V5 duplicate, V9 global scan, V10 format.
+> **KHÔNG đọc toàn bộ OUTPUT_FILE** — dùng grep/Python extract sections.
 
 Đọc agent instructions:
 ```bash
@@ -233,7 +272,7 @@ OUTPUT_FILE: {path}
 ===================
 ```
 
-**Kết thúc khi:** Self-check in ra 10/10 ✅ hoặc tất cả vi phạm đã được sửa.
+**Kết thúc khi:** Self-check in ra 4/4 ✅ hoặc tất cả gaps/vi phạm đã được sửa.
 
 ---
 

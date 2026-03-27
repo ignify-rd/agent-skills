@@ -98,6 +98,19 @@ Missing → THÊM `### [SỬA]` ngay
 
 **TUYỆT ĐỐI KHÔNG** viết test case không có response.
 
+## Bước 6b — Self-check trước khi append (BẮT BUỘC)
+
+Scan nội dung vừa sinh (trong memory, TRƯỚC khi ghi file):
+
+```
+[V6] ≥2 modes → mỗi mode có #### heading riêng: ✅/❌
+[V7] Mọi ### Kiểm tra đều có "1\. Check api trả về:" block: ✅/❌
+[V8] SQL không có placeholder ({...}, ..., <value>, ???): ✅/❌
+[V9] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:, [placeholder]): ✅/❌
+```
+
+Nếu có ❌ → SỬA ngay trong memory trước khi sang Bước 7.
+
 ## Bước 7 — Append vào output + Coverage report
 
 Append vào `{OUTPUT_FILE}`:

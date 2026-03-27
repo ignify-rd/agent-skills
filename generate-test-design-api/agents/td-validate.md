@@ -70,10 +70,12 @@ Nếu field có ràng buộc với field khác (VD: expiredDate ≥ effectiveDat
 
 ```
 ✓ Field {fieldName} ({type}): {generated}/{min} cases.
-  Missing: [list nếu có] → THÊM ngay trước khi sang field tiếp.
+  [V3] → error chỉ cho type violations/XSS/SQL injection: ✅/❌
+  [V4] Status validate = 200 (không có 400/422/500): ✅/❌
+  Missing cases: [list nếu có] → THÊM ngay trước khi sang field tiếp.
 ```
 
-Nếu thiếu → THÊM ngay, KHÔNG bỏ qua.
+Nếu thiếu hoặc có ❌ → THÊM/SỬA ngay, KHÔNG bỏ qua.
 
 ## Bước 5 — Kiểm tra error codes từ inventory
 

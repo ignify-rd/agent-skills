@@ -1,35 +1,38 @@
 ---
 name: td-verify
-description: Verify API test design output, fill gaps, run self-check and quality rules.
+description: Cross-section verification and gap fill for API test design. V1-V4 handled by td-validate; V6-V9 handled by td-mainflow. This agent covers gap analysis, V5 duplicate check, V9 global scan, V10 format check.
 tools: Read, Bash, Edit
 model: inherit
 ---
 
-# td-verify — Kiểm tra, bổ sung, self-check output
+# td-verify — Cross-section verification và gap analysis
 
-Nhiệm vụ: Đọc output test design, đối chiếu với inventory, fill gaps, chạy self-check.
+Nhiệm vụ: Gap fill + cross-section checks. **KHÔNG đọc toàn bộ OUTPUT_FILE vào context** — dùng Bash/Python để extract chỉ phần cần.
 
-## Bước 1 — Load verify + self-check + quality rules
+> **Phân công:** V1-V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-mainflow self-check. td-verify chỉ chịu trách nhiệm: gap analysis, V5 duplicate, V9 global, V10 format.
+
+## Bước 1 — Load verify rules
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "verify,self-check"
-python {SKILL_SCRIPTS}/search.py --ref quality-rules
+python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "verify"
 ```
 
-## Bước 2 — Gap Analysis
+## Bước 2 — Gap Analysis (inventory vs output)
 
-Đọc `{INVENTORY_FILE}` và `{OUTPUT_FILE}`. Với **MỖI** inventory item:
+Đọc `{INVENTORY_FILE}`. Với MỖI item trong inventory, dùng Bash grep (không load file vào LLM context):
 
-| Category | Tìm trong output | Thiếu → flag |
-|----------|-----------------|--------------|
-| errorCodes[validate] | error code trong `## Kiểm tra validate` | ☐ |
-| errorCodes[main] | error code trong `## Kiểm tra luồng chính` | ☐ |
-| businessRules | cả TRUE branch và FALSE branch | ☐ |
-| dbOperations.fieldsToVerify | từng column trong SQL SELECT | ☐ |
-| modes | ≥1 happy path test | ☐ |
-| externalServices | onFailure + rollback | ☐ |
+```bash
+# Kiểm tra error code có trong output chưa
+grep -c "LDH_SLA_020" "{OUTPUT_FILE}"
 
-In gap list:
+# Kiểm tra DB field có trong SQL chưa
+grep -c "APPROVED_BY" "{OUTPUT_FILE}"
+
+# Kiểm tra service rollback
+grep -c "rollback" "{OUTPUT_FILE}"
+```
+
+Liệt kê gaps:
 ```
 🔍 Gap Analysis:
 ☐ errorCode "LDH_SLA_025" [validate] → chưa có bullet
@@ -37,47 +40,69 @@ In gap list:
 ☐ service "S3" rollback → chưa có bullet
 ```
 
-Fill tất cả gaps — thêm vào cuối section tương ứng với `### [SỬA]` prefix.
+Fill từng gap — thêm vào cuối section tương ứng với `### [SỬA]` prefix. Dùng Edit tool để append.
 
-## Bước 3 — Self-check (in kết quả bắt buộc)
+## Bước 3 — V5: Cross-section duplicate check
+
+Chạy Python script — extract chỉ headings (không load content):
+
+```python
+import re
+
+with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
+    content = f.read()
+
+validate_match = re.search(r'## Kiểm tra validate(.*?)(?=## Kiểm tra luồng chính|$)', content, re.DOTALL)
+mainflow_match = re.search(r'## Kiểm tra luồng chính(.*?)$', content, re.DOTALL)
+
+def get_headings(text):
+    return set(re.findall(r'^#{3,4}\s+(.+)$', text or '', re.MULTILINE))
+
+validate_h = get_headings(validate_match.group(1) if validate_match else '')
+mainflow_h = get_headings(mainflow_match.group(1) if mainflow_match else '')
+
+duplicates = validate_h & mainflow_h
+if duplicates:
+    print(f"❌ V5 DUPLICATE ({len(duplicates)}):")
+    for d in sorted(duplicates):
+        print(f"  - {d}")
+else:
+    print(f"✅ V5: No duplicates ({len(validate_h)} validate, {len(mainflow_h)} mainflow headings)")
+```
+
+Nếu có duplicate → dùng Edit tool xóa khỏi `## Kiểm tra luồng chính` (field-level checks thuộc về validate).
+
+## Bước 4 — V9: Global forbidden words scan
+
+```bash
+grep -n "hoặc\|và/hoặc\|có thể\|ví dụ:\|\[placeholder\]" "{OUTPUT_FILE}"
+```
+
+Nếu có kết quả → grep thêm context, dùng Edit tool sửa từng dòng.
+
+## Bước 5 — V10: Structural check
+
+```bash
+# File phải bắt đầu bằng # API_NAME — không có ---, không có blockquote
+head -5 "{OUTPUT_FILE}"
+
+# Không có horizontal rules
+grep -cn "^---$" "{OUTPUT_FILE}"
+```
+
+Nếu file bắt đầu sai → dùng Edit tool sửa header.
+
+## Bước 6 — Self-check kết quả (in bắt buộc)
 
 ```
-=== SELF-CHECK ===
-[V1] Date cross-field trong field section: ✅/❌
-[V2] Min cases per field: ✅/❌ {field nào thiếu}
-[V3] Marker đúng loại (→ error chỉ cho type violations/XSS/SQL): ✅/❌
-[V4] Status validate = 200: ✅/❌
-[V5] Không duplicate validate → luồng chính: ✅/❌
-[V6] Luồng con tách biệt (nếu ≥2 modes): ✅/❌
-[V7] Mọi case luồng chính có response: ✅/❌
-[V8] SQL giá trị cụ thể (không có placeholder): ✅/❌
-[V9] Không có từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:, [placeholder]): ✅/❌
-[V10] Format đúng (# API_NAME, không có ---, common dùng - status:): ✅/❌
-=== KẾT QUẢ: {N}/10 — PASS / CẦN SỬA ===
+=== SELF-CHECK (td-verify) ===
+[Gap] Inventory items covered:    {filled}/{total} gaps fixed
+[V5]  No duplicate validate↔main: ✅/❌ ({N} duplicates)
+[V9]  No forbidden words:         ✅/❌ ({N} occurrences)
+[V10] Format correct (# header):  ✅/❌
+=== KẾT QUẢ: {N}/4 ===
 ```
-
-## Bước 4 — Sửa từng vi phạm
-
-Với mỗi ❌:
-- [V3] `→ error` sai → đổi thành `→ Theo RSD` và điền đúng response
-- [V4] Status 4xx/5xx trong validate → đổi thành 200, move message vào body
-- [V5] Case duplicate → xóa khỏi luồng chính
-- [V6] Luồng con trộn lẫn → tách heading `####`
-- [V7] Case thiếu response → thêm `1\. Check api trả về:` block
-- [V8] Placeholder trong SQL → điền concrete values
-- [V9] Từ bị cấm → sửa wording
-- [V10] Format sai → sửa structure
-
-Scan lại sau khi sửa để xác nhận tất cả ✅.
-
-## Bước 5 — Quality check
-
-- 100% Vietnamese, giữ nguyên tên field/button từ PTTK/RSD
-- 1 test = 1 check (atomic — không có "và", "hoặc" trong 1 case)
-- SQL: UPPERCASE columns, concrete WHERE values
-- Output bắt đầu bằng `# {API_NAME}` (không có blockquote, không có `---`)
 
 ## Output
 
-`{OUTPUT_FILE}` đã được patch với tất cả gaps filled và violations fixed.
-In self-check results (bắt buộc) trước khi kết thúc.
+`{OUTPUT_FILE}` đã được patch. In self-check results bắt buộc trước khi kết thúc.
