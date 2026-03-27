@@ -132,28 +132,25 @@ PROJECT_RULES: {projectRules hoặc "none"}
 
 ---
 
-### Step 5b: Sub-agent — td-validate (Sinh validate, 1 sub-agent per batch)
+### Step 5b: Sub-agent — td-validate (Sinh validate, song song theo batch)
 
 Đọc `{INVENTORY_FILE}` để lấy tất cả `fieldConstraints[]`.
-Nhóm fields thành batches tối đa 5 fields mỗi batch.
+Nhóm fields thành batches tối đa 5 fields mỗi batch: Batch 1 [F1–F5], Batch 2 [F6–F10], ...
 
-**Với MỖI batch [F1..F5], [F6..F10], ...:**
+**Spawn TẤT CẢ batch sub-agents song song** — mỗi batch 1 sub-agent độc lập.
 
-1. Xác định `FIELD_TYPES_NEEDED` = danh sách unique types trong batch
-   - VD: `[slaVersionId:Long, effectiveDate:Date Required, description:String 500 Optional]` → `"validate-rules,Long,Date Required,String Optional"`
-
-2. Đọc agent instructions:
+Với mỗi batch, đọc agent instructions:
 ```bash
 cat $SKILL_AGENTS/td-validate.md
 ```
 
-3. Spawn sub-agent với prompt = nội dung td-validate.md + context:
+Spawn sub-agent với prompt = nội dung td-validate.md + context:
 
 ```
 === TASK CONTEXT ===
 SKILL_SCRIPTS: {path}
 INVENTORY_FILE: {path}
-OUTPUT_FILE: {path}
+OUTPUT_DIR: {output-folder}
 BATCH_NUMBER: {N}
 FIELD_BATCH: [{fieldName}:{type}:{required}:{maxLength}, ...]
 FIELD_TYPES_NEEDED: "{comma-separated types for --section}"
@@ -162,9 +159,37 @@ PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
 
-4. **Sau khi sub-agent kết thúc:** Kiểm tra output file có batch content không. Nếu có ❌ trong checkpoint → re-spawn với note "Batch {N} thiếu cases cho fields: [list]".
+⚠️ **Mỗi sub-agent ghi vào file riêng** `{output-folder}/validate-batch-{N}.md` — KHÔNG ghi vào output chung. Tránh race condition khi chạy song song.
 
-**Kết thúc Step 5b khi:** Tất cả batches hoàn thành và có `## Kiểm tra validate` trong output.
+**Sau khi TẤT CẢ batches hoàn thành — merge theo thứ tự:**
+
+```python
+import os
+
+output_dir = "{output-folder}"
+output_file = "{OUTPUT_FILE}"
+
+# Đọc nội dung đã có (common section)
+with open(output_file, encoding="utf-8") as f:
+    existing = f.read()
+
+# Collect batch files theo đúng thứ tự
+batch_parts = []
+n = 1
+while os.path.exists(f"{output_dir}/validate-batch-{n}.md"):
+    with open(f"{output_dir}/validate-batch-{n}.md", encoding="utf-8") as f:
+        batch_parts.append(f.read().strip())
+    n += 1
+
+# Append validate section
+with open(output_file, "a", encoding="utf-8") as f:
+    f.write("\n\n## Kiểm tra validate\n\n")
+    f.write("\n\n".join(batch_parts))
+```
+
+Nếu có ❌ trong batch checkpoint → re-spawn batch đó với note "Batch {N} thiếu cases cho fields: [list]".
+
+**Kết thúc Step 5b khi:** Tất cả batch files tồn tại, merge xong, `{OUTPUT_FILE}` chứa `## Kiểm tra validate`.
 
 ---
 

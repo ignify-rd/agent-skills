@@ -82,19 +82,32 @@ Sau khi xong batch, đọc `{INVENTORY_FILE}`:
 - Kiểm tra mỗi error code có bullet trong output chưa
 - Thiếu → THÊM bullet với exact message
 
-## Bước 6 — Append vào output
+## Bước 6 — Ghi vào file batch riêng
 
-Ghi phần validate vừa sinh vào `{OUTPUT_FILE}`. Nếu đây là batch đầu tiên, tạo heading:
-```markdown
-## Kiểm tra validate
+**KHÔNG ghi vào `{OUTPUT_FILE}` chung.** Ghi vào file riêng của batch này:
+
+```
+{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md
 ```
 
-Nếu là batch tiếp theo, append trực tiếp (không lặp heading `## Kiểm tra validate`).
+File này chứa **chỉ** validate cases của batch, không có heading `## Kiểm tra validate` — orchestrator sẽ merge sau.
+
+Ví dụ nội dung `validate-batch-1.md`:
+```markdown
+### slaVersionId: Long (Required)
+
+#### Để trống
+...
+
+### effectiveDate: Date yyyy-MM-dd (Required)
+...
+```
 
 ## Bước 7 — Batch checkpoint
 
 ```
 === Batch {BATCH_NUMBER} complete ===
+Output: {OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md
 Fields: {field list}
 Counts: {field}: {N}/{min} ✓/✗
 All min cases met: YES / NO (fix required)
@@ -103,4 +116,5 @@ Error codes covered: {N}/{total validate errors}
 
 ## Output
 
-Validate cases cho `{FIELD_BATCH}` đã được append vào `{OUTPUT_FILE}`.
+`{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md` — chứa validate cases của batch này.
+Orchestrator sẽ merge tất cả batch files vào `{OUTPUT_FILE}` theo đúng thứ tự.
