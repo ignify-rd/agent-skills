@@ -14,7 +14,6 @@ Generate comprehensive test design documents (.md) for Frontend UI screens from 
 - User provides RSD/PTTK for a UI screen and asks to generate test design or mindmap
 - User says "sinh test design frontend", "sinh test design giao diện", "tạo test design màn hình", "tao mindmap"
 - User uploads .pdf/.txt/.md files for Frontend test design / mindmap generation
-- Called internally by `generate-test-case-frontend` skill when user provides only RSD+PTTK without a mindmap
 
 ## Prerequisites
 
@@ -77,15 +76,27 @@ Before starting generation, check project structure and **load project-level rul
 
 **⚠️ CRITICAL: Project AGENTS.md rules take precedence when explicitly defined.** Every subsequent step must check `projectRules` and apply them.
 
-### Step 0b: Resolve Input Documents & Extract Scope
+### Step 0b: Validate Required Inputs
 
-**If user provides a feature folder name** (e.g., `/generate-test-design-frontend feature-1` or `sinh test design frontend cho feature-1`):
-1. Look inside `<feature-name>/` folder for input documents automatically:
-   - Scan for document files: `.pdf`, `.docx`, `.doc`, `.md`, `.txt` — identify RSD and PTTK by filename
-2. **DO NOT ask** the user for file paths — use whatever documents are found in the folder
-3. **If folder is empty** → scan toàn bộ project root cho document files liên quan đến feature name
-4. If truly no documents found → inform user: "Không tìm thấy tài liệu RSD/PTTK. Hãy cung cấp đường dẫn hoặc upload file."
-5. Save output as `<feature-name>/test-design-frontend.md`
+**⚠️ STOP — Do NOT read any files or proceed until the user explicitly provides input file paths.**
+
+Required inputs:
+- **RSD file path** — required
+- **PTTK file path** — optional
+- **Output folder** — required (e.g. `feature-1/`), output will be saved as `<output-folder>/test-design-frontend.md`
+
+**NEVER:**
+- Scan folders looking for files
+- Guess file paths from feature names or conversation context
+- Read any file not explicitly provided by the user
+
+**If any required input is missing → STOP immediately and ask:**
+> "Vui lòng cung cấp:
+> 1. Đường dẫn file RSD (bắt buộc)
+> 2. Đường dẫn file PTTK (nếu có)
+> 3. Thư mục output (bắt buộc, ví dụ: `feature-1/`)"
+
+Do not proceed until the user provides these.
 
 **⛔ Extract & enforce user scope:**
 
@@ -308,45 +319,53 @@ After extraction, check for issues and **proactively ask user** before proceedin
 
 ### Step 4c: Business Logic Inventory (Frontend Mode)
 
-**⚠️ Frontend CŨ̃NG PHẢI extract business logic từ RSD — KHÔNG được bỏ qua.**
+**⚠️ Frontend CŨNG PHẢI extract business logic từ RSD — KHÔNG được bỏ qua.**
 
-```json
-{
-  "screenName": "Tạo mới SLA",
-  "screenType": "FORM",
-  "fieldConstraints": [
-    { "field": "Tên cấu hình SLA", "type": "textbox", "maxLength": 100, "required": true, "unique": true, "source": "RSD" },
-    { "field": "Ngày hiệu lực", "type": "datepicker", "constraint": ">= ngày hiện tại", "required": true, "source": "RSD" }
-  ],
-  "businessRules": [
-    { "id": "BR1", "type": "validation", "condition": "Tên cấu hình SLA đã tồn tại", "expected": "Hiển thị cảnh báo 'Tên cấu hình SLA đã tồn tại'", "section": "validate" },
-    { "id": "BR2", "type": "condition", "condition": "Ngày hiệu lực < ngày hiện tại", "expected": "Không cho phép chọn", "section": "validate" },
-    { "id": "BR3", "type": "flow", "condition": "Click Lưu khi form hợp lệ", "expected": "Lưu thành công, hiển thị thông báo", "section": "function" },
-    { "id": "BR4", "type": "flow", "condition": "Click Lưu khi form có lỗi validate", "expected": "Hiển thị cảnh báo lỗi", "section": "function" }
-  ],
-  "errorMessages": [
-    { "trigger": "Bỏ trống field bắt buộc", "message": "exact message từ RSD", "section": "validate" },
-    { "trigger": "Nhập quá maxLength", "message": "exact message từ RSD", "section": "validate" },
-    { "trigger": "Lưu thất bại", "message": "exact message từ RSD", "section": "function" }
-  ],
-  "enableDisableRules": [
-    { "target": "Button Lưu",              "targetType": "button",  "condition": "Form chưa nhập đủ required fields", "state": "disable",  "section": "function" },
-    { "target": "Dropdown X",             "targetType": "field",   "condition": "Chọn loại A",                       "state": "enable",   "section": "validate" },
-    { "target": "Khối Luồng trình X",     "targetType": "block",   "condition": "Loại nghiệp vụ = Cấp tín dụng",    "state": "visible",  "section": "ui_common" },
-    { "target": "Nhóm Thông tin thêm",    "targetType": "block",   "condition": "Loại nghiệp vụ chưa được chọn",    "state": "hidden",   "section": "ui_common" }
-  ],
-  "autoFillRules": [
-    { "trigger": "Chọn giá trị tại Dropdown X", "target": "Field Y", "action": "auto-fill giá trị tương ứng" }
-  ],
-  "statusTransitions": [
-    { "from": "Draft", "to": "Active", "trigger": "Click Phê duyệt" }
-  ],
-  "permissions": [
-    { "action": "Xem", "role": "Viewer" },
-    { "action": "Tạo mới", "role": "Maker" },
-    { "action": "Phê duyệt", "role": "Checker" }
-  ]
-}
+**Khởi tạo file:**
+```bash
+python $SKILL_SCRIPTS/inventory.py init \
+  --file <output-folder>/inventory.json \
+  --name "<Screen name>" \
+  --screen-type "FORM|LIST"
+```
+
+**Với mỗi item extract được, gọi ngay lệnh add (KHÔNG tích lũy rồi write một lần):**
+
+```bash
+# Mỗi field constraint:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category fieldConstraints \
+  --data '{"field":"Tên cấu hình SLA","type":"textbox","maxLength":100,"required":true,"unique":true,"source":"RSD tr.X"}'
+
+# Mỗi business rule:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category businessRules \
+  --data '{"id":"BR1","type":"validation","condition":"...","expected":"...","section":"validate","source":"RSD tr.X"}'
+
+# Mỗi error message:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category errorMessages \
+  --data '{"trigger":"Bỏ trống field bắt buộc","message":"exact message từ RSD","section":"validate","source":"RSD tr.X"}'
+
+# Mỗi enable/disable rule:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category enableDisableRules \
+  --data '{"target":"Button Lưu","targetType":"button","condition":"Form chưa đủ required","state":"disable","section":"function","source":"RSD tr.X"}'
+
+# Mỗi auto-fill rule:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category autoFillRules \
+  --data '{"trigger":"Chọn Dropdown X","target":"Field Y","action":"auto-fill giá trị tương ứng","source":"RSD tr.X"}'
+
+# Mỗi status transition:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category statusTransitions \
+  --data '{"from":"Draft","to":"Active","trigger":"Click Phê duyệt","source":"RSD tr.X"}'
+
+# Mỗi permission:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category permissions \
+  --data '{"action":"Tạo mới","role":"Maker","source":"RSD tr.X"}'
 ```
 
 **Extraction rules (Frontend):**
@@ -409,18 +428,10 @@ After extraction, check for issues and **proactively ask user** before proceedin
 
 ### Step 4d: Inventory Verification Gate
 
-**Sau khi hoàn thành Step 4c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
+**Sau khi hoàn thành Step 4c, chạy summary và báo cáo cho user:**
 
-```
-📋 Business Logic Inventory đã extract:
-- Fields:             {N} fields cần generate validate cases (list tên + type)
-- Fields displayBehavior: {N} fields (list: Tên [always/conditional])
-  → Kiểm tra: field always KHÔNG có enable/disable cases; field conditional CÓ cả validate + enable/disable
-- Business rules:     {N} (list: BR1 [validate], BR2 [function], ...)
-- Error messages:     {N} messages cần cover (list trigger)
-- Enable/disable:     {N} rules (list field + condition)
-- Auto-fill:          {N} cascading rules
-- Permissions:        {N} roles
+```bash
+python $SKILL_SCRIPTS/inventory.py summary --file <output-folder>/inventory.json
 ```
 
 **⚠️ displayBehavior checklist bắt buộc:**
@@ -428,8 +439,8 @@ After extraction, check for issues and **proactively ask user** before proceedin
 - Field nào = `conditional` → verify: CÓ validate cases (khi enable) + CÓ enable/disable cases
 - Điều kiện của block KHÔNG lan sang field ở block khác
 
-**Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận trước khi tiếp tục:**
-> "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không? (có thể tôi đọc bỏ sót phần nào đó)"
+**Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận:**
+> "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không?"
 
 ### Step 5: Generate Test Design Sections (Frontend Mode)
 

@@ -12,8 +12,7 @@
 - **Ngắn gọn**: tối đa 80 ký tự
 - **Cụ thể**: mô tả chính xác hành động đang test
 - **Không trùng lặp**: mỗi test case phải unique trong toàn bộ output
-- **API Mode**: có prefix theo field/section: `"regChannel_Bỏ trống field bắt buộc"`
-- **Frontend Mode**: không prefix, lấy trực tiếp từ mindmap: `"Kiểm tra giá trị mặc định"`
+- Có prefix theo field/section: `"regChannel_Bỏ trống field bắt buộc"`
 
 ## Atomic test cases — 1 test = 1 check
 
@@ -49,7 +48,7 @@
 
 - Mỗi `### field name` trong validate section = 1 sub-batch riêng
 - testSuiteName = "Kiểm tra validate" (force override)
-- testCaseName = `"{field}_Mô tả"` (API) hoặc lấy trực tiếp từ bullet (Frontend)
+- testCaseName = `"{field}_Mô tả"`
 - KHÔNG mix cases của field A vào batch đang xử lý field B
 
 ## Các field LUÔN trống
@@ -90,7 +89,6 @@ KHÔNG được chỉ sinh 1 trong 2.
 | testCaseName quá dài | Tối đa 80 ký tự, cắt bỏ phần thừa |
 | step không numbered | Luôn dùng `"1. ...\n2. ..."` |
 | expectedResult không có status code (API) | Luôn có `1.1. Status: ...` và `1.2. Response: ...` |
-| Frontend test có HTTP status code | KHÔNG dùng status code cho FE test |
 | Dùng placeholder `<>` trong preConditions body | Thay bằng giá trị thật: `"WEB"` không phải `"<channel>"` |
 | SQL có `-->` ở đầu dòng xuống dòng | Xóa `-->`, xuống dòng trực tiếp |
 | Phân quyền chỉ có case "không có quyền" | Luôn thêm case "có quyền" |

@@ -12,8 +12,7 @@
 - **Ngắn gọn**: tối đa 80 ký tự
 - **Cụ thể**: mô tả chính xác hành động đang test
 - **Không trùng lặp**: mỗi test case phải unique trong toàn bộ output
-- **API Mode**: có prefix theo field/section: `"regChannel_Bỏ trống field bắt buộc"`
-- **Frontend Mode**: không prefix, lấy trực tiếp từ mindmap: `"Kiểm tra giá trị mặc định"`
+- Không prefix, lấy trực tiếp từ mindmap: `"Kiểm tra giá trị mặc định"`
 
 ## Atomic test cases — 1 test = 1 check
 
@@ -44,13 +43,8 @@ KHÔNG được gộp tất cả vào 1 case chung chỉ vì outcome giống nha
 
 ## Giá trị cụ thể — KHÔNG placeholder
 
-- LUÔN dùng giá trị mẫu cụ thể trong preConditions body
 - KHÔNG dùng: `{fieldName}`, `[value]`, `<param>`, `"your_value"`, `"example"`
-- **KHÔNG dùng dấu `<>` cho bất kỳ giá trị nào trong request body**: `<channel>`, `<date>`, `<id>` đều bị cấm
-- `{JWT_TOKEN}` trong Authorization header là chấp nhận được (Postman variable), nhưng data field values phải là giá trị thật
-- ĐÚNG: `"regChannel": "WEB"`, `"pageSize": 5`, `"PAR_TYPE": "CUSTOMER_TYPE"`
-- SAI: `"regChannel": "<channel>"`, `"fromDate": "<date>"`, `"id": "<id>"`
-- Body trong preConditions = request hợp lệ hoàn chỉnh với tất cả required fields
+- **KHÔNG dùng dấu `<>` cho bất kỳ giá trị nào**: `<screen>`, `<field>`, `<value>` đều bị cấm
 
 ## Deduplication
 
@@ -69,7 +63,7 @@ KHÔNG được gộp tất cả vào 1 case chung chỉ vì outcome giống nha
 
 - Mỗi `### field name` trong validate section = 1 sub-batch riêng
 - testSuiteName = "Kiểm tra validate" (force override)
-- testCaseName = `"{field}_Mô tả"` (API) hoặc lấy trực tiếp từ bullet (Frontend)
+- testCaseName = lấy trực tiếp từ bullet
 - KHÔNG mix cases của field A vào batch đang xử lý field B
 
 ## Các field LUÔN trống
@@ -97,8 +91,8 @@ note = ""
 ## Phân quyền — PHẢI có đủ 2 cases
 
 Section "Kiểm tra phân quyền" PHẢI sinh **đủ 2 test case**:
-1. `"Phân quyền_Kiểm tra user không có quyền"` — expect 403/401
-2. `"Phân quyền_Kiểm tra user có quyền"` — expect 200 (happy path)
+1. `"Kiểm tra user không có quyền"` — expect UI hiển thị thông báo lỗi hoặc điều hướng
+2. `"Kiểm tra user có quyền"` — expect truy cập thành công (happy path)
 
 KHÔNG được chỉ sinh 1 trong 2.
 
@@ -106,12 +100,10 @@ KHÔNG được chỉ sinh 1 trong 2.
 
 | Lỗi | Cách sửa |
 |-----|----------|
-| preConditions body để trống dù API có input fields | Luôn điền body đầy đủ với required fields |
 | testCaseName quá dài | Tối đa 80 ký tự, cắt bỏ phần thừa |
 | step không numbered | Luôn dùng `"1. ...\n2. ..."` |
-| expectedResult không có status code (API) | Luôn có `1.1. Status: ...` và `1.2. Response: ...` |
-| Frontend test có HTTP status code | KHÔNG dùng status code cho FE test |
-| Dùng placeholder `<>` trong preConditions body | Thay bằng giá trị thật: `"WEB"` không phải `"<channel>"` |
+| expectedResult dùng HTTP status code | KHÔNG dùng status code cho FE test |
+| Dùng placeholder `<>` trong preConditions | Thay bằng giá trị thật: `"WEB"` không phải `"<channel>"` |
 | SQL có `-->` ở đầu dòng xuống dòng | Xóa `-->`, xuống dòng trực tiếp |
 | Phân quyền chỉ có case "không có quyền" | Luôn thêm case "có quyền" |
 | summary khác testCaseName | summary = testCaseName |

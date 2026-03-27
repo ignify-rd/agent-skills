@@ -2,7 +2,7 @@
 
 ## Bảng ưu tiên
 
-| Có PTTK? | Nguồn cho field definitions / request / response | Nguồn cho business logic |
+| Có PTTK? | Nguồn cho field definitions / màn hình | Nguồn cho business logic |
 |-----------|--------------------------------------------------|--------------------------|
 | **Có** | **CHỈ dùng PTTK** — BỎ QUA field definitions, request body, response body trong RSD | RSD |
 | **Không** | RSD (fallback) | RSD |
@@ -14,9 +14,6 @@
 - Kiểu dữ liệu (Date, Integer, Long, String — chính xác từ PTTK)
 - Required/Optional
 - maxLength, format constraints (dd/MM/yyyy, etc.)
-- Request body structure
-- Response body structure (tên trường, kiểu dữ liệu, nesting)
-- API endpoints
 - DB mappings, enum values
 
 ### RSD ưu tiên cho (luôn luôn):
@@ -30,14 +27,12 @@
 
 ### BỎ QUA trong RSD (khi có PTTK):
 - Mọi phần định nghĩa fields (tên, kiểu, required...)
-- Request body structure
-- Response body structure
 
 ## Ưu tiên khi có hình ảnh (Frontend only)
 
 | Nguồn | Ưu tiên | Dùng khi |
 |-------|---------|----------|
-| PTTK | **Cao nhất cho field definitions** | Field names, data types, required/optional, maxLength, format constraints, API endpoints, DB mappings, enum values, request/response structure |
+| PTTK | **Cao nhất cho field definitions** | Field names, data types, required/optional, maxLength, format constraints, DB mappings, enum values |
 | RSD | **Cao nhất cho business logic** | Screen flow, permissions, UI layout, chức năng, business rules. BỎ QUA field definitions/request/response nếu có PTTK |
 | Hình ảnh | **Bổ sung** | Placeholder text, field positions, UI layout hints, icon X, button labels thực tế |
 
@@ -45,7 +40,7 @@
 - Hình ảnh **KHÔNG ĐƯỢC** override bất kỳ thông tin nào từ RSD/PTTK, bao gồm:
   - Field names, data types, required/optional
   - **maxLength, minLength, format constraints** ← quan trọng: KHÔNG đoán từ ảnh
-  - API endpoints, enum values, error codes
+  - enum values, error codes
   - Business logic, conditions, validation rules
 - Hình ảnh **CHỈ ĐƯỢC** bổ sung những thông tin **RSD/PTTK không đề cập**:
   - placeholder text thực tế (nếu RSD không ghi)
@@ -58,7 +53,7 @@
 
 ## Lưu ý quan trọng
 
-- PTTK thường là file lớn hơn và chứa nhiều API/screen khác nhau
-- Luôn tìm ĐÚNG API/screen theo endpoint hoặc tên trước khi trích xuất
+- PTTK thường là file lớn hơn và chứa nhiều màn hình khác nhau
+- Luôn tìm ĐÚNG màn hình theo tên trước khi trích xuất
 - Khi có conflict giữa PTTK và RSD về field definitions → PTTK thắng
 - Khi có conflict về business logic → RSD thắng

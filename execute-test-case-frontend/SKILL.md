@@ -35,13 +35,21 @@ Check if an `"Evidence"` tab exists:
 mcp__gsheets__list_sheets(spreadsheetId)
 ```
 
-If not found, create it and write header:
+If not found, create it, write the header row, then pre-populate column A with **all test case IDs** read from the test sheet (one ID per row starting at row 2):
 ```
 mcp__gsheets__create_sheet(spreadsheetId, "Evidence")
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", row=1, {A: "Test ID", B: "Screenshot"})
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A1:B1", [["Test ID", "Screenshot"]])
+
+# Pre-populate column A with all test IDs (read from test sheet first)
+# e.g. if test IDs are FE-001…FE-020, write them to A2:A21
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A2:A{n+1}", [[id] for id in testIds])
 ```
 
-Track the next available Evidence row (start at 2).
+If the Evidence sheet **already exists**, read its current content to determine which rows already have screenshots (column B non-empty) so you can skip re-writing those rows.
+
+Track the next available Evidence row: find the first row in column A that has a Test ID but an empty column B (or append after the last populated row).
+
+**Important:** column A is the source of truth for row positions — always look up the Evidence row for a given Test ID by scanning column A, do not assume sequential order.
 
 ---
 
@@ -192,14 +200,24 @@ mcp__gsheets__update_cells(spreadsheetId, "Frontend Tests", rowIndex, {
 })
 ```
 
-Write to Evidence sheet:
+Write to Evidence sheet — find the row whose column A matches `testId`, then write an `=IMAGE()` formula to column B so the screenshot renders as a viewable image in the sheet:
 ```
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", evidenceRow, {
-  A: testId,
-  B: screenshotPath
-})
-evidenceRow += 1
+# Find Evidence row by testId (from the pre-populated column A)
+evidenceRow = lookup row in Evidence where A == testId
+
+# Write IMAGE formula to column B
+# screenshotUrl must be a web-accessible URL (https://...)
+# If screenshots are saved locally, upload to a public host first (e.g. Google Drive
+# shared link, imgbb, etc.) and use that URL here.
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", f"B{evidenceRow}",
+  [[f'=IMAGE("{screenshotUrl}")']]
+)
 ```
+
+**Obtaining a web-accessible screenshot URL:**
+- If the Playwright MCP returns a public URL for the screenshot, use it directly.
+- If only a local file path is available, attempt to upload the file to Google Drive using any available `mcp__gdrive__*` upload tool, then use the shareable `https://drive.google.com/uc?id=FILE_ID` link.
+- If no upload mechanism is available, fall back to writing the local file path as plain text (the image will not render inline but the path is preserved for reference).
 
 #### 4c — Close browser after each group
 

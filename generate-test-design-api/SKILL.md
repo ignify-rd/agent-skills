@@ -14,7 +14,6 @@ Generate comprehensive test design documents (.md) for API endpoints from RSD an
 - User provides RSD/PTTK for an API endpoint and asks to generate test design or mindmap
 - User says "sinh test design api", "tạo test design api", "tao mindmap api"
 - User uploads .pdf/.txt/.md files for API test design / mindmap generation
-- Called internally by `generate-test-case-api` skill when user provides only RSD+PTTK without a mindmap
 
 ## Prerequisites
 
@@ -77,15 +76,27 @@ Before starting generation, check project structure and **load project-level rul
 
 **⚠️ CRITICAL: Project AGENTS.md rules take precedence when explicitly defined.** Every subsequent step must check `projectRules` and apply them.
 
-### Step 0b: Resolve Input Documents
+### Step 0b: Validate Required Inputs
 
-**If user provides a feature folder name** (e.g., `/generate-test-design-api feature-1` or `sinh test design api cho feature-1`):
-1. Look inside `<feature-name>/` folder for input documents automatically:
-   - Scan for document files: `.pdf`, `.docx`, `.doc`, `.md`, `.txt` — identify RSD and PTTK by filename
-2. **DO NOT ask** the user for file paths — use whatever documents are found in the folder
-3. **If folder is empty** → scan toàn bộ project root cho document files liên quan đến feature name
-4. If truly no documents found → inform user: "Không tìm thấy tài liệu RSD/PTTK. Hãy cung cấp đường dẫn hoặc upload file."
-5. Save output as `<feature-name>/test-design-api.md`
+**⚠️ STOP — Do NOT read any files or proceed until the user explicitly provides input file paths.**
+
+Required inputs:
+- **RSD file path** — required
+- **PTTK file path** — optional
+- **Output folder** — required (e.g. `feature-1/`), output will be saved as `<output-folder>/test-design-api.md`
+
+**NEVER:**
+- Scan folders looking for files
+- Guess file paths from feature names or conversation context
+- Read any file not explicitly provided by the user
+
+**If any required input is missing → STOP immediately and ask:**
+> "Vui lòng cung cấp:
+> 1. Đường dẫn file RSD (bắt buộc)
+> 2. Đường dẫn file PTTK (nếu có)
+> 3. Thư mục output (bắt buộc, ví dụ: `feature-1/`)"
+
+Do not proceed until the user provides these.
 
 ### Step 1: Mode Detection (API Mode Only)
 
@@ -224,41 +235,55 @@ After extraction, check for issues and **proactively ask user** before proceedin
 
 ### Step 4c: Business Logic Inventory (API Mode)
 
-**Before generating any section**, extract toàn bộ business logic thành inventory. Đây là checklist để đảm bảo mọi item đều xuất hiện trong mindmap đúng section.
+**Before generating any section**, extract toàn bộ business logic và ghi vào `inventory.json` từng bước bằng script.
 
-```json
-{
-  "errorCodes": [
-    { "code": "PCER_UPLOAD_001", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file format sai" },
-    { "code": "PCER_UPLOAD_004", "desc": "exact từ RSD", "section": "validate", "triggerCondition": "file sai template" },
-    { "code": "2", "desc": "Có lỗi xảy ra trong quá trình xử lý", "section": "main", "triggerCondition": "S3 error hoặc DB error" }
-  ],
-  "businessRules": [
-    { "id": "BR1", "condition": "uploadType = 1", "trueBranch": "INSERT với action=ADD", "falseBranch": null, "section": "main" },
-    { "id": "BR2", "condition": "uploadType = 2", "trueBranch": "INSERT với action=DELETE", "falseBranch": null, "section": "main" }
-  ],
-  "dbFields": [
-    "ID (auto)", "DOMAIN_TYPE", "FEE_SERVICE", "CUSTOMER_ID", "BRANCH (= bdsCode + '000')",
-    "STATUS (= 1)", "UPLOAD_TYPE", "CREATED_USER", "CREATED_TIME", "TOTAL_UPLOAD", "FILE_NAME", "S3_FILE_KEY"
-  ],
-  "externalServices": [
-    { "name": "S3", "onFailure": "error code 2", "rollbackBehavior": "không INSERT DB" }
-  ],
-  "modes": ["uploadType=1 (Thêm mới)", "uploadType=2 (Xoá)"]
-}
+**Khởi tạo file:**
+```bash
+python $SKILL_SCRIPTS/inventory.py init \
+  --file <output-folder>/inventory.json \
+  --name "<API name>" \
+  --endpoint "<METHOD /path>"
 ```
 
-**Extraction rules (API):**
-- `errorCodes[].section`: `"validate"` = thuộc section "Kiểm tra validate" trong mindmap; `"main"` = thuộc "Kiểm tra luồng chính"
-- `errorCodes[].desc`: copy **exact** từ bảng mã lỗi trong RSD/PTTK — **đọc toàn bộ bảng, không bỏ sót dòng nào**
-- `dbFields[]`: lấy từ bảng DB mapping trong PTTK — **list 100% columns** kể cả auto-generate và derived fields
-- `externalServices[].rollbackBehavior`: nếu RSD mô tả "không lưu DB khi lỗi" → ghi rõ, cần 1 bullet trong mindmap
+**Extraction rules:**
+- `errorCodes[].section`: `"validate"` = thuộc "Kiểm tra validate"; `"main"` = thuộc "Kiểm tra luồng chính"
+- `errorCodes[].desc`: copy **exact** từ bảng mã lỗi — **đọc toàn bộ bảng, không bỏ sót dòng nào**
+- `dbOperations[].fieldsToVerify`: lấy từ bảng DB mapping — **list 100% columns** kể cả auto-generate
+- `fieldConstraints[]`: lấy từ PTTK Phase 2 — name, type, maxLength, required, format
 
-**Dùng inventory này khi sinh từng section (API):**
-- Error codes có `section="validate"` → phải xuất hiện trong ## Kiểm tra validate
-- Error codes có `section="main"` → phải xuất hiện trong ## Kiểm tra luồng chính
-- `dbFields[]` → tất cả fields phải có trong SQL verify của luồng chính
-- `rollbackBehavior` → phải có bullet "S3 lỗi → không INSERT vào DB" trong luồng chính
+**Với mỗi item extract được, gọi ngay lệnh add (KHÔNG tích lũy rồi write một lần):**
+
+```bash
+# Mỗi error code:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category errorCodes \
+  --data '{"code":"PCER_001","desc":"exact message","section":"validate","trigger":"condition","source":"RSD tr.X"}'
+
+# Mỗi business rule:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category businessRules \
+  --data '{"id":"BR1","condition":"uploadType=1","trueBranch":"INSERT action=ADD","falseBranch":null,"source":"RSD tr.X"}'
+
+# Mỗi mode:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category modes \
+  --data '{"name":"Thêm mới","triggerValue":"uploadType=1","expectedAction":"INSERT","source":"RSD tr.X"}'
+
+# Mỗi DB operation (1 entry per table):
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category dbOperations \
+  --data '{"table":"TABLE_NAME","operation":"INSERT","fieldsToVerify":["COL1","COL2"],"source":"PTTK section Y"}'
+
+# Mỗi external service:
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category externalServices \
+  --data '{"name":"S3","onFailure":"error code 2","rollbackBehavior":"không INSERT DB","source":"RSD tr.X"}'
+
+# Mỗi field constraint (từ PTTK Phase 2):
+python $SKILL_SCRIPTS/inventory.py add --file <output-folder>/inventory.json \
+  --category fieldConstraints \
+  --data '{"name":"fieldName","type":"String","maxLength":100,"required":true,"source":"PTTK section Y"}'
+```
 
 **⚠️ Inventory = Mandatory Checklist — mỗi item PHẢI có trong output:**
 
@@ -267,7 +292,7 @@ After extraction, check for issues and **proactively ask user** before proceedin
 | Mỗi errorCode[validate] | ≥1 bullet với exact message | ## Kiểm tra validate |
 | Mỗi errorCode[main] | ≥1 bullet với exact message | ## Kiểm tra luồng chính |
 | Mỗi businessRule | bullet TRUE + FALSE | ## Kiểm tra luồng chính |
-| Mỗi dbField | phải có trong SQL SELECT | ## Kiểm tra luồng chính |
+| Mỗi dbOperation | SQL SELECT all fieldsToVerify | ## Kiểm tra luồng chính |
 | Mỗi mode | ≥1 happy path bullet | ## Kiểm tra luồng chính |
 | Mỗi externalService | bullet onFailure + rollback | ## Kiểm tra luồng chính |
 
@@ -275,22 +300,17 @@ After extraction, check for issues and **proactively ask user** before proceedin
 
 ### Step 4d: Inventory Verification Gate
 
-**Sau khi hoàn thành Step 4c, PHẢI báo cáo cho user (bắt buộc, không được skip):**
+**Sau khi hoàn thành Step 4c, chạy summary và báo cáo cho user:**
 
-```
-📋 Business Logic Inventory đã extract:
-- Error codes:        {N} (list: PCER_001 [validate], PCER_002 [main], ...)
-- Business rules:     {N} if/else branches (list: BR1, BR2, ...)
-- Modes/flows:        {N} (list: uploadType=1, uploadType=2, ...)
-- DB fields:          {N} columns cần verify (list: ID, STATUS, FILE_NAME, ...)
-- External services:  {N} (list: S3, Queue, ...)
+```bash
+python $SKILL_SCRIPTS/inventory.py summary --file <output-folder>/inventory.json
 ```
 
-**Nếu bất kỳ category nào = 0 VÀ tài liệu có khả năng chứa thông tin đó → HỎI USER xác nhận trước khi tiếp tục:**
-> "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không? (có thể tôi đọc bỏ sót phần nào đó)"
+**Nếu bất kỳ category = 0 VÀ tài liệu có khả năng chứa → HỎI USER:**
+> "Không tìm thấy {category} trong tài liệu. Tài liệu có đề cập không?"
 
 **Nếu errorCodes = 0:** Dừng lại, hỏi user:
-> "Không tìm thấy bảng mã lỗi trong tài liệu. Bạn có thể chỉ rõ section nào chứa error codes không?"
+> "Không tìm thấy bảng mã lỗi. Bạn có thể chỉ rõ section nào chứa error codes không?"
 
 ### Step 5: Generate Test Design Sections (API Mode)
 
