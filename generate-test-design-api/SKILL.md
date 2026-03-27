@@ -246,7 +246,17 @@ python $SKILL_SCRIPTS/inventory.py init \
 ```
 
 **Extraction rules:**
-- `errorCodes[].section`: `"validate"` = thuộc "Kiểm tra validate"; `"main"` = thuộc "Kiểm tra luồng chính"
+- `errorCodes[].section`: phân loại theo quy tắc sau:
+  - `"validate"` = lỗi liên quan đến giá trị 1 field hoặc ràng buộc giữa 2 fields:
+    - Empty/missing/type mismatch/format sai
+    - Date constraint của 1 field (quá khứ, tương lai, không tồn tại)
+    - **Cross-field constraint** (VD: expiredDate phải ≥ effectiveDate, endDate > startDate)
+    - Ràng buộc giá trị không cần DB query (min/max, range, enum)
+  - `"main"` = lỗi cần DB lookup hoặc business state:
+    - Entity không tồn tại trong DB
+    - Trùng tên/mã với record khác đã được duyệt
+    - Sai trạng thái workflow / state machine
+    - External service failure
 - `errorCodes[].desc`: copy **exact** từ bảng mã lỗi — **đọc toàn bộ bảng, không bỏ sót dòng nào**
 - `dbOperations[].fieldsToVerify`: lấy từ bảng DB mapping — **list 100% columns** kể cả auto-generate
 - `fieldConstraints[]`: lấy từ PTTK Phase 2 — name, type, maxLength, required, format
@@ -328,31 +338,56 @@ Generate the test design following the rules loaded via `--ref` and the format o
 **Post-section checkpoint — Common:** Có đủ Method + URL + Authorization test cases? Thiếu → thêm bullet.
 → Count: {generated}/{expected}. Missing → THÊM bullet ngay, KHÔNG proceed đến section tiếp.
 
-**Validate section (per-field):** For each inputField from Phase 2, generate test cases using the field templates in `--ref api-test-design`. **Process 1 field at a time** — complete ALL cases for the current field before moving to the next.
+**Validate section — BATCHED (max 5 fields per batch):**
 
-- **String Required** → test ALL 19+ cases: empty, missing, null, maxLen-1/maxLen/maxLen+1, numeric chars, lowercase/uppercase, accented chars, special chars (see special-char rule below), all space, space in middle, space at start/end, emoji, unicode, boolean, array, object, XSS, SQL injection
-- **Integer Required (no default)** → test ALL 19 cases: empty (→ error), missing (→ error), null (→ error), valid positive, negative, decimal, leading zero (00123), very large number, string only (abc), mixed string+number (10abc), special chars (@#$), all space, space at start/end, boolean, array, object, XSS, SQL injection
-- **Integer with default** → test ALL 19 cases: empty/missing/null (→ uses default, success), valid value, negative, decimal, leading zero, very large, string, mixed string+number, special chars, all space, space at start/end, boolean, array, object, XSS, SQL injection
-- **Optional Integer** → test: empty/missing/null (→ returns all), valid/invalid value, negative, decimal, string, boolean, array, object, XSS, SQL injection
-- **JSONB Required** → test ALL 14 cases: empty (→ error), missing (→ error), null (→ error), valid JSON, JSON sai syntax, JSON sai format nghiệp vụ, object rỗng `{}`, mảng `[]`, chuỗi rỗng, string thuần, number, boolean, XSS trong JSON value, SQL injection trong JSON value
-- **JSONB Optional** → test: missing/null (→ success), valid JSON (→ success), JSON sai syntax, JSON sai format nghiệp vụ, object rỗng, mảng, chuỗi rỗng, string thuần, number, boolean, XSS trong JSON value, SQL injection trong JSON value
-- **Special chars rule**: Only include "ký tự đặc biệt cho phép" + "không cho phép" cases when PTTK explicitly defines `allowedSpecialChars`. If not specified → use 1 generic "ký tự đặc biệt" case with expectedResult = "Theo RSD"
+> **Lý do batch**: Sinh toàn bộ validate trong 1 request làm cạn context window → fields cuối bị cắt cases. Batch thành nhóm 5 → context sạch, checkpoint nghiêm.
+
+1. Nhóm tất cả `inputFields` thành batches: [F1–F5], [F6–F10], [F11–F15], ...
+2. Với **MỖI batch**: sinh validate từng field → per-field checkpoint ngay sau mỗi field → inter-batch checkpoint sau khi xong cả nhóm:
+```
+Batch {N} complete: [{fields}] — {N} fields. Min cases met? → PROCEED / FIX trước khi sang batch tiếp.
+```
+3. **KHÔNG proceed sang batch tiếp** khi batch hiện tại chưa đủ min cases.
+
+**Field type dispatch table:**
+
+| Type | Min cases | Template |
+|------|-----------|----------|
+| String Required | ≥ 19 | empty→error, missing→error, null→RSD, maxLen-1/max/max+1, numeric→RSD, lower/upper→success, accented→RSD, special chars (xem rule), all space→RSD, space start/end→RSD, space middle→RSD, emoji→RSD, unicode→RSD, boolean→error, array→error, object→error, XSS→error, SQL→error |
+| String Optional | ≥ 17 | missing→success, null→success, empty("")→RSD, maxLen-1/max/max+1, numeric→RSD, lower/upper→success, accented→RSD, special chars, all space→RSD, space start/end→RSD, space middle→RSD, emoji→RSD, unicode→RSD, boolean→error, array→error, object→error, XSS→error, SQL→error |
+| Integer Required | ≥ 19 | empty→error, missing→error, null→RSD, valid positive→success, negative→RSD, decimal→RSD, leading zero (00123)→RSD, very large→RSD, string (abc)→error, mixed (10abc)→error, special (@#$)→error, all space→error, space start/end→error, boolean→error, array→error, object→error, XSS→error, SQL→error |
+| Integer with Default | ≥ 19 | empty/missing/null→success+default note, valid→success, negative→RSD, decimal→RSD, leading zero→RSD, very large→RSD, string→error, mixed→error, special→error, all space→error, space start/end→error, boolean→error, array→error, object→error, XSS→error, SQL→error |
+| Integer Optional | ≥ 13 | empty/missing/null→success (all records), valid→success (filtered), invalid→RSD, negative→RSD, decimal→RSD, string→error, boolean→error, array→error, object→error, XSS→error, SQL→error |
+| Long | ≥ 19 | Dùng Integer Required template |
+| Boolean Required | ≥ 11 | empty→error, missing→error, null→RSD, true→success, false→success, "true"/"false"→RSD, 0/1→RSD, other numbers→error, string (abc)→error, array→error, object→error |
+| Boolean Optional | ≥ 9 | missing→success, null→success, true→success, false→success, "true"/"false"→RSD, 0/1→RSD, string (abc)→error, array→error, object→error |
+| Number Required | ≥ 18 | empty→error, missing→error, null→RSD, integer valid→success, decimal valid→success, negative→RSD, too many decimals→RSD, very large→RSD, string (abc)→error, mixed (10abc)→error, special (@#$)→error, all space→error, space start/end→error, boolean→error, array→error, object→error, XSS→error, SQL→error. Nếu có range: thêm <min→RSD và >max→RSD |
+| Number Optional | ≥ 13 | missing→success, null→success, integer valid→success, decimal valid→success, negative→RSD, too many decimals→RSD, very large→RSD, string→error, boolean→error, array→error, object→error, XSS→error, SQL→error. Nếu có range: thêm <min→RSD và >max→RSD |
+| JSONB Required | ≥ 14 | empty→error, missing→error, null→RSD, valid JSON→success, bad syntax→error, bad business format→RSD, `{}`→RSD, `[]`→error, empty string→error, plain string→error, number→error, boolean→error, XSS in value→error, SQL in value→error |
+| JSONB Optional | ≥ 12 | missing→success, null→success, valid JSON→success, bad syntax→error, bad business format→RSD, `{}`→RSD, `[]`→error, empty string→error, plain string→error, number→error, boolean→error, XSS in value→error, SQL in value→error |
+| Date Required | ≥ 15 | empty→error, missing→error, null→RSD, correct format→success, wrong format→error, invalid date (00-00, 02-30)→error, past→RSD, today→RSD, future→RSD, integer→error, boolean→error, array→error, object→error, XSS→error, SQL→error |
+| Array Required | ≥ 8 | missing→error, null→RSD, empty `[]`→error, element with empty `[{}]`→error, string→error, number→error, object→error, boolean→error, XSS in element→error, SQL in element→error |
+
+**Special chars rule**: Only split "cho phép" + "không cho phép" when PTTK **explicitly defines** `allowedSpecialChars` as a list. If not defined → 1 generic case "ký tự đặc biệt" `→ Theo RSD`. **KHÔNG tự suy luận từ ví dụ trong spec.**
+
 - ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
 - JSON response must be multiline WITHOUT backtick fence
 
-**⚠️ Per-field checkpoint (MANDATORY after EACH field):**
-Count generated cases vs required minimum. If any field < min → APPEND missing cases immediately before moving to next field.
+**⚠️ Per-field checkpoint (MANDATORY after EACH field — không bỏ qua kể cả trong batch):**
 ```
 Field {fieldName} ({type}): {generated}/{min_required} cases. Missing: [list] → THÊM ngay.
 ```
-Min case counts: String Required ≥ 19 | Integer Required ≥ 19 | Integer with Default ≥ 19 | JSONB Required ≥ 14 | JSONB Optional ≥ 12
+Min counts: String Req ≥ 19 | String Opt ≥ 17 | Int Req ≥ 19 | Int Default ≥ 19 | Int Opt ≥ 13 | Long ≥ 19 | Bool Req ≥ 11 | Bool Opt ≥ 9 | Num Req ≥ 18 | Num Opt ≥ 13 | JSONB Req ≥ 14 | JSONB Opt ≥ 12 | Date ≥ 15 | Array ≥ 8
 
 **Post-section checkpoint — Validate (API):** TỪNG field trong `inventory.errorCodes[section="validate"]` → có bullet với exact error code? Thiếu → THÊM bullet `### [SỬA]`.
 → Count per field: {generated}/{expected} error codes covered. Missing → THÊM `### [SỬA]` ngay, KHÔNG proceed đến main flow.
 
 **Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format.
 
-**⚠️ KHÔNG duplicate validate cases vào luồng chính:** Các lỗi validate (truyền sai kiểu, bỏ trống, vượt maxLength...) đã có trong "Kiểm tra validate" → KHÔNG viết lại vào "Kiểm tra luồng chính". Luồng chính chỉ test business logic (error codes từ RSD, DB operations, mode variations, external services).
+**⚠️ KHÔNG duplicate validate cases vào luồng chính:**
+- Lỗi validate field (empty, type, length, format, date constraint, cross-field) đã có trong "Kiểm tra validate" → KHÔNG viết lại vào luồng chính
+- **Cross-field validate** (VD: expiredDate < effectiveDate, endDate ≤ startDate) → sinh trong validate section dưới field thứ 2, KHÔNG sinh trong main flow
+- Luồng chính **CHỈ** test: error codes cần DB lookup, workflow state, external service failure
 
 **⚠️ PHẢI sinh dựa trên inventory từ Step 4c — inject các items cụ thể vào generation:**
 
@@ -622,8 +657,7 @@ This is the REQUIRED output format. AI MUST follow this structure even when cata
 #### Truyền FIELD_NAME là ký tự số
 #### Truyền FIELD_NAME là chữ(thường/hoa) không dấu
 #### Truyền FIELD_NAME là chữ(thường/hoa) có dấu
-#### Truyền FIELD_NAME là ký tự đặc biệt cho phép _
-#### Truyền FIELD_NAME là ký tự đặc biệt không cho phép
+#### Truyền FIELD_NAME là ký tự đặc biệt
 #### Truyền FIELD_NAME là all space
 #### Truyền FIELD_NAME có space đầu / cuối
 #### Truyền FIELD_NAME là emoji/icons

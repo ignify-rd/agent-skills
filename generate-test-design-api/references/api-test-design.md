@@ -313,13 +313,131 @@ Heading: `### {fieldName}: Integer (Optional, null = tìm tất cả)`
 
 ---
 
+### LONG — map to INTEGER Required
+
+`Long` type → dùng **INTEGER Required (no default)** template (≥ 19 cases). Heading: `### {fieldName}: Long (Required)`.
+
+---
+
+### BOOLEAN Required — 11 cases
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ error` |
+| Không truyền | `→ error` |
+| Truyền null | `→ Theo RSD` |
+| true | `→ success` |
+| false | `→ success` |
+| Chuỗi "true" / "false" | `→ Theo RSD` |
+| Số nguyên (0/1) | `→ Theo RSD` |
+| Số khác 0 và 1 | `→ error` |
+| Chuỗi bất kỳ (abc) | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+
+---
+
+### BOOLEAN Optional — 9 cases
+
+| Case | Marker |
+|------|--------|
+| Không truyền | `→ success` |
+| Truyền null | `→ success` |
+| true | `→ success` |
+| false | `→ success` |
+| Chuỗi "true" / "false" | `→ Theo RSD` |
+| Số nguyên (0/1) | `→ Theo RSD` |
+| Chuỗi bất kỳ (abc) | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+
+---
+
+### NUMBER Required (decimal/float, có thể có range) — ≥ 18 cases
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ error` |
+| Không truyền | `→ error` |
+| Truyền null | `→ Theo RSD` |
+| Số nguyên hợp lệ | `→ success` |
+| Số thập phân hợp lệ | `→ success` |
+| Số âm | `→ Theo RSD` |
+| Quá nhiều chữ số thập phân (vượt precision) | `→ Theo RSD` |
+| Số rất lớn | `→ Theo RSD` |
+| Chuỗi ký tự (abc) | `→ error` |
+| Chuỗi chữ lẫn số (10abc) | `→ error` |
+| Ký tự đặc biệt (@#$) | `→ error` |
+| All space | `→ error` |
+| Space đầu / cuối | `→ error` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+> Nếu spec có range [min, max]: thêm "Giá trị < min" `→ Theo RSD` và "Giá trị > max" `→ Theo RSD`
+
+---
+
+### NUMBER Optional — ≥ 13 cases
+
+| Case | Marker |
+|------|--------|
+| Không truyền | `→ success` |
+| Truyền null | `→ success` |
+| Số nguyên hợp lệ | `→ success` |
+| Số thập phân hợp lệ | `→ success` |
+| Số âm | `→ Theo RSD` |
+| Quá nhiều chữ số thập phân | `→ Theo RSD` |
+| Số rất lớn | `→ Theo RSD` |
+| Chuỗi | `→ error` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+> Nếu spec có range [min, max]: thêm "Giá trị < min" `→ Theo RSD` và "Giá trị > max" `→ Theo RSD`
+
+---
+
+### STRING Optional — ≥ 17 cases
+
+| Case | Marker |
+|------|--------|
+| Không truyền | `→ success` |
+| Truyền null | `→ success` |
+| Để trống ("") | `→ Theo RSD` |
+| {maxLen-1} ký tự | `→ success` |
+| {maxLen} ký tự | `→ success` |
+| {maxLen+1} ký tự | `→ error` |
+| Ký tự số | `→ Theo RSD` |
+| Chữ thường/hoa không dấu | `→ success` |
+| Chữ có dấu tiếng Việt | `→ Theo RSD` |
+| Ký tự đặc biệt (xem quy tắc) | `→ Theo RSD` |
+| All space | `→ Theo RSD` |
+| Space đầu / cuối | `→ Theo RSD` |
+| Space ở giữa | `→ Theo RSD` |
+| Emoji/icons | `→ Theo RSD` |
+| Unicode đặc biệt | `→ Theo RSD` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+> Nếu không có maxLength: bỏ qua 3 cases maxLen → min ≥ 17 → ≥ 14 cases.
+
+---
+
 ### Per-field checkpoint (bắt buộc sau MỖI field)
 
 ```
 Field {fieldName} ({type}): {generated}/{min} cases. Missing: [list] → THÊM ngay.
 ```
 
-Min counts: String Required ≥ 19 | Integer Required ≥ 19 | Integer with Default ≥ 19 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date ≥ 15 | Array ≥ 8
+Min counts: String Required ≥ 19 | String Optional ≥ 17 | Integer Required ≥ 19 | Integer with Default ≥ 19 | Long ≥ 19 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date ≥ 15 | Array ≥ 8 | Boolean Required ≥ 11 | Boolean Optional ≥ 9 | Number Required ≥ 18 | Number Optional ≥ 13
 
 ---
 
