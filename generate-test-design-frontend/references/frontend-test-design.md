@@ -43,6 +43,7 @@ Phase 8:  Validate and fix markdown
 
 **DETAIL screen:** Rename `## Kiểm tra validate` → `## Kiểm tra dữ liệu hiển thị`
 
+<!-- @section: image-analysis -->
 ## Phase 2: Phân tích hình ảnh (nếu có screenshots/wireframes) — BỔ SUNG SAU RSD/PTTK
 
 Tương ứng với logic trong ứng dụng tại `rsd-to-mindmap-frontend.vue` — service `preImageAnalysisService`.
@@ -131,6 +132,7 @@ RSD không đề cập button "Xuất Excel"
 
 ---
 
+<!-- @section: extraction -->
 ## Phase 1: Trích xuất cấu trúc UI từ RSD/PTTK (LUÔN ĐỌC TRƯỚC TIÊN)
 
 Theo `priority-rules.md`: khi có PTTK chỉ lấy từ RSD business logic/screen structure. Khi không có PTTK, lấy tất cả.
@@ -231,6 +233,7 @@ Theo `priority-rules.md`: khi có PTTK chỉ lấy từ RSD business logic/scree
 }
 ```
 
+<!-- @section: common-ui -->
 ## {COMMON_UI_SECTION} — Kiểm tra giao diện chung
 
 Section này mô tả **tất cả các trạng thái UI** của màn hình — đọc toàn bộ spec để xác định:
@@ -314,6 +317,7 @@ Template:
 - Điều kiện thay đổi UI: bảng luồng xử lý, mục enable/disable, mục hiển thị có điều kiện
 - Popup/modal: mọi chỗ trong spec đề cập popup, modal, dialog
 
+<!-- @section: permissions -->
 ## {PERMISSION_SECTION} — Kiểm tra phân quyền
 
 ```markdown
@@ -328,6 +332,7 @@ Template:
 - {hasPermissionResult}
 ```
 
+<!-- @section: validate -->
 ## {VALIDATE_SECTION} — Phase 4
 
 ### Cho LIST/FORM/POPUP screens
@@ -379,6 +384,7 @@ KHÔNG dùng field templates. Thay bằng `generateDetailDataSection()`:
         - {SQL query SELECT ... FROM ... WHERE ...}
 ```
 
+<!-- @section: grid -->
 ## {GRID_SECTION} — Phase 5 (LIST screens only)
 
 ```markdown
@@ -412,6 +418,7 @@ KHÔNG dùng field templates. Thay bằng `generateDetailDataSection()`:
 
 **Bỏ qua** grid section cho DETAIL screens (data đã trong validate).
 
+<!-- @section: pagination -->
 ## {PAGINATION_SECTION} — Hardcoded template
 
 ```markdown
@@ -465,6 +472,7 @@ KHÔNG dùng field templates. Thay bằng `generateDetailDataSection()`:
 
 Chỉ sinh khi `pagination` exists trong UI structure.
 
+<!-- @section: function -->
 ## {FUNCTION_SECTION} — Phase 5 (LLM-generated)
 
 Nội dung thay đổi tùy **screenType**:
@@ -546,6 +554,7 @@ Nội dung thay đổi tùy **screenType**:
 - KHÔNG tạo section phân trang (đã có riêng)
 - CHỈ test: hiển thị/ẩn button theo quyền/status + click button + điều hướng
 
+<!-- @section: timeout -->
 ## {TIMEOUT_SECTION} — Hardcoded template
 
 ```markdown
@@ -570,6 +579,7 @@ Nội dung thay đổi tùy **screenType**:
       + Nội dung: <Mã lỗi> : <Mô tả lỗi Server trả>
 ```
 
+<!-- @section: verify -->
 ## Phase 6: Verify + Supplement
 
 Sau khi generate function section, re-read RSD và verify:

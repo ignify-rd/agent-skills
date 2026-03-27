@@ -68,6 +68,8 @@ Nếu field có ràng buộc với field khác (VD: expiredDate ≥ effectiveDat
 
 ## Bước 4 — Per-field checkpoint (BẮT BUỘC sau MỖI field)
 
+> ⚠️ **Checkpoint chỉ trong MEMORY / STDOUT — KHÔNG ghi vào batch file.**
+
 ```
 ✓ Field {fieldName} ({type}): {generated}/{min} cases.
   [V3] → error chỉ cho type violations/XSS/SQL injection: ✅/❌
@@ -92,7 +94,14 @@ Sau khi xong batch, đọc `{INVENTORY_FILE}`:
 {OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md
 ```
 
-File này chứa **chỉ** validate cases của batch, không có heading `## Kiểm tra validate` — orchestrator sẽ merge sau.
+> ⚠️ **NỘI DUNG FILE BATCH CHỈ ĐƯỢC CHỨA validate cases. TUYỆT ĐỐI KHÔNG ghi:**
+> - Heading `# ...` hoặc `## Kiểm tra validate` hay `## Kiểm tra Validate`
+> - Bảng checkpoint `## Per-Field Checkpoint` hay `| Field | Type | ...`
+> - `=== Batch N complete ===` text
+> - `## Response Legend` tables
+> - Bất kỳ text nào từ các bước checkpoint
+>
+> **File bắt đầu TRỰC TIẾP bằng `### fieldName:` — không có gì trước đó.**
 
 Ví dụ nội dung `validate-batch-1.md`:
 ```markdown
@@ -106,6 +115,8 @@ Ví dụ nội dung `validate-batch-1.md`:
 ```
 
 ## Bước 7 — Batch checkpoint
+
+> ⚠️ **In ra CONSOLE/STDOUT ONLY — KHÔNG ghi vào batch file hay output file nào.**
 
 ```
 === Batch {BATCH_NUMBER} complete ===

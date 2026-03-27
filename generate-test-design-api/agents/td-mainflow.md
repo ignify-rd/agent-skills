@@ -100,6 +100,8 @@ Missing → THÊM `### [SỬA]` ngay
 
 ## Bước 6b — Self-check trước khi append (BẮT BUỘC)
 
+> ⚠️ **Xác nhận trong MEMORY ONLY — KHÔNG ghi bất kỳ dòng nào sau đây vào OUTPUT_FILE.**
+
 Scan nội dung vừa sinh (trong memory, TRƯỚC khi ghi file):
 
 ```
@@ -113,13 +115,15 @@ Nếu có ❌ → SỬA ngay trong memory trước khi sang Bước 7.
 
 ## Bước 7 — Append vào output + Coverage report
 
-Append vào `{OUTPUT_FILE}`:
+Append **CHỈ** nội dung sau vào `{OUTPUT_FILE}` (không có gì khác):
 ```markdown
 ## Kiểm tra luồng chính
 {generated content}
 ```
 
-In coverage report:
+> ⚠️ **KHÔNG append vào OUTPUT_FILE:** Coverage report, Self-check, bảng thống kê, separator `---`, hay bất kỳ text nào từ các bước checkpoint.
+
+In coverage report ra STDOUT (không ghi vào file):
 ```
 📊 Coverage Report (Main Flow):
 ✓ Error codes [main]: {N}/{N}

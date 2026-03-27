@@ -2,6 +2,7 @@
 
 Mỗi field type có template hardcoded (19 loại). Templates sinh ~80% test cases. LLM chỉ bổ sung business-specific cases.
 
+<!-- @section: dispatch -->
 ## Dispatch Logic
 
 ```
@@ -28,6 +29,7 @@ field.type → template function:
 
 ---
 
+<!-- @section: textbox -->
 ## 1. Textbox (editable)
 
 ```markdown
@@ -159,6 +161,7 @@ field.type → template function:
 - `validationPattern` → sinh 2 format tests (đúng/sai định dạng)
 - `isConditionallyDisabled` → sinh test trạng thái disabled
 
+<!-- @section: textbox-readonly -->
 ## 2. Textbox (Read Only)
 
 ```markdown
@@ -189,6 +192,7 @@ field.type → template function:
 
 ---
 
+<!-- @section: combobox -->
 ## 3. Combobox (searchable dropdown with API data)
 
 ```markdown
@@ -369,6 +373,7 @@ field.type → template function:
 
 ---
 
+<!-- @section: simple-dropdown -->
 ## 4. Simple Dropdown (hardcoded values, no search)
 
 ```markdown
@@ -431,6 +436,7 @@ field.type → template function:
 
 ---
 
+<!-- @section: searchable-dropdown -->
 ## 5. Searchable Dropdown (API data + search textbox)
 
 ```markdown
@@ -556,6 +562,7 @@ field.type → template function:
 
 ---
 
+<!-- @section: toggle -->
 ## 6. Toggle Button
 
 ```markdown
@@ -595,6 +602,7 @@ field.type → template function:
 
 ---
 
+<!-- @section: checkbox -->
 ## 7. Checkbox (in data grid)
 
 ```markdown
@@ -644,6 +652,7 @@ Nếu `requiresDeletePermission = false`: thay block quyền bằng `- Mặc đ�
 
 ---
 
+<!-- @section: button -->
 ## 8. Button
 
 ```markdown
@@ -688,6 +697,7 @@ Nếu `requiresDeletePermission = false`: thay block quyền bằng `- Mặc đ�
 
 ---
 
+<!-- @section: icon-x -->
 ## 9. Icon X (close icon)
 
 ```markdown
@@ -722,6 +732,7 @@ Nếu `requiresDeletePermission = false`: thay block quyền bằng `- Mặc đ�
 
 ---
 
+<!-- @section: button-visibility -->
 ## 10. Button Visibility (DETAIL screens only — sinh từ `buttonVisibilityRules[]`)
 
 ```markdown
@@ -749,6 +760,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: datepicker -->
 ## 11. Date Picker
 
 ```markdown
@@ -886,6 +898,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: daterange -->
 ## 12. Date Range Picker
 
 ```markdown
@@ -998,6 +1011,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: textarea -->
 ## 13. Textarea (multiline text)
 
 ```markdown
@@ -1103,6 +1117,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: number -->
 ## 14. Number Input
 
 ```markdown
@@ -1248,6 +1263,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: radio -->
 ## 15. Radio Button / Radio Group
 
 ```markdown
@@ -1305,6 +1321,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: file-upload -->
 ## 16. File Upload
 
 ```markdown
@@ -1410,6 +1427,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: password -->
 ## 17. Password Input
 
 ```markdown
@@ -1536,6 +1554,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: tag-input -->
 ## 18. Tag Input / Chip Input
 
 ```markdown
@@ -1629,6 +1648,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 ---
 
+<!-- @section: richtext -->
 ## 19. Rich Text Editor
 
 ```markdown
