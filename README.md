@@ -158,5 +158,3 @@ test-genie update --ai cursor
 > ⚠️ **Bắt buộc truyền `--ai`** — giống lệnh `init`.
 
 File của bạn (`catalog/`, `AGENTS.md`) **sẽ không bị ảnh hưởng**.
-
----
