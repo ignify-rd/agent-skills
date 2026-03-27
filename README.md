@@ -160,24 +160,3 @@ test-genie update --ai cursor
 File của bạn (`catalog/`, `AGENTS.md`) **sẽ không bị ảnh hưởng**.
 
 ---
-
-## Changelog
-
-### v1.1 — Cải thiện coverage
-
-**Thay đổi quan trọng:**
-
-- **`test-genie init` và `update` bắt buộc truyền `--ai`** — trước đây mặc định là `claude`, giờ phải chỉ rõ IDE đang dùng
-- **Truyền tên thư mục thay vì đường dẫn file** — `/generate-test-case-api login-feature` thay vì phải chỉ từng file PDF
-- **Không cần credentials.json** — tool tự dùng OAuth mặc định nếu không tìm thấy credentials của bạn
-- **Tự động upload Google Sheets** sau khi sinh test case xong (không cần chạy lệnh riêng)
-- **Coverage cao hơn cho luồng chính:**
-  - Tool trích xuất toàn bộ error codes, business rules, DB fields, external services trước khi sinh
-  - Tự kiểm tra và bổ sung các trường hợp còn thiếu (error codes, DB fields, rollback scenarios)
-  - Đảm bảo mọi error code trong tài liệu đều có test case với đúng message
-  - Verify tất cả DB fields (kể cả CREATED_TIME, S3_FILE_KEY, derived fields)
-  - Test rollback: verify không có data ghi vào DB khi S3/external service lỗi
-
-**Nâng cấp nhỏ:**
-- Script tự tìm đường dẫn — không còn lỗi "Skill scripts not found" khi chạy trong Cursor/Windsurf
-- Nếu không tìm được script, tool tự đọc file rules trực tiếp để không bỏ qua format
