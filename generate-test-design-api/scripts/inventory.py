@@ -6,14 +6,30 @@ Incrementally builds and queries inventory.json.
 Commands:
   init     Create or reset inventory file
   add      Append one item to a category
+  patch    Merge a JSON file {category: [items]} into inventory (avoids shell encoding issues)
   get      Query items from a category (optionally filtered)
   summary  Print item counts per category
 
 Usage:
   python inventory.py init    --file PATH --name NAME [--endpoint ENDPOINT] [--screen-type TYPE]
   python inventory.py add     --file PATH --category CATEGORY --data JSON
+  python inventory.py add     --file PATH --category CATEGORY --data-file ITEM.json
+  python inventory.py patch   --file PATH --patch-file PATCH.json
   python inventory.py get     --file PATH --category CATEGORY [--filter KEY=VALUE]
   python inventory.py summary --file PATH
+
+Windows encoding note:
+  On Windows, passing Vietnamese JSON via --data may fail due to shell encoding.
+  Use --data-file or --patch-file instead:
+    python inventory.py add --file inv.json --category errorCodes --data-file item.json
+    python inventory.py patch --file inv.json --patch-file all_items.json
+
+patch-file format (add multiple categories at once):
+  {
+    "errorCodes": [{"code":"LDH_SLA_001","desc":"...","section":"validate"}],
+    "businessRules": [{"id":"BR1","condition":"..."}],
+    "fieldConstraints": [{"name":"slaVersionId","type":"Long","required":true}]
+  }
 
 Categories (API):      errorCodes, businessRules, modes, dbOperations, externalServices,
                        statusTransitions, decisionCombinations, fieldConstraints
@@ -23,16 +39,23 @@ Categories (Frontend): fieldConstraints, businessRules, errorMessages, enableDis
 Examples:
   python inventory.py init --file feat/inventory.json --name "Upload File" --endpoint "POST /v1/upload"
   python inventory.py add  --file feat/inventory.json --category errorCodes \\
-      --data '{"code":"E001","desc":"File quá lớn","section":"validate","trigger":"size>10MB","source":"RSD tr.5"}'
-  python inventory.py get  --file feat/inventory.json --category errorCodes
+      --data '{"code":"E001","desc":"File qua lon","section":"validate"}'
+  python inventory.py patch --file feat/inventory.json --patch-file patch.json
   python inventory.py get  --file feat/inventory.json --category errorCodes --filter section=validate
   python inventory.py summary --file feat/inventory.json
 """
 
 import json
 import sys
+import io
 import os
 import argparse
+
+# Force UTF-8 output on Windows
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.stderr.encoding and sys.stderr.encoding.lower() != 'utf-8':
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 
 def load(path):
@@ -75,10 +98,23 @@ def cmd_init(args):
 
 def cmd_add(args):
     data = load(args.file)
-    try:
-        item = json.loads(args.data)
-    except json.JSONDecodeError as e:
-        print(f"Error: invalid JSON in --data: {e}", file=sys.stderr)
+    # Support --data-file to avoid Windows shell encoding issues
+    if args.data_file:
+        try:
+            with open(args.data_file, encoding="utf-8") as f:
+                item = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"Error: cannot read --data-file: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.data:
+        try:
+            item = json.loads(args.data)
+        except json.JSONDecodeError as e:
+            print(f"Error: invalid JSON in --data: {e}", file=sys.stderr)
+            print("Tip: on Windows use --data-file instead to avoid encoding issues", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("Error: must provide --data or --data-file", file=sys.stderr)
         sys.exit(1)
     cat = args.category
     if cat not in data:
@@ -86,6 +122,32 @@ def cmd_add(args):
     data[cat].append(item)
     save(args.file, data)
     print(f"✓ Added to {cat} ({len(data[cat])} total)")
+
+
+def cmd_patch(args):
+    """Merge patch-file {category: [items]} into inventory. Best for Windows."""
+    data = load(args.file)
+    try:
+        with open(args.patch_file, encoding="utf-8") as f:
+            patch = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"Error: cannot read --patch-file: {e}", file=sys.stderr)
+        sys.exit(1)
+    if not isinstance(patch, dict):
+        print("Error: patch-file must be a JSON object {category: [items]}", file=sys.stderr)
+        sys.exit(1)
+    counts = {}
+    for cat, items in patch.items():
+        if not isinstance(items, list):
+            print(f"Warning: skipping {cat} — value must be a list", file=sys.stderr)
+            continue
+        if cat not in data:
+            data[cat] = []
+        data[cat].extend(items)
+        counts[cat] = len(items)
+    save(args.file, data)
+    for cat, n in counts.items():
+        print(f"✓ Patched {cat}: +{n} items ({len(data[cat])} total)")
 
 
 def cmd_get(args):
@@ -140,7 +202,14 @@ def main():
     p_add = sub.add_parser("add")
     p_add.add_argument("--file", required=True)
     p_add.add_argument("--category", required=True)
-    p_add.add_argument("--data", required=True, help="JSON string of item to append")
+    p_add.add_argument("--data", default="", help="JSON string of item to append")
+    p_add.add_argument("--data-file", default="", dest="data_file",
+                       help="Path to JSON file containing item (avoids Windows shell encoding issues)")
+
+    p_patch = sub.add_parser("patch")
+    p_patch.add_argument("--file", required=True)
+    p_patch.add_argument("--patch-file", required=True, dest="patch_file",
+                         help="JSON file {category: [items]} to merge into inventory")
 
     p_get = sub.add_parser("get")
     p_get.add_argument("--file", required=True)
@@ -156,6 +225,8 @@ def main():
         cmd_init(args)
     elif args.command == "add":
         cmd_add(args)
+    elif args.command == "patch":
+        cmd_patch(args)
     elif args.command == "get":
         cmd_get(args)
     elif args.command == "summary":

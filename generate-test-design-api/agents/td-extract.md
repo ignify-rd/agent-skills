@@ -48,38 +48,49 @@ Tìm đúng API theo endpoint trong PTTK. Trích xuất:
 
 Nếu không có PTTK → lấy field definitions từ RSD.
 
-### 4. Ghi inventory — gọi `add` ngay per item
+### 4. Ghi inventory — dùng `patch` command (tránh Windows encoding issue)
+
+**KHÔNG dùng `--data` trực tiếp với tiếng Việt trên Windows.** Thay vào đó:
+
+**Bước 4a** — Dùng Python để tạo file `{OUTPUT_DIR}/patch.json` chứa toàn bộ data trích xuất được:
+
+```python
+import json
+
+patch = {
+  "errorCodes": [
+    {"code": "LDH_SLA_020", "desc": "Dữ liệu đầu vào không hợp lệ", "section": "validate", "trigger": "sai type/format", "source": "Mã lỗi tr.X"},
+    {"code": "LDH_SLA_002", "desc": "Không tìm thấy thông tin SLA", "section": "main", "trigger": "slaVersionId không tồn tại", "source": "Mã lỗi tr.X"},
+    # ... tất cả error codes
+  ],
+  "businessRules": [
+    {"id": "BR1", "condition": "currentStatus=DRAFT", "trueBranch": "UPDATE status=PUSHED", "falseBranch": "error LDH_SLA_015", "source": "RSD tr.X"},
+  ],
+  "modes": [
+    {"name": "Lưu nháp", "triggerValue": "action=SAVE", "expectedAction": "UPDATE VERSION_NO++", "source": "RSD tr.X"},
+    {"name": "Gửi duyệt", "triggerValue": "action=PUSH", "expectedAction": "UPDATE status=PUSHED", "source": "RSD tr.X"},
+  ],
+  "dbOperations": [
+    {"table": "SLA_VERSION", "operation": "UPDATE", "fieldsToVerify": ["SLA_VERSION_ID","SLA_CODE","STATUS","VERSION_NO","UPDATED_AT","UPDATED_BY"], "source": "PTTK"},
+  ],
+  "externalServices": [],
+  "fieldConstraints": [
+    {"name": "slaVersionId", "type": "Long", "maxLength": None, "required": True, "source": "PTTK"},
+    {"name": "effectiveDate", "type": "Date", "maxLength": None, "required": True, "source": "PTTK"},
+    # ... tất cả fields
+  ]
+}
+
+with open(r"{OUTPUT_DIR}/patch.json", "w", encoding="utf-8") as f:
+    json.dump(patch, f, ensure_ascii=False, indent=2)
+```
+
+**Bước 4b** — Apply patch:
 
 ```bash
-# Error code:
-python {SKILL_SCRIPTS}/inventory.py add --file {INVENTORY_FILE} \
-  --category errorCodes \
-  --data '{"code":"LDH_SLA_020","desc":"Exact message từ tài liệu","section":"validate","trigger":"sai type","source":"RSD tr.X"}'
-
-# Business rule:
-python {SKILL_SCRIPTS}/inventory.py add --file {INVENTORY_FILE} \
-  --category businessRules \
-  --data '{"id":"BR1","condition":"currentStatus=DRAFT","trueBranch":"UPDATE status=PUSHED","falseBranch":"error LDH_SLA_015","source":"RSD tr.X"}'
-
-# Mode:
-python {SKILL_SCRIPTS}/inventory.py add --file {INVENTORY_FILE} \
-  --category modes \
-  --data '{"name":"Lưu nháp","triggerValue":"action=SAVE","expectedAction":"UPDATE VERSION_NO++","source":"RSD tr.X"}'
-
-# DB operation:
-python {SKILL_SCRIPTS}/inventory.py add --file {INVENTORY_FILE} \
-  --category dbOperations \
-  --data '{"table":"SLA_VERSION","operation":"UPDATE","fieldsToVerify":["SLA_VERSION_ID","SLA_CODE","STATUS","VERSION_NO","UPDATED_AT","UPDATED_BY"],"source":"PTTK"}'
-
-# External service:
-python {SKILL_SCRIPTS}/inventory.py add --file {INVENTORY_FILE} \
-  --category externalServices \
-  --data '{"name":"S3","onFailure":"rollback INSERT","rollbackBehavior":"DELETE row vừa INSERT","source":"RSD tr.X"}'
-
-# Field constraint:
-python {SKILL_SCRIPTS}/inventory.py add --file {INVENTORY_FILE} \
-  --category fieldConstraints \
-  --data '{"name":"slaVersionId","type":"Long","maxLength":null,"required":true,"source":"PTTK"}'
+python {SKILL_SCRIPTS}/inventory.py patch \
+  --file {INVENTORY_FILE} \
+  --patch-file {OUTPUT_DIR}/patch.json
 ```
 
 ### 5. Chạy summary và báo cáo
