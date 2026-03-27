@@ -44,18 +44,18 @@ jobs:
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai claude
 
           # Skill files installed
-          test -d .claude/skills/test-case-generator
-          test -f .claude/skills/test-case-generator/SKILL.md
-          test -f .claude/skills/test-case-generator/AGENTS.md
-          test -d .claude/skills/test-case-generator/references
-          test -d .claude/skills/test-case-generator/scripts
-          test -d .claude/skills/test-design-generator
-          test -f .claude/skills/test-design-generator/SKILL.md
-          test -d .claude/skills/test-design-generator/data/rules
+          test -d .claude/skills/generate-test-case-api
+          test -f .claude/skills/generate-test-case-api/SKILL.md
+          test -f .claude/skills/generate-test-case-api/AGENTS.md
+          test -d .claude/skills/generate-test-case-api/references
+          test -d .claude/skills/generate-test-case-api/scripts
+          test -d .claude/skills/generate-test-design-api
+          test -f .claude/skills/generate-test-design-api/SKILL.md
+          test -d .claude/skills/generate-test-design-api/data/rules
 
           # Skill data NOT copied (catalogs should not be in skill folder)
-          test ! -d .claude/skills/test-case-generator/data/catalogs
-          test ! -d .claude/skills/test-design-generator/data/catalogs
+          test ! -d .claude/skills/generate-test-case-api/data/catalogs
+          test ! -d .claude/skills/generate-test-design-api/data/catalogs
 
           # Project structure created
           test -d catalog/api
@@ -74,10 +74,10 @@ jobs:
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai cursor
 
           # Skill files
-          test -d .cursor/skills/test-case-generator
-          test -f .cursor/skills/test-case-generator/SKILL.md
-          test -d .cursor/skills/test-design-generator
-          test -f .cursor/skills/test-design-generator/SKILL.md
+          test -d .cursor/skills/generate-test-case-api
+          test -f .cursor/skills/generate-test-case-api/SKILL.md
+          test -d .cursor/skills/generate-test-design-api
+          test -f .cursor/skills/generate-test-design-api/SKILL.md
 
           # Project structure
           test -d catalog/api
@@ -92,8 +92,8 @@ jobs:
           mkdir -p /tmp/test-windsurf
           cd /tmp/test-windsurf
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai windsurf
-          test -d .windsurf/rules/test-case-generator
-          test -f .windsurf/rules/test-case-generator/SKILL.md
+          test -d .windsurf/rules/generate-test-case-api
+          test -f .windsurf/rules/generate-test-case-api/SKILL.md
           test -d catalog/api
           test -f AGENTS.md
           echo "✔ windsurf: skills installed correctly"
@@ -103,8 +103,8 @@ jobs:
           mkdir -p /tmp/test-roocode
           cd /tmp/test-roocode
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai roocode
-          test -d .roo/rules/test-case-generator
-          test -f .roo/rules/test-case-generator/SKILL.md
+          test -d .roo/rules/generate-test-case-api
+          test -f .roo/rules/generate-test-case-api/SKILL.md
           test -d catalog/api
           test -f AGENTS.md
           echo "✔ roocode: skills installed correctly"
@@ -114,8 +114,8 @@ jobs:
           mkdir -p /tmp/test-copilot
           cd /tmp/test-copilot
           node $GITHUB_WORKSPACE/bin/test-genie.js init --ai copilot
-          test -d .github/copilot-skills/test-case-generator
-          test -f .github/copilot-skills/test-case-generator/SKILL.md
+          test -d .github/copilot-skills/generate-test-case-api
+          test -f .github/copilot-skills/generate-test-case-api/SKILL.md
           test -d catalog/api
           test -f AGENTS.md
           echo "✔ copilot: skills installed correctly"
@@ -125,10 +125,10 @@ jobs:
           mkdir -p /tmp/test-codex-home /tmp/test-codex-project
           cd /tmp/test-codex-project
           CODEX_HOME=/tmp/test-codex-home node $GITHUB_WORKSPACE/bin/test-genie.js init --ai codex
-          test -d /tmp/test-codex-home/skills/test-case-generator
-          test -f /tmp/test-codex-home/skills/test-case-generator/SKILL.md
-          test -d /tmp/test-codex-home/skills/test-design-generator
-          test -f /tmp/test-codex-home/skills/test-design-generator/SKILL.md
+          test -d /tmp/test-codex-home/skills/generate-test-case-api
+          test -f /tmp/test-codex-home/skills/generate-test-case-api/SKILL.md
+          test -d /tmp/test-codex-home/skills/generate-test-design-api
+          test -f /tmp/test-codex-home/skills/generate-test-design-api/SKILL.md
           test -d catalog/api
           test -f AGENTS.md
           echo "✔ codex: skills installed correctly"
@@ -140,21 +140,21 @@ jobs:
           CODEX_HOME=/tmp/test-all-codex-home node $GITHUB_WORKSPACE/bin/test-genie.js init --ai all
 
           # All AI assistant configs created
-          test -d .claude/skills/test-case-generator
-          test -d .cursor/skills/test-case-generator
-          test -d .windsurf/rules/test-case-generator
-          test -d .roo/rules/test-case-generator
-          test -d .github/copilot-skills/test-case-generator
-          test -d .kiro/rules/test-case-generator
-          test -d .gemini/skills/test-case-generator
-          test -d .agent/skills/test-case-generator
-          test -d /tmp/test-all-codex-home/skills/test-case-generator
-          test -d .qoder/rules/test-case-generator
-          test -d .trae/rules/test-case-generator
-          test -d .opencode/skills/test-case-generator
-          test -d .continue/skills/test-case-generator
-          test -d .codebuddy/skills/test-case-generator
-          test -d .factory/skills/test-case-generator
+          test -d .claude/skills/generate-test-case-api
+          test -d .cursor/skills/generate-test-case-api
+          test -d .windsurf/rules/generate-test-case-api
+          test -d .roo/rules/generate-test-case-api
+          test -d .github/copilot-skills/generate-test-case-api
+          test -d .kiro/rules/generate-test-case-api
+          test -d .gemini/skills/generate-test-case-api
+          test -d .agent/skills/generate-test-case-api
+          test -d /tmp/test-all-codex-home/skills/generate-test-case-api
+          test -d .qoder/rules/generate-test-case-api
+          test -d .trae/rules/generate-test-case-api
+          test -d .opencode/skills/generate-test-case-api
+          test -d .continue/skills/generate-test-case-api
+          test -d .codebuddy/skills/generate-test-case-api
+          test -d .factory/skills/generate-test-case-api
 
           # Project structure created (only once, shared)
           test -d catalog/api
@@ -200,11 +200,11 @@ jobs:
           ./node_modules/.bin/test-genie init --ai claude
 
           # Skill files
-          test -d .claude/skills/test-case-generator
-          test -f .claude/skills/test-case-generator/SKILL.md
-          test -d .claude/skills/test-case-generator/references
-          test -d .claude/skills/test-design-generator
-          test -f .claude/skills/test-design-generator/SKILL.md
+          test -d .claude/skills/generate-test-case-api
+          test -f .claude/skills/generate-test-case-api/SKILL.md
+          test -d .claude/skills/generate-test-case-api/references
+          test -d .claude/skills/generate-test-design-api
+          test -f .claude/skills/generate-test-design-api/SKILL.md
 
           # Project structure
           test -d catalog/api
@@ -221,9 +221,9 @@ jobs:
           TARBALL=$(ls $GITHUB_WORKSPACE/test-genie-*.tgz 2>/dev/null | head -1)
           npm install $TARBALL
           ./node_modules/.bin/test-genie init --ai all
-          test -d .claude/skills/test-case-generator
-          test -d .cursor/skills/test-case-generator
-          test -d .windsurf/rules/test-case-generator
+          test -d .claude/skills/generate-test-case-api
+          test -d .cursor/skills/generate-test-case-api
+          test -d .windsurf/rules/generate-test-case-api
           test -d catalog/api
           test -f AGENTS.md
           echo "✔ init --ai all works via installed package"
