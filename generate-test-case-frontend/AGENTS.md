@@ -54,20 +54,20 @@ PTTK is typically the larger document — always find the EXACT API/screen by en
 
 ## Extract Rules
 
-### Phase 2 — Request Body (API mode)
+### Phase 1 — Field Extraction (Frontend mode)
 
 Source: PTTK if available, fallback RSD.
 
-1. Find the API endpoint section
-2. Extract from source: field names (exact), data types, required/optional, maxLength, format constraints, example values
-3. Build body JSON with ALL required fields having concrete values
+1. Find the screen/form section in source document
+2. Extract all fields: name, type (textbox/combobox/dropdown/toggle/datepicker/file/textarea/number/etc.), maxLength, required, format constraints
+3. Extract business logic: enable/disable rules, auto-fill rules, validation messages
 
-### Step 4 — Response Templates
+### Phase 2 — Business Logic & UI State
 
-Source: PTTK if available, fallback RSD.
+Source: RSD for business logic, PTTK for field definitions.
 
-- Extract response SUCCESS (status 200, errorCode "0") and ERROR (validation fail) **once**
-- Inject into all BATCH 1, 2, 3
+- Extract error messages, enable/disable conditions, auto-fill cascading rules
+- Map each rule to its target section (validate/function/ui_common)
 
 ## Batch Strategy
 
@@ -100,7 +100,7 @@ Each batch: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho se
 - `externalId`, `testSuiteDetails`, `specTitle`, `documentId`, `estimatedDuration`, `note` = always `""`
 - `result` = always `"PENDING"`
 - `summary` = exactly same as `testCaseName`
-- API testCaseName: with prefix `"{Field}_Mô tả"` — Frontend: no prefix, direct from mindmap
+- testCaseName: no prefix, direct from mindmap
 - Dedup: track testCaseNames case-insensitive, keep first occurrence
 
 ## Test Account
@@ -142,11 +142,11 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 - **Template variables** (`{N}`, `{warning}`, `{requiredMessage}`, `{allowSpecialChars}`...) phải được điền từ tài liệu. Nếu không tìm thấy → bỏ qua test case đó hoặc hỏi user.
 - **Inventory items** (Step 4c) phải có `source` trỏ đến trang/section trong tài liệu — item không có nguồn → không được đưa vào inventory.
 
-## Format Differences
+## Frontend Format Rules
 
-| Aspect | API | Frontend |
-|--------|-----|----------|
-| preConditions | Endpoint + headers + body JSON | Screen path + login |
-| step | API method/params | UI actions (click, nhập, chọn) |
-| expectedResult | HTTP status + JSON response | UI state (hiển thị, enable, disable) |
-| testCaseName | With prefix | No prefix |
+| Aspect | Format |
+|--------|--------|
+| preConditions | Screen path + login |
+| step | UI actions (click, nhập, chọn) |
+| expectedResult | UI state (hiển thị, enable, disable) |
+| testCaseName | No prefix, direct from mindmap |

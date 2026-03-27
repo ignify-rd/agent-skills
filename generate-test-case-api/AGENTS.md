@@ -102,7 +102,7 @@ Each batch: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho se
 - `externalId`, `testSuiteDetails`, `specTitle`, `documentId`, `estimatedDuration`, `note` = always `""`
 - `result` = always `"PENDING"`
 - `summary` = exactly same as `testCaseName`
-- API testCaseName: with prefix `"{Field}_Mô tả"` — Frontend: no prefix, direct from mindmap
+- testCaseName: with prefix `"{Field}_Mô tả"` using `_` underscore between category and description
 - Dedup: track testCaseNames case-insensitive, keep first occurrence
 
 ## Test Account
@@ -143,11 +143,11 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 - **Nếu thông tin không có trong tài liệu** → DỪNG lại, báo cáo user cụ thể phần nào còn thiếu, đợi bổ sung. KHÔNG tự điền hay suy luận.
 - **Inventory items** (Step 4c) phải có `source` trỏ đến trang/section trong tài liệu — item không có nguồn → không được đưa vào inventory.
 
-## Format Differences
+## API Format Rules
 
-| Aspect | API | Frontend |
-|--------|-----|----------|
-| preConditions | Endpoint + headers + body JSON | Screen path + login |
-| step | API method/params | UI actions (click, nhập, chọn) |
-| expectedResult | HTTP status + JSON response | UI state (hiển thị, enable, disable) |
-| testCaseName | With prefix | No prefix |
+| Aspect | Format |
+|--------|--------|
+| preConditions | Endpoint + headers + body JSON |
+| step | API method/params |
+| expectedResult | HTTP status + JSON response |
+| testCaseName | With prefix `"{Field}_Mô tả"` |

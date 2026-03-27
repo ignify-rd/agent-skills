@@ -190,10 +190,10 @@ python $SKILL_SCRIPTS/search.py "export excel" --domain frontend --full
 **Search strategy:**
 ```bash
 # Tìm keyword chính xác trước
-python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 1
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain frontend --full --top 1
 
 # Nếu top 1 không phù hợp (domain khác, quality thấp) → thử top 2
-python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain api --full --top 2
+python $SKILL_SCRIPTS/search.py "{feature_keyword}" --domain frontend --full --top 2
 ```
 
 **Fallback:** Nếu top 1 và top 2 đều không phù hợp → thông báo user và dùng format mặc định từ references.
@@ -596,12 +596,38 @@ Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
 
 **⚠️ Section này phải cover TOÀN BỘ business logic. KHÔNG được sinh function section mà không có inventory items.**
 
+**⚠️ KHÔNG duplicate validate cases vào chức năng:**
+- Lỗi validate field (empty, type, length, format, date constraint, cross-field) đã có trong "Kiểm tra validate" → KHÔNG viết lại vào "Kiểm tra chức năng"
+- **Cross-field validate** (VD: expiredDate < effectiveDate, endDate ≤ startDate) → sinh trong validate section dưới field thứ 2, KHÔNG sinh trong chức năng
+- Chức năng **CHỈ** test: button actions, save/submit flow, status transitions, permissions, auto-fill behavior
+
+**⚠️ PHẢI tách riêng từng action thành ### heading riêng biệt:**
+
+Nếu màn hình có nhiều action/button (VD: Lưu, Chỉnh sửa, Đẩy duyệt, Xóa), **mỗi action = 1 heading `###` riêng**:
+
+```
+## Kiểm tra chức năng
+
+### Kiểm tra chức năng Lưu
+- Lưu thành công khi ...
+- Lưu thất bại khi ...
+
+### Kiểm tra chức năng Chỉnh sửa
+- Chỉnh sửa thành công khi ...
+
+### Kiểm tra chức năng Đẩy duyệt
+- Đẩy duyệt thành công khi ...
+- Đẩy duyệt thất bại khi ...
+```
+
+**KHÔNG gộp tất cả actions vào chung 1 heading.** Mỗi action có business rules riêng → tách riêng để dễ đọc và kiểm tra.
+
 **Split function generation thành sub-sections:**
 
-**Sub-section A — Button/Action flows:**
+**Sub-section A — Button/Action flows (TÁCH RIÊNG TỪNG ACTION):**
 - TỪNG `businessRules[section="function"]` → test condition met + not met
 - TỪNG `errorMessages[section="function"]` → test trigger với exact message
-- FORM: Save success + save fail + cancel + navigation
+- FORM: **Mỗi button/action = 1 heading `###` riêng**: Lưu (success + fail), Chỉnh sửa, Đẩy duyệt, Xóa, Cancel, Navigation...
 
 **Sub-section B — Enable/Disable + Auto-fill:**
 - TỪNG `enableDisableRules[section="function"]` → test state enable VÀ disable
@@ -613,7 +639,7 @@ Fields đã gen (đối chiếu với inventory.fieldConstraints[]):
 
 **Per-sub-section checkpoint (MANDATORY):**
 ```
-Sub-A: {N}/{N} business rules, {N}/{N} error messages covered
+Sub-A: {N}/{N} business rules, {N}/{N} error messages covered — tách {N} actions riêng biệt
 Sub-B: {N}/{N} enable/disable, {N}/{N} auto-fill covered
 Sub-C: {N}/{N} transitions, {N}/{N} permissions covered
 → Missing: [list] → THÊM bullet `### [SỬA]` ngay
@@ -621,7 +647,7 @@ Sub-C: {N}/{N} transitions, {N}/{N} permissions covered
 
 **Screen type guidance:**
 - **LIST:** Search per field (exists/not exists/partial), combined search, clear filter, add new button
-- **FORM/POPUP:** Save success/fail, field interactions, cancel, back navigation
+- **FORM/POPUP:** Save success/fail, field interactions, cancel, back navigation — **mỗi button = 1 `###` riêng**
 - **DETAIL:** Button visibility by status/permission, click actions, navigation, status transitions
 - **All:** Buttons belong in function section (not validate)
 

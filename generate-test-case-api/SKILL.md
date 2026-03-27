@@ -230,6 +230,7 @@ Lưu patterns làm `catalogStyle` — dùng cho TOÀN BỘ batches. Mục tiêu:
 **BATCH 3 — Post-validate sections (split by technique):**
 - All ## sections AFTER "Kiểm tra validate" (grid, functionality, timeout)
 - **Split into sub-batches by technique** to ensure thorough coverage:
+- **⚠️ KHÔNG duplicate validate cases:** Error codes `section="validate"` và cross-field validate đã có trong BATCH 2 → KHÔNG sinh lại trong BATCH 3.
 
 **Sub-batch 3a — Happy paths (1 per mode):**
 ```bash

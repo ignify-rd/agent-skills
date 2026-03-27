@@ -13,10 +13,7 @@ Rules that override default behavior. Loaded automatically by AI agents.
 | testSuiteName convention | Yes |
 | Writing style (ngắn/dài, cách viết step) | Yes |
 | Section assignment (buttons vào section nào) | Yes |
-| Output JSON field names | No |
-| Batch strategy (BATCH 1/2/3 split) | No |
 | Field type dispatch table | No |
-| Importance mapping | No |
 
 ## ⚠️ How to Apply Project AGENTS.md
 
@@ -49,7 +46,7 @@ Rules that override default behavior. Loaded automatically by AI agents.
 > - Field chỉ có trong RSD (không có trong PTTK) → **bỏ qua**, không dùng
 > - Khi upload PTTK → bỏ qua TẤT CẢ field definitions từ RSD, dùng PTTK
 
-## Image Priority (Frontend only)
+## Image Priority
 
 | Source | Priority |
 |--------|----------|
@@ -58,26 +55,6 @@ Rules that override default behavior. Loaded automatically by AI agents.
 | Images | Supplementary only — placeholder text, icon X, button labels |
 
 Images CANNOT override field names or add features not in RSD. If image shows field not in RSD → note it, do NOT add to test design.
-
-## API Mode — Extract Rules
-
-### Phase 1: RSD → business logic only
-Extract: title, endpoint, method, errorCodes, dbMapping (table, conditions, orderBy)
-
-### Phase 2: PTTK → field definitions (if available)
-Extract: inputFields (name, type, maxLength, required, validationRules), outputFields
-- CHỈ dùng PTTK fields cho validate. RSD chỉ dùng hiểu business logic
-- Data types chính xác từ PTTK (Date, Integer, Long, String)
-
-### Fallback: no PTTK → extract everything from RSD
-
-## API Mode — Format Rules
-
-- Common section: `- status: 107` — NEVER use `1\. Check api trả về:` in common
-- Validate + Luồng chính: `- 1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:`
-- ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
-- Output starts with `# {API_NAME}` — NO blockquote, NO `---` horizontal rules
-- SQL: concrete values (`WHERE ID = 10001`), UPPERCASE columns, NO placeholders
 
 ## Frontend Mode — Field Templates
 
@@ -107,35 +84,14 @@ Templates generate ~80% of test cases (19 field types). LLM supplements business
 
 ## Frontend Mode — Field displayBehavior Classification
 
-**⚠️ Bắt buộc phân loại displayBehavior cho TỪNG field từ RSD — KHÔNG suy diễn.**
+**⚠️ Bắt buộc phân loại displayBehavior cho TẪNGfield từ RSD — KHÔNG suy diễn.** Chi tiết rules và ví dụ xem SKILL.md Step 4 (Phase 1).
 
-|| displayBehavior | Điều kiện xác định | Cases cần gen |
-||---|---|---|
-| `always` | RSD không đề cập điều kiện hiển thị/ẩn/enable/disable, hoặc ghi rõ "luôn hiển thị" | **Chỉ validate cases** (maxLength, required, format...) — KHÔNG enable/disable cases |
+| displayBehavior | Điều kiện xác định | Cases cần gen |
+|---|---|---|
+| `always` | RSD không đề cập điều kiện hiển thị/ẩn/enable/disable | **Chỉ validate cases** — KHÔNG enable/disable cases |
 | `conditional` | RSD ghi rõ: "hiển thị khi...", "ẩn khi...", "enable khi...", "disable khi..." | Validate cases (khi enable) **+ enable/disable cases** |
 
-**Quy tắc phân loại — tránh nhầm lẫn:**
-- Không có câu nào trong RSD mô tả điều kiện → `always`
-- RSD chỉ mô tả validate rule (VD: "bắt buộc", "tối đa 100 ký tự") → `always` (không phải displayBehavior)
-- `always` + `conditional` đều phải có validate cases
-
-**⚠️ Điều kiện của block KHÔNG lan sang field bên ngoài block:**
-
-SAI — nhầm lan điều kiện của Khối Luồng trình sang field ở block khác:
-```
-RSD: "Nếu Loại nghiệp vụ = Cấp tín dụng thì hiển thị Khối A gồm: [A1, A2, A3]"
-
-Datepicker Ngày hết hiệu lực (thuộc Khối Thông tin chung, không trong danh sách)
-→ displayBehavior: conditional, condition: "Loại nghiệp vụ = Cấp tín dụng"  ← SAI
-```
-
-ĐÚNG:
-```
-Khối Luồng trình              → displayBehavior: conditional
-Field A1 (trong Khối Luồng trình) → displayBehavior: always
-Field A2 (trong Khối Luồng trình) → displayBehavior: always
-Datepicker Ngày hết hiệu lực (Khối Thông tin chung) → displayBehavior: always
-```
+**⚠️ Điều kiện của block KHÔNG lan sang field bên ngoài block.**
 
 ## Frontend Mode — Screen Type Rules
 
@@ -151,4 +107,4 @@ Datepicker Ngày hết hiệu lực (Khối Thông tin chung) → displayBehavio
 - No placeholders — use concrete sample values
 - 1 test = 1 check (atomic)
 - Forbidden: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
-- API Response body format comes from PTTK (no fixed format)
+- Output starts with `# {SCREEN_NAME}` — NO blockquote, NO `---` horizontal rules

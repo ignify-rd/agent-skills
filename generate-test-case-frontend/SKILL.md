@@ -125,8 +125,18 @@ python $SKILL_SCRIPTS/search.py --ref fe-test-case
 
 **⚠️ field-templates.md: KHÔNG load toàn bộ ở đây.** Load theo field type trong BATCH 2 (lazy-load).
 
-#### Extract test account
+#### Extract test account from catalog
+
 Priority: 1. Project AGENTS.md `testAccount` → 2. Catalog examples → 3. Default: `164987/ Test@147258369`
+
+**How to extract from catalog:**
+- Read first few rows of `catalog/frontend/*.csv`
+- Look for the login/account pattern in `preConditions` column
+- Pattern: account string like `164987/ Test@147258369`
+
+**Store the resolved account** for use in all test case generation batches. The account MUST be consistent across all test cases in the output.
+
+**Cách diễn đạt, hành văn:** Toàn bộ cách viết preConditions, step, expectedResult cũng phải **tuân theo catalog**. Catalog là nguồn chuẩn cho style/wording — nếu catalog viết theo cách nào thì output phải theo đúng cách đó.
 
 ### Step 3: Read the Mindmap
 
@@ -228,12 +238,15 @@ Nếu search.py chưa hỗ trợ `--section`, đọc file và CHỈ áp dụng t
 - All ## sections AFTER "Kiểm tra validate" (grid, pagination, chức năng, timeout)
 - **Split into sub-batches by technique:**
 
-**Sub-batch 3a — Button/Action success + fail:**
+**Sub-batch 3a — Button/Action success + fail (TÁCH RIÊNG TỪNG ACTION):**
 ```bash
 python $SKILL_SCRIPTS/inventory.py get --file $INVENTORY --category businessRules --filter section=function
 python $SKILL_SCRIPTS/inventory.py get --file $INVENTORY --category errorMessages --filter section=function
 ```
 Sinh test success + fail cho TỪNG action. Include exact error messages trả về.
+**Mỗi action/button (Lưu, Chỉnh sửa, Đẩy duyệt, Xóa...) = 1 nhóm testSuiteName riêng biệt.** KHÔNG gộp tất cả actions vào chung 1 nhóm.
+
+**⚠️ KHÔNG duplicate validate cases:** Cross-field validate (VD: expiredDate < effectiveDate) đã có trong BATCH 2 → KHÔNG sinh lại trong BATCH 3.
 
 **Sub-batch 3b — Enable/Disable rules:**
 ```bash
