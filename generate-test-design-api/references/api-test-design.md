@@ -7,18 +7,6 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 2. **Validate** (kiểm tra validate từng field đầu vào) — per-field templates
 3. **Luồng chính** (business logic, DB operations, error scenarios) — LLM-generated
 
-## Pipeline tổng thể
-
-```
-Phase 1:  Extract RSD structure → business logic, errorCodes, dbMapping
-Phase 2:  Extract PTTK fields (if available) → inputFields[], outputFields[] (PTTK wins)
-Phase 3:  Generate validate section (per-field templates)
-Phase 4:  Generate main flow section (LLM from RSD)
-Phase 5:  Verify & supplement main flow (re-read RSD, cross-check, merge [SỬA])
-Phase 6:  Combine with base template
-Phase 7:  Validate and fix markdown
-```
-
 > **Quy tắc ưu tiên nguồn dữ liệu**: Xem `--ref priority-rules`
 
 ## Base Template (hardcoded — KHÔNG thay đổi)
@@ -64,18 +52,16 @@ Phase 7:  Validate and fix markdown
 {MAIN_FLOW_SECTION}
 ```
 
-**⚠️ CRITICAL — Format Rules cho toàn bộ API output:**
-1. **KHÔNG** thêm blockquote/mô tả endpoint (` > **Endpoint:** ...`) — output bắt đầu NGAY từ `# {API_NAME}`
-2. **KHÔNG** dùng `---` (horizontal rule) phân cách giữa các section, field, hoặc bất kỳ đâu
+**⚠️ CRITICAL — Format Rules:**
+1. **KHÔNG** thêm blockquote/mô tả endpoint — output bắt đầu NGAY từ `# {API_NAME}`
+2. **KHÔNG** dùng `---` (horizontal rule) bất kỳ đâu
 3. **Section common** dùng format ĐƠN GIẢN: `- status: 107` — **TUYỆT ĐỐI KHÔNG** dùng `1\. Check api trả về:` trong common
-4. Format `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` **CHỈ** dùng trong section **validate** và **luồng chính**
-5. Section common là **hardcoded template** — copy ĐÚNG NGUYÊN VĂN, chỉ thay `{API_NAME}` và `{WRONG_METHODS}`
+4. Format `1\. Check api trả về:` **CHỈ** dùng trong **validate** và **luồng chính**
+5. `{WRONG_METHODS}`: nếu method=POST → "GET/PUT/DELETE"
 
-**`{WRONG_METHODS}`**: Tính từ API method. VD: nếu method=POST → WRONG_METHODS = "GET/PUT/DELETE"
+---
 
 ## Phase 1: Trích xuất cấu trúc từ RSD — business logic
-
-Đọc RSD và trích xuất phần **business logic** (luôn lấy từ RSD):
 
 ```json
 {
@@ -93,50 +79,12 @@ Phase 7:  Validate and fix markdown
 
 ## Phase 2: Đọc PTTK (nếu có) — lấy field definitions
 
-Nếu có PTTK → tìm ĐÚNG API theo endpoint → đọc bảng INPUT/OUTPUT:
-
 ```json
 {
-  "inputFields": [
-    {
-      "name": "tên field (từ PTTK)",
-      "type": "string | number | date | boolean | array | object",
-      "maxLength": 30,
-      "required": "Y | N",
-      "nullBehavior": "Mô tả khi truyền null (nếu optional)",
-      "validationRules": {
-        "allowedSpecialChars": ["_", "-"],
-        "allowSpaces": false,
-        "allowAccents": false
-      },
-      "children": []
-    }
-  ],
-  "outputFields": [
-    {"name": "field name", "children": []}
-  ]
-}
-```
-
-- Lấy TẤT CẢ fields từ PTTK (Trường, Kiểu dữ liệu, Bắt buộc, Định dạng, Mô tả)
-- **CHỈ dùng PTTK fields cho validate**. RSD chỉ dùng hiểu business logic
-- Data types chính xác từ PTTK (Date, Integer, Long, String)
-- Format constraints từ PTTK (dd/MM/yyyy, etc.)
-- Response body structure từ PTTK (tên trường, kiểu dữ liệu, nesting)
-
-## Phase 1+2 fallback: Khi KHÔNG có PTTK
-
-Nếu không có PTTK, đọc RSD và trích xuất CẢ field definitions lẫn business logic:
-
-```json
-{
-  "title": "Tên API",
-  "endpoint": "POST /v1/category/search",
-  "method": "GET | POST | PUT | DELETE",
   "inputFields": [
     {
       "name": "tên field",
-      "type": "string | number | date | boolean | array | object",
+      "type": "string | integer | date | boolean | array | object | jsonb",
       "maxLength": 30,
       "required": "Y | N",
       "nullBehavior": "Mô tả khi truyền null (nếu optional)",
@@ -144,385 +92,280 @@ Nếu không có PTTK, đọc RSD và trích xuất CẢ field definitions lẫn
         "allowedSpecialChars": ["_", "-"],
         "allowSpaces": false,
         "allowAccents": false
-      },
-      "children": []
+      }
     }
   ],
-  "outputFields": [
-    {"name": "field name", "children": []}
-  ],
-  "errorCodes": {"mô tả lỗi": "status code"},
-  "dbMapping": {
-    "table": "Tên bảng DB",
-    "conditions": ["Điều kiện WHERE"],
-    "orderBy": "Sắp xếp"
-  }
+  "outputFields": [{"name": "field name"}]
 }
 ```
 
+**Khi KHÔNG có PTTK:** lấy field definitions từ RSD.
+**Khi có PTTK:** IGNORE field definitions trong RSD, chỉ dùng PTTK cho fields.
+
+---
+
 ## Phase 3: Kiểm tra validate
 
-### Format chuẩn cho MỖI field
+### Response Legend (áp dụng cho MỌI validate case)
 
-Mỗi field được sinh test cases theo format escaped numbering:
+| Marker | Ý nghĩa | Output thực tế trong file .md |
+|--------|---------|-------------------------------|
+| `→ error` | Luôn luôn lỗi, bất kể spec (sai kiểu dữ liệu, XSS, SQL injection...) | Status 200 + `{"message": "Dữ liệu không hợp lệ"}` |
+| `→ success` | Luôn luôn thành công khi đúng kiểu/format | Status 200 + `Trả về response body đúng cấu trúc` |
+| `→ Theo RSD` | Kết quả phụ thuộc vào spec — **bắt buộc đọc tài liệu** để xác định trước khi điền response | Điền response đúng theo PTTK/RSD |
 
-```markdown
-### {fieldName} : {type} ({Required/Optional})
+**CRITICAL:** ALL validate responses dùng Status: 200 — KHÔNG dùng 400/422/500 cho validate.
 
-#### Để trống
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
+### Quy tắc ký tự đặc biệt cho String
 
-#### Không truyền
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
+| Tài liệu có `allowedSpecialChars`? | Sinh cases |
+|------------------------------------|-----------|
+| Có (VD: `["_", "-"]`) | Tách 2 case: "cho phép (_, -)" `→ success` + "không cho phép (!@#$%^&*)" `→ error` |
+| Không có / không rõ | 1 case chung "ký tự đặc biệt" `→ Theo RSD` |
 
-#### Truyền null
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
+### Per-field output format
+
+Heading field: `### {fieldName}: {type} ({Required/Optional})`
+Mỗi case = 1 `####` heading + response theo legend trên.
+
+---
+
+### STRING Required — 19+ cases
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ error` |
+| Không truyền | `→ error` |
+| Truyền null | `→ Theo RSD` |
+| {maxLen-1} ký tự | `→ success` |
+| {maxLen} ký tự | `→ success` |
+| {maxLen+1} ký tự | `→ error` |
+| Ký tự số | `→ Theo RSD` |
+| Chữ thường/hoa không dấu | `→ success` |
+| Chữ có dấu tiếng Việt | `→ Theo RSD` |
+| Ký tự đặc biệt (xem quy tắc trên) | `→ Theo RSD` |
+| All space | `→ Theo RSD` |
+| Space đầu / cuối | `→ Theo RSD` |
+| Space ở giữa | `→ Theo RSD` |
+| Emoji/icons (😀🏠⚡) | `→ Theo RSD` |
+| Unicode đặc biệt (tiếng Trung, Nhật...) | `→ Theo RSD` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+---
+
+### INTEGER Required (no default) — 19 cases
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ error` |
+| Không truyền | `→ error` |
+| Truyền null | `→ Theo RSD` |
+| Số nguyên hợp lệ | `→ success` |
+| Số âm | `→ Theo RSD` |
+| Số thập phân | `→ Theo RSD` |
+| Số leading zero (00123) | `→ Theo RSD` |
+| Số rất lớn vượt giới hạn Integer | `→ Theo RSD` |
+| Chuỗi ký tự (abc) | `→ error` |
+| Chuỗi chữ lẫn số (10abc) | `→ error` |
+| Ký tự đặc biệt (@#$) | `→ error` |
+| All space | `→ error` |
+| Space đầu / cuối | `→ error` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+---
+
+### INTEGER with Default Value — 19 cases
+
+Heading: `### {fieldName}: Integer (Required, default = {defaultValue})`
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ success` + ghi chú: "Hệ thống sử dụng default {fieldName} = {defaultValue}" |
+| Không truyền | `→ success` + ghi chú default |
+| Truyền null | `→ success` + ghi chú default |
+| Số nguyên hợp lệ | `→ success` |
+| Số âm | `→ Theo RSD` |
+| Số thập phân | `→ Theo RSD` |
+| Số leading zero (00123) | `→ Theo RSD` |
+| Số rất lớn vượt giới hạn Integer | `→ Theo RSD` |
+| Chuỗi ký tự (abc) | `→ error` |
+| Chuỗi chữ lẫn số (10abc) | `→ error` |
+| Ký tự đặc biệt (@#$) | `→ error` |
+| All space | `→ error` |
+| Space đầu / cuối | `→ error` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+---
+
+### INTEGER Optional (null = tìm tất cả)
+
+Heading: `### {fieldName}: Integer (Optional, null = tìm tất cả)`
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ success` + "Trả về TẤT CẢ bản ghi" |
+| Không truyền | `→ success` + "Trả về TẤT CẢ bản ghi" |
+| Truyền null | `→ success` + "Trả về TẤT CẢ bản ghi" |
+| Giá trị hợp lệ | `→ success` + "CHỈ trả về bản ghi khớp" |
+| Giá trị không hợp lệ | `→ Theo RSD` |
+| Số âm | `→ Theo RSD` |
+| Số thập phân | `→ Theo RSD` |
+| Chuỗi | `→ error` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+---
+
+### JSONB Required — 14 cases
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ error` |
+| Không truyền | `→ error` |
+| Truyền null | `→ Theo RSD` |
+| JSON hợp lệ | `→ success` |
+| JSON sai syntax (không parse được) | `→ error` |
+| JSON sai format nghiệp vụ (thiếu trường bắt buộc trong JSON) | `→ Theo RSD` |
+| Object rỗng `{}` | `→ Theo RSD` |
+| Mảng `[]` thay vì object | `→ error` |
+| Chuỗi rỗng | `→ error` |
+| String thuần (không phải JSON) | `→ error` |
+| Number | `→ error` |
+| Boolean | `→ error` |
+| XSS trong JSON value | `→ error` |
+| SQL injection trong JSON value | `→ error` |
+
+---
+
+### JSONB Optional — 12 cases
+
+| Case | Marker |
+|------|--------|
+| Không truyền | `→ success` |
+| Truyền null | `→ success` |
+| JSON hợp lệ | `→ success` |
+| JSON sai syntax (không parse được) | `→ error` |
+| JSON sai format nghiệp vụ | `→ Theo RSD` |
+| Object rỗng `{}` | `→ Theo RSD` |
+| Mảng `[]` thay vì object | `→ error` |
+| Chuỗi rỗng | `→ error` |
+| String thuần (không phải JSON) | `→ error` |
+| Number | `→ error` |
+| Boolean | `→ error` |
+| XSS trong JSON value | `→ error` |
+| SQL injection trong JSON value | `→ error` |
+
+---
+
+### DATE Required — format theo PTTK/RSD
+
+| Case | Marker |
+|------|--------|
+| Để trống | `→ error` |
+| Không truyền | `→ error` |
+| Truyền null | `→ Theo RSD` |
+| Đúng định dạng | `→ success` |
+| Sai định dạng | `→ error` |
+| Ngày không tồn tại (2025-00-00, 2025-02-30) | `→ error` |
+| Ngày quá khứ | `→ Theo RSD` |
+| Ngày hiện tại | `→ Theo RSD` |
+| Ngày tương lai | `→ Theo RSD` |
+| Số nguyên | `→ error` |
+| Boolean | `→ error` |
+| Mảng | `→ error` |
+| Object | `→ error` |
+| XSS | `→ error` |
+| SQL INJECTION | `→ error` |
+
+---
+
+### ARRAY Required — cases
+
+| Case | Marker |
+|------|--------|
+| Không truyền | `→ error` |
+| Truyền null | `→ Theo RSD` |
+| Mảng rỗng `[]` | `→ error` |
+| Mảng chứa phần tử rỗng `[{}]` | `→ error` |
+| String thay vì array | `→ error` |
+| Number thay vì array | `→ error` |
+| Object thay vì array | `→ error` |
+| Boolean thay vì array | `→ error` |
+| XSS trong phần tử | `→ error` |
+| SQL injection trong phần tử | `→ error` |
+
+> Với Array có child fields: sinh thêm validate cases cho từng child field riêng (`### {childFieldName}`).
+
+---
+
+### Per-field checkpoint (bắt buộc sau MỖI field)
+
+```
+Field {fieldName} ({type}): {generated}/{min} cases. Missing: [list] → THÊM ngay.
 ```
 
-**CRITICAL — Status Code Rules:**
-- **ALL validate responses use Status: 200** — bất kể valid hay invalid
-- Invalid data → response body: `{"message": "Dữ liệu không hợp lệ"}`
-- Valid data → response body: `Trả về response body đúng cấu trúc`
-- JSON response MUST be multiline WITHOUT backtick fence, directly after `1\.2. Response:`
+Min counts: String Required ≥ 19 | Integer Required ≥ 19 | Integer with Default ≥ 19 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date ≥ 15 | Array ≥ 8
 
-### Field type classification (ảnh hưởng response)
-
-| Field Type | Detect | XSS/SQL Response |
-|-----------|--------|------------------|
-| SEARCH_FIELD | "tìm kiếm gần đúng", "LIKE", "trim" | Status: 200 (search text) |
-| FILTER_FIELD | Optional string lọc | Status: 200 + error body |
-| ENUM_FIELD | Giá trị cố định ("1: active, 0: inactive") | Status: 200 |
-| INTEGER_REQUIRED | Type Integer, required=Y | Status: 200 + error body |
-
-### Template: String Required (không có default)
-
-```markdown
-### {fieldName}: string (Required, không có default)
-
-#### Để trống
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Không truyền
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền null
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} = {maxLen-1} ký tự
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền {fieldName} = {maxLen} ký tự
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền {fieldName} = {maxLen+1} ký tự
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là ký tự số
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền {fieldName} là chữ(thường/hoa) không dấu
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền {fieldName} là chữ(thường/hoa) có dấu
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là ký tự đặc biệt cho phép _
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền {fieldName} là ký tự đặc biệt không cho phép
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là all space
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} có space ở giữa
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} có space đầu / cuối
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là emoji/icons (😀🏠⚡)
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là ký tự Unicode đặc biệt (tiếng Trung, Nhật, Ả Rập...)
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là boolean (true/false)
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là mảng
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là object
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là XSS
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là SQL INJECTION
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-```
-
-### Template: Integer with Default Value
-
-```markdown
-### {fieldName}: Integer (Required, default = {defaultValue})
-
-#### Để trống
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-  Hệ thống sử dụng giá trị default {fieldName} = {defaultValue}
-
-#### Không truyền
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-  Hệ thống sử dụng giá trị default {fieldName} = {defaultValue}
-
-#### Truyền null
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-  Hệ thống sử dụng giá trị default {fieldName} = {defaultValue}
-
-#### Truyền {fieldName} = {validValue}
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-
-#### Truyền {fieldName} là số âm
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là số thập phân
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là chuỗi ký tự
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-```
-
-### Template: Optional Integer (null = tìm tất cả)
-
-```markdown
-### {fieldName}: Integer (Optional, null = tìm tất cả)
-
-#### Để trống
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-  Trả về TẤT CẢ bản ghi (cả active và inactive)
-- Verify: Kết quả chứa cả bản ghi có STATUS = 0 và STATUS = 1
-
-#### Không truyền
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-  Trả về TẤT CẢ bản ghi (cả active và inactive)
-
-#### Truyền null
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-  Trả về TẤT CẢ bản ghi (cả active và inactive)
-
-#### Truyền {fieldName} = {validValue} (giá trị hợp lệ)
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response: Trả về response body đúng cấu trúc
-  CHỈ trả về bản ghi khớp
-
-#### Truyền {fieldName} = {invalidValue} (giá trị không hợp lệ)
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-
-#### Truyền {fieldName} là chuỗi
-- 1\. Check api trả về:
-  1\.1. Status: 200
-  1\.2. Response:
-  {
-    "message": "Dữ liệu không hợp lệ"
-  }
-```
-
-### Test cases theo kiểu dữ liệu
-
-**STRING field — Full test list:**
-Để trống, Không truyền, Truyền null, Độ dài (maxLen-1, maxLen, maxLen+1), Ký tự số, Chữ không dấu, Chữ có dấu, Ký tự đặc biệt cho phép, Ký tự đặc biệt không cho phép, All space, Space ở giữa, Space đầu/cuối, Emoji/Icons, Unicode đặc biệt, Boolean, Mảng, Object, XSS, SQL INJECTION.
-
-**NUMBER/INTEGER field — Full test list:**
-Để trống, Không truyền, Truyền null, Số nguyên hợp lệ, Số âm, Số thập phân, Số leading zero, Số rất lớn, Chuỗi chữ lẫn số, Ký tự chữ, Ký tự đặc biệt, Emoji, Unicode, Boolean, All space, Space đầu/cuối, Mảng, Object, XSS, SQL INJECTION.
-
-**ARRAY field — Test list:**
-Không truyền, Truyền null, Mảng rỗng [], Mảng chứa phần tử rỗng, String/Number/Object (thay vì array).
+---
 
 ## Phase 4: Kiểm tra luồng chính
 
 ### ⚠️ QUY TẮC QUAN TRỌNG NHẤT
 
-**MỌI test case trong luồng chính PHẢI có response rõ ràng theo format:**
+**MỌI test case trong luồng chính PHẢI có response:**
 ```
 - 1\. Check api trả về:
       1\.1. Status: {status_code}
       1\.2. Response:
       {
-        ...response body theo PTTK/RSD định nghĩa...
+        ...response body theo PTTK/RSD...
       }
       SQL:
       SELECT ... FROM ... WHERE ...;
 ```
 
-> **LƯU Ý:** Response body và request body KHÔNG có format cố định. Cấu trúc response
-> (tên trường, kiểu dữ liệu, nesting) tùy thuộc vào PTTK/RSD của từng API.
-> Các ví dụ bên dưới dùng `errorCode`, `poErrorCode`, `data` chỉ là MẪU từ 1 project cụ thể.
-> Khi sinh test cases, PHẢI đọc PTTK/RSD để lấy đúng cấu trúc response thực tế.
+**TUYỆT ĐỐI KHÔNG** viết test case không có response.
 
-**TUYỆT ĐỐI KHÔNG** viết test case chỉ mô tả hành động mà không có response. VD SAI:
-```
-### Kiểm tra mapping cột "Chi nhánh"
-- Check file excel: Cột hiển thị 120000 - Chi nhánh Hà Nội
-```
+**⚠️ KHÔNG duplicate validate cases vào luồng chính.** Lỗi validate (sai kiểu, bỏ trống, vượt maxLength...) đã có trong "Kiểm tra validate" → KHÔNG viết lại vào luồng chính. Luồng chính chỉ test business logic.
 
-VD ĐÚNG:
-```
-### Kiểm tra mapping cột "Chi nhánh"
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        ...response body chứa thông tin "Chi nhánh" theo cấu trúc PTTK định nghĩa...
-      }
-      SQL:
-      SELECT BRANCH_CODE, BRANCH_NAME FROM CAT_BRANCH
-      WHERE BRANCH_CODE = '120000';
-```
+> Response body cấu trúc tùy theo PTTK/RSD của từng API — KHÔNG có format cố định. Các ví dụ dùng `errorCode`, `poErrorCode`, `data` chỉ là MẪU từ project demo.
 
-### App's 4 Training Examples (copy ĐÚNG format)
+### Nội dung bắt buộc
 
-**Example 1 — Basic flow with DB query:**
+1. **Response fields verification** — list ALL output fields (camelCase) với sample values
+2. **DB mapping verification** — SQL đầy đủ SELECT/FROM/WHERE/ORDER BY, concrete values
+3. **Search scenarios** — chính xác, gần đúng (LIKE), kết hợp nhiều điều kiện, không tồn tại
+4. **Sort order verification** — kiểm tra ORDER BY đúng
+5. **Error code scenarios** — mỗi error code trong bảng mã lỗi → 1 test với exact message
+6. **Business logic branches** — mỗi if/else → test TRUE + FALSE, mỗi branch có Response riêng
+7. **DB validations** — tồn tại/không tồn tại → test cả 2, mỗi cái có Response
+8. **Mode variations** — mỗi mode (tạo/sửa/xóa) → test riêng, có Response
+9. **Status transitions** — valid/invalid transitions, mỗi cái có Response
+
+### SQL query rules
+
+- Concrete values: `WHERE SRV_CODE = 'FEEACC001'` — KHÔNG dùng placeholder
+- Tên bảng schema-qualified nếu biết: `FEE_ENGINE_SIT.SEGMENT_CONFIG`
+- Tên cột UPPERCASE từ RSD; response fields dùng camelCase từ PTTK
+
+### Training Examples
+
+**Example 1 — Basic flow + DB:**
 ```markdown
 ### Kiểm tra response khi truyền PAR_TYPE tồn tại kết quả
 - 1\. Check api trả về:
@@ -538,56 +381,9 @@ VD ĐÚNG:
       SELECT * FROM PAR_COMMON
       WHERE PAR_TYPE = 'CUSTOMER_TYPE'
       ORDER BY PAR_TYPE ASC, PAR_CODE ASC;
-
-### Kiểm tra response khi truyền PAR_TYPE không tồn tại kết quả
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        "errorCode": "0",
-        "errorDesc": "",
-        "total": 0,
-        "items": []
-      }
-      SQL:
-      SELECT * FROM PAR_COMMON
-      WHERE PAR_TYPE = 'KHONG_TON_TAI';
 ```
 
-**Example 2 — Output field mapping (response trả đầy đủ các trường):**
-```markdown
-### Kiểm tra response trả ra đầy đủ các trường
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        "poErrorCode": "0",
-        "poErrorDesc": "Thực hiện thành công",
-        "pageNo": 0,
-        "pageSize": 5,
-        "total": 1,
-        "totalPage": 1,
-        "data": [
-          {
-            "srvCode": "FEEACC001",
-            "srvName": "Phí thu hộ",
-            "cusPers": "S",
-            "cusPersName": "KHTC siêu nhỏ",
-            "status": 1,
-            "createdUser": "admin",
-            "createdTime": "2024-01-15 10:30:00",
-            "updatedUser": "admin",
-            "updatedTime": "2024-01-15 10:30:00"
-          }
-        ]
-      }
-      SQL:
-      SELECT * FROM CAT_FEESERVICE
-      WHERE SRV_CODE = 'FEEACC001'
-      ORDER BY UPDATED_TIME DESC;
-```
-
-**Example 3 — Error code scenarios:**
+**Example 2 — Error code:**
 ```markdown
 ### Kiểm tra response khi dữ liệu không hợp lệ
 - 1\. Check api trả về:
@@ -597,106 +393,26 @@ VD ĐÚNG:
         "errorCode": "1",
         "errorDesc": "Dữ liệu không hợp lệ"
       }
-
-### Kiểm tra response khi không có quyền
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        "errorCode": "1",
-        "errorDesc": "Phân quyền người dùng không hợp lệ"
-      }
-
-### Kiểm tra response khi lỗi hệ thống
-- 1\. Check api trả về:
-      1\.1. Status: 500
-      1\.2. Response:
-      {
-        "errorCode": "1",
-        "errorDesc": "Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại."
-      }
 ```
 
-**Example 4 — Search with SQL (exact + approximate):**
+**Example 3 — Search LIKE:**
 ```markdown
-### Kiểm tra tìm kiếm chính xác theo srvCode
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        "poErrorCode": "0",
-        "poErrorDesc": "Thực hiện thành công",
-        "total": 1,
-        "data": [
-          {
-            "srvCode": "FEEACC001",
-            "srvName": "Phí thu hộ",
-            "status": 1
-          }
-        ]
-      }
-      SQL:
-      SELECT * FROM CAT_FEESERVICE
-      WHERE SRV_CODE = 'FEEACC001'
-      ORDER BY UPDATED_TIME DESC;
-
 ### Kiểm tra tìm kiếm gần đúng theo srvCode
 - 1\. Check api trả về:
       1\.1. Status: 200
       1\.2. Response:
       {
         "poErrorCode": "0",
-        "poErrorDesc": "Thực hiện thành công",
         "total": 3,
-        "data": [
-          {"srvCode": "FEEACC001", "status": 1},
-          {"srvCode": "FEEACC002", "status": 1},
-          {"srvCode": "FEEACC003", "status": 1}
-        ]
+        "data": [{"srvCode": "FEEACC001"}, ...]
       }
       SQL:
       SELECT * FROM CAT_FEESERVICE
       WHERE UPPER(TRIM(SRV_CODE)) LIKE UPPER(TRIM('%FEEACC%'))
       ORDER BY UPDATED_TIME DESC;
-
-### Kiểm tra kết hợp nhiều điều kiện tìm kiếm
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        "poErrorCode": "0",
-        "poErrorDesc": "Thực hiện thành công",
-        "data": [...]
-      }
-      SQL:
-      SELECT * FROM CAT_FEESERVICE
-      LEFT JOIN CAT_CUSTYPE ON CAT_CUSTYPE.TYPE_CODE = CAT_FEESERVICE.CUS_PERS
-      WHERE UPPER(TRIM(SRV_CODE)) LIKE '%FEE%'
-        AND UPPER(TRIM(SRV_NAME)) LIKE '%PHÍ%'
-        AND CUS_PERS = 'S'
-        AND STATUS = 1
-      ORDER BY UPDATED_TIME DESC;
 ```
 
-### Nội dung bắt buộc
-
-1. **Response fields verification** — Kiểm tra response trả ra đầy đủ các trường (list ALL output fields dạng camelCase với sample values)
-2. **DB mapping verification** — Kiểm tra data mapping đúng DB (với SQL query ĐẦY ĐỦ SELECT/FROM/WHERE/ORDER BY)
-3. **Search scenarios** — Tìm kiếm chính xác, gần đúng (LIKE), kết hợp nhiều điều kiện, không tồn tại
-4. **Sort order verification** — Kiểm tra sắp xếp theo đúng ORDER BY
-5. **Error code scenarios** — Mỗi error code trong bảng mã lỗi → 1 test case với exact message trong Response
-6. **Business logic branches** — Mỗi if/else → test cả true và false branch, MỖI branch có Response riêng
-7. **DB validations** — Check tồn tại/không tồn tại → test cả 2 trường hợp, mỗi cái có Response
-8. **Mode variations** — Nếu có task=create/update → test từng mode, mỗi mode có Response
-9. **Status transitions** — Nếu có chuyển trạng thái → test valid/invalid transitions, mỗi cái có Response
-
-### SQL query rules
-
-- SELECT cụ thể (liệt kê cột hoặc *), FROM, WHERE, ORDER BY
-- GIÁ TRỊ MẪU CỤ THỂ: `WHERE SRV_CODE = 'FEEACC001'` — KHÔNG dùng placeholder
-- Tên bảng schema-qualified nếu biết: `FEE_ENGINE_SIT.SEGMENT_CONFIG`
-- Tên cột UPPERCASE từ RSD
-- Response fields dùng camelCase (extract từ PTTK nếu có)
+---
 
 ## Phase 5: Verify + Supplement
 

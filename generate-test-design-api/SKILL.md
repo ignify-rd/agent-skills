@@ -328,17 +328,31 @@ Generate the test design following the rules loaded via `--ref` and the format o
 **Post-section checkpoint — Common:** Có đủ Method + URL + Authorization test cases? Thiếu → thêm bullet.
 → Count: {generated}/{expected}. Missing → THÊM bullet ngay, KHÔNG proceed đến section tiếp.
 
-**Validate section (per-field):** For each inputField from Phase 2, generate test cases using the field templates in `--ref api-test-design`:
-- String Required → test: empty, missing, null, maxLen-1/maxLen/maxLen+1, numeric, accented chars, special chars, spaces, emoji, unicode, boolean, array, object, XSS, SQL injection
-- Integer with default → test: empty/missing/null (uses default), valid value, negative, decimal, string
-- Optional Integer → test: empty/missing/null (returns all), valid/invalid value, string
+**Validate section (per-field):** For each inputField from Phase 2, generate test cases using the field templates in `--ref api-test-design`. **Process 1 field at a time** — complete ALL cases for the current field before moving to the next.
+
+- **String Required** → test ALL 19+ cases: empty, missing, null, maxLen-1/maxLen/maxLen+1, numeric chars, lowercase/uppercase, accented chars, special chars (see special-char rule below), all space, space in middle, space at start/end, emoji, unicode, boolean, array, object, XSS, SQL injection
+- **Integer Required (no default)** → test ALL 19 cases: empty (→ error), missing (→ error), null (→ error), valid positive, negative, decimal, leading zero (00123), very large number, string only (abc), mixed string+number (10abc), special chars (@#$), all space, space at start/end, boolean, array, object, XSS, SQL injection
+- **Integer with default** → test ALL 19 cases: empty/missing/null (→ uses default, success), valid value, negative, decimal, leading zero, very large, string, mixed string+number, special chars, all space, space at start/end, boolean, array, object, XSS, SQL injection
+- **Optional Integer** → test: empty/missing/null (→ returns all), valid/invalid value, negative, decimal, string, boolean, array, object, XSS, SQL injection
+- **JSONB Required** → test ALL 14 cases: empty (→ error), missing (→ error), null (→ error), valid JSON, JSON sai syntax, JSON sai format nghiệp vụ, object rỗng `{}`, mảng `[]`, chuỗi rỗng, string thuần, number, boolean, XSS trong JSON value, SQL injection trong JSON value
+- **JSONB Optional** → test: missing/null (→ success), valid JSON (→ success), JSON sai syntax, JSON sai format nghiệp vụ, object rỗng, mảng, chuỗi rỗng, string thuần, number, boolean, XSS trong JSON value, SQL injection trong JSON value
+- **Special chars rule**: Only include "ký tự đặc biệt cho phép" + "không cho phép" cases when PTTK explicitly defines `allowedSpecialChars`. If not specified → use 1 generic "ký tự đặc biệt" case with expectedResult = "Theo RSD"
 - ALL validate responses use Status: 200 (errors in body, NOT 400/422/500)
 - JSON response must be multiline WITHOUT backtick fence
+
+**⚠️ Per-field checkpoint (MANDATORY after EACH field):**
+Count generated cases vs required minimum. If any field < min → APPEND missing cases immediately before moving to next field.
+```
+Field {fieldName} ({type}): {generated}/{min_required} cases. Missing: [list] → THÊM ngay.
+```
+Min case counts: String Required ≥ 19 | Integer Required ≥ 19 | Integer with Default ≥ 19 | JSONB Required ≥ 14 | JSONB Optional ≥ 12
 
 **Post-section checkpoint — Validate (API):** TỪNG field trong `inventory.errorCodes[section="validate"]` → có bullet với exact error code? Thiếu → THÊM bullet `### [SỬA]`.
 → Count per field: {generated}/{expected} error codes covered. Missing → THÊM `### [SỬA]` ngay, KHÔNG proceed đến main flow.
 
 **Main flow section (LLM-generated):** Every test case MUST include response with `1\. Check api trả về:` / `1\.1. Status:` / `1\.2. Response:` format.
+
+**⚠️ KHÔNG duplicate validate cases vào luồng chính:** Các lỗi validate (truyền sai kiểu, bỏ trống, vượt maxLength...) đã có trong "Kiểm tra validate" → KHÔNG viết lại vào "Kiểm tra luồng chính". Luồng chính chỉ test business logic (error codes từ RSD, DB operations, mode variations, external services).
 
 **⚠️ PHẢI sinh dựa trên inventory từ Step 4c — inject các items cụ thể vào generation:**
 
