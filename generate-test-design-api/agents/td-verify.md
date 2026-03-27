@@ -72,6 +72,37 @@ else:
 
 Nếu có duplicate → dùng Edit tool xóa khỏi `## Kiểm tra luồng chính` (field-level checks thuộc về validate).
 
+## Bước 3b — V5b: Detect validate cases misplaced in mainflow
+
+```python
+import re
+
+with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
+    content = f.read()
+
+mainflow_match = re.search(r'## Kiểm tra luồng chính(.*?)$', content, re.DOTALL)
+if mainflow_match:
+    mainflow = mainflow_match.group(1)
+    # Patterns that indicate validate cases in mainflow
+    suspicious_patterns = [
+        r'### Kiểm tra .*(bỏ trống|để trống|thiếu trường|trường không bắt buộc)',
+        r'### Kiểm tra .*(không hợp lệ|sai định dạng|sai kiểu)',
+        r'### Kiểm tra .*(null|empty|rỗng)',
+    ]
+    found = []
+    for pat in suspicious_patterns:
+        matches = re.findall(pat, mainflow, re.IGNORECASE)
+        found.extend(matches)
+    if found:
+        print(f"❌ V5b MISPLACED ({len(found)}) validate cases in mainflow:")
+        for m in found:
+            print(f"  - {m}")
+    else:
+        print("✅ V5b: No misplaced validate cases in mainflow")
+```
+
+Nếu có misplaced → dùng Edit tool xóa khỏi `## Kiểm tra luồng chính`.
+
 ## Bước 4 — V9: Global forbidden words scan
 
 ```bash
@@ -96,11 +127,12 @@ Nếu file bắt đầu sai → dùng Edit tool sửa header.
 
 ```
 === SELF-CHECK (td-verify) ===
-[Gap] Inventory items covered:    {filled}/{total} gaps fixed
-[V5]  No duplicate validate↔main: ✅/❌ ({N} duplicates)
-[V9]  No forbidden words:         ✅/❌ ({N} occurrences)
-[V10] Format correct (# header):  ✅/❌
-=== KẾT QUẢ: {N}/4 ===
+[Gap]  Inventory items covered:         {filled}/{total} gaps fixed
+[V5]   No duplicate validate↔main:      ✅/❌ ({N} duplicates)
+[V5b]  No misplaced validate in main:   ✅/❌ ({N} cases removed)
+[V9]   No forbidden words:              ✅/❌ ({N} occurrences)
+[V10]  Format correct (# header):       ✅/❌
+=== KẾT QUẢ: {N}/5 ===
 ```
 
 ## Output

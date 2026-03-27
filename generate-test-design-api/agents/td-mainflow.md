@@ -46,6 +46,14 @@ Trước khi viết bất kỳ case nào, nhớ quy tắc:
 - Bao gồm: empty, type mismatch, format sai, date constraint, cross-field so sánh, maxLength
 - Luồng chính **CHỈ** test: DB lookup errors, workflow state, external service failures, business branches
 
+**Các pattern NGHIÊM CẤM trong mainflow:**
+- `### Kiểm tra ... bỏ trống` — dù là 1 field hay kết hợp nhiều optional fields
+- `### Kiểm tra ... với giá trị hợp lệ / không hợp lệ` — đây là validate
+- `### Kiểm tra ... khi thiếu trường X` — đây là validate
+- `### Kiểm tra ... với các trường không bắt buộc để trống` — đây là validate
+
+**Mainflow luôn test với data hợp lệ** (required fields đầy đủ, optional fields có giá trị đại diện hoặc được nêu rõ là bỏ trống theo kịch bản nghiệp vụ cụ thể). Kịch bản nghiệp vụ "bỏ trống optional" chỉ được viết trong mainflow khi RSD/PTTK có luồng xử lý riêng (VD: save draft không cần field X).
+
 ## Bước 5 — Sinh theo từng sub-section
 
 **Sub-A — Response + DB:**

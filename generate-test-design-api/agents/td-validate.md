@@ -5,9 +5,9 @@ tools: Read, Bash, Edit, Write
 model: inherit
 ---
 
-# td-validate — Sinh validate cases cho 1 batch fields
+# td-validate — Sinh validate cases cho 1 batch fields (tối đa 3 fields/batch)
 
-Nhiệm vụ: Sinh validate test cases cho đúng `{FIELD_BATCH}` fields được giao. Append vào output file.
+Nhiệm vụ: Sinh validate test cases cho đúng `{FIELD_BATCH}` fields được giao (≤3 fields). Append vào output file.
 
 ## Bước 1 — Load field type templates
 
@@ -28,6 +28,8 @@ python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules
 - Đọc `{CATALOG_SAMPLE}` nếu được cung cấp → dùng làm wording reference
 
 ## Bước 3 — Sinh validate cho TỪNG field theo thứ tự
+
+> ⚠️ **KHÔNG rút gọn template cho các fields sau trong batch.** Field thứ 2, 3 trong batch phải có đúng số cases như field thứ 1 — áp dụng 100% template. Nếu cảm thấy "đã viết đủ rồi" → kiểm tra lại với min case count.
 
 ### Quy tắc chung
 - **Heading field**: `### {fieldName}: {type} ({Required/Optional})`
@@ -69,15 +71,31 @@ Nếu field có ràng buộc với field khác (VD: expiredDate ≥ effectiveDat
 ## Bước 4 — Per-field checkpoint (BẮT BUỘC sau MỖI field)
 
 > ⚠️ **Checkpoint chỉ trong MEMORY / STDOUT — KHÔNG ghi vào batch file.**
+> ⚠️ **Hoàn thành checkpoint NGAY SAU KHI viết xong field** — KHÔNG chờ hết batch mới kiểm tra.
 
+Với mỗi field type, phải có ĐỦ các case categories sau (không chỉ đếm số lượng):
+
+**String Required / String Optional:**
+Bỏ trống (null/empty/"") ✓ | Đúng định dạng (ngắn) ✓ | Đúng maxLength (N ký tự) ✓ | maxLength+1 ✓ | maxLength-1 ✓ | Chỉ khoảng trắng ✓ | Khoảng trắng đầu/cuối ✓ | Số ✓ | Chữ có dấu ✓ | Ký tự đặc biệt ✓ | Emoji ✓ | XSS script ✓ | SQL injection ✓ | Paste ✓ | Unicode ✓
+
+**Integer Required / Long / Integer Default:**
+Bỏ trống ✓ | String ✓ | Số thực (decimal) ✓ | Âm ✓ | 0 ✓ | 1 ✓ | Max-1 ✓ | Max ✓ | Max+1 ✓ | Rất lớn ✓ | Boolean ✓ | Array ✓ | Null ✓
+
+**Number Required / Number Optional:**
+Bỏ trống ✓ | String ✓ | Âm ✓ | 0 ✓ | 1 chữ số ✓ | 1 chữ số thập phân ✓ | 2 chữ số thập phân ✓ | 3 chữ số thập phân ✓ | Max-1 ✓ | Max ✓ | Max+1 ✓ | > Max boundary ✓
+
+**Date Required:**
+Bỏ trống ✓ | Format sai ✓ | String ✓ | Quá khứ ✓ | Hôm nay ✓ | Tương lai ✓ | Ngày không tồn tại (29/02 năm lẻ) ✓ | Cross-field (nếu có) ✓
+
+In checkpoint:
 ```
 ✓ Field {fieldName} ({type}): {generated}/{min} cases.
   [V3] → error chỉ cho type violations/XSS/SQL injection: ✅/❌
-  [V4] Status validate = 200 (không có 400/422/500): ✅/❌
-  Missing cases: [list nếu có] → THÊM ngay trước khi sang field tiếp.
+  [V4] Status validate = 200: ✅/❌
+  Missing categories: [list cụ thể nếu có] → THÊM ngay.
 ```
 
-Nếu thiếu hoặc có ❌ → THÊM/SỬA ngay, KHÔNG bỏ qua.
+Nếu thiếu hoặc có ❌ → THÊM ngay, KHÔNG sang field tiếp cho đến khi đủ.
 
 ## Bước 5 — Kiểm tra error codes từ inventory
 

@@ -135,7 +135,8 @@ PROJECT_RULES: {projectRules hoặc "none"}
 ### Step 5b: Sub-agent — td-validate (Sinh validate, song song theo batch)
 
 Đọc `{INVENTORY_FILE}` để lấy tất cả `fieldConstraints[]`.
-Nhóm fields thành batches tối đa 5 fields mỗi batch: Batch 1 [F1–F5], Batch 2 [F6–F10], ...
+Nhóm fields thành batches tối đa **3 fields** mỗi batch: Batch 1 [F1–F3], Batch 2 [F4–F6], ...
+(Giới hạn 3 fields/batch để đảm bảo mỗi sub-agent có đủ context cho 100% template cases mỗi field.)
 
 **Spawn TẤT CẢ batch sub-agents song song** — mỗi batch 1 sub-agent độc lập.
 
