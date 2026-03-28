@@ -28,32 +28,21 @@ If not provided, ask for it.
 
 ---
 
-### Step 1 — Prepare Evidence sheet
+### Step 0b — Optional: Range / filter
 
-Check if an `"Evidence"` tab exists:
-```
-mcp__gsheets__list_sheets(spreadsheetId)
-```
+The user may optionally specify which test cases to run:
+- **Range**: "run FE-010 to FE-025" → only rows where Test ID is in that range
+- **List**: "run FE-003, FE-007" → only those specific IDs
+- **Re-run failures**: "re-run failed cases" → only rows where column G = "FAIL"
+- **Force re-run**: "re-run all" → ignore already-executed check
 
-If not found, create it, write the header row, then pre-populate column A with **all test case IDs** read from the test sheet (one ID per row starting at row 2):
-```
-mcp__gsheets__create_sheet(spreadsheetId, "Evidence")
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A1:B1", [["Test ID", "Screenshot"]])
+If not specified → run all pending rows in order.
 
-# Pre-populate column A with all test IDs (read from test sheet first)
-# e.g. if test IDs are FE-001…FE-020, write them to A2:A21
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A2:A{n+1}", [[id] for id in testIds])
-```
-
-If the Evidence sheet **already exists**, read its current content to determine which rows already have screenshots (column B non-empty) so you can skip re-writing those rows.
-
-Track the next available Evidence row: find the first row in column A that has a Test ID but an empty column B (or append after the last populated row).
-
-**Important:** column A is the source of truth for row positions — always look up the Evidence row for a given Test ID by scanning column A, do not assume sequential order.
+Store filter as `idFilter` (list of IDs, or null for all). Applied after Step 1 partitioning.
 
 ---
 
-### Step 2 — Read test cases
+### Step 1 — Read test cases
 
 ```
 mcp__gsheets__get_sheet_data(spreadsheetId, sheetName="Frontend Tests")
@@ -77,6 +66,43 @@ Column mapping (1-indexed):
 | H | Error Message | **Agent writes**: failure detail or empty |
 | I | Screenshot URL | **Agent writes**: file path of screenshot |
 | J | Executed At | **Agent writes**: ISO 8601 timestamp |
+
+**Skip already-executed rows:**
+- `pendingRows` — rows where column G is empty
+- `doneRows` — rows where column G is non-empty
+
+Print at start:
+```
+Loaded {total} test cases: {pending} pending, {done} already executed (skipping)
+```
+Only execute `pendingRows` (unless user says "re-run all").
+
+---
+
+### Step 2 — Prepare Evidence sheet
+
+Read test cases first (Step 1 must complete before this step).
+
+Check if an `"Evidence"` tab exists:
+```
+mcp__gsheets__list_sheets(spreadsheetId)
+```
+
+If not found, create it, write the header row, then pre-populate column A with **all test case IDs** (from `pendingRows` + `doneRows`, in original order):
+```
+mcp__gsheets__create_sheet(spreadsheetId, "Evidence")
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A1:B1", [["Test ID", "Screenshot"]])
+
+# Pre-populate column A with all test IDs
+# e.g. if test IDs are FE-001…FE-020, write them to A2:A21
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A2:A{n+1}", [[id] for id in allTestIds])
+```
+
+If the Evidence sheet **already exists**, read its current content to determine which rows already have screenshots (column B non-empty) so you can skip re-writing those rows.
+
+Track the next available Evidence row: find the first row in column A that has a Test ID but an empty column B (or append after the last populated row).
+
+**Important:** column A is the source of truth for row positions — always look up the Evidence row for a given Test ID by scanning column A, do not assume sequential order.
 
 ---
 
@@ -164,16 +190,35 @@ On step failure:
 
 ```json
 [
-  {"type": "visible", "selector": ".success-toast"},
-  {"type": "text_contains", "selector": "h1", "value": "Welcome"},
-  {"type": "url_contains", "value": "/dashboard"},
-  {"type": "not_visible", "selector": ".error-message"}
+  {"type": "visible",          "selector": ".success-toast"},
+  {"type": "not_visible",      "selector": ".error-message"},
+  {"type": "text_equals",      "selector": "h1",            "value": "Tạo mới thành công"},
+  {"type": "text_contains",    "selector": ".status-badge", "value": "Đang xử lý"},
+  {"type": "value_equals",     "selector": "#input-name",   "value": "Tên sản phẩm A"},
+  {"type": "attribute_equals", "selector": "#btn-save",     "attribute": "disabled", "value": "true"},
+  {"type": "count_equals",     "selector": ".table-row",    "value": 5},
+  {"type": "url_contains",     "value": "/dashboard"},
+  {"type": "url_equals",       "value": "https://app.example.com/dashboard"}
 ]
 ```
 
+**Assertion type reference:**
+
+| type | Checks | Required fields |
+|------|--------|----------------|
+| `visible` | Element exists and is visible | `selector` |
+| `not_visible` | Element absent or hidden | `selector` |
+| `text_equals` | Element text = value (exact, trimmed) | `selector`, `value` |
+| `text_contains` | Element text contains value | `selector`, `value` |
+| `value_equals` | Input/textarea `.value` = value | `selector`, `value` |
+| `attribute_equals` | Element attribute = value | `selector`, `attribute`, `value` |
+| `count_equals` | Number of matching elements = value | `selector`, `value` (integer) |
+| `url_contains` | Current URL contains value | `value` |
+| `url_equals` | Current URL = value (exact) | `value` |
+
 Use `mcp__playwright__browser_snapshot` to get the current page state, then evaluate assertions against the snapshot.
 
-On first assertion failure → mark FAIL, record the failing assertion. Continue remaining assertions only to collect additional failures (include all in error message).
+On first failure → record `"Assertion failed [{type}]: selector={selector}, expected={value}, got={actual}"`. Continue remaining assertions to collect all failures.
 
 **4b-4: Capture screenshot**
 

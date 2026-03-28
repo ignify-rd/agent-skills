@@ -32,6 +32,20 @@ If not provided, ask for it.
 
 ---
 
+### Step 0b — Optional: Range / filter
+
+The user may optionally specify which test cases to run:
+- **Range**: "run API-010 to API-025" → only rows where Test ID is in that range
+- **List**: "run API-003, API-007, API-012" → only those specific IDs
+- **Re-run failures**: "re-run failed cases" → only rows where column K = "FAIL"
+- **Force re-run**: "re-run all" or `--force` → ignore already-executed check
+
+If not specified → run all pending (non-executed) rows in order.
+
+Store filter as `idFilter` (list of IDs, or null for all). Applied after Step 1 partitioning.
+
+---
+
 ### Step 1 — Read test cases
 
 ```
@@ -60,22 +74,40 @@ Column mapping:
 | M | Response Body | **Agent writes**: actual response (truncated 500 chars) |
 | N | Executed At | **Agent writes**: ISO 8601 timestamp |
 
+**Skip already-executed rows:**
+After reading, partition rows into two lists:
+- `pendingRows` — rows where column K is empty (not yet executed)
+- `doneRows` — rows where column K is non-empty (already have results)
+
+If user explicitly passes `--force` or says "re-run all" → use all rows as `pendingRows`.
+Otherwise → only execute `pendingRows`. Print at start:
+```
+Loaded {total} test cases: {pending} pending, {done} already executed (skipping)
+```
+All subsequent steps operate on `pendingRows` only.
+
 ---
 
 ### Step 2 — Prepare Evidence sheet
+
+Read test cases first (Step 1 must complete before this step).
 
 Check if an `"Evidence"` tab exists:
 ```
 mcp__gsheets__list_sheets(spreadsheetId)
 ```
 
-If not found, create it and write the header:
+If not found, create it, write header, then **pre-populate column A with all test case IDs** (from `pendingRows` + `doneRows`, in original order):
 ```
 mcp__gsheets__create_sheet(spreadsheetId, "Evidence")
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", row=1, {A: "Test ID", B: "Screenshot"})
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A1:B1", [["Test ID", "Screenshot"]])
+# Pre-populate column A with all test IDs
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A2:A{n+1}", [[id] for id in allTestIds])
 ```
 
-Track the next available row in Evidence (start at 2).
+If Evidence **already exists**, read current content to find which rows already have screenshots (column B non-empty) — skip re-writing those.
+
+**Always look up Evidence row by scanning column A for the testId** — never assume sequential order.
 
 ---
 
@@ -123,7 +155,9 @@ Take column D from the group's first row. Execute each auth step via curl to cap
 
 Build curl command, execute, capture variables from response body using JSONPath. Store as group-scoped variables.
 
-If precondition fails → mark all cases in group as ERROR: `"Precondition failed: {detail}"`. Skip group.
+If precondition fails → mark all cases in group as ERROR: `"Precondition failed: {detail}"`.
+Close browser immediately: `mcp__playwright__browser_close()`
+Then skip to next group (re-open browser for next group).
 
 #### 5b — Execute each test case in Postman web
 
@@ -190,21 +224,29 @@ mcp__gsheets__update_cells(spreadsheetId, "API Tests", rowIndex, {
 })
 ```
 
-Write to Evidence sheet:
+Write to Evidence sheet — find the row whose column A matches `testId`, then write screenshot path to column B:
 ```
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", evidenceRow, {
-  A: testId,
-  B: screenshotPath
-})
-evidenceRow += 1
+# Find Evidence row by testId (from the pre-populated column A)
+evidenceRow = lookup row in Evidence where A == testId
+
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", f"B{evidenceRow}",
+  [[screenshotPath]]
+)
 ```
 
-#### 5c — After all groups complete
-
-Close browser:
+**After last case in group completes** (pass or fail), close the browser context:
 ```
 mcp__playwright__browser_close()
 ```
+Then re-open for the next group:
+```
+mcp__playwright__browser_navigate("https://web.postman.co")
+```
+(Login state may be preserved by browser profile — take snapshot to verify, re-login if needed.)
+
+#### 5c — After all groups complete
+
+Browser is already closed after the last group — no additional close needed.
 
 ---
 
