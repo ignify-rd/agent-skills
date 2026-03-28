@@ -1,13 +1,13 @@
 ---
 name: td-mainflow
-description: Generate the main flow section (luồng chính) for API test design from inventory.
+description: Generate the main flow sections (Kiểm tra chức năng + Kiểm tra ngoại lệ) for API test design from inventory.
 tools: Read, Bash, Edit, Write
 model: inherit
 ---
 
-# td-mainflow — Sinh section "Kiểm tra luồng chính"
+# td-mainflow — Sinh sections "Kiểm tra chức năng" và "Kiểm tra ngoại lệ"
 
-Nhiệm vụ: Sinh main flow section dựa trên inventory, append vào output file.
+Nhiệm vụ: Sinh 2 sections cuối dựa trên inventory, append vào output file.
 
 ## Bước 1 — Load main flow rules
 
@@ -20,7 +20,7 @@ python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "main-flow"
 Đọc `{INVENTORY_FILE}` — lấy TẤT CẢ categories:
 - `modes[]` — danh sách luồng con
 - `businessRules[]` — if/else branches
-- `errorCodes[section="main"]` — DB lookup errors
+- `errorCodes[section="main"]` — DB lookup errors → đưa vào `## Kiểm tra ngoại lệ`
 - `dbOperations[]` — tables + fieldsToVerify
 - `externalServices[]` — external calls + rollback
 - `statusTransitions[]` — valid/invalid transitions
@@ -41,102 +41,117 @@ Từ `modes[]`, liệt kê tất cả luồng con. Nếu ≥ 2 luồng → mỗi
 
 ## Bước 4 — KHÔNG duplicate validate cases
 
-Trước khi viết bất kỳ case nào, nhớ quy tắc:
-- Lỗi đã có trong `## Kiểm tra validate` → **KHÔNG viết lại**
-- Bao gồm: empty, type mismatch, format sai, date constraint, cross-field so sánh, maxLength
-- Luồng chính **CHỈ** test: DB lookup errors, workflow state, external service failures, business branches
+- Lỗi đã có trong `## Kiểm tra Validate` → **KHÔNG viết lại**
+- Bao gồm: empty, type mismatch, format sai, date constraint, cross-field, maxLength
+- `## Kiểm tra chức năng` **CHỈ** test: happy path, DB state, business branches, external services
+- `## Kiểm tra ngoại lệ` **CHỈ** test: error codes section="main" (DB lookup, workflow state, concurrency)
 
-**Các pattern NGHIÊM CẤM trong mainflow:**
-- `### Kiểm tra ... bỏ trống` — dù là 1 field hay kết hợp nhiều optional fields
+**Các pattern NGHIÊM CẤM trong chức năng:**
+- `### Kiểm tra ... bỏ trống` — đây là validate
 - `### Kiểm tra ... với giá trị hợp lệ / không hợp lệ` — đây là validate
 - `### Kiểm tra ... khi thiếu trường X` — đây là validate
-- `### Kiểm tra ... với các trường không bắt buộc để trống` — đây là validate
+- Không có "Pre-conditions:" block
+- Không có "Expected:" trailing text
 
-**Mainflow luôn test với data hợp lệ** (required fields đầy đủ, optional fields có giá trị đại diện hoặc được nêu rõ là bỏ trống theo kịch bản nghiệp vụ cụ thể). Kịch bản nghiệp vụ "bỏ trống optional" chỉ được viết trong mainflow khi RSD/PTTK có luồng xử lý riêng (VD: save draft không cần field X).
-
-## Bước 5 — Sinh theo từng sub-section
-
-**Sub-A — Response + DB:**
-- List ALL output fields với sample values
-- SQL đầy đủ: SELECT {100% fieldsToVerify từ dbOperations} FROM {table} WHERE {concrete value} ORDER BY ...
-- Concrete values: `WHERE SLA_VERSION_ID = 101` — KHÔNG dùng placeholder
-
-**Sub-B — Search scenarios (nếu là search API):**
-- Tìm kiếm chính xác / gần đúng (LIKE) / không tồn tại
-- Mỗi search field → ≥2 bullets (có kết quả + không có kết quả)
-
-**Sub-C — Error codes + Business logic:**
-- Mỗi `errorCodes[section="main"]` → 1 test case với **exact message từ inventory**
-- Mỗi `businessRules[]` → test TRUE branch + FALSE branch, mỗi branch có response riêng
-
-**Sub-D — Mode variations + Status transitions:**
-- Mỗi `modes[]` → ≥1 happy path test
-- Valid/invalid status transitions → test each
-
-**Sub-E — External services + Rollback:**
-- Mỗi `externalServices[]` → test onFailure + rollback không INSERT DB
-
-## Bước 6 — Per-sub-section checkpoint
-
-```
-Sub-A: {N}/{N} dbFields in SQL, {N}/{N} output fields ✓/✗
-Sub-B: {N}/{N} search fields ✓/✗
-Sub-C: {N}/{N} error codes, {N}/{N} branches ✓/✗
-Sub-D: {N}/{N} modes, {N}/{N} transitions ✓/✗
-Sub-E: {N}/{N} services, {N}/{N} rollback ✓/✗
-Missing → THÊM `### [SỬA]` ngay
-```
-
-## Quy tắc format mỗi test case
+## Bước 5 — Quy tắc format mỗi test case
 
 ```markdown
-### Kiểm tra {mô tả}
-- 1\. Check api trả về:
-      1\.1. Status: 200
-      1\.2. Response:
-      {
-        ...response body theo PTTK...
+### Kiểm tra {mô tả ngắn gọn}
+
+- 1. Check api trả về:
+  1.1.Status: 200
+  1.2.Response:
+  {
+      "code": "00",
+      "data": {
+          "slaVersionId": 10001,
+          "status": "DRAFT"
       }
-      SQL:
-      SELECT COL1, COL2, COL3
-      FROM TABLE_NAME
-      WHERE COL1 = 'concrete_value'
-      ORDER BY COL2 ASC;
+  }
+  SQL:
+  SELECT COL1, COL2, COL3
+  FROM TABLE_NAME
+  WHERE COL1 = concrete_value;
 ```
 
-**TUYỆT ĐỐI KHÔNG** viết test case không có response.
+**Quy tắc bắt buộc:**
+- `1.1.Status:` — KHÔNG có space sau dấu chấm
+- JSON body: plain `{` không có backtick fence
+- SQL: plain text sau `  SQL:`, không có backtick fence, indent 2 spaces
+- KHÔNG có "Pre-conditions:" block
+- KHÔNG có "Expected:" trailing text
+- KHÔNG có `---` separator giữa các cases
+- Concrete values trong SQL: `WHERE ID = 10001` — KHÔNG dùng placeholder
 
-## Bước 6b — Self-check trước khi append (BẮT BUỘC)
+## Bước 6 — Sinh nội dung
 
-> ⚠️ **Xác nhận trong MEMORY ONLY — KHÔNG ghi bất kỳ dòng nào sau đây vào OUTPUT_FILE.**
+### Section "Kiểm tra chức năng"
 
-Scan nội dung vừa sinh (trong memory, TRƯỚC khi ghi file):
+Sinh theo từng sub-section:
+
+**Sub-A — Happy path theo modes:**
+- Mỗi `modes[]` → ≥1 test case với data hợp lệ
+- Response đầy đủ từ `responseSchema.success.sample`
+- SQL: SELECT 100% `fieldsToVerify` từ `dbOperations`
+
+**Sub-B — Business rules:**
+- Mỗi `businessRules[]` → test TRUE branch + FALSE branch, mỗi branch response riêng
+
+**Sub-C — External services:**
+- Mỗi `externalServices[]` → test onSuccess + onFailure
+
+### Section "Kiểm tra ngoại lệ"
+
+- Mỗi `errorCodes[section="main"]` → 1 test case với exact message từ inventory
+- Format đơn giản: `- Status: 500` hoặc response body tùy error type
+
+## Bước 7 — Per-sub-section checkpoint (STDOUT only)
+
+> ⚠️ **STDOUT ONLY — KHÔNG ghi vào OUTPUT_FILE.**
+
+```
+Sub-A: {N}/{N} modes ✓/✗
+Sub-B: {N}/{N} business rules (TRUE+FALSE) ✓/✗
+Sub-C: {N}/{N} external services ✓/✗
+Ngoại lệ: {N}/{N} error codes [main] ✓/✗
+Missing → THÊM ngay
+```
+
+## Bước 8 — Self-check trước khi append (MEMORY ONLY)
+
+> ⚠️ **MEMORY ONLY — KHÔNG ghi vào OUTPUT_FILE.**
 
 ```
 [V6] ≥2 modes → mỗi mode có #### heading riêng: ✅/❌
-[V7] Mọi ### Kiểm tra đều có "1\. Check api trả về:" block: ✅/❌
-[V8] SQL không có placeholder ({...}, ..., <value>, ???): ✅/❌
-[V9] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:, [placeholder]): ✅/❌
+[V7] Mọi ### đều có "1. Check api trả về:" block: ✅/❌
+[V8] SQL không có placeholder: ✅/❌
+[V9] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:): ✅/❌
+[VX] Không có Pre-conditions, Expected, backtick fences, ---: ✅/❌
 ```
 
-Nếu có ❌ → SỬA ngay trong memory trước khi sang Bước 7.
+Nếu có ❌ → SỬA trong memory trước khi sang Bước 9.
 
-## Bước 7 — Append vào output + Coverage report
+## Bước 9 — Append vào output
 
-Append **CHỈ** nội dung sau vào `{OUTPUT_FILE}` (không có gì khác):
+Append **CHỈ** test case content vào `{OUTPUT_FILE}`:
+
 ```markdown
-## Kiểm tra luồng chính
-{generated content}
+## Kiểm tra chức năng
+
+{Sub-A + Sub-B + Sub-C content}
+
+## Kiểm tra ngoại lệ
+
+{error codes content}
 ```
 
-> ⚠️ **KHÔNG append vào OUTPUT_FILE:** Coverage report, Self-check, bảng thống kê, separator `---`, hay bất kỳ text nào từ các bước checkpoint.
+> ⚠️ **KHÔNG append:** Coverage report, checkpoint tables, separator `---`, hay bất kỳ text nào từ các bước trên.
 
-In coverage report ra STDOUT (không ghi vào file):
+In coverage report ra STDOUT:
 ```
-📊 Coverage Report (Main Flow):
-✓ Error codes [main]: {N}/{N}
-✓ Business rules:     {N}/{N} (TRUE+FALSE)
-✓ DB fields in SQL:  {N}/{N}
-✓ Modes:             {N}/{N}
-✓ External services: {N}/{N}
+📊 Coverage:
+✓ Modes:          {N}/{N}
+✓ Business rules: {N}/{N} (TRUE+FALSE)
+✓ External svc:   {N}/{N}
+✓ Error codes:    {N}/{N}
 ```

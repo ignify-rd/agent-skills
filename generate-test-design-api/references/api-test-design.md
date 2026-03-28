@@ -40,9 +40,13 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 
 {VALIDATE_SECTION}
 
-## Kiểm tra luồng chính
+## Kiểm tra chức năng
 
-{MAIN_FLOW_SECTION}
+{FUNCTION_SECTION}
+
+## Kiểm tra ngoại lệ
+
+{EXCEPTION_SECTION}
 ```
 
 **⚠️ CRITICAL — Format Rules:**

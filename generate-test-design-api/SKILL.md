@@ -243,7 +243,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
 
-**Kết thúc Step 5c khi:** `{OUTPUT_FILE}` chứa `## Kiểm tra luồng chính` và coverage report.
+**Kết thúc Step 5c khi:** `{OUTPUT_FILE}` chứa `## Kiểm tra chức năng`.
 
 ---
 
@@ -252,7 +252,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 > python -c "
 > import sys
 > c = open('{OUTPUT_FILE}', encoding='utf-8').read()
-> checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra luồng chính']
+> checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra chức năng']
 > missing = [s for s in checks if s not in c]
 > print('READY' if not missing else f'MISSING: {missing}')
 > sys.exit(0 if not missing else 1)

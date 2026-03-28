@@ -52,8 +52,8 @@ import re
 with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
     content = f.read()
 
-validate_match = re.search(r'## Kiểm tra validate(.*?)(?=## Kiểm tra luồng chính|$)', content, re.DOTALL)
-mainflow_match = re.search(r'## Kiểm tra luồng chính(.*?)$', content, re.DOTALL)
+validate_match = re.search(r'## Kiểm tra Validate(.*?)(?=## Kiểm tra chức năng|## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
+mainflow_match = re.search(r'## Kiểm tra chức năng(.*?)(?=## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
 
 def get_headings(text):
     return set(re.findall(r'^#{3,4}\s+(.+)$', text or '', re.MULTILINE))
