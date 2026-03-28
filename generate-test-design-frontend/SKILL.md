@@ -73,11 +73,20 @@ Xác định các paths dùng xuyên suốt:
 
 ### Step 3: Catalog Example
 
+Liệt kê tất cả catalog files:
 ```bash
-python $SKILL_SCRIPTS/search.py "{screen_keyword}" --domain frontend --full --top 1
+python $SKILL_SCRIPTS/search.py --list --domain frontend
 ```
 
-Lưu `CATALOG_SAMPLE` (snippet wording + format). Catalog = nguồn WORDING cao nhất.
+Đọc **tối đa 3 file** có chức năng gần nhất với màn hình đang generate (dựa theo tên file + title):
+```bash
+# Đọc từng file bằng Read tool — KHÔNG dùng search.py để tìm
+# VD: Read("catalog/frontend/Screen_Ten_man_hinh.md", limit=80)
+```
+
+Chọn catalog phù hợp nhất (cùng screen type LIST/FORM/DETAIL, cùng domain, hoặc cấu trúc tương tự). Nếu không có file nào phù hợp → đọc file đầu tiên trong danh sách.
+
+Lưu `CATALOG_SAMPLE` = **50 dòng đầu + 50 dòng cuối** của file được chọn — dùng làm wording reference cho sub-agents. Catalog = nguồn WORDING cao nhất.
 
 ---
 
