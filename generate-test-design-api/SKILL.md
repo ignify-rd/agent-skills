@@ -128,7 +128,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
 
-**Kết thúc Step 5a khi:** `{OUTPUT_FILE}` tồn tại và chứa `## Kiểm tra các case common`.
+**Kết thúc Step 5a khi:** `{OUTPUT_FILE}` tồn tại và chứa `## Kiểm tra token`.
 
 ---
 
@@ -180,7 +180,7 @@ while os.path.exists(f"{output_dir}/validate-batch-{n}.md"):
 
 # Append validate section vào output
 with open(output_file, "a", encoding="utf-8") as f:
-    f.write("\n\n## Kiểm tra validate\n\n")
+    f.write("\n\n## Kiểm tra Validate\n\n")
     f.write("\n\n".join(batch_parts))
 
 # Ghi sentinel để báo merge hoàn thành
@@ -206,7 +206,7 @@ Nếu có ❌ trong batch checkpoint → re-spawn batch đó với note "Batch {
 > import sys
 > done = open('{output-folder}/.validate-done').read()
 > content = open('{OUTPUT_FILE}', encoding='utf-8').read()
-> ok = '## Kiểm tra validate' in content
+> ok = '## Kiểm tra Validate' in content
 > print('READY' if ok else 'NOT READY')
 > sys.exit(0 if ok else 1)
 > "
@@ -243,7 +243,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 > python -c "
 > import sys
 > c = open('{OUTPUT_FILE}', encoding='utf-8').read()
-> checks = ['## Kiểm tra các case common', '## Kiểm tra validate', '## Kiểm tra luồng chính']
+> checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra luồng chính']
 > missing = [s for s in checks if s not in c]
 > print('READY' if not missing else f'MISSING: {missing}')
 > sys.exit(0 if not missing else 1)

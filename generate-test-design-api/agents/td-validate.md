@@ -32,13 +32,29 @@ python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules
 > ⚠️ **KHÔNG rút gọn template cho các fields sau trong batch.** Field thứ 2, 3 trong batch phải có đúng số cases như field thứ 1 — áp dụng 100% template. Nếu cảm thấy "đã viết đủ rồi" → kiểm tra lại với min case count.
 
 ### Quy tắc chung
-- **Heading field**: `### {fieldName}: {type} ({Required/Optional})`
-- **Mỗi case** = 1 `####` heading + response
+- **Heading field**: `### Trường {fieldName}` — KHÔNG kèm type hay Required/Optional
+- **Mỗi case** = 1 **bullet** `- Kiểm tra ...` + response lồng trong (KHÔNG dùng `####`)
 - **TẤT CẢ validate responses** dùng Status: 200 — KHÔNG dùng 400/422/500
-- JSON response: multiline, KHÔNG có backtick fence
-- `→ error` → `{"code": "LDH_SLA_020", "message": "Dữ liệu không hợp lệ"}` (hoặc error code từ inventory)
-- `→ success` → `Trả về response body đúng cấu trúc`
-- `→ Theo RSD` → điền response đúng từ PTTK/RSD (đọc lại inventory để xác định)
+- `→ error` → error code từ inventory, `→ success` → `{}` rỗng hoặc response đúng, `→ Theo RSD` → điền từ PTTK
+
+**Format bắt buộc cho MỖI case:**
+```markdown
+- Kiểm tra {mô tả case}
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response:
+      {
+          "code": "LDH_..._020",
+          "message": "Dữ liệu đầu vào không hợp lệ"
+      }
+```
+- Dòng `- Kiểm tra ...`: indent 0
+- Dòng `    - 1. Check api trả về:`: indent **4 spaces**
+- Dòng `      1.1.Status:`: indent **6 spaces** (không có space sau dấu chấm)
+- JSON mở `{` trên dòng riêng sau `1.2.Response:`
+- JSON field indent **6 spaces**: `      "code": "..."`
+- Response rỗng (→ Theo RSD / → success không rõ): dùng `{` + blank line + `}`
 
 ### Quy tắc ký tự đặc biệt
 - PTTK có `allowedSpecialChars` list → tách 2 case: "cho phép (_,-)" → success + "không cho phép (!@#)" → error

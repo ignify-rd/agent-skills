@@ -16,36 +16,27 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 ```markdown
 # {API_NAME}
 
-## Kiểm tra các case common
+## Kiểm tra token
 
-### Method
+### Kiểm tra nhập token hết hạn
 
-#### Kiểm tra truyền sai method ({WRONG_METHODS})
-- status: 107
-- {
-  "message": "Error retrieving AuthorInfo for token from TokenLib: Token is invalid signature"
-  }
+- Status: 401
 
-### URL
+### Kiểm tra không nhập token
 
-#### Kiểm tra truyền sai url
-- status: 500
-- {
-  "message": "Access denied"
-  }
+- Status: 401
 
-### Kiểm tra phân quyền
+## Kiểm tra Endpoint & Method
 
-#### Không có quyền
-- status: 500
-- {
-  "message": "Access denied"
-  }
+### Kiểm tra nhập sai method ({WRONG_METHODS})
 
-#### Được phân quyền
-- status: 200
+- Status: 405
 
-## Kiểm tra validate
+### Kiểm tra nhập sai endpoint
+
+- Status: 404
+
+## Kiểm tra Validate
 
 {VALIDATE_SECTION}
 
@@ -57,8 +48,8 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 **⚠️ CRITICAL — Format Rules:**
 1. **KHÔNG** thêm blockquote/mô tả endpoint — output bắt đầu NGAY từ `# {API_NAME}`
 2. **KHÔNG** dùng `---` (horizontal rule) bất kỳ đâu
-3. **Section common** dùng format ĐƠN GIẢN: `- status: 107` — **TUYỆT ĐỐI KHÔNG** dùng `1\. Check api trả về:` trong common
-4. Format `1\. Check api trả về:` **CHỈ** dùng trong **validate** và **luồng chính**
+3. **Section common** (`## Kiểm tra token`, `## Kiểm tra Endpoint & Method`) dùng format ĐƠN GIẢN: `- Status: 401` — **TUYỆT ĐỐI KHÔNG** dùng `1\. Check api trả về:` trong common
+4. Format `1\. Check api trả về:` **CHỈ** dùng trong **Validate** và **luồng chính**
 5. `{WRONG_METHODS}`: nếu method=POST → "GET/PUT/DELETE"
 
 ---
@@ -131,8 +122,37 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 
 ### Per-field output format
 
-Heading field: `### {fieldName}: {type} ({Required/Optional})`
-Mỗi case = 1 `####` heading + response theo legend trên.
+Heading field: `### Trường {fieldName}`
+
+Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo format:
+
+```markdown
+### Trường {fieldName}
+
+- Kiểm tra không truyền trường {fieldName}
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response:
+      {
+          "code": "LDH_..._020",
+          "message": "Dữ liệu đầu vào không hợp lệ"
+      }
+
+- Kiểm tra truyền trường {fieldName} = null
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response:
+      {
+      }
+```
+
+**Quy tắc bắt buộc:**
+- Case heading: `- Kiểm tra ...` (KHÔNG dùng `####`)
+- Response: thụt vào 4 spaces dưới bullet cha: `    - 1. Check api trả về:`
+- JSON mở đầu ngay sau `1.2.Response:` trên dòng tiếp theo
+- JSON body thụt 6 spaces: `      "code": "..."`
 
 ---
 
