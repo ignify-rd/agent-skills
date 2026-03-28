@@ -75,12 +75,14 @@ Từ `modes[]`, liệt kê tất cả luồng con. Nếu ≥ 2 luồng → mỗi
 ```
 
 **Quy tắc bắt buộc:**
+- Case bắt đầu NGAY bằng `- 1. Check api trả về:` — **KHÔNG có bullet `- Body:` hay `- Request:` hay bất kỳ bullet nào khác trước đó**
 - `1.1.Status:` — KHÔNG có space sau dấu chấm
 - JSON body: plain `{` không có backtick fence
 - SQL: plain text sau `  SQL:`, không có backtick fence, indent 2 spaces
 - KHÔNG có "Pre-conditions:" block
 - KHÔNG có "Expected:" trailing text
 - KHÔNG có `---` separator giữa các cases
+- KHÔNG có `#### Luồng ...` heading ngay trước `### Kiểm tra` trong cùng một case — `####` chỉ dùng để nhóm nhiều cases lại, xuất hiện TRƯỚC block cases của luồng đó
 - Concrete values trong SQL: `WHERE ID = 10001` — KHÔNG dùng placeholder
 
 ## Bước 6 — Sinh nội dung
