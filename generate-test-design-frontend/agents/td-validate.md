@@ -98,12 +98,13 @@ Sau khi xong batch, đọc `{INVENTORY_FILE}`:
 ```
 
 > ⚠️ **NỘI DUNG FILE BATCH CHỈ ĐƯỢC CHỨA validate cases. TUYỆT ĐỐI KHÔNG ghi:**
-> - Heading `# ...` hoặc `## Kiểm tra validate`
-> - Bảng checkpoint hay count table
-> - `=== Batch N complete ===` text
-> - Bất kỳ text nào từ các bước checkpoint
+> - `# BATCH N: ...` hay bất kỳ heading H1 nào
+> - `## Kiểm tra validate`, `## Kiểm tra Validate`, hay bất kỳ heading H2 nào
+> - `## Per-Field Checkpoint`, bảng checkpoint hay count table
+> - `=== Batch N complete ===` hay bất kỳ separator text nào
+> - Bất kỳ text nào từ các bước checkpoint hay tổng kết
 >
-> **File bắt đầu TRỰC TIẾP bằng `### Kiểm tra {fieldType} "..."` — không có gì trước đó.**
+> **DÒNG ĐẦU TIÊN của file PHẢI LÀ: `### Kiểm tra {fieldType} "..."` — tuyệt đối không có gì trước đó.**
 
 File này chứa **chỉ** validate cases của batch, không có heading `## Kiểm tra validate` — orchestrator sẽ merge sau.
 

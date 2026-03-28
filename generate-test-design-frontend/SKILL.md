@@ -173,53 +173,40 @@ PROJECT_RULES: {projectRules hoặc "none"}
 
 ⚠️ **Mỗi sub-agent ghi vào file riêng** `{output-folder}/validate-batch-{N}.md`.
 
-**Sau khi TẤT CẢ batches hoàn thành — merge theo thứ tự:**
+**Sau khi TẤT CẢ batches hoàn thành — merge bằng script:**
 
-```python
-import os
-
-output_dir = "{output-folder}"
-output_file = "{OUTPUT_FILE}"
-
-batch_parts = []
-n = 1
-while os.path.exists(f"{output_dir}/validate-batch-{n}.md"):
-    with open(f"{output_dir}/validate-batch-{n}.md", encoding="utf-8") as f:
-        batch_parts.append(f.read().strip())
-    n += 1
-
-with open(output_file, "a", encoding="utf-8") as f:
-    f.write("\n\n## Kiểm tra validate\n\n")
-    f.write("\n\n".join(batch_parts))
-
-with open(f"{output_dir}/.validate-done", "w") as f:
-    f.write(f"merged {n-1} batches")
-
-print(f"Merged {n-1} validate batches → {output_file}")
+```bash
+python $SKILL_SCRIPTS/merge_validate.py \
+  --output-dir {output-folder} \
+  --output-file {OUTPUT_FILE}
 ```
 
-Nếu có ❌ trong batch checkpoint → re-spawn batch đó.
+Script tự động strip garbage headers và tạo sentinel `.validate-done`.
+Nếu exit 1 → đọc error, re-spawn batch bị lỗi.
 
-**Kết thúc Step 5b khi:** File `{output-folder}/.validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra validate`.
+**Kết thúc Step 5b khi:** File `{output-folder}/.validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra Validate`.
 
 ---
 
-> ⛔ **SEQUENTIAL BARRIER — KHÔNG proceed Step 5c cho đến khi:**
-> 1. File `{output-folder}/.validate-done` tồn tại
-> 2. `{OUTPUT_FILE}` chứa `## Kiểm tra validate`
+> ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 5c:**
 >
-> Kiểm tra bằng lệnh:
 > ```bash
 > python -c "
-> import sys
-> done = open('{output-folder}/.validate-done').read()
-> content = open('{OUTPUT_FILE}', encoding='utf-8').read()
-> ok = '## Kiểm tra validate' in content
-> print('READY' if ok else 'NOT READY')
-> sys.exit(0 if ok else 1)
+> import sys, os
+> sentinel = '{output-folder}/.validate-done'
+> output = '{OUTPUT_FILE}'
+> if not os.path.exists(sentinel):
+>     print('NOT READY: .validate-done missing')
+>     sys.exit(1)
+> content = open(output, encoding='utf-8').read()
+> if '## Kiểm tra Validate' not in content:
+>     print('NOT READY: ## Kiểm tra Validate missing from output')
+>     sys.exit(1)
+> print('READY')
 > "
 > ```
-> Nếu in ra `NOT READY` → DỪNG, debug Step 5b trước.
+>
+> **Nếu in ra `NOT READY` → DỪNG HOÀN TOÀN. KHÔNG spawn Step 5c. Debug Step 5b trước.**
 
 ---
 
@@ -246,18 +233,21 @@ PROJECT_RULES: {projectRules hoặc "none"}
 
 ---
 
-> ⛔ **SEQUENTIAL BARRIER — KHÔNG proceed Step 6 cho đến khi `{OUTPUT_FILE}` chứa đủ sections:**
+> ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 6:**
+>
 > ```bash
 > python -c "
 > import sys
 > c = open('{OUTPUT_FILE}', encoding='utf-8').read()
 > required = ['## Kiểm tra giao diện chung', '## Kiểm tra phân quyền',
->             '## Kiểm tra validate', '## Kiểm tra chức năng']
+>             '## Kiểm tra Validate', '## Kiểm tra chức năng']
 > missing = [s for s in required if s not in c]
-> print('READY' if not missing else f'MISSING: {missing}')
+> print('READY' if not missing else 'NOT READY: MISSING: ' + str(missing))
 > sys.exit(0 if not missing else 1)
 > "
 > ```
+>
+> **Nếu in ra `NOT READY` → DỪNG HOÀN TOÀN. KHÔNG spawn Step 6. Debug bước thiếu trước.**
 
 ---
 

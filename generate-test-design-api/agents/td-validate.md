@@ -129,23 +129,50 @@ Sau khi xong batch, đọc `{INVENTORY_FILE}`:
 ```
 
 > ⚠️ **NỘI DUNG FILE BATCH CHỈ ĐƯỢC CHỨA validate cases. TUYỆT ĐỐI KHÔNG ghi:**
-> - Heading `# ...` hoặc `## Kiểm tra validate` hay `## Kiểm tra Validate`
-> - Bảng checkpoint `## Per-Field Checkpoint` hay `| Field | Type | ...`
-> - `=== Batch N complete ===` text
+> - `# BATCH N: ...` hay bất kỳ heading H1 nào
+> - `## Kiểm tra validate`, `## Kiểm tra Validate`, hay bất kỳ heading H2 nào
+> - `## Per-Field Checkpoint`, `| Field | Type | ...` bảng checkpoint
+> - `=== Batch N complete ===` hay bất kỳ separator text nào
 > - `## Response Legend` tables
-> - Bất kỳ text nào từ các bước checkpoint
+> - Bất kỳ text nào từ các bước checkpoint hay tổng kết
 >
-> **File bắt đầu TRỰC TIẾP bằng `### fieldName:` — không có gì trước đó.**
+> **DÒNG ĐẦU TIÊN của file PHẢI LÀ: `### Trường {fieldName}` — tuyệt đối không có gì trước đó.**
 
-Ví dụ nội dung `validate-batch-1.md`:
+Ví dụ nội dung `validate-batch-1.md` (chú ý: dòng 1 là `### Trường ...`, không có header nào trước):
 ```markdown
-### slaVersionId: Long (Required)
+### Trường slaVersionId
 
-#### Để trống
-...
+- Kiểm tra không truyền trường slaVersionId
 
-### effectiveDate: Date yyyy-MM-dd (Required)
-...
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response:
+      {
+          "code": "LDH_SLA_020",
+          "message": "Dữ liệu đầu vào không hợp lệ"
+      }
+
+- Kiểm tra truyền slaVersionId là string
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response:
+      {
+          "code": "LDH_SLA_020",
+          "message": "Dữ liệu đầu vào không hợp lệ"
+      }
+
+### Trường effectiveDate
+
+- Kiểm tra không truyền trường effectiveDate
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response:
+      {
+          "code": "LDH_SLA_020",
+          "message": "Dữ liệu đầu vào không hợp lệ"
+      }
 ```
 
 ## Bước 7 — Batch checkpoint

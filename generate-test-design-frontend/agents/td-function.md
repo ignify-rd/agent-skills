@@ -14,6 +14,34 @@ Nhiệm vụ: Sinh các sections còn lại sau validate, append vào OUTPUT_FIL
 - `FORM` / `POPUP`: function + timeout
 - `DETAIL`: function + timeout (không có validate, dùng `## Kiểm tra dữ liệu hiển thị`)
 
+## Bước 0 — Kiểm tra barrier (BẮT BUỘC chạy trước mọi thứ)
+
+**Chạy lệnh này NGAY ĐẦU TIÊN. Nếu exit 1 → DỪNG, không làm gì thêm.**
+
+```bash
+python -c "
+import sys, os
+output_file = r'{OUTPUT_FILE}'
+output_dir = os.path.dirname(output_file)
+sentinel = os.path.join(output_dir, '.validate-done')
+errors = []
+if not os.path.exists(sentinel):
+    errors.append('.validate-done not found — merge_validate.py chua chay')
+if not os.path.exists(output_file):
+    errors.append('OUTPUT_FILE not found — td-common chua chay')
+else:
+    content = open(output_file, encoding='utf-8').read()
+    if '## Kiem tra Validate' not in content and '## Ki\u1ec3m tra Validate' not in content:
+        errors.append('## Kiem tra Validate missing — merge chua hoan thanh')
+if errors:
+    for e in errors: print('BARRIER FAIL:', e)
+    sys.exit(1)
+print('BARRIER OK')
+"
+```
+
+Nếu in ra `BARRIER FAIL` → **DỪNG NGAY, báo lỗi cho orchestrator**. KHÔNG tiếp tục dù bất kỳ lý do gì.
+
 ## Bước 1 — Load rules
 
 ```bash
