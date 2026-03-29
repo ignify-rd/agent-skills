@@ -12,7 +12,7 @@ Nhiệm vụ: Sinh test cases cho các sections tìm kiếm, lọc, phân trang.
 ## Bước 0: Kiểm tra screenType
 
 ```bash
-python -c "
+python3 -c "
 import sys, json
 ctx = json.load(open(r'{TC_CONTEXT_FILE}', encoding='utf-8'))
 if ctx.get('screenType', '').upper() != 'LIST':
@@ -44,8 +44,8 @@ Với mỗi section, thu thập tất cả bullets — mỗi bullet = 1 test cas
 ## Bước 3: Load rules
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref fe-test-case
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints --filter section=search
+python3 {SKILL_SCRIPTS}/search.py --ref fe-test-case
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints --filter section=search
 ```
 
 ## Bước 4: Sinh test cases

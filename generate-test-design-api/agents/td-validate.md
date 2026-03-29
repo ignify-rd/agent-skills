@@ -14,7 +14,7 @@ Nhiệm vụ: Sinh validate test cases cho đúng `{FIELD_BATCH}` fields đượ
 Load **chỉ những templates cần thiết** cho batch này:
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,{FIELD_TYPES_NEEDED}"
+python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,{FIELD_TYPES_NEEDED}"
 ```
 
 Ví dụ nếu batch có String Required + Date Required + Long:

@@ -14,7 +14,7 @@ Nhiệm vụ: Gap fill + cross-section checks. **KHÔNG đọc toàn bộ OUTPUT
 ## Bước 1 — Load verify rules
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "verify"
+python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "verify"
 ```
 
 ## Bước 2 — Gap Analysis (inventory vs output)

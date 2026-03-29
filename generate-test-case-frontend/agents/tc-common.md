@@ -30,7 +30,7 @@ Với mỗi section, thu thập tất cả bullets `- Kiểm tra ...` — mỗi 
 ## Bước 3: Load rules
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref fe-test-case
+python3 {SKILL_SCRIPTS}/search.py --ref fe-test-case
 ```
 
 ## Bước 4: Sinh test cases cho từng section

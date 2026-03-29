@@ -12,7 +12,7 @@ Nhiệm vụ: Sinh 2 sections common cho API test design và ghi vào output fil
 ## Load template
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "common"
+python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "common"
 ```
 
 ## Quy tắc

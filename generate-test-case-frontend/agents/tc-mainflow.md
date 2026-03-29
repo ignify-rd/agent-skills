@@ -12,7 +12,7 @@ Nhiệm vụ: Sinh test cases cho các buttons, actions, và business functions.
 ## Bước 0: Kiểm tra sentinel .tc-validate-done
 
 ```bash
-python -c "
+python3 -c "
 import sys, os
 sentinel = '{OUTPUT_DIR}/.tc-validate-done'
 if not os.path.exists(sentinel):
@@ -45,11 +45,11 @@ Với mỗi section/button, thu thập tất cả bullets — mỗi bullet = 1 t
 ## Bước 3: Load rules và inventory data
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref fe-test-case
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorMessages
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category enableDisableRules
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category autoFillRules
+python3 {SKILL_SCRIPTS}/search.py --ref fe-test-case
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorMessages
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category enableDisableRules
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category autoFillRules
 ```
 
 ## Bước 4: Sinh test cases — mỗi button/action = 1 nhóm testSuiteName riêng

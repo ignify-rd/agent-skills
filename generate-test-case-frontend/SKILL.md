@@ -28,9 +28,9 @@ python3 --version || python --version
 > Nếu orchestrator tự đọc test-design-frontend.md hay inventory.json → vi phạm kiến trúc, gây context pollution, gây sai lệch output.
 
 **Orchestrator được phép:**
-- Chạy `python $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints` để đếm và batch fields
-- Chạy `python $SKILL_SCRIPTS/inventory.py summary --file {INVENTORY_FILE}` để lấy screenType và summary
-- Chạy `python $SKILL_SCRIPTS/search.py --list --domain frontend` để list catalog files
+- Chạy `python3 $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints` để đếm và batch fields
+- Chạy `python3 $SKILL_SCRIPTS/inventory.py summary --file {INVENTORY_FILE}` để lấy screenType và summary
+- Chạy `python3 $SKILL_SCRIPTS/search.py --list --domain frontend` để list catalog files
 - Đọc 2–3 catalog files (50 dòng đầu mỗi file) để lấy CATALOG_SAMPLE
 - Kiểm tra file existence (sentinel, batch files)
 
@@ -71,17 +71,41 @@ OUTPUT_FILE = <output-folder>/test-cases.json
 ### Step 1: Resolve SKILL_SCRIPTS và SKILL_AGENTS paths
 
 ```bash
-SKILL_SCRIPTS=$(find . -name "search.py" -path "*/generate-test-case-frontend/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
-SKILL_AGENTS=$(find . -name "tc-context.md" -path "*/generate-test-case-frontend/agents/*" 2>/dev/null | head -1 | xargs -r dirname)
+# Resolve SKILL_SCRIPTS — dùng Python thay vì find (cross-platform)
+SKILL_SCRIPTS=$(python3 -c "
+import os, sys
+skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
+for root, dirs, files in os.walk(skill_dir, topdown=True):
+    depth = root.count(os.sep) - skill_dir.count(os.sep)
+    if depth > 3:
+        dirs[:] = []
+        continue
+    if 'search.py' in files and 'scripts' in root:
+        print(os.path.dirname(root))
+        break
+" "$(pwd)/generate-test-case-frontend/scripts/search.py" 2>/dev/null || echo "generate-test-case-frontend/scripts")
+
+SKILL_AGENTS=$(python3 -c "
+import os, sys
+skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
+for root, dirs, files in os.walk(skill_dir, topdown=True):
+    depth = root.count(os.sep) - skill_dir.count(os.sep)
+    if depth > 3:
+        dirs[:] = []
+        continue
+    if 'tc-context.md' in files and 'agents' in root:
+        print(root)
+        break
+" "$(pwd)/generate-test-case-frontend/agents/tc-context.md" 2>/dev/null || echo "generate-test-case-frontend/agents")
 ```
 
-Fallback: kiểm tra `.claude/skills`, `.cursor/skills`, `.windsurf/skills`, hoặc global npm.
+Fallback: kiểm tra `.claude/skills/generate-test-case-frontend`, `.cursor/skills/generate-test-case-frontend`, `node_modules/generate-test-case-frontend`.
 
 ### Step 2: Catalog listing (CATALOG_SAMPLE)
 
 List tất cả catalog files:
 ```bash
-python $SKILL_SCRIPTS/search.py --list --domain frontend
+python3 $SKILL_SCRIPTS/search.py --list --domain frontend
 ```
 
 Đọc **2–3 file đầu tiên** trong danh sách (KHÔNG chọn theo tên — chỉ lấy 2–3 file đầu):
@@ -136,8 +160,8 @@ PROJECT_RULES: {projectRules hoặc "none"}
 ### Step 5a: Query inventory — batch fields + detect screenType
 
 ```bash
-python $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints
-python $SKILL_SCRIPTS/inventory.py summary --file {INVENTORY_FILE}
+python3 $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints
+python3 $SKILL_SCRIPTS/inventory.py summary --file {INVENTORY_FILE}
 ```
 
 Từ kết quả:
@@ -195,7 +219,7 @@ Mỗi sub-agent ghi vào file riêng — KHÔNG ghi chung. Spawn TẤT CẢ song
 **Sau khi TẤT CẢ parallel agents hoàn thành — kiểm tra:**
 
 ```bash
-python -c "
+python3 -c "
 import sys, os, glob
 output_dir = '{OUTPUT_DIR}'
 batches = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-*.json')))
@@ -212,7 +236,7 @@ Nếu exit 1 → re-spawn batch bị thiếu.
 
 Sau khi tất cả batch files tồn tại → tạo sentinel:
 ```bash
-python -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
+python3 -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
 ```
 
 ---
@@ -220,7 +244,7 @@ python -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
 > ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 5c:**
 >
 > ```bash
-> python -c "
+> python3 -c "
 > import sys, os
 > sentinel = '{OUTPUT_DIR}/.tc-validate-done'
 > if not os.path.exists(sentinel):
@@ -263,7 +287,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 Kiểm tra xem inventory có permissions hoặc statusTransitions không:
 
 ```bash
-python -c "
+python3 -c "
 import json, sys
 inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
 if inv.get('permissions') or inv.get('statusTransitions'):

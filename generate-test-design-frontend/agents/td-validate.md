@@ -14,12 +14,12 @@ Nhiệm vụ: Sinh validate test cases cho đúng `{FIELD_BATCH}` fields đượ
 Load **chỉ những templates cần thiết** cho batch này:
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref field-templates --section "{FIELD_TYPES_NEEDED}"
+python3 {SKILL_SCRIPTS}/search.py --ref field-templates --section "{FIELD_TYPES_NEEDED}"
 ```
 
 Ví dụ nếu batch có textbox + combobox + datepicker:
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref field-templates --section "textbox,combobox,datepicker"
+python3 {SKILL_SCRIPTS}/search.py --ref field-templates --section "textbox,combobox,datepicker"
 ```
 
 Mapping field.type → section name:

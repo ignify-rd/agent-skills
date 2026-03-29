@@ -12,7 +12,7 @@ Nhiệm vụ: Sinh 2 sections đầu tiên của test design và ghi vào output
 ## Bước 1 — Load templates
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref frontend-test-design --section "common-ui,permissions"
+python3 {SKILL_SCRIPTS}/search.py --ref frontend-test-design --section "common-ui,permissions"
 ```
 
 ## Bước 2 — Đọc inventory

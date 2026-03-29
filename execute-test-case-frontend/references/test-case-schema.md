@@ -2,7 +2,7 @@
 
 ## Tab name
 Default: `Frontend Tests`
-Override in project AGENTS.md: `sheet_name: "UI Tests"`
+Override in project AGENTS.md: `sheet_name: "My Tests"`
 
 ---
 
@@ -15,7 +15,7 @@ Override in project AGENTS.md: `sheet_name: "UI Tests"`
 | C | Precondition Group | Text | User | No |
 | D | Precondition Steps | JSON array | User | No |
 | E | Steps | JSON array | User | Yes |
-| F | Assertions | JSON array | User | No |
+| F | Assertions | JSON array | User | Yes |
 | G | Result | PASS/FAIL/ERROR | **Agent** | — |
 | H | Error Message | Text | **Agent** | — |
 | I | Screenshot URL | Text | **Agent** | — |
@@ -23,158 +23,107 @@ Override in project AGENTS.md: `sheet_name: "UI Tests"`
 
 ---
 
-## Column C — Precondition Group
+## Column details
 
-An optional label that identifies which test cases share the same browser session (login state + navigation).
+### C — Precondition Group
+Optional identifier. Consecutive rows with the same value share a browser session — precondition steps execute only once for the group.
 
-- Consecutive rows with the **same non-empty value** share one browser session.
-- The first case in a group executes `Precondition Steps`; subsequent cases skip preconditions and reset to the entry URL.
-- Empty value → solo execution (browser resets before this case).
+- Leave empty to reset browser before this case.
+- Use descriptive names: `login-admin`, `login-guest`, `navigate-to-form`.
 
-**Naming convention:** `{role}-{context}` — e.g., `admin-user-management`, `guest-homepage`, `staff-order-list`
+### D — Precondition Steps
+JSON array of browser actions to run once before the group's first test case (login, navigate to page, etc.).
+
+**Supported actions:**
+
+```json
+[
+  {"action": "goto", "url": "https://app.example.com/login"},
+  {"action": "fill", "selector": "#email", "value": "admin@test.com"},
+  {"action": "fill", "selector": "#password", "value": "Admin@123"},
+  {"action": "click", "selector": "button[type=submit]"},
+  {"action": "wait_for", "selector": ".dashboard", "timeout": 5000},
+  {"action": "goto", "url": "https://app.example.com/feature"},
+  {"action": "wait_for", "selector": ".feature-list", "timeout": 3000}
+]
+```
+
+### E — Steps
+JSON array of browser actions for this specific test case. Execute after resetting to entry state.
+
+```json
+[
+  {"action": "click", "selector": "#btn-create"},
+  {"action": "fill", "selector": "#form-name", "value": "Test Item"},
+  {"action": "click", "selector": "#btn-submit"},
+  {"action": "wait_for", "selector": ".success-toast", "timeout": 3000}
+]
+```
+
+### F — Assertions
+JSON array of conditions to verify after steps execute.
+
+```json
+[
+  {"type": "visible", "selector": ".success-toast"},
+  {"type": "text_equals", "selector": "h1", "value": "Tạo mới thành công"},
+  {"type": "not_visible", "selector": ".error-message"},
+  {"type": "url_contains", "value": "/dashboard"}
+]
+```
+
+**Supported assertion types:**
+
+| Type | Checks | Required fields |
+|------|--------|----------------|
+| `visible` | Element exists and is visible | `selector` |
+| `not_visible` | Element absent or hidden | `selector` |
+| `text_equals` | Element text = value (exact, trimmed) | `selector`, `value` |
+| `text_contains` | Element text contains value | `selector`, `value` |
+| `value_equals` | Input/textarea `.value` = value | `selector`, `value` |
+| `attribute_equals` | Element attribute = value | `selector`, `attribute`, `value` |
+| `count_equals` | Number of matching elements = value | `selector`, `value` (integer) |
+| `url_contains` | Current URL contains value | `value` |
+| `url_equals` | Current URL = value (exact) | `value` |
 
 ---
 
-## Column D — Precondition Steps
+## Grouping logic
 
-JSON array of browser steps to run **once** before the group's first test case. Typically: login, navigate to the feature under test.
-
-Only the first row of a group needs to populate this column. Subsequent rows' column D is **ignored**.
-
-### Step format
-
-Each step is a JSON object with `"action"` and action-specific fields:
-
-#### `goto` — Navigate to URL
-```json
-{"action": "goto", "url": "https://app.example.com/login"}
-```
-
-#### `fill` — Type text into an input
-```json
-{"action": "fill", "selector": "#email", "value": "admin@test.com"}
-```
-`selector` is a CSS selector used to find the element in the accessibility snapshot.
-
-#### `click` — Click an element
-```json
-{"action": "click", "selector": "button[type=submit]"}
-```
-
-#### `wait_for` — Wait for element to appear
-```json
-{"action": "wait_for", "selector": ".dashboard-header", "timeout": 5000}
-```
-The last `wait_for` step's selector becomes the **entry selector** used to reset state between test cases.
-
-#### `select` — Choose a dropdown option
-```json
-{"action": "select", "selector": "#status-filter", "value": "ACTIVE"}
-```
-
-#### `press_key` — Press a keyboard key
-```json
-{"action": "press_key", "key": "Enter"}
-```
-
-#### `hover` — Hover over an element
-```json
-{"action": "hover", "selector": ".menu-item"}
-```
+- Empty `Precondition Group` → solo case (reset browser before running)
+- Same non-empty value in consecutive rows → share browser session within that run
+- Non-consecutive appearances of the same group name → separate groups (each re-executes preconditions)
 
 ---
 
-## Column E — Steps
+## Example rows
 
-JSON array of test-specific browser steps. Same format as Precondition Steps.
-
-These steps execute **after** the entry state is established. They represent the actual test scenario.
-
----
-
-## Column F — Assertions
-
-JSON array of conditions to verify after Steps complete.
-
-### Assertion types
-
-#### `visible` — Element is present and visible
-```json
-{"type": "visible", "selector": ".success-toast"}
-```
-
-#### `not_visible` — Element is absent or hidden
-```json
-{"type": "not_visible", "selector": ".error-banner"}
-```
-
-#### `text_contains` — Element text includes a substring
-```json
-{"type": "text_contains", "selector": "h1", "value": "Danh sách người dùng"}
-```
-
-#### `text_equals` — Element text exactly matches
-```json
-{"type": "text_equals", "selector": ".total-count", "value": "10"}
-```
-
-#### `url_contains` — Current URL includes a substring
-```json
-{"type": "url_contains", "value": "/users"}
-```
-
-#### `url_equals` — Current URL exactly matches
-```json
-{"type": "url_equals", "value": "https://app.example.com/users"}
-```
-
-#### `count` — Number of matching elements equals expected
-```json
-{"type": "count", "selector": ".table-row", "value": 5}
-```
-
----
-
-## Full example
-
-### Sheet setup (3 cases, grouped by login)
-
-**Row 2 — FE-001** (first in group — includes preconditions)
+### Row 2 — First case in group (login + navigate)
 | Col | Value |
 |-----|-------|
 | A | FE-001 |
-| B | Hiển thị danh sách user |
-| C | admin-user-list |
-| D | `[{"action":"goto","url":"https://app.example.com/login"},{"action":"fill","selector":"#email","value":"admin@test.com"},{"action":"fill","selector":"#password","value":"Admin@123"},{"action":"click","selector":"button[type=submit]"},{"action":"wait_for","selector":".dashboard","timeout":5000},{"action":"goto","url":"https://app.example.com/users"},{"action":"wait_for","selector":".user-table","timeout":3000}]` |
-| E | `[{"action":"wait_for","selector":".user-table","timeout":2000}]` |
-| F | `[{"type":"visible","selector":".user-table"},{"type":"count","selector":".user-table tr","value":10}]` |
+| B | Tạo item mới thành công |
+| C | login-admin |
+| D | `[{"action":"goto","url":"https://app.example.com/login"},{"action":"fill","selector":"#email","value":"admin@test.com"},{"action":"fill","selector":"#password","value":"Admin@123"},{"action":"click","selector":"button[type=submit]"},{"action":"wait_for","selector":".dashboard","timeout":5000}]` |
+| E | `[{"action":"click","selector":"#btn-create"},{"action":"fill","selector":"#form-name","value":"Test Item"},{"action":"click","selector":"#btn-submit"}]` |
+| F | `[{"type":"visible","selector":".success-toast"},{"type":"not_visible","selector":".error-message"}]` |
 
-**Row 3 — FE-002** (same group — reuses session, navigates back to user list)
+### Row 3 — Same group (reuse browser session)
 | Col | Value |
 |-----|-------|
 | A | FE-002 |
-| B | Tìm kiếm user theo tên |
-| C | admin-user-list |
-| D | *(empty — reuses group session)* |
-| E | `[{"action":"fill","selector":"#search-input","value":"Nguyen"},{"action":"click","selector":"#btn-search"},{"action":"wait_for","selector":".search-results","timeout":3000}]` |
-| F | `[{"type":"visible","selector":".search-results"},{"type":"text_contains","selector":".result-count","value":"Nguyen"}]` |
+| B | Tạo item thất bại khi bỏ trống tên |
+| C | login-admin |
+| D | *(empty — reuses group's login)* |
+| E | `[{"action":"click","selector":"#btn-create"},{"action":"click","selector":"#btn-submit"}]` |
+| F | `[{"type":"visible","selector":".error-message"},{"type":"text_contains","selector":".error-message","value":"Tên không được để trống"}]` |
 
-**Row 4 — FE-003** (same group — reuses session)
+### Row 4 — Solo case (reset browser)
 | Col | Value |
 |-----|-------|
 | A | FE-003 |
-| B | Lọc user theo trạng thái ACTIVE |
-| C | admin-user-list |
-| D | *(empty)* |
-| E | `[{"action":"select","selector":"#status-filter","value":"ACTIVE"},{"action":"click","selector":"#btn-apply-filter"},{"action":"wait_for","selector":".filtered-results","timeout":3000}]` |
-| F | `[{"type":"visible","selector":".filtered-results"},{"type":"not_visible","selector":".empty-state"}]` |
-
-**Row 5 — FE-004** (different group — new login as guest)
-| Col | Value |
-|-----|-------|
-| A | FE-004 |
-| B | Guest không thấy menu admin |
-| C | guest-home |
-| D | `[{"action":"goto","url":"https://app.example.com/login"},{"action":"fill","selector":"#email","value":"guest@test.com"},{"action":"fill","selector":"#password","value":"Guest@123"},{"action":"click","selector":"button[type=submit]"},{"action":"wait_for","selector":".home-content","timeout":5000}]` |
-| E | `[{"action":"wait_for","selector":".home-content","timeout":2000}]` |
-| F | `[{"type":"not_visible","selector":".admin-menu"},{"type":"visible","selector":".home-content"}]` |
+| B | Không thể truy cập khi chưa login |
+| C | *(empty)* |
+| D | *(empty — no shared preconditions)* |
+| E | `[{"action":"goto","url":"https://app.example.com/admin"}]` |
+| F | `[{"type":"url_contains","value":"/login"}]` |

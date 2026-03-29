@@ -12,7 +12,7 @@ Nhiệm vụ: Sinh test cases cho role-based access và status transition flows.
 ## Bước 0: Kiểm tra có cần workflow testing không
 
 ```bash
-python -c "
+python3 -c "
 import sys, json
 inv = json.load(open(r'{INVENTORY_FILE}', encoding='utf-8'))
 has_roles = len(inv.get('permissions', [])) > 0
@@ -43,8 +43,8 @@ Nếu output chứa `SKIP` → DỪNG HOÀN TOÀN. Không phải lỗi — màn 
 ## Bước 3: Load workflow data từ inventory
 
 ```bash
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category permissions
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category statusTransitions
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category permissions
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category statusTransitions
 ```
 
 ## Bước 4: Sinh test cases

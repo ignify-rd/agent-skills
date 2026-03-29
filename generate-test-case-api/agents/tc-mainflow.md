@@ -12,7 +12,7 @@ Nhiệm vụ: Sinh test cases cho `## Kiểm tra chức năng` và `## Kiểm tr
 ## Bước 0 — Barrier check (BẮT BUỘC chạy đầu tiên)
 
 ```bash
-python -c "
+python3 -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)
@@ -44,12 +44,12 @@ print('BARRIER OK')
 ## Bước 3: Load rules và inventory data
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref api-test-case
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorCodes --filter section=main
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category modes
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category decisionCombinations
+python3 {SKILL_SCRIPTS}/search.py --ref api-test-case
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorCodes --filter section=main
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category modes
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category decisionCombinations
 ```
 
 ## Bước 4: Sinh test cases theo sub-batches

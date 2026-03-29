@@ -12,7 +12,7 @@ Nhiệm vụ: Đọc catalog để học style, đọc inventory để lấy API
 ## Bước 1: Liệt kê catalog files
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --list --domain api
+python3 {SKILL_SCRIPTS}/search.py --list --domain api
 ```
 
 Từ danh sách trả về, đọc **2–3 file đầu tiên** (KHÔNG chọn theo tên — chỉ lấy 2–3 file đầu trong danh sách). Đọc 50 dòng đầu mỗi file để trích xuất style patterns.
@@ -22,9 +22,9 @@ Nếu catalog rỗng (danh sách trống hoặc không có file nào) → dùng 
 ## Bước 2: Đọc inventory summary
 
 ```bash
-python {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category requestSchema
-python {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category responseSchema
+python3 {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category requestSchema
+python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category responseSchema
 ```
 
 Từ summary lấy: `_meta.name` (apiName), `_meta.endpoint` (method + path).

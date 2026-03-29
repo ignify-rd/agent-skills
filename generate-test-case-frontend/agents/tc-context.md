@@ -12,7 +12,7 @@ Nhiệm vụ: Đọc catalog để học style, đọc inventory để lấy scr
 ## Bước 1: Liệt kê catalog files
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --list --domain frontend
+python3 {SKILL_SCRIPTS}/search.py --list --domain frontend
 ```
 
 Từ danh sách trả về, đọc **2–3 file đầu tiên** (KHÔNG chọn theo tên — chỉ lấy 2–3 file đầu trong danh sách). Đọc 50 dòng đầu mỗi file để trích xuất style patterns.
@@ -22,7 +22,7 @@ Nếu catalog rỗng (danh sách trống hoặc không có file nào) → dùng 
 ## Bước 2: Đọc inventory summary
 
 ```bash
-python {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}
+python3 {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}
 ```
 
 Từ summary lấy:

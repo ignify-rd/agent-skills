@@ -25,8 +25,8 @@ Với mỗi field, thu thập tất cả bullets `- Kiểm tra ...` bên dưới
 ## Bước 3: Load validate rules và field templates
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref fe-test-case
-python {SKILL_SCRIPTS}/search.py --ref field-templates --section "{FIELD_TYPES_NEEDED}"
+python3 {SKILL_SCRIPTS}/search.py --ref fe-test-case
+python3 {SKILL_SCRIPTS}/search.py --ref field-templates --section "{FIELD_TYPES_NEEDED}"
 ```
 
 `FIELD_TYPES_NEEDED` = danh sách field types trong batch này (VD: `"textbox,combobox,datepicker"`). Chỉ load templates cho field types có trong FIELD_BATCH — KHÔNG load toàn bộ.

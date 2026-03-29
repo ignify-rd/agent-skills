@@ -25,7 +25,7 @@ Với mỗi field, thu thập tất cả bullets `- Kiểm tra ...` bên dưới
 ## Bước 3: Load validate rules
 
 ```bash
-python {SKILL_SCRIPTS}/search.py --ref api-test-case
+python3 {SKILL_SCRIPTS}/search.py --ref api-test-case
 ```
 
 ## Bước 4: Sinh test cases cho TỪNG field trong FIELD_BATCH

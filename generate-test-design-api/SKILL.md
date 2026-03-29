@@ -54,17 +54,39 @@ NEVER scan folders hoặc đoán file paths. Nếu thiếu → hỏi.
 ### Step 2: Resolve Paths & Load Priority Rules
 
 ```bash
-# Resolve SKILL_SCRIPTS
-SKILL_SCRIPTS=$(find . -name "search.py" -path "*/generate-test-design-api/scripts/*" 2>/dev/null | head -1 | xargs -r dirname)
+# Resolve SKILL_SCRIPTS — dùng Python thay vì find (cross-platform)
+SKILL_SCRIPTS=$(python3 -c "
+import os, sys
+skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
+for root, dirs, files in os.walk(skill_dir, topdown=True):
+    depth = root.count(os.sep) - skill_dir.count(os.sep)
+    if depth > 3:
+        dirs[:] = []
+        continue
+    if 'search.py' in files and 'scripts' in root:
+        print(os.path.dirname(root))
+        break
+" "$(pwd)/generate-test-design-api/scripts/search.py" 2>/dev/null || echo "generate-test-design-api/scripts")
 
 # Resolve SKILL_AGENTS
-SKILL_AGENTS=$(find . -name "td-extract.md" -path "*/generate-test-design-api/agents/*" 2>/dev/null | head -1 | xargs -r dirname)
+SKILL_AGENTS=$(python3 -c "
+import os, sys
+skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
+for root, dirs, files in os.walk(skill_dir, topdown=True):
+    depth = root.count(os.sep) - skill_dir.count(os.sep)
+    if depth > 3:
+        dirs[:] = []
+        continue
+    if 'td-extract.md' in files and 'agents' in root:
+        print(root)
+        break
+" "$(pwd)/generate-test-design-api/agents/td-extract.md" 2>/dev/null || echo "generate-test-design-api/agents")
 ```
 
-Nếu fail → tìm trong `.claude/skills`, `.cursor/skills`, `node_modules/test-genie/`.
+Fallback paths: `.claude/skills/generate-test-design-api`, `.cursor/skills/generate-test-design-api`, `node_modules/generate-test-design-api`.
 
 ```bash
-python $SKILL_SCRIPTS/search.py --ref priority-rules
+python3 $SKILL_SCRIPTS/search.py --ref priority-rules
 ```
 
 Xác định các paths dùng xuyên suốt:
@@ -75,7 +97,7 @@ Xác định các paths dùng xuyên suốt:
 
 Liệt kê tất cả catalog files:
 ```bash
-python $SKILL_SCRIPTS/search.py --list --domain api
+python3 $SKILL_SCRIPTS/search.py --list --domain api
 ```
 
 Đọc **tối đa 3 file** có chức năng gần nhất với API đang generate (dựa theo tên file + title):
@@ -86,7 +108,9 @@ python $SKILL_SCRIPTS/search.py --list --domain api
 
 Chọn catalog phù hợp nhất (cùng nhóm nghiệp vụ, cùng HTTP method, hoặc có cấu trúc tương tự). Nếu không có file nào phù hợp → đọc file đầu tiên trong danh sách.
 
-Lưu `CATALOG_SAMPLE` = **50 dòng đầu + 50 dòng cuối** của file được chọn — dùng làm wording reference cho sub-agents. Catalog = nguồn WORDING cao nhất.
+**Trích xuất CATALOG_SAMPLE:** Dùng Read tool để đọc **50 dòng đầu + 50 dòng cuối** của file được chọn. Nếu file < 100 dòng → đọc toàn bộ. In nội dung ra cho sub-agents dùng.
+
+Catalog = nguồn WORDING cao nhất. Luôn dùng CATALOG_SAMPLE (từ Step 3) cho sub-agents, KHÔNG dùng template mặc định.
 
 ---
 
@@ -176,7 +200,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 **Sau khi TẤT CẢ batches hoàn thành — merge bằng script:**
 
 ```bash
-python $SKILL_SCRIPTS/merge_validate.py \
+python3 $SKILL_SCRIPTS/merge_validate.py \
   --output-dir {output-folder} \
   --output-file {OUTPUT_FILE}
 ```
@@ -196,7 +220,7 @@ Nếu exit 1 → đọc error message, re-spawn batch bị lỗi với note "Bat
 > ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 5c:**
 >
 > ```bash
-> python -c "
+> python3 -c "
 > import sys, os
 > sentinel = '{output-folder}/.td-validate-done'
 > output = '{OUTPUT_FILE}'
@@ -242,7 +266,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 > ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 6:**
 >
 > ```bash
-> python -c "
+> python3 -c "
 > import sys
 > c = open('{OUTPUT_FILE}', encoding='utf-8').read()
 > checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra chức năng']

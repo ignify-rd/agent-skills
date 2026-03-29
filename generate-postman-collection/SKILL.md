@@ -54,13 +54,13 @@ This prevents wrong parsing when the template stores request details in mixed te
 Run:
 
 ```bash
-python scripts/build_profile.py --input <sample.csv|sample.json> --output data/profiles/<project>.json
+python3 scripts/build_profile.py --input <sample.csv|sample.json> --output data/profiles/<project>.json
 ```
 
 Or build directly from Google Sheet URL:
 
 ```bash
-python scripts/build_profile.py \
+python3 scripts/build_profile.py \
   --sheet-url "https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit#gid=<GID>" \
   --sheet-name "<Tab Name>" \
   --output data/profiles/<project>.json
@@ -79,7 +79,7 @@ Then review and edit:
 Run:
 
 ```bash
-python scripts/generate_postman_collection.py \
+python3 scripts/generate_postman_collection.py \
   --input <test-cases.csv|test-cases.json> \
   --output <collection.postman_collection.json> \
   --profile data/profiles/<project>.json \
@@ -89,7 +89,7 @@ python scripts/generate_postman_collection.py \
 Generate directly from Google Sheet URL:
 
 ```bash
-python scripts/generate_postman_collection.py \
+python3 scripts/generate_postman_collection.py \
   --sheet-url "https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit#gid=<GID>" \
   --sheet-name "<Tab Name>" \
   --output <collection.postman_collection.json> \
