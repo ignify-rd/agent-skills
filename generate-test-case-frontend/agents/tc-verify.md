@@ -20,7 +20,7 @@ python {SKILL_SCRIPTS}/merge_batches.py \
 Script sẽ tự động tìm và merge theo thứ tự:
 1. `batch-1.json` (ui + permission)
 2. `batch-search.json` (optional — nếu tồn tại)
-3. `batch-validate-N.json` (validate, theo thứ tự số)
+3. `validate-batch-N.json` (validate, theo thứ tự số)
 4. `batch-3.json` (function)
 5. `batch-workflow.json` (optional — nếu tồn tại)
 

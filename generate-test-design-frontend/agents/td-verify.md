@@ -1,6 +1,6 @@
 ---
 name: td-verify-frontend
-description: Cross-section verification and gap fill for frontend test design. V3/V4 handled by td-validate; V6-V9 handled by td-function. This agent covers gap analysis, V5 duplicate check, V9 global scan, V10 format check.
+description: Cross-section verification and gap fill for frontend test design. V3/V4 handled by td-validate; V6-V9 handled by td-mainflow. This agent covers gap analysis, V5 duplicate check, V9 global scan, V10 format check.
 tools: Read, Bash, Edit
 model: inherit
 ---
@@ -9,7 +9,7 @@ model: inherit
 
 Nhiệm vụ: Gap fill + cross-section checks. **KHÔNG đọc toàn bộ OUTPUT_FILE vào context** — dùng Bash/Python để extract chỉ phần cần.
 
-> **Phân công:** V3/V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-function self-check. td-verify chỉ chịu trách nhiệm: gap analysis, V5 duplicate, V9 global scan, V10 format.
+> **Phân công:** V3/V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-mainflow self-check. td-verify chỉ chịu trách nhiệm: gap analysis, V5 duplicate, V9 global scan, V10 format.
 
 ## Bước 1 — Load verify rules
 

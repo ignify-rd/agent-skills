@@ -1,11 +1,11 @@
 ---
-name: td-function-frontend
+name: td-mainflow
 description: Generate grid, pagination, function, and timeout sections for frontend test design. Screen-type aware.
 tools: Read, Bash, Edit, Write
 model: inherit
 ---
 
-# td-function-frontend — Sinh sections chức năng theo loại màn hình
+# td-mainflow — Sinh sections chức năng theo loại màn hình
 
 Nhiệm vụ: Sinh các sections còn lại sau validate, append vào OUTPUT_FILE.
 
@@ -23,10 +23,10 @@ python -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)
-sentinel = os.path.join(output_dir, '.validate-done')
+sentinel = os.path.join(output_dir, '.td-validate-done')
 errors = []
 if not os.path.exists(sentinel):
-    errors.append('.validate-done not found — merge_validate.py chua chay')
+    errors.append('.td-validate-done not found — merge_validate.py chua chay')
 if not os.path.exists(output_file):
     errors.append('OUTPUT_FILE not found — td-common chua chay')
 else:

@@ -165,7 +165,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
 
-Mỗi sub-agent ghi vào `{OUTPUT_DIR}/batch-validate-{N}.json` riêng — KHÔNG ghi chung. Spawn TẤT CẢ batches song song.
+Mỗi sub-agent ghi vào `{OUTPUT_DIR}/validate-batch-{N}.json` riêng — KHÔNG ghi chung. Spawn TẤT CẢ batches song song.
 
 **Sau khi TẤT CẢ batches hoàn thành — kiểm tra:**
 
@@ -173,7 +173,7 @@ Mỗi sub-agent ghi vào `{OUTPUT_DIR}/batch-validate-{N}.json` riêng — KHÔN
 python -c "
 import sys, os, glob
 output_dir = '{OUTPUT_DIR}'
-batches = sorted(glob.glob(os.path.join(output_dir, 'batch-validate-*.json')))
+batches = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-*.json')))
 if not batches:
     print('ERROR: no validate batches found')
     sys.exit(1)
@@ -322,7 +322,7 @@ generate-test-case-api/
 | Batch | File | Content |
 |-------|------|---------|
 | BATCH 1 | `batch-1.json` | Common + permission test cases |
-| BATCH 2 | `batch-validate-1.json`, `batch-validate-2.json`, ... | Validate cases per field batch |
+| BATCH 2 | `validate-batch-1.json`, `validate-batch-2.json`, ... | Validate cases per field batch |
 | BATCH 3 | `batch-3.json` | Main flow cases |
 | Merged | `test-cases-merged.json` | After merge_batches.py |
 | Final | `test-cases.json` | After gap fill + project rules |

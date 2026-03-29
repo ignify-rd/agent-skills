@@ -1,11 +1,11 @@
 ---
-name: tc-function
+name: tc-mainflow
 description: Generate BATCH 3 — button/action/business function test cases for frontend screens.
 tools: Read, Bash, Write
 model: inherit
 ---
 
-# tc-function — Sinh BATCH 3: Chức năng / Button / Business Functions
+# tc-mainflow — Sinh BATCH 3: Chức năng / Button / Business Functions
 
 Nhiệm vụ: Sinh test cases cho các buttons, actions, và business functions. Ghi kết quả vào `batch-3.json`.
 

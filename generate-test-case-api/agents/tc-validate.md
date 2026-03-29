@@ -7,7 +7,7 @@ model: inherit
 
 # tc-validate — Sinh BATCH 2: Validate test cases (per field batch)
 
-Nhiệm vụ: Sinh test cases validate cho các fields trong `FIELD_BATCH`. Mỗi sub-agent chỉ xử lý ≤3 fields. Ghi kết quả vào `batch-validate-{BATCH_NUMBER}.json`.
+Nhiệm vụ: Sinh test cases validate cho các fields trong `FIELD_BATCH`. Mỗi sub-agent chỉ xử lý ≤3 fields. Ghi kết quả vào `validate-batch-{BATCH_NUMBER}.json`.
 
 ## Bước 1: Đọc tc-context.json
 
@@ -66,9 +66,9 @@ Nếu thiếu cases → APPEND ngay trước khi qua field tiếp theo.
 
 > ⚠️ Checkpoint chỉ được in ra STDOUT. TUYỆT ĐỐI KHÔNG ghi checkpoint text vào batch file.
 
-## Bước 6: Ghi batch-validate-{BATCH_NUMBER}.json
+## Bước 6: Ghi validate-batch-{BATCH_NUMBER}.json
 
-Dùng Write tool để ghi `{OUTPUT_DIR}/batch-validate-{BATCH_NUMBER}.json`.
+Dùng Write tool để ghi `{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json`.
 
 > ⚠️ DÒNG ĐẦU TIÊN phải là `[` — không có text, comment, hay markdown trước đó
 > ⚠️ DÒNG CUỐI CÙNG phải là `]`

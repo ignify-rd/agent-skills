@@ -12,7 +12,7 @@ What it does:
   3. Validates each: after sanitization the first line must start with ###
      (H3 field heading). Exits 1 if any batch is empty after sanitization.
   4. Merges all batches under ## Kiểm tra Validate, appends to OUTPUT_FILE
-  5. Writes .validate-done sentinel to OUTPUT_DIR
+  5. Writes .td-validate-done sentinel to OUTPUT_DIR
 
 Exit codes:
   0 — success
@@ -159,7 +159,7 @@ def main():
         f.write("\n\n".join(batch_parts))
 
     # ── Step 5: Write sentinel ─────────────────────────────────────────────────
-    sentinel = os.path.join(args.output_dir, ".validate-done")
+    sentinel = os.path.join(args.output_dir, ".td-validate-done")
     with open(sentinel, "w", encoding="utf-8") as f:
         f.write(f"merged {len(batch_parts)} batches")
 

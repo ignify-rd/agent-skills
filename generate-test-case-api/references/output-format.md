@@ -16,7 +16,7 @@
   "specTitle": "",               // LUÔN để trống
   "documentId": "",              // LUÔN để trống
   "estimatedDuration": "",       // LUÔN để trống
-  "result": "",                  // LUÔN để trống
+  "result": "PENDING",           // LUÔN để "PENDING"
   "note": ""                     // LUÔN để trống
 }
 ```
@@ -54,7 +54,7 @@
   "specTitle": "",
   "documentId": "",
   "estimatedDuration": "",
-  "result": "",
+  "result": "PENDING",
   "note": ""
 }
 ```
@@ -75,7 +75,7 @@
   "specTitle": "",
   "documentId": "",
   "estimatedDuration": "",
-  "result": "",
+  "result": "PENDING",
   "note": ""
 }
 ```

@@ -18,10 +18,10 @@ python -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)
-sentinel = os.path.join(output_dir, '.validate-done')
+sentinel = os.path.join(output_dir, '.td-validate-done')
 errors = []
 if not os.path.exists(sentinel):
-    errors.append('.validate-done not found — merge_validate.py chua chay')
+    errors.append('.td-validate-done not found — merge_validate.py chua chay')
 if not os.path.exists(output_file):
     errors.append('OUTPUT_FILE not found — td-common chua chay')
 else:

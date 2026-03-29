@@ -147,7 +147,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 ### Step 5b: Sub-agent — td-validate (Sinh validate, song song theo batch)
 
 Đọc `{INVENTORY_FILE}` để lấy tất cả `fieldConstraints[]`.
-Nhóm fields thành batches tối đa 5 fields mỗi batch.
+Nhóm fields thành batches tối đa **3 fields** mỗi batch.
 
 **Spawn TẤT CẢ batch sub-agents song song** — mỗi batch 1 sub-agent độc lập.
 
@@ -181,10 +181,10 @@ python $SKILL_SCRIPTS/merge_validate.py \
   --output-file {OUTPUT_FILE}
 ```
 
-Script tự động strip garbage headers và tạo sentinel `.validate-done`.
+Script tự động strip garbage headers và tạo sentinel `.td-validate-done`.
 Nếu exit 1 → đọc error, re-spawn batch bị lỗi.
 
-**Kết thúc Step 5b khi:** File `{output-folder}/.validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra Validate`.
+**Kết thúc Step 5b khi:** File `{output-folder}/.td-validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra Validate`.
 
 ---
 
@@ -193,10 +193,10 @@ Nếu exit 1 → đọc error, re-spawn batch bị lỗi.
 > ```bash
 > python -c "
 > import sys, os
-> sentinel = '{output-folder}/.validate-done'
+> sentinel = '{output-folder}/.td-validate-done'
 > output = '{OUTPUT_FILE}'
 > if not os.path.exists(sentinel):
->     print('NOT READY: .validate-done missing')
+>     print('NOT READY: .td-validate-done missing')
 >     sys.exit(1)
 > content = open(output, encoding='utf-8').read()
 > if '## Kiểm tra Validate' not in content:
@@ -210,14 +210,14 @@ Nếu exit 1 → đọc error, re-spawn batch bị lỗi.
 
 ---
 
-### Step 5c: Sub-agent — td-function (Sinh grid + function + timeout)
+### Step 5c: Sub-agent — td-mainflow (Sinh grid + function + timeout)
 
 Đọc agent instructions:
 ```bash
-cat $SKILL_AGENTS/td-function.md
+cat $SKILL_AGENTS/td-mainflow.md
 ```
 
-Spawn sub-agent với prompt = nội dung td-function.md + context:
+Spawn sub-agent với prompt = nội dung td-mainflow.md + context:
 
 ```
 === TASK CONTEXT ===
@@ -253,7 +253,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 
 ### Step 6: Sub-agent — td-verify (Gap-fill + Cross-section check)
 
-> V3/V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-function self-check.
+> V3/V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-mainflow self-check.
 > td-verify CHỈ làm: gap analysis, V5 duplicate, V9 global scan, V10 format.
 > **KHÔNG đọc toàn bộ OUTPUT_FILE** — dùng grep/Python extract sections.
 

@@ -1,11 +1,11 @@
 ---
-name: tc-ui
+name: tc-common
 description: Generate BATCH 1 — UI/giao diện chung + phân quyền test cases for frontend screens.
 tools: Read, Bash, Write
 model: inherit
 ---
 
-# tc-ui — Sinh BATCH 1: Giao diện chung + Phân quyền
+# tc-common — Sinh BATCH 1: Giao diện chung + Phân quyền
 
 Nhiệm vụ: Sinh test cases cho các sections TRƯỚC `## Kiểm tra Validate` (giao diện chung, phân quyền, và các sections pre-validate tương tự). Ghi kết quả vào `batch-1.json`.
 

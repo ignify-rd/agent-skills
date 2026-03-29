@@ -184,12 +184,12 @@ python $SKILL_SCRIPTS/merge_validate.py \
 Script sẽ:
 - **Tự động strip** các garbage lines (`# BATCH N:`, `## Kiểm tra Validate`, `=== ... ===`, `| table |`, `---`) khỏi từng batch file
 - **Báo lỗi** nếu batch file rỗng sau khi strip (exit 1 → orchestrator biết phải re-spawn batch đó)
-- **Tạo sentinel** `.validate-done` khi merge thành công
+- **Tạo sentinel** `.td-validate-done` khi merge thành công
 - **In log** số dòng bị strip mỗi batch để dễ debug
 
 Nếu exit 1 → đọc error message, re-spawn batch bị lỗi với note "Batch {N} thiếu cases cho fields: [list]".
 
-**Kết thúc Step 5b khi:** File `{output-folder}/.validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra Validate`.
+**Kết thúc Step 5b khi:** File `{output-folder}/.td-validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra Validate`.
 
 ---
 
@@ -198,10 +198,10 @@ Nếu exit 1 → đọc error message, re-spawn batch bị lỗi với note "Bat
 > ```bash
 > python -c "
 > import sys, os
-> sentinel = '{output-folder}/.validate-done'
+> sentinel = '{output-folder}/.td-validate-done'
 > output = '{OUTPUT_FILE}'
 > if not os.path.exists(sentinel):
->     print('NOT READY: .validate-done missing')
+>     print('NOT READY: .td-validate-done missing')
 >     sys.exit(1)
 > content = open(output, encoding='utf-8').read()
 > if '## Kiểm tra Validate' not in content:

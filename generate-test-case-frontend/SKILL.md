@@ -112,14 +112,14 @@ PROJECT_RULES: {projectRules nếu có, hoặc "none"}
 
 **Kết thúc Step 3 khi:** `{OUTPUT_DIR}/tc-context.json` tồn tại.
 
-### Step 4: Spawn tc-ui (sequential)
+### Step 4: Spawn tc-common (sequential)
 
 Đọc agent instructions:
 ```bash
-cat $SKILL_AGENTS/tc-ui.md
+cat $SKILL_AGENTS/tc-common.md
 ```
 
-Spawn sub-agent với prompt = nội dung tc-ui.md + context:
+Spawn sub-agent với prompt = nội dung tc-common.md + context:
 
 ```
 === TASK CONTEXT ===
@@ -198,7 +198,7 @@ Mỗi sub-agent ghi vào file riêng — KHÔNG ghi chung. Spawn TẤT CẢ song
 python -c "
 import sys, os, glob
 output_dir = '{OUTPUT_DIR}'
-batches = sorted(glob.glob(os.path.join(output_dir, 'batch-validate-*.json')))
+batches = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-*.json')))
 if not batches:
     print('ERROR: no validate batches found')
     sys.exit(1)
@@ -235,14 +235,14 @@ python -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
 
 ---
 
-### Step 5c: Spawn tc-function (sequential, after barrier)
+### Step 5c: Spawn tc-mainflow (sequential, after barrier)
 
 Đọc agent instructions:
 ```bash
-cat $SKILL_AGENTS/tc-function.md
+cat $SKILL_AGENTS/tc-mainflow.md
 ```
 
-Spawn sub-agent với prompt = nội dung tc-function.md + context:
+Spawn sub-agent với prompt = nội dung tc-mainflow.md + context:
 
 ```
 === TASK CONTEXT ===
@@ -356,10 +356,10 @@ generate-test-case-frontend/
 ├── AGENTS.md                        ← Skill-level default rules
 ├── agents/
 │   ├── tc-context.md                ← Load catalog style, build preConditionsBase
-│   ├── tc-ui.md                     ← BATCH 1: giao diện chung + phân quyền
+│   ├── tc-common.md                     ← BATCH 1: giao diện chung + phân quyền
 │   ├── tc-search.md                 ← Search/filter/pagination (LIST screens only)
 │   ├── tc-validate.md               ← BATCH 2: validate cases (per field batch)
-│   ├── tc-function.md               ← BATCH 3: button/action/function cases
+│   ├── tc-mainflow.md               ← BATCH 3: button/action/function cases
 │   ├── tc-workflow.md               ← Maker-Checker + role flows (conditional)
 │   └── tc-verify.md                 ← Gap analysis, dedup, final output
 ├── references/
@@ -390,7 +390,7 @@ generate-test-case-frontend/
 |-------|------|---------|
 | BATCH 1 | `batch-1.json` | UI + permission test cases |
 | BATCH search | `batch-search.json` | Search/filter/pagination (LIST screens only, optional) |
-| BATCH 2 | `batch-validate-1.json`, `batch-validate-2.json`, ... | Validate cases per field batch |
+| BATCH 2 | `validate-batch-1.json`, `validate-batch-2.json`, ... | Validate cases per field batch |
 | BATCH 3 | `batch-3.json` | Function + button cases |
 | BATCH workflow | `batch-workflow.json` | Maker-Checker + role flows (optional) |
 | Merged | `test-cases-merged.json` | After merge_batches.py |

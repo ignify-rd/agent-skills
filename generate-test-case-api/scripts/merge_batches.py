@@ -7,7 +7,7 @@ Usage:
 
 Batch file order:
   1. batch-1.json          (common + permission cases)
-  2. batch-validate-1.json, batch-validate-2.json, ... (validate cases, in order)
+  2. validate-batch-1.json, validate-batch-2.json, ... (validate cases, in order)
   3. batch-3.json          (main flow cases)
 
 What it does:
@@ -68,12 +68,12 @@ def collect_batch_files(output_dir: str) -> list:
     if os.path.exists(p):
         files.append(p)
 
-    # 2. batch-validate-N.json in numeric order
-    validate_pattern = os.path.join(output_dir, "batch-validate-*.json")
+    # 2. validate-batch-N.json in numeric order
+    validate_pattern = os.path.join(output_dir, "validate-batch-*.json")
     validate_files = sorted(
         glob.glob(validate_pattern),
         key=lambda x: int(
-            os.path.basename(x).replace("batch-validate-", "").replace(".json", "")
+            os.path.basename(x).replace("validate-batch-", "").replace(".json", "")
         ),
     )
     files.extend(validate_files)
@@ -131,7 +131,7 @@ def main():
             f"ERROR: no batch files found in: {args.output_dir}", file=sys.stderr
         )
         print(
-            "  Expected: batch-1.json, batch-validate-1.json, ..., batch-3.json",
+            "  Expected: batch-1.json, validate-batch-1.json, ..., batch-3.json",
             file=sys.stderr,
         )
         sys.exit(1)

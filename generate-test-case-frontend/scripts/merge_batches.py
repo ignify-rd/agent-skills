@@ -8,7 +8,7 @@ Usage:
 Batch file order:
   1. batch-1.json          (ui + permission)
   2. batch-search.json     (search/filter/pagination — optional, LIST screens only)
-  3. batch-validate-N.json (field validation, in order)
+  3. validate-batch-N.json (field validation, in order)
   4. batch-3.json          (function + workflow)
   5. batch-workflow.json   (maker-checker + role flows — optional)
 
@@ -75,12 +75,12 @@ def collect_batch_files(output_dir: str) -> list:
     if os.path.exists(p):
         files.append(p)
 
-    # 3. batch-validate-N.json in numeric order
-    validate_pattern = os.path.join(output_dir, "batch-validate-*.json")
+    # 3. validate-batch-N.json in numeric order
+    validate_pattern = os.path.join(output_dir, "validate-batch-*.json")
     validate_files = sorted(
         glob.glob(validate_pattern),
         key=lambda x: int(
-            os.path.basename(x).replace("batch-validate-", "").replace(".json", "")
+            os.path.basename(x).replace("validate-batch-", "").replace(".json", "")
         ),
     )
     files.extend(validate_files)
@@ -143,7 +143,7 @@ def main():
             f"ERROR: no batch files found in: {args.output_dir}", file=sys.stderr
         )
         print(
-            "  Expected: batch-1.json, batch-search.json (optional), batch-validate-1.json, ..., batch-3.json, batch-workflow.json (optional)",
+            "  Expected: batch-1.json, batch-search.json (optional), validate-batch-1.json, ..., batch-3.json, batch-workflow.json (optional)",
             file=sys.stderr,
         )
         sys.exit(1)
