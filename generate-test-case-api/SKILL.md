@@ -30,7 +30,7 @@ python3 --version || python --version
 **Orchestrator được phép:**
 - Chạy `python3 $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints` để đếm và batch fields
 - Chạy `python3 $SKILL_SCRIPTS/search.py --list --domain api` để list catalog files
-- Đọc 2–3 catalog files (50 dòng đầu mỗi file) để lấy CATALOG_SAMPLE
+- Đọc catalog files (≤3 files → đọc toàn bộ, >3 files → chọn 3 file phù hợp nhất) để lấy CATALOG_SAMPLE
 - Kiểm tra file existence (sentinel, batch files)
 
 **Orchestrator KHÔNG được phép:**
@@ -107,13 +107,18 @@ List tất cả catalog files:
 python3 $SKILL_SCRIPTS/search.py --list --domain api
 ```
 
-Đọc **2–3 file đầu tiên** trong danh sách (KHÔNG chọn theo tên — chỉ lấy 2–3 file đầu):
+**Quy tắc đọc catalog:**
+
+- **≤ 3 files catalog:** Đọc **TOÀN BỘ nội dung** tất cả các file bằng Read tool (không giới hạn dòng).
+- **> 3 files catalog:** Chọn **3 file** có chức năng gần nhất với API đang generate (dựa theo tên file + title, cùng nhóm nghiệp vụ, cùng HTTP method, hoặc có cấu trúc tương tự). Đọc **toàn bộ nội dung** cả 3 file.
+- Nếu không có file nào phù hợp → đọc file đầu tiên trong danh sách.
+
 ```bash
-# Dùng Read tool — đọc 50 dòng đầu mỗi file
-# VD: Read("catalog/api/sample1.csv", limit=50)
+# Đọc từng file bằng Read tool — KHÔNG dùng search.py để tìm
+# VD: Read("catalog/api/API_Ten_chuc_nang.md")
 ```
 
-Lưu `CATALOG_SAMPLE` = nội dung đã đọc — truyền cho sub-agents làm wording reference.
+Lưu `CATALOG_SAMPLE` = ghép nội dung tất cả các file đã đọc, phân cách bằng `--- catalog: {filename} ---` — truyền cho sub-agents làm wording reference.
 
 ### Step 3: Spawn tc-context (sequential)
 

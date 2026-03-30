@@ -15,7 +15,10 @@ Nhiệm vụ: Đọc catalog để học style, đọc inventory để lấy API
 python3 {SKILL_SCRIPTS}/search.py --list --domain api
 ```
 
-Từ danh sách trả về, đọc **2–3 file đầu tiên** (KHÔNG chọn theo tên — chỉ lấy 2–3 file đầu trong danh sách). Đọc 50 dòng đầu mỗi file để trích xuất style patterns.
+**Quy tắc đọc catalog:**
+
+- **≤ 3 files catalog:** Đọc **TOÀN BỘ nội dung** tất cả các file bằng Read tool (không giới hạn dòng).
+- **> 3 files catalog:** Chọn **3 file** có chức năng gần nhất với API đang generate. Đọc **toàn bộ nội dung** cả 3 file.
 
 Nếu catalog rỗng (danh sách trống hoặc không có file nào) → dùng default format (xem Bước 4).
 

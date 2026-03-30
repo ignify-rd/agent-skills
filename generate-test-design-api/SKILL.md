@@ -100,15 +100,18 @@ Liệt kê tất cả catalog files:
 python3 $SKILL_SCRIPTS/search.py --list --domain api
 ```
 
-Đọc **tối đa 3 file** có chức năng gần nhất với API đang generate (dựa theo tên file + title):
+**Quy tắc đọc catalog:**
+
+- **≤ 3 files catalog:** Đọc **TOÀN BỘ nội dung** tất cả các file bằng Read tool (không giới hạn dòng).
+- **> 3 files catalog:** Chọn **3 file** có chức năng gần nhất với API đang generate (dựa theo tên file + title, cùng nhóm nghiệp vụ, cùng HTTP method, hoặc có cấu trúc tương tự). Đọc **toàn bộ nội dung** cả 3 file.
+- Nếu không có file nào phù hợp → đọc file đầu tiên trong danh sách.
+
 ```bash
 # Đọc từng file bằng Read tool — KHÔNG dùng search.py để tìm
-# VD: Read("catalog/api/API_Ten_chuc_nang.md", limit=80)
+# VD: Read("catalog/api/API_Ten_chuc_nang.md")
 ```
 
-Chọn catalog phù hợp nhất (cùng nhóm nghiệp vụ, cùng HTTP method, hoặc có cấu trúc tương tự). Nếu không có file nào phù hợp → đọc file đầu tiên trong danh sách.
-
-**Trích xuất CATALOG_SAMPLE:** Dùng Read tool để đọc **50 dòng đầu + 50 dòng cuối** của file được chọn. Nếu file < 100 dòng → đọc toàn bộ. In nội dung ra cho sub-agents dùng.
+**Trích xuất CATALOG_SAMPLE:** Ghép nội dung tất cả các file đã đọc thành CATALOG_SAMPLE, phân cách bằng `--- catalog: {filename} ---`. In nội dung ra cho sub-agents dùng.
 
 Catalog = nguồn WORDING cao nhất. Luôn dùng CATALOG_SAMPLE (từ Step 3) cho sub-agents, KHÔNG dùng template mặc định.
 
