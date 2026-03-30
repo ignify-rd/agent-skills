@@ -7,12 +7,15 @@ model: inherit
 
 # tc-mainflow — Sinh BATCH 3: Main flow test cases
 
-Nhiệm vụ: Sinh test cases cho `## Kiểm tra chức năng` và `## Kiểm tra ngoại lệ` (và các sections post-validate khác). Ghi kết quả vào `batch-3.json`.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You generate test cases for "## Kiểm tra chức năng" and "## Kiểm tra ngoại lệ" (and post-validate sections). Write to batch-3.json.</identity>
+</role_definition>
 
-## Bước 0 — Barrier check (BẮT BUỘC chạy đầu tiên)
-
-```bash
-python3 -c "
+<guardrails>
+    <rule type="hard_stop" id="barrier_check">
+        <description>BARRIER check — MUST run first. If fails, STOP completely.</description>
+        <script>python3 -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)
@@ -21,131 +24,194 @@ if not os.path.exists(sentinel):
     print('BARRIER FAIL: .tc-validate-done not found')
     sys.exit(1)
 print('BARRIER OK')
-"
-```
+"</script>
+        <on_fail>
+            <action>STOP IMMEDIATELY. Report to orchestrator: "tc-validate chưa hoàn thành."</action>
+            <note>Do NOT continue under any circumstances.</note>
+        </on_fail>
+    </rule>
 
-> ⛔ Nếu in ra `BARRIER FAIL` → DỪNG NGAY HOÀN TOÀN. Báo lỗi cho orchestrator: "tc-validate chưa hoàn thành. Không thể chạy tc-mainflow." KHÔNG được tiếp tục dù bất kỳ lý do gì.
+    <rule type="forbidden">
+        <action>Duplicate validate cases (error codes section="validate" already in BATCH 2)</action>
+        <action>Write non-JSON content to batch file</action>
+    </rule>
 
-## Bước 1: Đọc tc-context.json
+    <rule type="hard_constraint">
+        <field>result</field>
+        <required_value>PENDING</required_value>
+    </rule>
 
-Đọc `{TC_CONTEXT_FILE}` bằng Read tool. Lấy:
-- `preConditionsBase` — dùng cho tất cả test cases
-- `catalogStyle` — dùng để follow đúng format
-- `testAccount`
-- `apiName`, `apiEndpoint`
+    <rule type="checkpoint_destination">
+        <description>All checkpoints go to STDOUT ONLY — NOT to batch file</description>
+    </rule>
+</guardrails>
 
-## Bước 2: Đọc test design file
+---
 
-Đọc `{TEST_DESIGN_FILE}`. Trích xuất:
-- `## Kiểm tra chức năng` và tất cả sub-sections bên trong
-- `## Kiểm tra ngoại lệ` và tất cả sub-sections bên trong
-- Các sections `##` khác sau `## Kiểm tra Validate` (nếu có)
+## Workflow
 
-## Bước 3: Load rules và inventory data
+<step id="0" name="Barrier check (MANDATORY first)">
+    <description>Check that .tc-validate-done sentinel exists before proceeding</description>
+    <trigger>First action — if fails, stop everything</trigger>
+</step>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref api-test-case
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorCodes --filter section=main
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category modes
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category decisionCombinations
-```
+<step id="1" name="Read tc-context.json">
+    <actions>
+        <action type="read">
+            <file>{TC_CONTEXT_FILE}</file>
+        </action>
+    </actions>
+    <extract_fields>
+        <field>preConditionsBase</field>
+        <field>catalogStyle</field>
+        <field>testAccount</field>
+        <field>apiName</field>
+        <field>apiEndpoint</field>
+    </extract_fields>
+</step>
 
-## Bước 4: Sinh test cases theo sub-batches
+<step id="2" name="Read test design file">
+    <actions>
+        <action type="read">
+            <file>{TEST_DESIGN_FILE}</file>
+        </action>
+    </actions>
+    <extraction>
+        <sections>
+            <section>## Kiểm tra chức năng</section>
+            <section>## Kiểm tra ngoại lệ</section>
+            <section>Any other ## sections after "## Kiểm tra Validate"</section>
+        </sections>
+    </extraction>
+</step>
 
-### Sub-batch 3a — Happy paths
+<step id="3" name="Load rules and inventory data">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-case</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorCodes --filter section=main</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category modes</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category decisionCombinations</script>
+        </action>
+    </actions>
+</step>
 
-Sinh ≥1 test case per mode từ `inventory.modes`. Mỗi test case:
-- `testSuiteName` = `"Kiểm tra chức năng"` (hoặc theo catalogStyle)
-- `testCaseName` = `"Luồng chính_{tên mode}"` (hoặc theo catalogStyle)
-- `importance` = `"High"`
-- `result` = `"PENDING"`
-- `step` = mô tả đầy đủ request với mode đó
-- `expectedResult` = response body đầy đủ + HTTP 200
+<step id="4" name="Generate test cases by sub-batches">
+    <description>Generate test cases organized by sub-batch type</description>
 
-Per-sub-batch checkpoint (STDOUT ONLY):
+    <sub_batch id="3a" name="Happy paths">
+        <description>≥1 test case per mode from inventory.modes</description>
+        <fields>
+            <field name="testSuiteName">"Kiểm tra chức năng" (or catalogStyle)</field>
+            <field name="testCaseName">"Luồng chính_{tên mode}"</field>
+            <field name="importance">High</field>
+            <field name="result">PENDING</field>
+            <field name="step">Full request description with that mode</field>
+            <field name="expectedResult">Full response body + HTTP 200</field>
+        </fields>
+        <checkpoint format="stdout_only">
 ```
 Sub-batch 3a: {N}/{total} modes covered
 Missing: [list] → APPEND immediately
 ```
+        </checkpoint>
+    </sub_batch>
 
-### Sub-batch 3b — Branch coverage
-
-Sinh test TRUE + FALSE cho mỗi rule từ `inventory.businessRules`:
-- `importance` = `"High"`
-- `result` = `"PENDING"`
-- Mỗi branch cần 2 cases: điều kiện đúng (TRUE) và điều kiện sai (FALSE)
-
-Per-sub-batch checkpoint (STDOUT ONLY):
+    <sub_batch id="3b" name="Branch coverage">
+        <description>Test TRUE + FALSE for each rule from inventory.businessRules</description>
+        <fields>
+            <field name="importance">High</field>
+            <field name="result">PENDING</field>
+        </fields>
+        <coverage_rule>Each branch needs 2 cases: TRUE condition and FALSE condition</coverage_rule>
+        <checkpoint format="stdout_only">
 ```
 Sub-batch 3b: {N}/{total} branches covered
 Missing: [list] → APPEND immediately
 ```
+        </checkpoint>
+    </sub_batch>
 
-### Sub-batch 3c — Error code coverage
-
-Sinh ≥1 test per error code từ `inventory.errorCodes[section=main]` với **exact message**:
-- `testSuiteName` = `"Kiểm tra luồng chính"` (hoặc theo catalogStyle)
-- `importance` = `"Medium"`
-- `result` = `"PENDING"`
-- `expectedResult` phải chứa exact error code và message từ inventory
-
-Per-sub-batch checkpoint (STDOUT ONLY):
+    <sub_batch id="3c" name="Error code coverage">
+        <description>≥1 test per error code from inventory.errorCodes[section=main] with exact message</description>
+        <fields>
+            <field name="testSuiteName">"Kiểm tra luồng chính" (or catalogStyle)</field>
+            <field name="importance">Medium</field>
+            <field name="result">PENDING</field>
+            <field name="expectedResult">Must contain exact error code and message from inventory</field>
+        </fields>
+        <checkpoint format="stdout_only">
 ```
 Sub-batch 3c: {N}/{total} error codes covered
 Missing: [list] → APPEND immediately
 ```
+        </checkpoint>
+    </sub_batch>
 
-### Sub-batch 3d — DB verification + External services
-
-Từ `inventory.dbOperations`: sinh test verify SQL cho mỗi table/operation.
-Từ `inventory.externalServices` (nếu có): sinh test timeout/failure cho mỗi external service.
-- `importance` = `"Medium"`
-- `result` = `"PENDING"`
-- `step` phải mô tả SQL SELECT đầy đủ để verify
-
-Per-sub-batch checkpoint (STDOUT ONLY):
+    <sub_batch id="3d" name="DB verification + External services">
+        <description>From inventory.dbOperations: test SQL verify for each table/operation. From inventory.externalServices (if any): test timeout/failure.</description>
+        <fields>
+            <field name="importance">Medium</field>
+            <field name="result">PENDING</field>
+        </fields>
+        <step_requirement>step must describe complete SQL SELECT for verification</step_requirement>
+        <checkpoint format="stdout_only">
 ```
 Sub-batch 3d: {N}/{total} DB ops covered
 Missing: [list] → APPEND immediately
 ```
+        </checkpoint>
+    </sub_batch>
 
-### Sub-batch 3e — Decision table combinations
-
-Sinh test cho mỗi combination từ `inventory.decisionCombinations`:
-- `importance` = `"Medium"`
-- `result` = `"PENDING"`
-
-Per-sub-batch checkpoint (STDOUT ONLY):
+    <sub_batch id="3e" name="Decision table combinations">
+        <description>Test for each combination from inventory.decisionCombinations</description>
+        <fields>
+            <field name="importance">Medium</field>
+            <field name="result">PENDING</field>
+        </fields>
+        <checkpoint format="stdout_only">
 ```
 Sub-batch 3e: {N}/{total} combinations covered
 Missing: [list] → APPEND immediately
 ```
+        </checkpoint>
+    </sub_batch>
+</step>
 
-> ⚠️ Tất cả checkpoints in ra STDOUT ONLY — KHÔNG ghi vào batch file
-> ⚠️ KHÔNG duplicate validate cases — error codes `section="validate"` đã có trong BATCH 2, không sinh lại
+<step id="5" name="Write batch-3.json">
+    <output_file>{OUTPUT_DIR}/batch-3.json</output_file>
 
-## Bước 5: Ghi batch-3.json
-
-Dùng Write tool để ghi `{OUTPUT_DIR}/batch-3.json`.
-
-> ⚠️ DÒNG ĐẦU TIÊN phải là `[` — không có text, comment, hay markdown trước đó
-> ⚠️ DÒNG CUỐI CÙNG phải là `]`
-> ⚠️ KHÔNG ghi bất kỳ text nào ngoài JSON array thuần túy
+    <format_constraints>
+        <constraint>First line MUST be [</constraint>
+        <constraint>Last line MUST be ]</constraint>
+        <constraint>Write ONLY JSON array — no checkpoint text, no comments</constraint>
+    </format_constraints>
+</step>
 
 ---
 
-## Context block
+## Context Block
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {output-folder}/tc-context.json
-TEST_DESIGN_FILE: {path}
-INVENTORY_FILE: {path}
-OUTPUT_DIR: {output-folder}
-OUTPUT_FILE: {path}
-PROJECT_RULES: {content or "none"}
-===================
-```
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="TC_CONTEXT_FILE" type="path" required="true"/>
+        <param name="TEST_DESIGN_FILE" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>

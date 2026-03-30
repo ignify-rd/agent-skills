@@ -7,45 +7,63 @@ model: inherit
 
 # td-verify — Cross-section verification và gap analysis
 
-Nhiệm vụ: Gap fill + cross-section checks. **KHÔNG đọc toàn bộ OUTPUT_FILE vào context** — dùng Bash/Python để extract chỉ phần cần.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>Gap fill + cross-section checks. Do NOT read the entire OUTPUT_FILE into context — use Bash/Python to extract only the needed parts.</identity>
+</role_definition>
 
-> **Phân công:** V1-V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-mainflow self-check. td-verify chỉ chịu trách nhiệm: gap analysis, V5 duplicate, V9 global, V10 format.
+<workload_assignment>
+    <agent name="td-validate">V1, V2, V3, V4 — already checkpointed per-field</agent>
+    <agent name="td-mainflow">V6, V7, V8, V9 — already self-checked</agent>
+    <agent name="td-verify">Gap analysis, V5 duplicate, V9 global forbidden words, V10 format</agent>
+</workload_assignment>
 
-## Bước 1 — Load verify rules
+---
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "verify"
-```
+## Workflow
 
-## Bước 2 — Gap Analysis (inventory vs output)
+<step id="1" name="Load verify rules">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "verify"</script>
+        </action>
+    </actions>
+</step>
 
-Đọc `{INVENTORY_FILE}`. Với MỖI item trong inventory, dùng Bash grep (không load file vào LLM context):
+<step id="2" name="Gap Analysis (inventory vs output)">
+    <description>For EACH item in inventory, use Bash grep (not full file read into LLM context)</description>
 
-```bash
-# Kiểm tra error code có trong output chưa
-grep -c "LDH_SLA_020" "{OUTPUT_FILE}"
+    <checks>
+        <check description="Check if error code exists in output">
+            <script>grep -c "LDH_SLA_020" "{OUTPUT_FILE}"</script>
+        </check>
+        <check description="Check if DB field exists in SQL">
+            <script>grep -c "APPROVED_BY" "{OUTPUT_FILE}"</script>
+        </check>
+        <check description="Check if service rollback covered">
+            <script>grep -c "rollback" "{OUTPUT_FILE}"</script>
+        </check>
+    </checks>
 
-# Kiểm tra DB field có trong SQL chưa
-grep -c "APPROVED_BY" "{OUTPUT_FILE}"
-
-# Kiểm tra service rollback
-grep -c "rollback" "{OUTPUT_FILE}"
-```
-
-Liệt kê gaps:
+    <gap_report format="stdout">
 ```
 🔍 Gap Analysis:
 ☐ errorCode "LDH_SLA_025" [validate] → chưa có bullet
 ☐ dbField "APPROVED_BY" → chưa có trong SQL SELECT
 ☐ service "S3" rollback → chưa có bullet
 ```
+    </gap_report>
 
-Fill từng gap — thêm vào cuối section tương ứng với `### [SỬA]` prefix. Dùng Edit tool để append.
+    <fill_action>
+        <description>Fill each gap — add to end of corresponding section with ### [SỬA] prefix</description>
+        <tool>Edit tool</tool>
+    </fill_action>
+</step>
 
-## Bước 3 — V5: Cross-section duplicate check
+<step id="3" name="V5: Cross-section duplicate check">
+    <description>Extract headings only (not full content) — check for duplicates between validate and mainflow sections</description>
 
-Chạy Python script — extract chỉ headings (không load content):
-
+    <script>
 ```python
 import re
 
@@ -59,7 +77,7 @@ def get_headings(text):
     return set(re.findall(r'^#{3,4}\s+(.+)$', text or '', re.MULTILINE))
 
 validate_h = get_headings(validate_match.group(1) if validate_match else '')
-mainflow_h = get_headings(mainflow_match.group(1) if mainflow_match else '')
+mainflow_h = get_headings(mainflow_match.group(1) if mainstream_match else '')
 
 duplicates = validate_h & mainflow_h
 if duplicates:
@@ -69,62 +87,57 @@ if duplicates:
 else:
     print(f"✅ V5: No duplicates ({len(validate_h)} validate, {len(mainflow_h)} mainflow headings)")
 ```
+    </script>
 
-Nếu có duplicate → dùng Edit tool xóa khỏi `## Kiểm tra luồng chính` (field-level checks thuộc về validate).
+    <on_duplicates>
+        <action>Use Edit tool to remove from "## Kiểm tra luồng chính"</action>
+        <note>Field-level checks belong in validate section</note>
+    </on_duplicates>
+</step>
 
-## Bước 3b — V5b: Detect validate cases misplaced in mainflow
+<step id="3b" name="V5b: Detect validate cases misplaced in mainflow">
+    <description>Find patterns indicating validate cases incorrectly in mainflow section</description>
 
-```python
-import re
+    <suspicious_patterns>
+        <pattern>### Kiểm tra .*(bỏ trống|để trống|thiếu trường|trường không bắt buộc)</pattern>
+        <pattern>### Kiểm tra .*(không hợp lệ|sai định dạng|sai kiểu)</pattern>
+        <pattern>### Kiểm tra .*(null|empty|rỗng)</pattern>
+    </suspicious_patterns>
 
-with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
-    content = f.read()
+    <on_misplaced>
+        <action>Use Edit tool to remove from "## Kiểm tra luồng chính"</action>
+    </on_misplaced>
+</step>
 
-mainflow_match = re.search(r'## Kiểm tra luồng chính(.*?)$', content, re.DOTALL)
-if mainflow_match:
-    mainflow = mainflow_match.group(1)
-    # Patterns that indicate validate cases in mainflow
-    suspicious_patterns = [
-        r'### Kiểm tra .*(bỏ trống|để trống|thiếu trường|trường không bắt buộc)',
-        r'### Kiểm tra .*(không hợp lệ|sai định dạng|sai kiểu)',
-        r'### Kiểm tra .*(null|empty|rỗng)',
-    ]
-    found = []
-    for pat in suspicious_patterns:
-        matches = re.findall(pat, mainflow, re.IGNORECASE)
-        found.extend(matches)
-    if found:
-        print(f"❌ V5b MISPLACED ({len(found)}) validate cases in mainflow:")
-        for m in found:
-            print(f"  - {m}")
-    else:
-        print("✅ V5b: No misplaced validate cases in mainflow")
-```
+<step id="4" name="V9: Global forbidden words scan">
+    <actions>
+        <action type="bash">
+            <script>grep -n "hoặc\|và/hoặc\|có thể\|ví dụ:\|\[placeholder\]" "{OUTPUT_FILE}"</script>
+        </action>
+    </actions>
+    <on_find>
+        <action>Grep for context, use Edit tool to fix each occurrence</action>
+    </on_find>
+</step>
 
-Nếu có misplaced → dùng Edit tool xóa khỏi `## Kiểm tra luồng chính`.
+<step id="5" name="V10: Structural check">
+    <actions>
+        <action type="bash">
+            <script># File must start with # API_NAME — no ---, no blockquote
+head -5 "{OUTPUT_FILE}"</script>
+        </action>
+        <action type="bash">
+            <script># No horizontal rules
+grep -cn "^---$" "{OUTPUT_FILE}"</script>
+        </action>
+    </actions>
+    <on_fail>
+        <action>Use Edit tool to fix header</action>
+    </on_fail>
+</step>
 
-## Bước 4 — V9: Global forbidden words scan
-
-```bash
-grep -n "hoặc\|và/hoặc\|có thể\|ví dụ:\|\[placeholder\]" "{OUTPUT_FILE}"
-```
-
-Nếu có kết quả → grep thêm context, dùng Edit tool sửa từng dòng.
-
-## Bước 5 — V10: Structural check
-
-```bash
-# File phải bắt đầu bằng # API_NAME — không có ---, không có blockquote
-head -5 "{OUTPUT_FILE}"
-
-# Không có horizontal rules
-grep -cn "^---$" "{OUTPUT_FILE}"
-```
-
-Nếu file bắt đầu sai → dùng Edit tool sửa header.
-
-## Bước 6 — Self-check kết quả (in bắt buộc)
-
+<step id="6" name="Self-check result (MANDATORY output)">
+    <output format="stdout">
 ```
 === SELF-CHECK (td-verify) ===
 [Gap]  Inventory items covered:         {filled}/{total} gaps fixed
@@ -134,7 +147,24 @@ Nếu file bắt đầu sai → dùng Edit tool sửa header.
 [V10]  Format correct (# header):       ✅/❌
 === KẾT QUẢ: {N}/5 ===
 ```
+    </output>
+</step>
+
+---
 
 ## Output
 
-`{OUTPUT_FILE}` đã được patch. In self-check results bắt buộc trước khi kết thúc.
+<output_file>{OUTPUT_FILE}</output_file>
+<description>Already patched. Print self-check results before ending.</description>
+
+---
+
+## Context Block
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+    </parameters>
+</task_context>

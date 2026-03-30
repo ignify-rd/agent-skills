@@ -7,97 +7,152 @@ model: inherit
 
 # tc-verify — Gap analysis, dedup, và output cuối cùng
 
-Nhiệm vụ: Merge tất cả batch files, phân tích coverage gaps, tự động fill gaps, áp dụng project rules, và ghi file output cuối cùng.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You merge all batch files, analyze coverage gaps, auto-fill gaps, apply project rules, and write the final output.</identity>
+</role_definition>
 
-## Bước 1: Merge tất cả batches
+<guardrails>
+    <rule type="forbidden">
+        <action>Skip writing results — even on error</action>
+    </rule>
+</guardrails>
 
-```bash
-python3 {SKILL_SCRIPTS}/merge_batches.py \
+---
+
+## Workflow
+
+<step id="1" name="Merge all batches">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/merge_batches.py \
   --output-dir {OUTPUT_DIR} \
-  --output-file {OUTPUT_DIR}/test-cases-merged.json
-```
+  --output-file {OUTPUT_DIR}/test-cases-merged.json</script>
+        </action>
+    </actions>
+    <on_script_fail>
+        <action>STOP COMPLETELY — report specific error to orchestrator</action>
+        <note>Do NOT continue under any circumstances</note>
+    </on_script_fail>
+    <output>test-cases-merged.json</output>
+</step>
 
-Nếu lệnh trên exit 1 → DỪNG HOÀN TOÀN, báo lỗi cụ thể cho orchestrator. KHÔNG tiếp tục.
+<step id="2" name="Read merged file + inventory data for gap analysis">
+    <actions>
+        <action type="read">
+            <file>{OUTPUT_DIR}/test-cases-merged.json</file>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorCodes --filter section=main</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category modes</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations</script>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints</script>
+        </action>
+    </actions>
+</step>
 
-## Bước 2: Đọc merged file + inventory data cho gap analysis
+<step id="3" name="Gap analysis">
+    <description>For each inventory item, check if test case coverage exists</description>
 
-Đọc `{OUTPUT_DIR}/test-cases-merged.json` bằng Read tool.
+    <coverage_checks>
+        <check category="errorCodes">
+            <method>Find code value in testCaseName / step / expectedResult</method>
+        </check>
+        <check category="businessRules">
+            <method>Find rule keyword in testCaseName / step</method>
+        </check>
+        <check category="modes">
+            <method>Find mode name in testCaseName / step</method>
+        </check>
+        <check category="dbOperations">
+            <method>Find table name in step / expectedResult</method>
+        </check>
+        <check category="fieldConstraints">
+            <method>Count test cases where testSuiteName = "Kiểm tra trường {name}"</method>
+        </check>
+    </coverage_checks>
 
-Query inventory:
-```bash
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorCodes --filter section=main
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category modes
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints
-```
-
-## Bước 3: Gap analysis
-
-Với mỗi inventory item, kiểm tra xem đã có test case cover chưa:
-
-| Inventory category | Cách kiểm tra coverage |
-|--------------------|------------------------|
-| `errorCodes` | Tìm code value trong `testCaseName` / `step` / `expectedResult` |
-| `businessRules` | Tìm rule keyword trong `testCaseName` / `step` |
-| `modes` | Tìm mode name trong `testCaseName` / `step` |
-| `dbOperations` | Tìm table name trong `step` / `expectedResult` |
-| `fieldConstraints` | Đếm số test cases có `testSuiteName` = `"Kiểm tra trường {name}"` |
-
-In gap report ra STDOUT:
+    <gap_report format="stdout">
 ```
 🔍 Gap Analysis:
-- ☐ errorCode "LDH_SLA_001" → chưa có test case trigger
-- ☐ mode "Lưu nháp" → chưa có happy path
-- ☐ businessRule BR3 FALSE → chưa có test case
+- ☐ errorCode "{code}" → chưa có test case trigger
+- ☐ mode "{name}" → chưa có happy path
+- ☐ businessRule {id} FALSE → chưa có test case
 ```
+    </gap_report>
 
-Nếu không có gap → in `✓ Gap Analysis: No gaps found`.
+    <no_gap_result>✓ Gap Analysis: No gaps found</no_gap_result>
+</step>
 
-## Bước 4: Auto-fill ALL gaps
+<step id="4" name="Auto-fill ALL gaps">
+    <description>Generate test cases for ALL gaps detected in Step 3. Append to existing array.</description>
 
-Sinh test cases cho TẤT CẢ gaps được phát hiện ở Bước 3. Append vào array đã đọc.
+    <gap_case_fields>
+        <field name="result">PENDING</field>
+        <field name="summary">EXACTLY match testCaseName</field>
+        <field name="externalId"></field>
+        <field name="testSuiteDetails"></field>
+        <field name="specTitle"></field>
+        <field name="documentId"></field>
+        <field name="estimatedDuration"></field>
+        <field name="note"></field>
+        <field name="preConditions">preConditionsBase from tc-context.json</field>
+    </gap_case_fields>
+</step>
 
-Với mỗi gap case:
-- `result` = `"PENDING"`
-- `summary` = giống hệt `testCaseName`
-- `externalId`, `testSuiteDetails`, `specTitle`, `documentId`, `estimatedDuration`, `note` = `""`
-- Dùng `preConditionsBase` từ `{TC_CONTEXT_FILE}`
+<step id="5" name="Apply project rules">
+    <description>Apply all rules from PROJECT_RULES context</description>
+    <actions>
+        <action type="read">
+            <file>{TC_CONTEXT_FILE}</file>
+            <purpose>Get catalogStyle (if not already read)</purpose>
+        </action>
+    </actions>
+    <apply>
+        <rule>Check section assignment correctness</rule>
+        <rule>Check writing style compliance</rule>
+        <rule>Check any custom rules defined in PROJECT_RULES</rule>
+    </apply>
+</step>
 
-## Bước 5: Áp dụng project rules
+<step id="6" name="Write final output file">
+    <output_file>{OUTPUT_FILE}</output_file>
+    <description>This is the OFFICIAL output — full, complete, no abbreviation</description>
 
-Đọc `{TC_CONTEXT_FILE}` để lấy catalogStyle (nếu chưa đọc).
+    <format_constraints>
+        <constraint>First line MUST be [</constraint>
+        <constraint>Last line MUST be ]</constraint>
+    </format_constraints>
 
-Áp dụng TẤT CẢ rules từ `PROJECT_RULES` context:
-- Kiểm tra section assignment đúng chưa
-- Kiểm tra writing style phù hợp chưa
-- Kiểm tra bất kỳ custom rule nào được định nghĩa trong PROJECT_RULES
-
-## Bước 6: Ghi file output cuối cùng
-
-Dùng Write tool để ghi `{OUTPUT_FILE}` (tức `{OUTPUT_DIR}/test-cases.json`).
-
-> ⚠️ DÒNG ĐẦU TIÊN phải là `[`, DÒNG CUỐI phải là `]`
-> ⚠️ File này là output CHÍNH THỨC — ghi đầy đủ, không rút gọn
-
-In thông báo hoàn thành:
+    <completion_message format="stdout">
 ```
 ✅ tc-verify done: {total} test cases → {OUTPUT_FILE}
    Auto-filled gaps: {N} cases
    Final total: {total}
 ```
+    </completion_message>
+</step>
 
 ---
 
-## Context block
+## Context Block
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {output-folder}/tc-context.json
-INVENTORY_FILE: {path}
-OUTPUT_DIR: {output-folder}
-OUTPUT_FILE: {output-folder}/test-cases.json
-PROJECT_RULES: {content or "none"}
-===================
-```
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="TC_CONTEXT_FILE" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>

@@ -7,86 +7,180 @@ model: inherit
 
 # tc-validate — Sinh BATCH 2: Validate test cases (per field batch)
 
-Nhiệm vụ: Sinh test cases validate cho các fields trong `FIELD_BATCH`. Mỗi sub-agent chỉ xử lý ≤3 fields. Ghi kết quả vào `validate-batch-{BATCH_NUMBER}.json`.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You generate validate test cases for fields in FIELD_BATCH. Each agent handles ≤3 fields. Write to validate-batch-{BATCH_NUMBER}.json.</identity>
+</role_definition>
 
-## Bước 1: Đọc tc-context.json
+<guardrails>
+    <rule type="forbidden">
+        <action>Skip or abbreviate cases for later fields in batch</action>
+        <action>Read test-design-api.md directly</action>
+        <action>Write non-JSON content to batch file</action>
+    </rule>
 
-Đọc `{TC_CONTEXT_FILE}` bằng Read tool. Lấy:
-- `preConditionsBase` — dùng cho tất cả test cases
-- `catalogStyle` — dùng để follow đúng format
-- `testAccount`
+    <rule type="hard_constraint">
+        <field>result</field>
+        <required_value>PENDING</required_value>
+        <note>NOT empty string ""</note>
+    </rule>
 
-## Bước 2: Đọc test design file — trích xuất fields trong FIELD_BATCH
+    <rule type="hard_constraint">
+        <field>summary</field>
+        <rule>EXACTLY match testCaseName</rule>
+    </rule>
 
-Đọc `{TEST_DESIGN_FILE}`. Tìm section `## Kiểm tra Validate`. Trong đó, tìm các `### Trường {fieldName}` tương ứng với fields trong `FIELD_BATCH`.
+    <rule type="batch_completeness">
+        <description>Field 2 and 3 in batch must have FULL cases — same as field 1. Do NOT abbreviate.</description>
+        <condition>If agent thinks "already covered enough"</condition>
+        <action>Check against min case count before concluding</action>
+    </rule>
 
-Với mỗi field, thu thập tất cả bullets `- Kiểm tra ...` bên dưới — mỗi bullet = 1 test case cần sinh.
+    <rule type="checkpoint_destination">
+        <description>Checkpoint goes to STDOUT ONLY — NEVER to batch file</description>
+    </rule>
+</guardrails>
 
-## Bước 3: Load validate rules
+---
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref api-test-case
-```
+## Workflow
 
-## Bước 4: Sinh test cases cho TỪNG field trong FIELD_BATCH
+<step id="1" name="Read tc-context.json">
+    <actions>
+        <action type="read">
+            <file>{TC_CONTEXT_FILE}</file>
+        </action>
+    </actions>
+    <extract_fields>
+        <field>preConditionsBase</field>
+        <field>catalogStyle</field>
+        <field>testAccount</field>
+    </extract_fields>
+</step>
 
-Với mỗi field và mỗi bullet case trong test design:
+<step id="2" name="Read test design file — extract fields in FIELD_BATCH">
+    <actions>
+        <action type="read">
+            <file>{TEST_DESIGN_FILE}</file>
+        </action>
+    </actions>
+    <extraction>
+        <section>## Kiểm tra Validate</section>
+        <within>Find ### Trường {fieldName} matching fields in FIELD_BATCH</within>
+        <case_per_bullet>Each bullet "- Kiểm tra ..." = 1 test case</case_per_bullet>
+    </extraction>
+</step>
 
-| Trường | Giá trị |
-|--------|---------|
-| `testSuiteName` | `"Kiểm tra trường {fieldName}"` (hoặc theo catalogStyle.testSuiteNameConvention) |
-| `testCaseName` | `"{fieldName}_{mô tả case}"` (theo catalogStyle.testCaseNameFormat) |
-| `summary` | Giống hệt `testCaseName` |
-| `preConditions` | `preConditionsBase` từ tc-context.json |
-| `step` | Mô tả thay đổi cụ thể cho case này (VD: `"1. Bỏ trống {field}\n2. Send API"`) theo catalogStyle.stepExample |
-| `expectedResult` | Kết quả mong đợi từ response block trong bullet của test design (theo catalogStyle.expectedResultExample) |
-| `importance` | `"Medium"` |
-| `result` | `"PENDING"` |
-| `externalId` | `""` |
-| `testSuiteDetails` | `""` |
-| `specTitle` | `""` |
-| `documentId` | `""` |
-| `estimatedDuration` | `""` |
-| `note` | `""` |
+<step id="3" name="Load validate rules">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-case</script>
+        </action>
+    </actions>
+</step>
 
-> ⚠️ KHÔNG rút gọn cho fields sau trong batch. Field thứ 2, thứ 3 phải đủ cases như field thứ 1 — KHÔNG được viết tắt hay bỏ qua cases.
-> ⚠️ `result` = `"PENDING"` — KHÔNG để `""`
-> ⚠️ `summary` = giống hệt `testCaseName`
+<step id="4" name="Generate test cases per field">
+    <description>For each field and each bullet case in test design</description>
 
-## Bước 5: Per-field checkpoint (STDOUT ONLY — KHÔNG ghi vào batch file)
+    <field_mappings>
+        <mapping>
+            <output_field>testSuiteName</output_field>
+            <template>"Kiểm tra trường {fieldName}"</template>
+            <note>Or follow catalogStyle.testSuiteNameConvention</note>
+        </mapping>
+        <mapping>
+            <output_field>testCaseName</output_field>
+            <template>"{fieldName}_{mô tả case}"</template>
+        </mapping>
+        <mapping>
+            <output_field>summary</output_field>
+            <rule>EXACTLY match testCaseName</rule>
+        </mapping>
+        <mapping>
+            <output_field>preConditions</output_field>
+            <source>tc-context.json preConditionsBase</source>
+        </mapping>
+        <mapping>
+            <output_field>step</output_field>
+            <description>Specific change for this case (e.g. "1. Bỏ trống {field}\n2. Send API")</description>
+            <source>catalogStyle.stepExample</source>
+        </mapping>
+        <mapping>
+            <output_field>expectedResult</output_field>
+            <description>Expected result from response block in test design bullet</description>
+            <source>catalogStyle.expectedResultExample</source>
+        </mapping>
+        <mapping>
+            <output_field>importance</output_field>
+            <value>Medium</value>
+        </mapping>
+        <mapping>
+            <output_field>result</output_field>
+            <value>PENDING</value>
+        </mapping>
+        <mapping>
+            <output_field>externalId</output_field>
+            <value></value>
+        </mapping>
+        <mapping>
+            <output_field>testSuiteDetails</output_field>
+            <value></value>
+        </mapping>
+        <mapping>
+            <output_field>specTitle</output_field>
+            <value></value>
+        </mapping>
+        <mapping>
+            <output_field>documentId</output_field>
+            <value></value>
+        </mapping>
+        <mapping>
+            <output_field>estimatedDuration</output_field>
+            <value></value>
+        </mapping>
+        <mapping>
+            <output_field>note</output_field>
+            <value></value>
+        </mapping>
+    </field_mappings>
+</step>
 
-Sau khi sinh xong mỗi field, in ra STDOUT:
-
+<step id="5" name="Per-field checkpoint (STDOUT ONLY)">
+    <output_destination>stdout ONLY — NOT to batch file</output_destination>
+    <format>
 ```
 ✓ Field {fieldName}: {N} cases generated
 Missing cases vs mindmap: [list nếu thiếu] → APPEND immediately
 ```
+    </format>
+    <action_on_missing>
+        APPEND missing cases immediately before moving to next field
+    </action_on_missing>
+</step>
 
-Nếu thiếu cases → APPEND ngay trước khi qua field tiếp theo.
+<step id="6" name="Write validate-batch-{BATCH_NUMBER}.json">
+    <output_file>{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json</output_file>
 
-> ⚠️ Checkpoint chỉ được in ra STDOUT. TUYỆT ĐỐI KHÔNG ghi checkpoint text vào batch file.
-
-## Bước 6: Ghi validate-batch-{BATCH_NUMBER}.json
-
-Dùng Write tool để ghi `{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json`.
-
-> ⚠️ DÒNG ĐẦU TIÊN phải là `[` — không có text, comment, hay markdown trước đó
-> ⚠️ DÒNG CUỐI CÙNG phải là `]`
-> ⚠️ KHÔNG ghi bất kỳ text nào ngoài JSON array thuần túy
+    <format_constraints>
+        <constraint>First line MUST be [</constraint>
+        <constraint>Last line MUST be ]</constraint>
+        <constraint>Write ONLY pure JSON array — no text outside JSON</constraint>
+    </format_constraints>
+</step>
 
 ---
 
-## Context block
+## Context Block
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {output-folder}/tc-context.json
-TEST_DESIGN_FILE: {path}
-INVENTORY_FILE: {path}
-OUTPUT_DIR: {output-folder}
-BATCH_NUMBER: {N}
-FIELD_BATCH: [{fieldName}, ...]
-PROJECT_RULES: {content or "none"}
-===================
-```
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="TC_CONTEXT_FILE" type="path" required="true"/>
+        <param name="TEST_DESIGN_FILE" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="BATCH_NUMBER" type="number" required="true"/>
+        <param name="FIELD_BATCH" type="array" required="true"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>

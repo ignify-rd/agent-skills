@@ -7,152 +7,203 @@ model: inherit
 
 # td-validate — Sinh validate cases cho 1 batch fields (tối đa 3 fields/batch)
 
-Nhiệm vụ: Sinh validate test cases cho đúng `{FIELD_BATCH}` fields được giao (≤3 fields). Append vào output file.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You generate validate test cases for exactly the fields in FIELD_BATCH (≤3 fields). Append to your own batch file. Do NOT write to the shared output file.</identity>
+</role_definition>
 
-## Bước 1 — Load field type templates
+<guardrails>
+    <rule type="forbidden">
+        <action>Skip or abbreviate cases for later fields in batch</action>
+        <action>Write to shared OUTPUT_FILE (write only to validate-batch-{BATCH_NUMBER}.md)</action>
+        <action>Write batch headers, checkpoint tables, or separator text to batch file</action>
+    </rule>
 
-Load **chỉ những templates cần thiết** cho batch này:
+    <rule type="batch_completeness">
+        <description>Fields 2 and 3 in batch must have FULL cases — same as field 1. Apply 100% template. If "already covered enough" → check against min case count first.</description>
+    </rule>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,{FIELD_TYPES_NEEDED}"
-```
+    <rule type="checkpoint_destination">
+        <description>Checkpoint goes to STDOUT ONLY — NEVER to batch file</description>
+    </rule>
+</guardrails>
 
-Ví dụ nếu batch có String Required + Date Required + Long:
-```bash
-python {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,String Required,Date Required,Long"
-```
+---
 
-## Bước 2 — Đọc context
+## Workflow
 
-- Đọc `{INVENTORY_FILE}` → lấy `fieldConstraints` cho các fields trong batch
-- Đọc `{CATALOG_SAMPLE}` nếu được cung cấp → dùng làm wording reference
+<step id="1" name="Load field type templates">
+    <description>Load ONLY the templates needed for this batch</description>
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,{FIELD_TYPES_NEEDED}"</script>
+        </action>
+    </actions>
 
-## Bước 3 — Sinh validate cho TỪNG field theo thứ tự
+    <example>
+        If batch has String Required + Date Required + Long:
+        python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,String Required,Date Required,Long"
+    </example>
+</step>
 
-> ⚠️ **KHÔNG rút gọn template cho các fields sau trong batch.** Field thứ 2, 3 trong batch phải có đúng số cases như field thứ 1 — áp dụng 100% template. Nếu cảm thấy "đã viết đủ rồi" → kiểm tra lại với min case count.
+<step id="2" name="Read context">
+    <actions>
+        <action type="read">
+            <file>{INVENTORY_FILE}</file>
+            <purpose>Get fieldConstraints for fields in batch</purpose>
+        </action>
+        <action type="read">
+            <file>{CATALOG_SAMPLE}</file>
+            <purpose>Use as wording reference</purpose>
+            <condition>If CATALOG_SAMPLE provided</condition>
+        </action>
+    </actions>
+</step>
 
-### Quy tắc chung
-- **Heading field**: `### Trường {fieldName}` — KHÔNG kèm type hay Required/Optional
-- **Mỗi case** = 1 **bullet** `- Kiểm tra ...` + response lồng trong (KHÔNG dùng `####`)
-- **TẤT CẢ validate responses** dùng Status: 200 — KHÔNG dùng 400/422/500
-- `→ error` → error code từ inventory, `→ success` → `{}` rỗng hoặc response đúng, `→ Theo RSD` → điền từ PTTK
+<step id="3" name="Generate validate per field (in order)">
+    <description>Generate ALL validate cases for each field in FIELD_BATCH sequentially</description>
 
-**Format bắt buộc cho MỖI case:**
+    <general_rules>
+        <rule>
+            <field_heading_format>### Trường {fieldName}</field_heading_format>
+            <note>NO type or Required/Optional suffix in heading</note>
+        </rule>
+        <rule>
+            <case_format>1 bullet per case: "- Kiểm tra ..." + nested response (NO #### sub-heading)</case_format>
+        </rule>
+        <rule>
+            <status_for_validate>ALL validate responses use Status: 200</status_for_validate>
+            <note>NOT 400/422/500</note>
+        </rule>
+        <rule>
+            <response_markers>
+                <marker name="error">error code from inventory</marker>
+                <marker name="success">empty {} or correct response</marker>
+                <marker name="Theo RSD">fill from PTTK</marker>
+            </response_markers>
+        </rule>
+    </general_rules>
+
+    <output_format>
 ```markdown
+### Trường {fieldName}
+
 - Kiểm tra {mô tả case}
 
     - 1. Check api trả về:
       1.1.Status: 200
       1.2.Response:
       {
-          "code": "LDH_..._020",
-          "message": "Dữ liệu đầu vào không hợp lệ"
+          "code": "ERR_CODE",
+          "message": "Error message"
       }
 ```
-- Dòng `- Kiểm tra ...`: indent 0
-- Dòng `    - 1. Check api trả về:`: indent **4 spaces**
-- Dòng `      1.1.Status:`: indent **6 spaces** (không có space sau dấu chấm)
-- JSON mở `{` trên dòng riêng sau `1.2.Response:`
-- JSON field indent **6 spaces**: `      "code": "..."`
-- Response rỗng (→ Theo RSD / → success không rõ): dùng `{` + blank line + `}`
+    </output_format>
 
-### Quy tắc ký tự đặc biệt
-- PTTK có `allowedSpecialChars` list → tách 2 case: "cho phép (_,-)" → success + "không cho phép (!@#)" → error
-- Không có / không rõ → 1 case chung "ký tự đặc biệt" → Theo RSD
+    <indentation_rules>
+        <level name="bullet">indent 0</level>
+        <level name="Check api tra ve">indent 4 spaces</level>
+        <level name="Status line">indent 6 spaces (NO space after period)</level>
+        <level name="JSON open">on its own line after Response:</level>
+        <level name="JSON field">indent 6 spaces</level>
+    </indentation_rules>
 
-### Quy tắc cross-field (Date fields)
-Nếu field có ràng buộc với field khác (VD: expiredDate ≥ effectiveDate):
-→ Thêm 3 cases TRONG section `###` của field đó:
-- `{fieldName} nhỏ hơn {relatedField}` → error
-- `{fieldName} bằng {relatedField}` → Theo RSD
-- `{fieldName} lớn hơn {relatedField}` → success
+    <special_rules>
+        <rule name="special_chars">
+            <condition>If PTTK has allowedSpecialChars list</condition>
+            <output>2 cases: "cho phép (_, -)" → success + "không cho phép (!@#)" → error</output>
+        </rule>
+        <rule name="cross_field_dates">
+            <condition>If field has constraint with another field (e.g. expiredDate ≥ effectiveDate)</condition>
+            <output>3 cases WITHIN that field's ### section:
+1. {fieldName} nhỏ hơn {relatedField} → error
+2. {fieldName} bằng {relatedField} → Theo RSD
+3. {fieldName} lớn hơn {relatedField} → success</output>
+        </rule>
+    </special_rules>
 
-### Min case counts (dùng để checkpoint)
-| Type | Min |
-|------|-----|
-| String Required | ≥ 19 |
-| String Optional | ≥ 17 |
-| Integer Required / Long | ≥ 19 |
-| Integer with Default | ≥ 19 |
-| Integer Optional | ≥ 13 |
-| Boolean Required | ≥ 11 |
-| Boolean Optional | ≥ 9 |
-| Number Required | ≥ 18 |
-| Number Optional | ≥ 13 |
-| JSONB Required | ≥ 14 |
-| JSONB Optional | ≥ 12 |
-| Date Required | ≥ 15 |
-| Array Required | ≥ 8 |
+    <min_case_counts>
+        | Type | Min |
+        |------|-----|
+        | String Required | ≥ 19 |
+        | String Optional | ≥ 17 |
+        | Integer Required / Long | ≥ 19 |
+        | Integer with Default | ≥ 19 |
+        | Integer Optional | ≥ 13 |
+        | Boolean Required | ≥ 11 |
+        | Boolean Optional | ≥ 9 |
+        | Number Required | ≥ 18 |
+        | Number Optional | ≥ 13 |
+        | JSONB Required | ≥ 14 |
+        | JSONB Optional | ≥ 12 |
+        | Date Required | ≥ 15 |
+        | Array Required | ≥ 8 |
+    </min_case_counts>
+</step>
 
-## Bước 4 — Per-field checkpoint (BẮT BUỘC sau MỖI field)
+<step id="4" name="Per-field checkpoint (IMMEDIATELY after each field)">
+    <output_destination>MEMORY / STDOUT ONLY — NOT to batch file</output_destination>
+    <description>Check AFTER each field, not after entire batch</description>
 
-> ⚠️ **Checkpoint chỉ trong MEMORY / STDOUT — KHÔNG ghi vào batch file.**
-> ⚠️ **Hoàn thành checkpoint NGAY SAU KHI viết xong field** — KHÔNG chờ hết batch mới kiểm tra.
+    <checkpoint_categories per_type="String Required / String Optional">
+        Bỏ trống (null/empty/"") ✓ | Đúng định dạng ✓ | maxLength ✓ | maxLength+1 ✓ | maxLength-1 ✓ | Chỉ khoảng trắng ✓ | Khoảng trắng đầu/cuối ✓ | Số ✓ | Chữ có dấu ✓ | Ký tự đặc biệt ✓ | Emoji ✓ | XSS script ✓ | SQL injection ✓ | Paste ✓ | Unicode ✓
+    </checkpoint_categories>
 
-Với mỗi field type, phải có ĐỦ các case categories sau (không chỉ đếm số lượng):
+    <checkpoint_categories per_type="Integer Required / Long / Integer Default">
+        Bỏ trống ✓ | String ✓ | Số thập phân ✓ | Âm ✓ | 0 ✓ | 1 ✓ | Max-1 ✓ | Max ✓ | Max+1 ✓ | Rất lớn ✓ | Boolean ✓ | Array ✓ | Null ✓
+    </checkpoint_categories>
 
-**String Required / String Optional:**
-Bỏ trống (null/empty/"") ✓ | Đúng định dạng (ngắn) ✓ | Đúng maxLength (N ký tự) ✓ | maxLength+1 ✓ | maxLength-1 ✓ | Chỉ khoảng trắng ✓ | Khoảng trắng đầu/cuối ✓ | Số ✓ | Chữ có dấu ✓ | Ký tự đặc biệt ✓ | Emoji ✓ | XSS script ✓ | SQL injection ✓ | Paste ✓ | Unicode ✓
-
-**Integer Required / Long / Integer Default:**
-Bỏ trống ✓ | String ✓ | Số thực (decimal) ✓ | Âm ✓ | 0 ✓ | 1 ✓ | Max-1 ✓ | Max ✓ | Max+1 ✓ | Rất lớn ✓ | Boolean ✓ | Array ✓ | Null ✓
-
-**Number Required / Number Optional:**
-Bỏ trống ✓ | String ✓ | Âm ✓ | 0 ✓ | 1 chữ số ✓ | 1 chữ số thập phân ✓ | 2 chữ số thập phân ✓ | 3 chữ số thập phân ✓ | Max-1 ✓ | Max ✓ | Max+1 ✓ | > Max boundary ✓
-
-**Date Required:**
-Bỏ trống ✓ | Format sai ✓ | String ✓ | Quá khứ ✓ | Hôm nay ✓ | Tương lai ✓ | Ngày không tồn tại (29/02 năm lẻ) ✓ | Cross-field (nếu có) ✓
-
-In checkpoint:
+    <output format="stdout">
 ```
 ✓ Field {fieldName} ({type}): {generated}/{min} cases.
   [V3] → error chỉ cho type violations/XSS/SQL injection: ✅/❌
   [V4] Status validate = 200: ✅/❌
   Missing categories: [list cụ thể nếu có] → THÊM ngay.
 ```
+    </output>
 
-Nếu thiếu hoặc có ❌ → THÊM ngay, KHÔNG sang field tiếp cho đến khi đủ.
+    <on_missing>
+        <action>THÊM ngay</action>
+        <rule>Do NOT move to next field until all cases are sufficient</rule>
+    </on_missing>
+</step>
 
-## Bước 5 — Kiểm tra error codes từ inventory
+<step id="5" name="Check error codes from inventory">
+    <description>After batch complete, verify all error codes section="validate" are covered</description>
+    <actions>
+        <action type="read">
+            <file>{INVENTORY_FILE}</file>
+        </action>
+    </actions>
+    <checks>
+        <check>Get errorCodes[section="validate"]</check>
+        <check>Each error code has a bullet in output</check>
+        <check>If missing → ADD bullet with exact message</check>
+    </checks>
+</step>
 
-Sau khi xong batch, đọc `{INVENTORY_FILE}`:
-- Lấy `errorCodes[section="validate"]`
-- Kiểm tra mỗi error code có bullet trong output chưa
-- Thiếu → THÊM bullet với exact message
+<step id="6" name="Write to batch file">
+    <output_file>{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md</output_file>
 
-## Bước 6 — Ghi vào file batch riêng
+    <format_constraints>
+        <constraint>Batch file contains ONLY validate cases</constraint>
+        <constraint>FIRST LINE of file MUST be: ### Trường {fieldName}</constraint>
 
-**KHÔNG ghi vào `{OUTPUT_FILE}` chung.** Ghi vào file riêng của batch này:
+        <forbidden_content>
+            <item># BATCH N: ... or any H1 heading</item>
+            <item>## Kiểm tra validate / ## Kiểm tra Validate or any H2 heading</item>
+            <item>## Per-Field Checkpoint, | Field | Type | ... | table</item>
+            <item>=== Batch N complete === or any separator</item>
+            <item>## Response Legend tables</item>
+            <item>Any checkpoint or summary text</item>
+        </forbidden_content>
+    </format_constraints>
 
-```
-{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md
-```
-
-> ⚠️ **NỘI DUNG FILE BATCH CHỈ ĐƯỢC CHỨA validate cases. TUYỆT ĐỐI KHÔNG ghi:**
-> - `# BATCH N: ...` hay bất kỳ heading H1 nào
-> - `## Kiểm tra validate`, `## Kiểm tra Validate`, hay bất kỳ heading H2 nào
-> - `## Per-Field Checkpoint`, `| Field | Type | ...` bảng checkpoint
-> - `=== Batch N complete ===` hay bất kỳ separator text nào
-> - `## Response Legend` tables
-> - Bất kỳ text nào từ các bước checkpoint hay tổng kết
->
-> **DÒNG ĐẦU TIÊN của file PHẢI LÀ: `### Trường {fieldName}` — tuyệt đối không có gì trước đó.**
-
-Ví dụ nội dung `validate-batch-1.md` (chú ý: dòng 1 là `### Trường ...`, không có header nào trước):
+    <example_valid_content>
 ```markdown
 ### Trường slaVersionId
 
 - Kiểm tra không truyền trường slaVersionId
-
-    - 1. Check api trả về:
-      1.1.Status: 200
-      1.2.Response:
-      {
-          "code": "LDH_SLA_020",
-          "message": "Dữ liệu đầu vào không hợp lệ"
-      }
-
-- Kiểm tra truyền slaVersionId là string
 
     - 1. Check api trả về:
       1.1.Status: 200
@@ -174,11 +225,13 @@ Ví dụ nội dung `validate-batch-1.md` (chú ý: dòng 1 là `### Trường .
           "message": "Dữ liệu đầu vào không hợp lệ"
       }
 ```
+    </example_valid_content>
+</step>
 
-## Bước 7 — Batch checkpoint
+<step id="7" name="Batch checkpoint">
+    <output_destination>CONSOLE/STDOUT ONLY — NOT to batch file or output file</output_destination>
 
-> ⚠️ **In ra CONSOLE/STDOUT ONLY — KHÔNG ghi vào batch file hay output file nào.**
-
+    <output format="stdout">
 ```
 === Batch {BATCH_NUMBER} complete ===
 Output: {OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md
@@ -187,8 +240,28 @@ Counts: {field}: {N}/{min} ✓/✗
 All min cases met: YES / NO (fix required)
 Error codes covered: {N}/{total validate errors}
 ```
+    </output>
+</step>
 
-## Output
+---
 
-`{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md` — chứa validate cases của batch này.
-Orchestrator sẽ merge tất cả batch files vào `{OUTPUT_FILE}` theo đúng thứ tự.
+## Context Block
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="BATCH_NUMBER" type="number" required="true"/>
+        <param name="FIELD_BATCH" type="array" required="true">
+            <description>Array of fieldName:type:required:maxLength</description>
+            <example>[slaVersionId:Long:true:, effectiveDate:Date:true:, slaName:String:true:100]</example>
+        </param>
+        <param name="FIELD_TYPES_NEEDED" type="string" required="true">
+            <description>Comma-separated types for --section parameter</description>
+            <example>String Required,Date Required,Long</example>
+        </param>
+        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>

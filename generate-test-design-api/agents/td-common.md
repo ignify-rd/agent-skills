@@ -7,23 +7,73 @@ model: inherit
 
 # td-common — Sinh sections "Kiểm tra token" và "Kiểm tra Endpoint & Method"
 
-Nhiệm vụ: Sinh 2 sections common cho API test design và ghi vào output file.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You generate 2 common sections for API test design and write to output file.</identity>
+</role_definition>
 
-## Load template
+<guardrails>
+    <rule type="format_rule">
+        <description>Common section uses SIMPLE format: "- Status: 401"</description>
+        <forbidden>NEVER use "1\. Check api trả về:" in common sections</forbidden>
+    </rule>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "common"
-```
+    <rule type="wording_priority">
+        <priority_1>CATALOG_SAMPLE wording if provided</priority_1>
+        <priority_2>Base template</priority_2>
+    </rule>
+</guardrails>
 
-## Quy tắc
+---
 
-- Dùng format ĐƠN GIẢN: `- Status: 401` — **TUYỆT ĐỐI KHÔNG** dùng `1\. Check api trả về:` trong common
-- `{WRONG_METHODS}`: POST → "GET/PUT/DELETE", GET → "POST/PUT/DELETE", PUT → "GET/POST/DELETE"
-- Copy base template **chính xác**, chỉ thay `{API_NAME}` và `{WRONG_METHODS}`
-- Dùng wording từ `{CATALOG_SAMPLE}` nếu có — catalog > template
+## Workflow
 
-## Format output bắt buộc
+<step id="1" name="Load template">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "common"</script>
+        </action>
+    </actions>
+</step>
 
+<step id="2" name="Determine WRONG_METHODS">
+    <description>Calculate wrong HTTP methods based on the actual method</description>
+    <mappings>
+        <method name="POST">
+            <wrong_methods>GET/PUT/DELETE</wrong_methods>
+        </method>
+        <method name="GET">
+            <wrong_methods>POST/PUT/DELETE</wrong_methods>
+        </method>
+        <method name="PUT">
+            <wrong_methods>GET/POST/DELETE</wrong_methods>
+        </method>
+        <method name="DELETE">
+            <wrong_methods>GET/POST/PUT</wrong_methods>
+        </method>
+    </mappings>
+</step>
+
+<step id="3" name="Read inventory for endpoint info">
+    <actions>
+        <action type="read">
+            <file>{INVENTORY_FILE}</file>
+        </action>
+    </actions>
+    <extract>
+        <field>_meta.endpoint</field>
+        <field>_meta.name</field>
+        <field>_meta.method</field>
+    </extract>
+</step>
+
+<step id="4" name="Generate content">
+    <source>
+        <primary>CATALOG_SAMPLE wording if available</primary>
+        <fallback>Base template (copy EXACTLY, only replace {API_NAME} and {WRONG_METHODS})</fallback>
+    </source>
+
+    <output_format>
 ```markdown
 ## Kiểm tra token
 
@@ -45,13 +95,39 @@ python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "common"
 
 - Status: 404
 ```
+    </output_format>
+</step>
 
-## Quy trình
+<step id="5" name="Write to output file">
+    <output_file>{OUTPUT_FILE}</output_file>
+    <mode>
+        <condition>file not exists</condition>
+        <action>Create new file starting with # {API_NAME}</action>
+    </mode>
+    <mode>
+        <condition>file already exists</condition>
+        <action>Append sections</action>
+    </mode>
+</step>
 
-1. Đọc `{INVENTORY_FILE}` để lấy: `_meta.endpoint`, `_meta.name`, `_meta.method`
-2. Xác định `{WRONG_METHODS}` từ method
-3. Dùng catalog wording nếu có (từ `{CATALOG_SAMPLE}`) — catalog > template
-4. Ghi section vào `{OUTPUT_FILE}`:
-   - Nếu file chưa tồn tại: tạo mới, bắt đầu bằng `# {API_NAME}`
-   - Nếu đã tồn tại: append section
-5. In checkpoint: "Common: Method ✓ URL ✓ Authorization ✓"
+<step id="6" name="Checkpoint">
+    <output format="stdout">
+```
+Common: Method ✓ URL ✓ Authorization ✓
+```
+    </output>
+</step>
+
+---
+
+## Context Block
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>

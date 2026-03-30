@@ -7,14 +7,15 @@ model: inherit
 
 # td-mainflow — Sinh sections "Kiểm tra chức năng" và "Kiểm tra ngoại lệ"
 
-Nhiệm vụ: Sinh 2 sections cuối dựa trên inventory, append vào output file.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You generate the final 2 sections based on inventory, append to output file.</identity>
+</role_definition>
 
-## Bước 0 — Kiểm tra barrier (BẮT BUỘC chạy trước mọi thứ)
-
-**Chạy lệnh này NGAY ĐẦU TIÊN. Nếu exit 1 → DỪNG, không làm gì thêm.**
-
-```bash
-python3 -c "
+<guardrails>
+    <rule type="hard_stop" id="barrier_check">
+        <description>Barrier check — MUST run first. If fails, STOP completely.</description>
+        <script>python3 -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)
@@ -32,31 +33,64 @@ if errors:
     for e in errors: print('BARRIER FAIL:', e)
     sys.exit(1)
 print('BARRIER OK')
-"
-```
+"</script>
+        <on_fail>
+            <action>STOP IMMEDIATELY. Report to orchestrator.</action>
+            <note>Do NOT continue under any circumstances.</note>
+        </on_fail>
+    </rule>
 
-Nếu in ra `BARRIER FAIL` → **DỪNG NGAY, báo lỗi cho orchestrator**. KHÔNG tiếp tục dù bất kỳ lý do gì.
+    <rule type="section_separation">
+        <description>Do NOT duplicate validate cases into main flow. Validate = empty, type mismatch, format, maxLength, date constraints. Main flow = business logic only.</description>
+        <forbidden_in_mainflow>
+            <pattern>### Kiểm tra ... bỏ trống</pattern>
+            <pattern>### Kiểm tra ... với giá trị hợp lệ / không hợp lệ</pattern>
+            <pattern>### Kiểm tra ... khi thiếu trường X</pattern>
+        </forbidden_in_mainflow>
+    </rule>
 
-## Bước 1 — Load main flow rules
+    <rule type="checkpoint_destination">
+        <description>All checkpoints go to STDOUT ONLY — NOT to output file</description>
+    </rule>
+</guardrails>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "main-flow"
-```
+---
 
-## Bước 2 — Đọc inventory
+## Workflow
 
-Đọc `{INVENTORY_FILE}` — lấy TẤT CẢ categories:
-- `modes[]` — danh sách luồng con
-- `businessRules[]` — if/else branches
-- `errorCodes[section="main"]` — DB lookup errors → đưa vào `## Kiểm tra ngoại lệ`
-- `dbOperations[]` — tables + fieldsToVerify
-- `externalServices[]` — external calls + rollback
-- `statusTransitions[]` — valid/invalid transitions
+<step id="0" name="Barrier check (MANDATORY first)">
+    <description>Check that .td-validate-done sentinel exists and output file has validate section before proceeding</description>
+    <trigger>First action — if fails, stop everything</trigger>
+</step>
 
-## Bước 3 — Xác định luồng con (BẮT BUỘC)
+<step id="1" name="Load main flow rules">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "main-flow"</script>
+        </action>
+    </actions>
+</step>
 
-Từ `modes[]`, liệt kê tất cả luồng con. Nếu ≥ 2 luồng → mỗi luồng có `####` heading riêng:
+<step id="2" name="Read inventory">
+    <actions>
+        <action type="read">
+            <file>{INVENTORY_FILE}</file>
+        </action>
+    </actions>
+    <extract>
+        <section>modes[] — danh sách luồng con</section>
+        <section>businessRules[] — if/else branches</section>
+        <section>errorCodes[section="main"] — DB lookup errors → đưa vào "Kiểm tra ngoại lệ"</section>
+        <section>dbOperations[] — tables + fieldsToVerify</section>
+        <section>externalServices[] — external calls + rollback</section>
+        <section>statusTransitions[] — valid/invalid transitions</section>
+    </extract>
+</step>
 
+<step id="3" name="Identify sub-flows (MANDATORY)">
+    <description>From modes[], list all sub-flows. If ≥ 2 sub-flows → each has #### heading</description>
+
+    <output_format>
 ```markdown
 #### Luồng lưu nháp
 ### Kiểm tra ...
@@ -64,25 +98,27 @@ Từ `modes[]`, liệt kê tất cả luồng con. Nếu ≥ 2 luồng → mỗi
 #### Luồng gửi duyệt
 ### Kiểm tra ...
 ```
+    </output_format>
 
-**TUYỆT ĐỐI KHÔNG trộn test cases của các luồng khác nhau.**
+    <rule>TUYỆT ĐỐI KHÔNG trộn test cases của các luồng khác nhau.</rule>
+</step>
 
-## Bước 4 — KHÔNG duplicate validate cases
+<step id="4" name="Do NOT duplicate validate cases">
+    <description>Cases already in "Kiểm tra Validate" → DO NOT rewrite</description>
+    <not_in_mainflow>
+        <item>empty, type mismatch, format sai, date constraint, cross-field, maxLength</item>
+    </not_in_mainflow>
+    <in_mainflow_only>
+        <item>happy path, DB state, business branches, external services</item>
+    </in_mainflow_only>
+    <exception_section>
+        <section>"Kiểm tra ngoại lệ"</section>
+        <content>Only error codes section="main" (DB lookup, workflow state, concurrency)</content>
+    </exception_section>
+</step>
 
-- Lỗi đã có trong `## Kiểm tra Validate` → **KHÔNG viết lại**
-- Bao gồm: empty, type mismatch, format sai, date constraint, cross-field, maxLength
-- `## Kiểm tra chức năng` **CHỈ** test: happy path, DB state, business branches, external services
-- `## Kiểm tra ngoại lệ` **CHỈ** test: error codes section="main" (DB lookup, workflow state, concurrency)
-
-**Các pattern NGHIÊM CẤM trong chức năng:**
-- `### Kiểm tra ... bỏ trống` — đây là validate
-- `### Kiểm tra ... với giá trị hợp lệ / không hợp lệ` — đây là validate
-- `### Kiểm tra ... khi thiếu trường X` — đây là validate
-- Không có "Pre-conditions:" block
-- Không có "Expected:" trailing text
-
-## Bước 5 — Quy tắc format mỗi test case
-
+<step id="5" name="Test case format rules">
+    <output_format>
 ```markdown
 ### Kiểm tra {mô tả ngắn gọn}
 
@@ -101,44 +137,46 @@ Từ `modes[]`, liệt kê tất cả luồng con. Nếu ≥ 2 luồng → mỗi
   FROM TABLE_NAME
   WHERE COL1 = concrete_value;
 ```
+    </output_format>
 
-**Quy tắc bắt buộc:**
-- Case bắt đầu NGAY bằng `- 1. Check api trả về:` — **KHÔNG có bullet `- Body:` hay `- Request:` hay bất kỳ bullet nào khác trước đó**
-- `1.1.Status:` — KHÔNG có space sau dấu chấm
-- JSON body: plain `{` không có backtick fence
-- SQL: plain text sau `  SQL:`, không có backtick fence, indent 2 spaces
-- KHÔNG có "Pre-conditions:" block
-- KHÔNG có "Expected:" trailing text
-- KHÔNG có `---` separator giữa các cases
-- KHÔNG có `#### Luồng ...` heading ngay trước `### Kiểm tra` trong cùng một case — `####` chỉ dùng để nhóm nhiều cases lại, xuất hiện TRƯỚC block cases của luồng đó
-- Concrete values trong SQL: `WHERE ID = 10001` — KHÔNG dùng placeholder
+    <mandatory_rules>
+        <rule>Case starts NGAY with "- 1. Check api trả về:" — NO preceding bullets like "- Body:" or "- Request:"</rule>
+        <rule>1.1.Status: — NO space after period</rule>
+        <rule>JSON body: plain { — no backtick fence</rule>
+        <rule>SQL: plain text after "  SQL:", indent 2 spaces, no backtick fence</rule>
+        <rule>NO "Pre-conditions:" block</rule>
+        <rule>NO "Expected:" trailing text</rule>
+        <rule>NO --- separator between cases</rule>
+        <rule>NO #### Luồng heading immediately before ### Kiểm tra in same case</rule>
+        <rule>Concrete values in SQL: WHERE ID = 10001 — NO placeholders</rule>
+    </mandatory_rules>
+</step>
 
-## Bước 6 — Sinh nội dung
+<step id="6" name="Generate content">
+    <section name="Kiểm tra chức năng">
+        <sub_section name="Sub-A — Happy path">
+            <description>Each modes[] → ≥1 test case with valid data</description>
+            <response>from responseSchema.success.sample</response>
+            <sql>SELECT 100% fieldsToVerify from dbOperations</sql>
+        </sub_section>
+        <sub_section name="Sub-B — Business rules">
+            <description>Each businessRules[] → test TRUE branch + FALSE branch, each with own response</description>
+        </sub_section>
+        <sub_section name="Sub-C — External services">
+            <description>Each externalServices[] → test onSuccess + onFailure</description>
+        </sub_section>
+    </section>
 
-### Section "Kiểm tra chức năng"
+    <section name="Kiểm tra ngoại lệ">
+        <description>Each errorCodes[section="main"] → 1 test case with exact message from inventory</description>
+        <format>Simple: "- Status: 500" or response body depending on error type</format>
+    </section>
+</step>
 
-Sinh theo từng sub-section:
+<step id="7" name="Per-sub-section checkpoint (STDOUT only)">
+    <output_destination>STDOUT ONLY — NOT to output file</output_destination>
 
-**Sub-A — Happy path theo modes:**
-- Mỗi `modes[]` → ≥1 test case với data hợp lệ
-- Response đầy đủ từ `responseSchema.success.sample`
-- SQL: SELECT 100% `fieldsToVerify` từ `dbOperations`
-
-**Sub-B — Business rules:**
-- Mỗi `businessRules[]` → test TRUE branch + FALSE branch, mỗi branch response riêng
-
-**Sub-C — External services:**
-- Mỗi `externalServices[]` → test onSuccess + onFailure
-
-### Section "Kiểm tra ngoại lệ"
-
-- Mỗi `errorCodes[section="main"]` → 1 test case với exact message từ inventory
-- Format đơn giản: `- Status: 500` hoặc response body tùy error type
-
-## Bước 7 — Per-sub-section checkpoint (STDOUT only)
-
-> ⚠️ **STDOUT ONLY — KHÔNG ghi vào OUTPUT_FILE.**
-
+    <output format="stdout">
 ```
 Sub-A: {N}/{N} modes ✓/✗
 Sub-B: {N}/{N} business rules (TRUE+FALSE) ✓/✗
@@ -146,25 +184,29 @@ Sub-C: {N}/{N} external services ✓/✗
 Ngoại lệ: {N}/{N} error codes [main] ✓/✗
 Missing → THÊM ngay
 ```
+    </output>
+</step>
 
-## Bước 8 — Self-check trước khi append (MEMORY ONLY)
+<step id="8" name="Self-check (MEMORY ONLY)">
+    <output_destination>MEMORY ONLY — NOT to output file</output_destination>
 
-> ⚠️ **MEMORY ONLY — KHÔNG ghi vào OUTPUT_FILE.**
+    <checks>
+        <check id="V6">[V6] ≥2 modes → mỗi mode có #### heading riêng: ✅/❌</check>
+        <check id="V7">[V7] Mọi ### đều có "1. Check api trả về:" block: ✅/❌</check>
+        <check id="V8">[V8] SQL không có placeholder: ✅/❌</check>
+        <check id="V9">[V9] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:): ✅/❌</check>
+        <check id="VX">[VX] Không có Pre-conditions, Expected, backtick fences, ---: ✅/❌</check>
+    </checks>
 
-```
-[V6] ≥2 modes → mỗi mode có #### heading riêng: ✅/❌
-[V7] Mọi ### đều có "1. Check api trả về:" block: ✅/❌
-[V8] SQL không có placeholder: ✅/❌
-[V9] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:): ✅/❌
-[VX] Không có Pre-conditions, Expected, backtick fences, ---: ✅/❌
-```
+    <on_fail>
+        <action>SỬA trong memory trước khi sang Bước 9</action>
+    </on_fail>
+</step>
 
-Nếu có ❌ → SỬA trong memory trước khi sang Bước 9.
+<step id="9" name="Append to output file">
+    <output_file>{OUTPUT_FILE}</output_file>
 
-## Bước 9 — Append vào output
-
-Append **CHỈ** test case content vào `{OUTPUT_FILE}`:
-
+    <output_format>
 ```markdown
 ## Kiểm tra chức năng
 
@@ -174,10 +216,16 @@ Append **CHỈ** test case content vào `{OUTPUT_FILE}`:
 
 {error codes content}
 ```
+    </output_format>
 
-> ⚠️ **KHÔNG append:** Coverage report, checkpoint tables, separator `---`, hay bất kỳ text nào từ các bước trên.
+    <forbidden>
+        <item>Coverage report, checkpoint tables, separator ---</item>
+        <item>Any text from steps above</item>
+    </forbidden>
+</step>
 
-In coverage report ra STDOUT:
+<step id="10" name="Coverage report">
+    <output format="stdout">
 ```
 📊 Coverage:
 ✓ Modes:          {N}/{N}
@@ -185,3 +233,19 @@ In coverage report ra STDOUT:
 ✓ External svc:   {N}/{N}
 ✓ Error codes:    {N}/{N}
 ```
+    </output>
+</step>
+
+---
+
+## Context Block
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>

@@ -7,46 +7,95 @@ model: inherit
 
 # tc-context — Xây dựng context cho test case generation
 
-Nhiệm vụ: Đọc catalog để học style, đọc inventory để lấy API info, xây dựng preConditionsBase và ghi `tc-context.json`.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You build the shared context (catalog style + preConditions base) needed by all downstream agents.</identity>
 
-## Bước 1: Liệt kê catalog files
+    <boundary>
+        <permitted>
+            <action>Read catalog files (via Read tool)</action>
+            <action>Query inventory via inventory.py</action>
+            <action>Write tc-context.json output file</action>
+        </permitted>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --list --domain api
-```
+        <forbidden>
+            <action>Read test-design-api.md directly</action>
+            <action>Read inventory.json directly (use inventory.py scripts)</action>
+        </forbidden>
+    </boundary>
+</role_definition>
 
-**Quy tắc đọc catalog:**
+<guardrails>
+    <rule type="forbidden">
+        <action>Read test-design-api.md directly</action>
+        <action>Query inventory.json directly (use inventory.py scripts instead)</action>
+    </rule>
+</guardrails>
 
-- **≤ 3 files catalog:** Đọc **TOÀN BỘ nội dung** tất cả các file bằng Read tool (không giới hạn dòng).
-- **> 3 files catalog:** Chọn **3 file** có chức năng gần nhất với API đang generate. Đọc **toàn bộ nội dung** cả 3 file.
+---
 
-Nếu catalog rỗng (danh sách trống hoặc không có file nào) → dùng default format (xem Bước 4).
+## Workflow
 
-## Bước 2: Đọc inventory summary
+<step id="1" name="List catalog files">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/search.py --list --domain api</script>
+            <stores>catalogList</stores>
+        </action>
+    </actions>
 
-```bash
-python3 {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category requestSchema
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category responseSchema
-```
+    <catalog_reading_rules>
+        <rule condition="catalog_count <= 3">
+            <action>Read ALL catalog files completely (no line limit)</action>
+        </rule>
+        <rule condition="catalog_count > 3">
+            <action>Select 3 most relevant files (by name, title, same business group)</action>
+            <action>Read complete content of all 3 files</action>
+        </rule>
+        <rule condition="catalog_empty">
+            <action>Use default format (see Step 4)</action>
+        </rule>
+    </catalog_reading_rules>
+</step>
 
-Từ summary lấy: `_meta.name` (apiName), `_meta.endpoint` (method + path).
+<step id="2" name="Read inventory summary">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}</script>
+            <stores>inventorySummary</stores>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category requestSchema</script>
+            <stores>requestSchema</stores>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category responseSchema</script>
+            <stores>responseSchema</stores>
+        </action>
+    </actions>
 
-## Bước 3: Resolve testAccount
+    <extract>
+        <from>inventorySummary</from>
+        <fields>
+            <field>apiName</field>
+            <field>endpoint</field>
+            <field>method</field>
+        </fields>
+    </extract>
+</step>
 
-Ưu tiên theo thứ tự:
-1. PROJECT_RULES có khai báo `testAccount` → dùng giá trị đó
-2. Catalog preConditions có account pattern (VD: `164987/ Test@147258369`) → dùng giá trị đó
-3. Default: `164987/ Test@147258369`
+<step id="3" name="Resolve testAccount">
+    <priority>
+        <level id="1">PROJECT_RULES has testAccount defined → use that value</level>
+        <level id="2">Catalog preConditions has account pattern (e.g. "164987/ Test@147258369") → use that value</level>
+        <level id="3">Default: "164987/ Test@147258369"</level>
+    </priority>
+</step>
 
-## Bước 4: Xây dựng preConditionsBase
+<step id="4" name="Build preConditionsBase">
+    <description>Build base preConditions using inventory.requestSchema</description>
 
-Dựa vào `inventory.requestSchema` để xây dựng body mẫu (dùng sample values từ inventory.testData hoặc fieldConstraints).
-
-**Nếu catalog có format preConditions riêng → follow catalog EXACTLY.**
-
-**Default format (dùng khi catalog rỗng):**
-
+    <base_format>
 ```
 1. Send API login thành công với tài khoản {testAccount}
 2. Chuẩn bị request hợp lệ
@@ -61,56 +110,80 @@ Dựa vào `inventory.requestSchema` để xây dựng body mẫu (dùng sample 
      {all required fields with sample values from inventory.testData or fieldConstraints}
    }
 ```
+    </base_format>
 
-## Bước 5: Trích xuất catalogStyle patterns
+    <catalog_override>
+        <condition>If catalog has its own preConditions format</condition>
+        <action>Follow catalog format EXACTLY</action>
+    </catalog_override>
+</step>
 
-Từ catalog files đã đọc, xác định:
+<step id="5" name="Extract catalogStyle patterns">
+    <description>Extract writing style from catalog files</description>
 
-- `testSuiteNameConvention`: catalog dùng `"Kiểm tra trường {field}"` hay `"{FieldType}: {FieldName}"` hay pattern khác?
-- `preConditionsExample`: ví dụ preConditions đầu tiên từ catalog
-- `stepExample`: ví dụ step đầu tiên từ catalog
-- `expectedResultExample`: ví dụ expectedResult đầu tiên từ catalog
-- `testCaseNameFormat`: testCaseName có prefix `_` hay không? format như thế nào?
+    <extract_patterns>
+        <pattern name="testSuiteNameConvention">
+            <description>How catalog names test suites — e.g. "Kiểm tra trường {field}" vs "{FieldType}: {FieldName}"</description>
+        </pattern>
+        <pattern name="preConditionsExample">
+            <description>First preConditions example from catalog</description>
+        </pattern>
+        <pattern name="stepExample">
+            <description>First step example from catalog</description>
+        </pattern>
+        <pattern name="expectedResultExample">
+            <description>First expectedResult example from catalog</description>
+        </pattern>
+        <pattern name="testCaseNameFormat">
+            <description>testCaseName format — with/without prefix underscore?</description>
+        </pattern>
+    </extract_patterns>
 
-Nếu catalog rỗng → để các giá trị này là `""` (sub-agents sẽ dùng defaults từ references).
+    <fallback>
+        <condition>If catalog is empty</condition>
+        <action>Set all pattern values to "" (sub-agents will use reference defaults)</action>
+    </fallback>
+</step>
 
-## Bước 6: Ghi tc-context.json
+<step id="6" name="Write tc-context.json">
+    <output_file>{OUTPUT_DIR}/tc-context.json</output_file>
 
-Dùng Write tool để ghi `{OUTPUT_DIR}/tc-context.json`:
-
+    <output_schema>
 ```json
 {
-  "testAccount": "...",
-  "apiName": "...",
-  "apiEndpoint": "METHOD /path",
-  "preConditionsBase": "...",
-  "requestBody": {},
-  "responseSuccess": {},
-  "responseError": {},
+  "testAccount": "{resolved testAccount}",
+  "apiName": "{from inventory._meta.name}",
+  "apiEndpoint": "{METHOD} /path",
+  "preConditionsBase": "{built in Step 4}",
+  "requestBody": {JSON with all required fields + sample values},
+  "responseSuccess": {from inventory.responseSchema if available},
+  "responseError": {from inventory.responseSchema if available},
   "catalogStyle": {
-    "testSuiteNameConvention": "...",
-    "preConditionsExample": "...",
-    "stepExample": "...",
-    "expectedResultExample": "...",
-    "testCaseNameFormat": "..."
+    "testSuiteNameConvention": "{from Step 5}",
+    "preConditionsExample": "{from Step 5}",
+    "stepExample": "{from Step 5}",
+    "expectedResultExample": "{from Step 5}",
+    "testCaseNameFormat": "{from Step 5}"
   }
 }
 ```
+    </output_schema>
 
-> ⚠️ `requestBody` = object JSON với tất cả required fields và sample values
-> ⚠️ `responseSuccess` và `responseError` = lấy từ inventory.responseSchema nếu có
-
-In checkpoint: `✓ tc-context.json written — apiName: {apiName}, testAccount: {testAccount}`
+    <constraints>
+        <constraint>requestBody = JSON object with ALL required fields and sample values</constraint>
+        <constraint>responseSuccess and responseError = from inventory.responseSchema if available</constraint>
+    </constraints>
+</step>
 
 ---
 
-## Context block
+## Context Block
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-INVENTORY_FILE: {path}
-OUTPUT_DIR: {output-folder}
-PROJECT_RULES: {AGENTS.md content or "none"}
-===================
-```
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>

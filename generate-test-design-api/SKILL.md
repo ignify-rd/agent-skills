@@ -5,57 +5,121 @@ description: Generate API test design mindmap from RSD/PTTK. For API endpoints o
 
 # Test Design Generator — API Mode (Orchestrator)
 
-Generate test design documents (.md) for API endpoints bằng cách điều phối các sub-agents chuyên biệt.
+<role_definition>
+    <task_type>orchestrator</task_type>
+    <identity>You coordinate specialized sub-agents to generate API test design documents (.md) from RSD/PTTK. You orchestrate the workflow but do NOT read RSD/PTTK directly.</identity>
 
-> **Scope**: API test design (mindmap) only. NOT Frontend, NOT test case generation.
+    <boundary>
+        <permitted>
+            <action>List catalog files via search.py scripts</action>
+            <action>Read catalog files (limited) for wording reference</action>
+            <action>Spawn sub-agents with context blocks</action>
+            <action>Check file existence (sentinel files, batch files)</action>
+            <action>Merge validate batch files</action>
+        </permitted>
 
-## When to Apply
+        <forbidden>
+            <action>Read RSD or PTTK files directly</action>
+            <action>Read inventory.json directly (sub-agents handle this)</action>
+        </forbidden>
+    </boundary>
 
-- User provides RSD/PTTK for an API endpoint and asks to generate test design or mindmap
-- User says "sinh test design api", "tạo test design api", "tao mindmap api"
+    <priority_rules>
+        <rule id="override_priority" type="hierarchy">
+            <level id="1" name="chat_input" priority="highest">User chat input / user request</level>
+            <level id="2" name="project_rules" priority="medium">Project AGENTS.md — overrides skill defaults when explicitly defined</level>
+            <level id="3" name="skill_defaults" priority="lowest">Skill-level defaults — used when project rules undefined</level>
+        </rule>
+    </priority_rules>
+</role_definition>
 
-## Prerequisites
+<guardrails>
+    <hard_stop id="orchestrator_reads_rsd">
+        <condition>If orchestrator reads RSD or PTTK directly</condition>
+        <consequence>VIOLATION: architecture breach — td-extract sub-agent has sole responsibility for reading RSD/PTTK</consequence>
+        <recovery>Pass file paths to td-extract sub-agent only.</recovery>
+    </hard_stop>
 
-Python 3 installed. Check: `python3 --version || python --version`
+    <hard_stop id="missing_inputs">
+        <condition>Required inputs missing (RSD file path, output folder)</condition>
+        <consequence>STOP — ask user for required inputs</consequence>
+    </hard_stop>
 
-## ⛔ ORCHESTRATOR KHÔNG ĐỌC RSD/PTTK
-
-**Orchestrator TUYỆT ĐỐI KHÔNG đọc nội dung file RSD hay PTTK.** Việc đọc RSD/PTTK là nhiệm vụ DUY NHẤT của sub-agent `td-extract`. Orchestrator chỉ nhận file path từ user và truyền cho td-extract.
-
-> Nếu orchestrator tự đọc RSD/PTTK → vi phạm kiến trúc, gây context pollution, gây sai lệch output.
+    <hard_stop id="catalog_missing">
+        <condition>catalog/ directory not found at project root</condition>
+        <consequence>STOP — prompt user to run test-genie init</consequence>
+    </hard_stop>
+</guardrails>
 
 ---
 
-## Workflow — Orchestrator
+## Workflow
 
-### Step 0: Validate Project Setup & Load Project Rules
+<step id="0" name="Validate Project Setup & Load Project Rules">
+    <trigger>Always — first step</trigger>
+    <actions>
+        <action type="check">
+            <target>catalog/ directory</target>
+            <at>project root</at>
+            <if_missing>Ask user to run test-genie init</if_missing>
+        </action>
+        <action type="read">
+            <target>AGENTS.md</target>
+            <at>project root</at>
+            <store_as>projectRules</store_as>
+            <fallback>Use skill-level defaults + notify user</fallback>
+        </action>
+    </actions>
+</step>
 
-1. Check `catalog/` at project root — nếu không có → hỏi user chạy `test-genie init`
-2. Check & READ `AGENTS.md` at project root → store as `projectRules`
-3. Nếu không có AGENTS.md → dùng skill-level defaults, thông báo user
+<step id="0b" name="Validate Required Inputs">
+    <trigger>Always — before any other step</trigger>
 
-**⚠️ projectRules override tất cả skill defaults.**
+    <required_inputs>
+        <input name="RSD File" var="RSD_FILE" source="user" required="true">
+            <description>Path to RSD file (PDF or document)</description>
+        </input>
+        <input name="PTTK File" var="PTTK_FILE" source="user" required="false">
+            <description>Path to PTTK file (optional)</description>
+        </input>
+        <input name="Output Folder" var="OUTPUT_DIR" source="user" required="true">
+            <description>Output directory</description>
+            <example>feature-1/</example>
+        </input>
+    </required_inputs>
 
-### Step 0b: Validate Required Inputs
+    <derived_vars>
+        <var name="INVENTORY_FILE">{OUTPUT_DIR}/inventory.json</var>
+        <var name="OUTPUT_FILE">{OUTPUT_DIR}/test-design-api.md</var>
+    </derived_vars>
 
-**⚠️ STOP — Chờ user cung cấp đủ 3 thứ:**
-- **RSD file path** — bắt buộc
-- **PTTK file path** — tuỳ chọn
-- **Output folder** — bắt buộc (VD: `feature-1/`)
+    <guardrails>
+        <rule type="hard_stop">
+            <condition>RSD file path missing</condition>
+            <action>NEVER scan folders or guess paths</action>
+        </rule>
+    </guardrails>
+</step>
 
-NEVER scan folders hoặc đoán file paths. Nếu thiếu → hỏi.
+<step id="1" name="Mode Detection">
+    <description>Detect if this is API or Frontend</description>
+    <rules>
+        <rule condition="title matches (GET|POST|PUT|DELETE|PATCH)\s+/">
+            <result>High confidence API → proceed</result>
+        </rule>
+        <rule condition="contains màn hình, screen, giao diện">
+            <result>suggest generate-test-design-frontend</result>
+        </rule>
+        <rule condition="unclear">
+            <result>ask user</result>
+        </rule>
+    </rules>
+</step>
 
-### Step 1: Mode Detection (API Mode Only)
-
-- Title matches `(GET|POST|PUT|DELETE|PATCH)\s+/` → High confidence → proceed
-- Chứa `màn hình`, `screen`, `giao diện` → suggest `generate-test-design-frontend`
-- Không rõ → hỏi user
-
-### Step 2: Resolve Paths & Load Priority Rules
-
-```bash
-# Resolve SKILL_SCRIPTS — dùng Python thay vì find (cross-platform)
-SKILL_SCRIPTS=$(python3 -c "
+<step id="2" name="Resolve SKILL_SCRIPTS and SKILL_AGENTS paths">
+    <actions>
+        <action type="bash">
+            <script>python3 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -66,10 +130,11 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     if 'search.py' in files and 'scripts' in root:
         print(os.path.dirname(root))
         break
-" "$(pwd)/generate-test-design-api/scripts/search.py" 2>/dev/null || echo "generate-test-design-api/scripts")
-
-# Resolve SKILL_AGENTS
-SKILL_AGENTS=$(python3 -c "
+" "$(pwd)/generate-test-design-api/scripts/search.py" 2>/dev/null || echo "generate-test-design-api/scripts"</script>
+            <stores>SKILL_SCRIPTS</stores>
+        </action>
+        <action type="bash">
+            <script>python3 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -80,267 +145,312 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     if 'td-extract.md' in files and 'agents' in root:
         print(root)
         break
-" "$(pwd)/generate-test-design-api/agents/td-extract.md" 2>/dev/null || echo "generate-test-design-api/agents")
-```
+" "$(pwd)/generate-test-design-api/agents/td-extract.md" 2>/dev/null || echo "generate-test-design-api/agents"</script>
+            <stores>SKILL_AGENTS</stores>
+        </action>
+    </actions>
 
-Fallback paths: `.claude/skills/generate-test-design-api`, `.cursor/skills/generate-test-design-api`, `node_modules/generate-test-design-api`.
+    <fallback_paths>
+        <path>.claude/skills/generate-test-design-api</path>
+        <path>.cursor/skills/generate-test-design-api</path>
+        <path>node_modules/generate-test-design-api</path>
+    </fallback_paths>
 
-```bash
-python3 $SKILL_SCRIPTS/search.py --ref priority-rules
-```
+    <actions>
+        <action type="bash">
+            <script>python3 $SKILL_SCRIPTS/search.py --ref priority-rules</script>
+        </action>
+    </actions>
+</step>
 
-Xác định các paths dùng xuyên suốt:
-- `INVENTORY_FILE` = `{output-folder}/inventory.json`
-- `OUTPUT_FILE` = `{output-folder}/test-design-api.md`
+<step id="3" name="Catalog Example">
+    <actions>
+        <action type="bash">
+            <script>python3 $SKILL_SCRIPTS/search.py --list --domain api</script>
+            <stores>catalogList</stores>
+        </action>
+    </actions>
 
-### Step 3: Catalog Example
+    <catalog_reading_rules>
+        <rule condition="catalog_count <= 3">
+            <action>Read ALL catalog files completely (no line limit)</action>
+        </rule>
+        <rule condition="catalog_count > 3">
+            <action>Select 3 most relevant files (by name, title, same business group, same HTTP method)</action>
+            <action>Read complete content of all 3 files</action>
+        </rule>
+        <rule condition="no_relevant_files">
+            <action>Read first file in the list</action>
+        </rule>
+    </catalog_reading_rules>
 
-Liệt kê tất cả catalog files:
-```bash
-python3 $SKILL_SCRIPTS/search.py --list --domain api
-```
+    <output>
+        <var name="CATALOG_SAMPLE">Concatenated catalog file contents for sub-agent reference</var>
+    </output>
 
-**Quy tắc đọc catalog:**
+    <note>Catalog = highest priority source for wording. Always use CATALOG_SAMPLE for sub-agents.</note>
+</step>
 
-- **≤ 3 files catalog:** Đọc **TOÀN BỘ nội dung** tất cả các file bằng Read tool (không giới hạn dòng).
-- **> 3 files catalog:** Chọn **3 file** có chức năng gần nhất với API đang generate (dựa theo tên file + title, cùng nhóm nghiệp vụ, cùng HTTP method, hoặc có cấu trúc tương tự). Đọc **toàn bộ nội dung** cả 3 file.
-- Nếu không có file nào phù hợp → đọc file đầu tiên trong danh sách.
+<step id="4" name="Spawn td-extract" type="sub-agent">
+    <description>Extract business logic from RSD/PTTK and build inventory.json</description>
+    <trigger>After Step 3</trigger>
 
-```bash
-# Đọc từng file bằng Read tool — KHÔNG dùng search.py để tìm
-# VD: Read("catalog/api/API_Ten_chuc_nang.md")
-```
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/td-extract.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>td-extract</agent_type>
+            <prompt>{td-extract.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="RSD_FILE">{RSD_FILE}</param>
+                <param name="PTTK_FILE">{PTTK_FILE or "none"}</param>
+                <param name="API_NAME">{from RSD title}</param>
+                <param name="METHOD">{HTTP method}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-**Trích xuất CATALOG_SAMPLE:** Ghép nội dung tất cả các file đã đọc thành CATALOG_SAMPLE, phân cách bằng `--- catalog: {filename} ---`. In nội dung ra cho sub-agents dùng.
+    <completion_criteria>
+        <condition>inventory.json created and summary non-empty</condition>
+    </completion_criteria>
 
-Catalog = nguồn WORDING cao nhất. Luôn dùng CATALOG_SAMPLE (từ Step 3) cho sub-agents, KHÔNG dùng template mặc định.
+    <error_handling>
+        <condition>errorCodes = 0</condition>
+        <action>Ask user before continuing</action>
+        <condition>Conflicts between PTTK and RSD detected</condition>
+        <action>Ask user to confirm</action>
+    </error_handling>
+</step>
 
----
+<step id="5a" name="Spawn td-common" type="sub-agent">
+    <description>Generate "Kiểm tra token" and "Kiểm tra Endpoint & Method" sections</description>
+    <trigger>After Step 4</trigger>
 
-### Step 4: Sub-agent — td-extract (Trích xuất dữ liệu)
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/td-common.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>td-common</agent_type>
+            <prompt>{td-common.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE or "none"}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-**Spawn sub-agent để extract RSD/PTTK và tạo inventory.**
+    <completion_criteria>
+        <file_exists>{OUTPUT_FILE}</file_exists>
+        <content_check>Contains "## Kiểm tra token"</content_check>
+    </completion_criteria>
+</step>
 
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/td-extract.md
-```
+<step id="5b" name="Spawn ALL td-validate agents" type="parallel">
+    <description>Generate validate cases per field batch (parallel)</description>
+    <trigger>After Step 5a</trigger>
 
-Spawn sub-agent với prompt = nội dung td-extract.md + context block sau:
+    <spawn_mode>ALL batches simultaneously</spawn_mode>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {resolved SKILL_SCRIPTS path}
-INVENTORY_FILE: {INVENTORY_FILE}
-RSD_FILE: {rsd file path}
-PTTK_FILE: {pttk file path hoặc "none"}
-API_NAME: {tên API từ RSD title}
-METHOD: {HTTP method}
-PROJECT_RULES: {projectRules nếu có, hoặc "none"}
-===================
-```
+    <preparation>
+        <action type="read">
+            <file>{INVENTORY_FILE}</file>
+            <purpose>Extract fieldConstraints for batching</purpose>
+        </action>
+        <batch_strategy>
+            <batch_size>3 fields per batch</batch_size>
+            <example>Batch 1: [F1–F3]; Batch 2: [F4–F6]</example>
+        </batch_strategy>
+    </preparation>
 
-**Kết thúc Step 4 khi:** `{INVENTORY_FILE}` được tạo và summary không rỗng.
+    <per_batch_actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/td-validate.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>td-validate</agent_type>
+            <prompt>{td-validate.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="BATCH_NUMBER">{N}</param>
+                <param name="FIELD_BATCH">[{fieldName}:{type}:{required}:{maxLength}, ...]</param>
+                <param name="FIELD_TYPES_NEEDED">"{comma-separated types for --section}"</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE or "none"}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </per_batch_actions>
 
-**Nếu errorCodes = 0:** Hỏi user trước khi tiếp tục.
-**Nếu có conflicts PTTK/RSD:** Hỏi user để xác nhận.
+    <file_naming>
+        <file pattern="{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md" />
+    </file_naming>
 
----
+    <merge>
+        <script>python3 $SKILL_SCRIPTS/merge_validate.py --output-dir {OUTPUT_DIR} --output-file {OUTPUT_FILE}</script>
+        <on_exit_1>
+            <action>Read error message</action>
+            <action>Re-spawn failed batch with note</action>
+        </on_exit_1>
+    </merge>
 
-### Step 5a: Sub-agent — td-common (Sinh common section)
+    <completion_criteria>
+        <file_exists>{OUTPUT_DIR}/.td-validate-done</file_exists>
+        <content_check>{OUTPUT_FILE} contains "## Kiểm tra Validate"</content_check>
+    </completion_criteria>
 
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/td-common.md
-```
+    <barrier id="validate_barrier">
+        <description>SEQUENTIAL BARRIER — MUST check before proceeding to Step 5c</description>
+        <script>python3 -c "
+import sys, os
+sentinel = '{OUTPUT_DIR}/.td-validate-done'
+output = '{OUTPUT_FILE}'
+if not os.path.exists(sentinel):
+    print('NOT READY: .td-validate-done missing')
+    sys.exit(1)
+content = open(output, encoding='utf-8').read()
+if '## Kiểm tra Validate' not in content:
+    print('NOT READY: ## Kiểm tra Validate missing from output')
+    sys.exit(1)
+print('READY')
+"</script>
 
-Spawn sub-agent với prompt = nội dung td-common.md + context:
+        <on_not_ready>
+            <action>STOP COMPLETELY. Do NOT spawn Step 5c.</action>
+            <action>Debug Step 5b first.</action>
+        </on_not_ready>
+    </barrier>
+</step>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-INVENTORY_FILE: {path}
-OUTPUT_FILE: {path}
-CATALOG_SAMPLE: {wording snippet từ Step 3, hoặc "none"}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
+<step id="5c" name="Spawn td-mainflow" type="sub-agent">
+    <description>Generate "Kiểm tra chức năng" and "Kiểm tra ngoại lệ" sections</description>
+    <trigger>After validate barrier passes</trigger>
 
-**Kết thúc Step 5a khi:** `{OUTPUT_FILE}` tồn tại và chứa `## Kiểm tra token`.
+    <barrier>
+        <description>Barrier check before spawning</description>
+        <script>python3 -c "
+import sys
+c = open('{OUTPUT_FILE}', encoding='utf-8').read()
+checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra chức năng']
+missing = [s for s in checks if s not in c]
+print('READY' if not missing else 'NOT READY: MISSING: ' + str(missing))
+sys.exit(0 if not missing else 1)
+"</script>
 
----
+        <on_not_ready>
+            <action>STOP COMPLETELY. Do NOT spawn Step 6.</action>
+        </on_not_ready>
+    </barrier>
 
-### Step 5b: Sub-agent — td-validate (Sinh validate, song song theo batch)
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/td-mainflow.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>td-mainflow</agent_type>
+            <prompt>{td-mainflow.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE or "none"}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-Đọc `{INVENTORY_FILE}` để lấy tất cả `fieldConstraints[]`.
-Nhóm fields thành batches tối đa **3 fields** mỗi batch: Batch 1 [F1–F3], Batch 2 [F4–F6], ...
-(Giới hạn 3 fields/batch để đảm bảo mỗi sub-agent có đủ context cho 100% template cases mỗi field.)
+    <completion_criteria>
+        <content_check>{OUTPUT_FILE} contains "## Kiểm tra chức năng"</content_check>
+    </completion_criteria>
+</step>
 
-**Spawn TẤT CẢ batch sub-agents song song** — mỗi batch 1 sub-agent độc lập.
+<step id="6" name="Spawn td-verify" type="sub-agent">
+    <description>Gap analysis, V5 duplicate check, V9 global scan, V10 format check</description>
+    <note>V1-V4 handled by td-validate. V6-V9 handled by td-mainflow. td-verify only covers: gap analysis, V5 duplicate, V9 global, V10 format.</note>
+    <trigger>After Step 5c</trigger>
 
-Với mỗi batch, đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/td-validate.md
-```
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/td-verify.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>td-verify</agent_type>
+            <prompt>{td-verify.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
+            </context>
+        </action>
+    </actions>
 
-Spawn sub-agent với prompt = nội dung td-validate.md + context:
+    <completion_criteria>
+        <result>Self-check prints 4/4 ✅ or all gaps/violations fixed</result>
+    </completion_criteria>
+</step>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-INVENTORY_FILE: {path}
-OUTPUT_DIR: {output-folder}
-BATCH_NUMBER: {N}
-FIELD_BATCH: [{fieldName}:{type}:{required}:{maxLength}, ...]
-FIELD_TYPES_NEEDED: "{comma-separated types for --section}"
-CATALOG_SAMPLE: {wording snippet hoặc "none"}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
+<step id="7" name="Final Output">
+    <description>Report completion to user</description>
+    <trigger>After Step 6</trigger>
 
-⚠️ **Mỗi sub-agent ghi vào file riêng** `{output-folder}/validate-batch-{N}.md` — KHÔNG ghi vào output chung. Tránh race condition khi chạy song song.
-
-**Sau khi TẤT CẢ batches hoàn thành — merge bằng script:**
-
-```bash
-python3 $SKILL_SCRIPTS/merge_validate.py \
-  --output-dir {output-folder} \
-  --output-file {OUTPUT_FILE}
-```
-
-Script sẽ:
-- **Tự động strip** các garbage lines (`# BATCH N:`, `## Kiểm tra Validate`, `=== ... ===`, `| table |`, `---`) khỏi từng batch file
-- **Báo lỗi** nếu batch file rỗng sau khi strip (exit 1 → orchestrator biết phải re-spawn batch đó)
-- **Tạo sentinel** `.td-validate-done` khi merge thành công
-- **In log** số dòng bị strip mỗi batch để dễ debug
-
-Nếu exit 1 → đọc error message, re-spawn batch bị lỗi với note "Batch {N} thiếu cases cho fields: [list]".
-
-**Kết thúc Step 5b khi:** File `{output-folder}/.td-validate-done` tồn tại VÀ `{OUTPUT_FILE}` chứa `## Kiểm tra Validate`.
-
----
-
-> ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 5c:**
->
-> ```bash
-> python3 -c "
-> import sys, os
-> sentinel = '{output-folder}/.td-validate-done'
-> output = '{OUTPUT_FILE}'
-> if not os.path.exists(sentinel):
->     print('NOT READY: .td-validate-done missing')
->     sys.exit(1)
-> content = open(output, encoding='utf-8').read()
-> if '## Kiểm tra Validate' not in content:
->     print('NOT READY: ## Kiểm tra Validate missing from output')
->     sys.exit(1)
-> print('READY')
-> "
-> ```
->
-> **Nếu in ra `NOT READY` → DỪNG HOÀN TOÀN. KHÔNG spawn Step 5c. Debug Step 5b trước.**
-> **KHÔNG được skip bước kiểm tra này dù bất kỳ lý do gì.**
-
----
-
-### Step 5c: Sub-agent — td-mainflow (Sinh main flow)
-
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/td-mainflow.md
-```
-
-Spawn sub-agent với prompt = nội dung td-mainflow.md + context:
-
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-INVENTORY_FILE: {path}
-OUTPUT_FILE: {path}
-CATALOG_SAMPLE: {wording snippet hoặc "none"}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
-
-**Kết thúc Step 5c khi:** `{OUTPUT_FILE}` chứa `## Kiểm tra chức năng`.
-
----
-
-> ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 6:**
->
-> ```bash
-> python3 -c "
-> import sys
-> c = open('{OUTPUT_FILE}', encoding='utf-8').read()
-> checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra chức năng']
-> missing = [s for s in checks if s not in c]
-> print('READY' if not missing else 'NOT READY: MISSING: ' + str(missing))
-> sys.exit(0 if not missing else 1)
-> "
-> ```
->
-> **Nếu in ra `NOT READY` → DỪNG HOÀN TOÀN. KHÔNG spawn Step 6. Debug bước thiếu trước.**
-
----
-
-### Step 6: Sub-agent — td-verify (Gap-fill + Cross-section check)
-
-> V1-V4 đã được td-validate checkpoint per-field. V6-V9 đã được td-mainflow self-check.
-> td-verify CHỈ làm: gap analysis, V5 duplicate, V9 global scan, V10 format.
-> **KHÔNG đọc toàn bộ OUTPUT_FILE** — dùng grep/Python extract sections.
-
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/td-verify.md
-```
-
-Spawn sub-agent với prompt = nội dung td-verify.md + context:
-
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-INVENTORY_FILE: {path}
-OUTPUT_FILE: {path}
-===================
-```
-
-**Kết thúc khi:** Self-check in ra 4/4 ✅ hoặc tất cả gaps/vi phạm đã được sửa.
-
----
-
-### Step 7: Final Output
-
-Thông báo user:
+    <output_message>
 ```
 ✅ Test design hoàn thành: {OUTPUT_FILE}
 📋 Inventory: {INVENTORY_FILE}
 ```
+    </output_message>
 
-Nếu có `### [SỬA]` trong output → thông báo số lượng items được tự động thêm/sửa.
+    <notification>
+        <condition>If ### [SỬA] exists in output</condition>
+        <message>Auto-added/fixed items count</message>
+    </notification>
+</step>
+
+<step id="8" name="Cleanup — Delete intermediate files">
+    <description>Remove temporary batch files, keep only final outputs</description>
+    <trigger>After Step 7</trigger>
+
+    <keep_files>
+        <file>inventory.json</file>
+        <file>patch.json</file>
+        <file>test-design-api.md</file>
+    </keep_files>
+
+    <delete_patterns>
+        <pattern>validate-batch-*.md</pattern>
+        <pattern>.td-validate-done</pattern>
+    </delete_patterns>
+</step>
 
 ---
 
-### Step 8: Cleanup — Xóa files trung gian
+## Project Structure
 
-Sau khi Step 7 hoàn thành, xóa tất cả files trung gian trong output folder:
-
-```bash
-python3 -c "
-import os, glob
-output_dir = '{output-folder}'
-keep = {'inventory.json', 'patch.json', 'test-design-api.md'}
-patterns = ['validate-batch-*.md', '.td-validate-done']
-removed = []
-for pat in patterns:
-    for f in glob.glob(os.path.join(output_dir, pat)):
-        if os.path.basename(f) not in keep:
-            os.remove(f)
-            removed.append(os.path.basename(f))
-if removed:
-    print('Removed: ' + ', '.join(removed))
-else:
-    print('No intermediate files to remove.')
-"
 ```
-
-**Giữ lại:** `inventory.json`, `patch.json`, `test-design-api.md` (nếu có)
+generate-test-design-api/
+├── SKILL.md                      ← Orchestrator workflow (this file)
+├── AGENTS.md                     ← Skill-level default rules
+├── agents/
+│   ├── td-extract.md             ← Extract RSD/PTTK → inventory.json
+│   ├── td-common.md              ← Generate common sections (token, endpoint)
+│   ├── td-validate.md            ← Generate validate per field batch
+│   ├── td-mainflow.md            ← Generate main flow + exceptions
+│   └── td-verify.md             ← Gap analysis, dedup, format check
+├── references/
+│   ├── api-test-design.md
+│   ├── priority-rules.md
+│   └── quality-rules.md
+└── scripts/
+    ├── search.py
+    ├── inventory.py
+    ├── merge_validate.py
+    └── ...
+```

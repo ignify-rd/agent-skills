@@ -7,169 +7,231 @@ model: inherit
 
 # td-extract — Trích xuất dữ liệu từ RSD & PTTK
 
-Nhiệm vụ: Đọc RSD và PTTK, trích xuất toàn bộ business logic + request/response schema, ghi vào `inventory.json`.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>You read RSD and PTTK, extract all business logic + request/response schema, and write to inventory.json. This is the ONLY agent that reads RSD/PTTK files.</identity>
+</role_definition>
 
-## Đọc file PDF — CHỈ dùng Read tool
+<guardrails>
+    <rule type="forbidden">
+        <action>Create scripts to parse PDF — use Read tool only</action>
+        <action>Use --data directly with Vietnamese text on Windows (encoding issue)</action>
+    </rule>
 
-Dùng Read tool với `pages` parameter cho file lớn. Đọc từng đoạn nếu cần. **CẤM** tạo script parse PDF.
+    <rule type="read_method">
+        <description>Use Read tool with pages parameter for large files. Read in chunks if needed.</description>
+    </rule>
 
-## Quy trình
+    <rule type="encoding_workaround">
+        <description>On Windows, use patch.json + inventory.py patch instead of --data with Vietnamese text</description>
+    </rule>
+</guardrails>
 
-### 1. Khởi tạo inventory
+---
 
-```bash
-# METHOD lấy từ context block — giá trị thực VD: "GET", "POST", "PUT"
-# endpoint được trích xuất trực tiếp từ RSD (không phải từ context)
-python3 {SKILL_SCRIPTS}/inventory.py init \
+## Workflow
+
+<step id="1" name="Initialize inventory">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py init \
   --file {INVENTORY_FILE} \
   --name "{API_NAME}" \
-  --method "{METHOD}"
-```
+  --method "{METHOD}"</script>
+        </action>
+    </actions>
+    <note>
+        After init, td-extract will extract endpoint from RSD in next step and write via patch.
+        METHOD comes from context block — actual value e.g. "GET", "POST", "PUT".
+    </note>
+</step>
 
- Sau khi init, td-extract sẽ trích xuất `endpoint` từ RSD trong bước tiếp theo và ghi vào inventory qua `patch`.
+<step id="2" name="Read RSD — extract business logic">
+    <actions>
+        <action type="read">
+            <file>{RSD_FILE}</file>
+            <purpose>Extract business logic, find correct API section by endpoint or name</purpose>
+        </action>
+    </actions>
 
-### 2. Đọc RSD — trích xuất business logic
+    <extract>
+        <section name="errorCodes">
+            <rule>Read ALL error code table rows — do not miss any line</rule>
+            <section_assignment>
+                <target name="validate">
+                    <description>Field-level errors (empty, type, format, date constraint, cross-field like expiredDate ≥ effectiveDate) — no DB query needed</description>
+                </target>
+                <target name="main">
+                    <description>DB lookup, duplicate name/code, wrong workflow state, external service failure</description>
+                </target>
+            </section_assignment>
+        </section>
 
-Tìm đúng section API trong RSD theo endpoint hoặc tên. Trích xuất:
+        <section name="businessRules">
+            <description>if/else branches, conditional logic</description>
+        </section>
 
-- **errorCodes**: Đọc **toàn bộ** bảng mã lỗi — không bỏ sót một dòng nào
+        <section name="modes">
+            <description>Sub-flows (Lưu nháp, Gửi duyệt, Phê duyệt, Xóa...)</description>
+        </section>
 
-  Phân loại `section`:
-  - `"validate"` = lỗi field-level (empty, type, format, date constraint, cross-field như expiredDate ≥ effectiveDate) — không cần DB query
-  - `"main"` = cần DB lookup, trùng tên/mã, sai workflow state, external service failure
+        <section name="dbOperations">
+            <description>DB tables, operation (INSERT/UPDATE/DELETE)</description>
+            <requirement>ALL columns 100% — including auto-generated columns</requirement>
+        </section>
 
-- **businessRules**: if/else branches, conditional logic
-- **modes**: các luồng con (Lưu nháp, Gửi duyệt, Phê duyệt, Xóa...)
-- **dbOperations**: bảng DB, operation (INSERT/UPDATE/DELETE), **100% columns** kể cả auto-generate
-- **externalServices**: S3, email, notification... + onFailure + rollback behavior
+        <section name="externalServices">
+            <description>S3, email, notification... + onFailure + rollback behavior</description>
+        </section>
+    </extract>
+</step>
 
-### 3. Đọc PTTK — trích xuất field definitions + schema
+<step id="3" name="Read PTTK — extract field definitions + schema">
+    <condition>If PTTK_FILE is provided (not "none")</condition>
+    <actions>
+        <action type="read">
+            <file>{PTTK_FILE}</file>
+            <purpose>Find correct API by endpoint, extract field definitions</purpose>
+        </action>
+    </actions>
 
-Tìm đúng API theo endpoint trong PTTK. Trích xuất:
+    <extract>
+        <section name="fieldConstraints">
+            <field name="name">Field name</field>
+            <field name="type">Exact from PTTK (Long/Integer/String/Date/Boolean/Array)</field>
+            <field name="maxLength">maxLength</field>
+            <field name="required">Y/N</field>
+            <field name="validationRules">validation rules</field>
+        </section>
 
-- **fieldConstraints**: name, type (giữ nguyên exact từ PTTK: Long/Integer/String/Date/Boolean/Array), maxLength, required (Y/N), validationRules
-- **requestSchema**: pathParams, queryParams, bodyParams với đầy đủ type/required/constraints
-- **responseSchema**: cấu trúc response success + error từ PTTK, kèm sample values
-- **testData**: 1 valid sample value cho mỗi field (dùng để gen test cases sau)
+        <section name="requestSchema">
+            <field name="pathParams">path parameters with type/required/constraints</field>
+            <field name="queryParams">query parameters</field>
+            <field name="bodyParams">All fields from fieldConstraints with full constraints</field>
+        </section>
 
-Nếu không có PTTK → lấy từ RSD.
+        <section name="responseSchema">
+            <description>Response structure success + error from PTTK, with sample values</description>
+        </section>
 
-### 4. Ghi inventory — dùng `patch` command (tránh Windows encoding issue)
+        <section name="testData">
+            <description>1 valid sample value per field (for test case generation)</description>
+        </section>
+    </extract>
 
-**KHÔNG dùng `--data` trực tiếp với tiếng Việt trên Windows.** Thay vào đó:
+    <fallback>
+        <condition>If no PTTK provided</condition>
+        <action>Extract field definitions from RSD</action>
+    </fallback>
+</step>
 
-**Bước 4a** — Tạo file `{OUTPUT_DIR}/patch.json` bằng Python:
+<step id="4" name="Write inventory — use patch command">
+    <description>Use patch.json + inventory.py patch to avoid Windows encoding issues with Vietnamese text</description>
 
-```python
-import json
+    <step id="4a" name="Create patch.json">
+        <output_file>{OUTPUT_DIR}/patch.json</output_file>
 
-patch = {
-  # ── Business logic ──
+        <structure>
+```json
+{
   "errorCodes": [
-    {"code": "LDH_SLA_020", "desc": "Dữ liệu đầu vào không hợp lệ", "section": "validate", "trigger": "sai type/format", "source": "Mã lỗi tr.X"},
-    {"code": "LDH_SLA_002", "desc": "Không tìm thấy thông tin SLA", "section": "main", "trigger": "slaVersionId không tồn tại", "source": "Mã lỗi tr.X"},
-    # ... tất cả error codes
+    {"code": "ERR_001", "desc": "Dữ liệu đầu vào không hợp lệ", "section": "validate", "trigger": "sai type/format", "source": "Mã lỗi tr.X"}
   ],
   "businessRules": [
-    {"id": "BR1", "condition": "currentStatus=DRAFT", "trueBranch": "UPDATE status=PUSHED", "falseBranch": "error LDH_SLA_015", "source": "RSD tr.X"},
+    {"id": "BR1", "condition": "currentStatus=DRAFT", "trueBranch": "UPDATE status=PUSHED", "falseBranch": "error ERR_015", "source": "RSD tr.X"}
   ],
   "modes": [
-    {"name": "Lưu nháp", "triggerValue": "action=SAVE", "expectedAction": "UPDATE VERSION_NO++", "source": "RSD tr.X"},
-    {"name": "Gửi duyệt", "triggerValue": "action=PUSH", "expectedAction": "UPDATE status=PUSHED", "source": "RSD tr.X"},
+    {"name": "Lưu nháp", "triggerValue": "action=SAVE", "expectedAction": "UPDATE VERSION_NO++", "source": "RSD tr.X"}
   ],
   "dbOperations": [
-    {"table": "SLA_VERSION", "operation": "UPDATE", "fieldsToVerify": ["SLA_VERSION_ID","SLA_CODE","STATUS","VERSION_NO","UPDATED_AT","UPDATED_BY"], "source": "PTTK"},
+    {"table": "TABLE_NAME", "operation": "UPDATE", "fieldsToVerify": ["COL1","COL2","COL3"], "source": "PTTK"}
   ],
   "externalServices": [],
   "fieldConstraints": [
-    {"name": "slaVersionId", "type": "Long", "maxLength": None, "required": True, "source": "PTTK"},
-    {"name": "effectiveDate", "type": "Date", "maxLength": None, "required": True, "source": "PTTK"},
-    # ... tất cả fields
+    {"name": "fieldName", "type": "String", "maxLength": 100, "required": true, "source": "PTTK"}
   ],
-
-  # ── Request schema (pathParams / queryParams / bodyParams) ──
   "requestSchema": {
-    "pathParams": [
-      # {"name": "slaVersionId", "type": "Long", "required": True, "desc": "ID phiên bản SLA"}
-    ],
-    "queryParams": [
-      # {"name": "action", "type": "String", "required": True, "values": ["SAVE", "PUSH"], "desc": "Loại hành động"}
-    ],
-    "bodyParams": [
-      # Liệt kê toàn bộ fields từ fieldConstraints kèm constraint đầy đủ
-      # {"name": "slaName", "type": "String", "required": True, "maxLength": 100},
-      # {"name": "steps", "type": "Array<Step>", "required": True, "items": {
-      #   "processStepCode": {"type": "String", "required": True, "maxLength": 50},
-      #   "processStepName": {"type": "String", "required": True, "maxLength": 200},
-      #   "slaHours": {"type": "Integer", "required": True, "min": 1, "max": 99}
-      # }}
-    ]
+    "pathParams": [],
+    "queryParams": [],
+    "bodyParams": []
   },
-
-  # ── Response schema ──
   "responseSchema": {
-    "success": {
-      "status": 200,
-      "body": {
-        # Tên field: type — từ PTTK response definition
-        # "slaVersionId": "Long",
-        # "slaName": "String",
-        # "status": "String (DRAFT|PUSHED|APPROVED)"
-      },
-      "sample": {
-        # Giá trị mẫu thực tế — KHÔNG dùng placeholder
-        # "slaVersionId": 10001,
-        # "slaName": "SLA Chỉnh sửa Test",
-        # "status": "DRAFT"
-      }
-    },
-    "error": {
-      "status": 200,
-      "body": {"code": "String", "message": "String"}
-    }
+    "success": {"status": 200, "body": {}, "sample": {}},
+    "error": {"status": 200, "body": {"code": "String", "message": "String"}}
   },
-
-  # ── Sample valid data cho test case generation ──
   "testData": [
-    # 1 valid value cho mỗi field — dùng làm base request trong test cases
-    # {"field": "slaName", "type": "String", "validValue": "SLA Test 001", "note": "tên SLA đúng định dạng"},
-    # {"field": "effectiveDate", "type": "Date", "validValue": "2025-01-01", "note": "ngày hiệu lực hợp lệ"},
-    # {"field": "action", "type": "String", "validValue": "SAVE", "note": "lưu nháp"},
+    {"field": "fieldName", "type": "String", "validValue": "Sample Value", "note": "valid format"}
   ]
 }
-
-with open(r"{OUTPUT_DIR}/patch.json", "w", encoding="utf-8") as f:
-    json.dump(patch, f, ensure_ascii=False, indent=2)
 ```
+        </structure>
+    </step>
 
-**Bước 4b** — Apply patch:
-
-```bash
-python3 {SKILL_SCRIPTS}/inventory.py patch \
+    <step id="4b" name="Apply patch">
+        <actions>
+            <action type="bash">
+                <script>python3 {SKILL_SCRIPTS}/inventory.py patch \
   --file {INVENTORY_FILE} \
-  --patch-file {OUTPUT_DIR}/patch.json
-```
+  --patch-file {OUTPUT_DIR}/patch.json</script>
+            </action>
+        </actions>
+    </step>
+</step>
 
-### 5. Chạy summary và báo cáo
+<step id="5" name="Run summary and report">
+    <actions>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}</script>
+        </action>
+    </actions>
 
-```bash
-python3 {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}
-```
+    <validation_checks>
+        <check condition="errorCodes = 0">
+            <message>Không tìm thấy bảng mã lỗi trong tài liệu.</message>
+        </check>
+        <check condition="requestSchema.bodyParams = 0">
+            <message>Không tìm thấy request body params trong PTTK.</message>
+        </check>
+        <check condition="responseSchema.success = {}">
+            <message>Cảnh báo: Không tìm thấy response schema — test cases có thể thiếu response body.</message>
+        </check>
+    </validation_checks>
+</step>
 
-In kết quả summary. Kiểm tra:
-- `errorCodes = 0` → báo lỗi: "Không tìm thấy bảng mã lỗi trong tài liệu."
-- `requestSchema.bodyParams = 0` → báo lỗi: "Không tìm thấy request body params trong PTTK."
-- `responseSchema.success = {}` → cảnh báo: "Không tìm thấy response schema — test cases có thể thiếu response body."
+<step id="6" name="Check for conflicts">
+    <description>Report any contradictions between PTTK and RSD</description>
+    <condition>If conflicts detected between PTTK and RSD (field name, type, required)</condition>
+    <output>
+        <description>Note conflicts for orchestrator to handle</description>
+    </output>
+</step>
 
-### 6. Kiểm tra conflicts
-
-Nếu phát hiện mâu thuẫn giữa PTTK và RSD (field name, type, required), ghi chú vào summary output để orchestrator xử lý.
+---
 
 ## Output
 
-`{INVENTORY_FILE}` được tạo và điền đầy đủ bao gồm:
-- Business logic (errorCodes, businessRules, modes, dbOperations, externalServices)
-- fieldConstraints (cho td-validate)
-- requestSchema + responseSchema + testData (cho generate-test-case-api)
+<output_file>{INVENTORY_FILE}</output_file>
 
-In summary ra stdout.
+<contains>
+    <item>Business logic (errorCodes, businessRules, modes, dbOperations, externalServices)</item>
+    <item>fieldConstraints (for td-validate)</item>
+    <item>requestSchema + responseSchema + testData (for generate-test-case-api)</item>
+</contains>
+
+<note>Print summary to stdout</note>
+
+---
+
+## Context Block
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="RSD_FILE" type="path" required="true"/>
+        <param name="PTTK_FILE" type="string" default="none"/>
+        <param name="API_NAME" type="string" required="true"/>
+        <param name="METHOD" type="string" required="true"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>
