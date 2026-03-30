@@ -371,6 +371,33 @@ def _append_suite_row(rows, suite_row_indices, suite_names_by_index, suite_name,
     rows.append(suite_row)
 
 
+def _normalize_tc_keys(tc):
+    """Normalize Vietnamese/display field names to internal camelCase names."""
+    FIELD_ALIASES = {
+        'Tên chương trình':    'testSuiteName',
+        'Test case Id':        'testCaseId',
+        'Test case Title':     'testCaseName',
+        'Pre-conditions':      'preConditions',
+        'Test Steps':          'steps',
+        'Expected result':     'expectedResults',
+        'Priority':            'priority',
+        'Test Results Round1': 'result',
+        'Test Results':        'result',
+        'EVD':                 'attachments',
+        'BugID':               'bugId',
+        'Notes':               'note',
+    }
+    normalized = {}
+    for key, value in tc.items():
+        mapped = FIELD_ALIASES.get(key)
+        if mapped:
+            if mapped not in normalized:
+                normalized[mapped] = value
+        else:
+            normalized[key] = value
+    return normalized
+
+
 def build_rows(test_cases, column_mapping, total_columns):
     """Build 2D array from test cases using column mapping.
 
@@ -386,6 +413,9 @@ def build_rows(test_cases, column_mapping, total_columns):
     Returns (rows, suite_row_indices, test_case_count, suite_names_by_index).
     suite_names_by_index: dict mapping row_index → suite_name string.
     """
+    # Normalize field names (handles Vietnamese/display headers)
+    test_cases = [_normalize_tc_keys(tc) for tc in test_cases]
+
     # Step 1: pre-group test cases by suite order, preserving first-seen order
     # This prevents duplicate headers caused by non-contiguous same-suite cases.
     from collections import OrderedDict
@@ -448,8 +478,8 @@ def build_rows(test_cases, column_mapping, total_columns):
                 'result':          tc.get('result', 'PENDING'),
                 'testResults':     tc.get('testResults', ''),
                 'priority':        tc.get('priority') or tc.get('importance', ''),
-                'externalId':      tc.get('externalId', ''),
-                'testCaseId':      tc.get('testCaseId', ''),
+                'externalId':      tc.get('externalId') or tc.get('testCaseId', ''),
+                'testCaseId':      tc.get('testCaseId') or tc.get('externalId', ''),
                 'note':            tc.get('note', ''),
                 'details':         tc.get('details', ''),
                 'specTitle':       tc.get('specTitle', ''),
