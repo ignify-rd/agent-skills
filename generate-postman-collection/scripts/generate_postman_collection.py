@@ -293,7 +293,7 @@ def parse_response_assertions(value: Any) -> List[Dict[str, Any]]:
     return []
 
 
-def extract_json_block(text: str, keyword: str) -> Optional[str]:
+def extract_json_block(text: str, keyword: str, search_end: Optional[int] = None) -> Optional[str]:
     if not text:
         return None
     lower_text = text.lower()
@@ -301,7 +301,8 @@ def extract_json_block(text: str, keyword: str) -> Optional[str]:
     if key_idx < 0:
         return None
 
-    brace_start = text.find("{", key_idx)
+    limit = search_end if search_end is not None else len(text)
+    brace_start = text.find("{", key_idx, limit)
     if brace_start < 0:
         return None
 
@@ -364,10 +365,27 @@ def parse_preconditions_context(preconditions_text: str) -> Dict[str, Any]:
         endpoint_raw = re.sub(r"\{\{BASE_URL\}\}|\{BASE_URL\}", "", endpoint_raw, flags=re.IGNORECASE)
         context["endpoint"] = endpoint_raw if endpoint_raw.startswith("/") else f"/{endpoint_raw}"
 
-    headers_block = extract_json_block(preconditions_text, "header")
+    lower_pre = preconditions_text.lower()
+    header_kw_idx = lower_pre.find("header")
+    body_kw_idx = lower_pre.find("body")
+    # Limit header JSON search to before the body section to avoid picking up body JSON
+    header_search_end = body_kw_idx if body_kw_idx > header_kw_idx >= 0 else None
+    headers_block = extract_json_block(preconditions_text, "header", search_end=header_search_end)
     headers_obj = safe_json_loads(headers_block) if headers_block else None
     if isinstance(headers_obj, dict):
         context["headers"] = {str(k): str(v) for k, v in headers_obj.items()}
+    elif header_kw_idx >= 0:
+        # Header is plain text (key: value), parse it directly from the header section
+        section_end = body_kw_idx if body_kw_idx > header_kw_idx else len(preconditions_text)
+        header_section = preconditions_text[header_kw_idx:section_end]
+        parsed_text_headers = parse_headers(header_section)
+        # Drop the bare "header" label key that parse_headers may produce
+        parsed_text_headers = {
+            k: v for k, v in parsed_text_headers.items()
+            if k.lower() not in {"header", "headers"}
+        }
+        if parsed_text_headers:
+            context["headers"] = parsed_text_headers
 
     body_block = extract_json_block(preconditions_text, "body")
     body_obj = safe_json_loads(body_block) if body_block else None
