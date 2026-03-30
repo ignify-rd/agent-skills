@@ -1,11 +1,11 @@
 ---
 name: execute-test-case-frontend
-description: Execute frontend/UI test cases from a Google Sheets spreadsheet using Playwright browser automation. Reads test rows, performs browser interactions, validates assertions, captures screenshots, and writes PASS/FAIL results back to the sheet. Groups consecutive cases by Precondition Group to reuse browser session state — login and navigation run only once per group. Use when user says "execute frontend test", "run FE test cases", "chạy test case frontend", or provides a Sheets URL with frontend test data.
+description: Execute frontend/UI test cases from a Google Sheets spreadsheet using Playwright browser automation. Reads test rows, performs browser interactions, validates assertions, captures screenshots, and writes PASS/FAIL results back to the sheet. Supports two sheet formats: Standard (JSON steps/assertions) and Zephyr/TestRail (human-readable steps, detected automatically). Use when user says "execute frontend test", "run FE test cases", "chạy test case frontend", or provides a Sheets URL with frontend test data.
 ---
 
 # Execute Test Case — Frontend
 
-Reads frontend test cases from Google Sheets, executes each via Playwright browser automation, and writes results back. Groups consecutive cases by `Precondition Group` so that login and page navigation run **once per group** — subsequent cases in the group reuse the existing browser session and only execute their test-specific steps.
+Reads frontend test cases from Google Sheets, executes each via Playwright browser automation, and writes results back. Supports two spreadsheet formats, detected automatically.
 
 ---
 
@@ -13,7 +13,7 @@ Reads frontend test cases from Google Sheets, executes each via Playwright brows
 
 - **gsheets MCP** configured (`mcp__gsheets__*` tools available)
 - **Playwright MCP** configured (`mcp__playwright__*` tools available)
-- Google Sheet structured per the [Frontend schema](references/test-case-schema.md)
+- Google Sheet in Standard or Zephyr format (see Step 1)
 
 ---
 
@@ -31,228 +31,209 @@ If not provided, ask for it.
 ### Step 0b — Optional: Range / filter
 
 The user may optionally specify which test cases to run:
-- **Range**: "run FE-010 to FE-025" → only rows where Test ID is in that range
-- **List**: "run FE-003, FE-007" → only those specific IDs
-- **Re-run failures**: "re-run failed cases" → only rows where column G = "FAIL"
+- **Range**: "run DVC1 to DVC10" → only rows where Test ID is in that range
+- **List**: "run DVC3, DVC7" → only those specific IDs
+- **Re-run failures**: "re-run failed cases" → only rows where Result column = "FAIL"
 - **Force re-run**: "re-run all" → ignore already-executed check
 
 If not specified → run all pending rows in order.
 
-Store filter as `idFilter` (list of IDs, or null for all). Applied after Step 1 partitioning.
+Store filter as `idFilter`. Applied after Step 1 partitioning.
 
 ---
 
-### Step 1 — Read test cases
+### Step 1 — Read test cases + detect format
 
 ```
 mcp__gsheets__list_sheets(spreadsheetId)
 ```
 
-- Default tab name: `"Frontend Tests"`. If not in the list → ask user which tab to use. **Do NOT guess.**
+If no tab matches `"Frontend Tests"` — do NOT ask. Read all available tabs and auto-detect the format (below).
 
 ```
-mcp__gsheets__get_sheet_data(spreadsheetId, sheetName=<confirmed tab>)
+mcp__gsheets__get_sheet_data(spreadsheetId, sheetName=<best candidate tab>)
 ```
 
-- Row 1 is the header. Skip rows where column A (Test ID) is empty.
+Best candidate: tab named "TestCase", "Test Cases", "TestCases", "Frontend Tests", or the first non-"Evidence" tab.
 
-**⛔ Schema validation — STOP if mismatch:**
+---
 
-After reading, inspect row 1 (column headers). Expected layout:
+#### Format auto-detection (no user input required)
 
-| Col | Expected keyword |
-|-----|-----------------|
-| A | Test ID / ID |
-| B | Title / Name |
-| E | Steps |
-| F | Assertions |
+Scan all rows to find the header row (the row that contains the most column name keywords):
 
-If row 1 does NOT contain these keywords in roughly the right columns:
-1. Print: `Found columns: [A="{val}", B="{val}", C="{val}", D="{val}", E="{val}", F="{val}", G="{val}", ...]`
-2. **STOP. Ask user:**
-   > "Sheet format không khớp schema mong đợi. Tìm thấy: [actual headers]. Đây có phải đúng tab không? Nếu không, hãy cho biết tên tab hoặc mapping cột."
-3. **Do NOT attempt to auto-map, infer column meanings from content, or adapt.** Wait for explicit user confirmation.
+**Zephyr/TestRail format detected if ANY of these appear in the header row:**
+- `"External ID"` or `"ExternalID"`
+- `"Testcase LV1"` or `"TestCase LV"`
+- `"PreConditions"` (as a column header)
+- `"Expected Result"` paired with `"Step"` column
 
-**⛔ Steps/Assertions format check — STOP if not JSON:**
+**Standard format detected if header row contains:**
+- `"Test ID"` near column A AND `"Steps"` near column E AND `"Assertions"` near column F
 
-After identifying data rows, check the **first non-empty value** in column E (Steps) and column F (Assertions):
-- Each must be a valid JSON array starting with `[`
-- If either is human-readable text (e.g. "1. Click button...", "Hệ thống hiển thị...") → **STOP. Ask user:**
-  > "Cột Steps (E) / Assertions (F) chứa text thường, không phải JSON array. Skill này yêu cầu JSON steps và assertions. Bạn có muốn convert không, hay cần dùng skill khác?"
-- **Do NOT attempt to execute human-readable steps** by interpreting them manually.
+If neither format can be detected with confidence → **STOP. Ask user** to confirm the tab name and column layout. This is the only case that requires user input.
 
-Column mapping (after schema confirmed):
+---
+
+#### Standard format — column mapping
 
 | Col | Field | Notes |
 |-----|-------|-------|
 | A | Test ID | e.g. `FE-001` |
 | B | Title | Short description |
-| C | Precondition Group | Optional. Consecutive cases with same value share browser state |
-| D | Precondition Steps | JSON array — browser steps to reach the test entry point. Executed once per group |
-| E | Steps | JSON array — test-specific browser steps |
-| F | Assertions | JSON array — conditions to verify after steps |
-| G | Result | **Agent writes**: PASS / FAIL / ERROR |
-| H | Error Message | **Agent writes**: failure detail or empty |
-| I | Screenshot URL | **Agent writes**: file path of screenshot |
-| J | Executed At | **Agent writes**: ISO 8601 timestamp |
+| C | Precondition Group | Consecutive same-value rows share browser state |
+| D | Precondition Steps | JSON array of browser actions. Executed once per group |
+| E | Steps | JSON array of browser actions for this test case |
+| F | Assertions | JSON array of assertion objects |
+| G | **Result** | Agent writes: PASS / FAIL / ERROR |
+| H | **Error Message** | Agent writes |
+| I | **Screenshot** | Agent writes: file path |
+| J | **Executed At** | Agent writes: ISO 8601 |
 
-**Skip already-executed rows:**
-- `pendingRows` — rows where column G is empty
-- `doneRows` — rows where column G is non-empty
+Skip rows where column A is empty. Pending = column G empty.
+
+---
+
+#### Zephyr/TestRail format — column mapping
+
+Locate each field by scanning the header row for the keyword (column position may vary):
+
+| Keyword in header | Field | Agent reads/writes |
+|-------------------|-------|--------------------|
+| `External ID` | Test ID | reads |
+| `Name` (in test case section) | Title | reads |
+| `PreConditions` | Precondition text | reads |
+| `Step` | Test steps text | reads |
+| `Expected Result` | Expected outcome text | reads |
+| `Actual Result` | Actual outcome | **agent writes** |
+| `Kết quả` / last `Lần N` column | Result | **agent writes**: PASS / FAIL / ERROR |
+
+**Row detection:** Skip rows where Test ID column is empty (metadata/header rows). First data row is the first row where Test ID is non-empty.
+
+**Pending rows:** Rows where the Result column (`Kết quả` / `Lần N`) is empty or contains `"PENDING"`.
+
+**Already-executed rows:** Result column is `"PASS"` or `"FAIL"` — skip unless `--force`.
+
+**Row number tracking:** After reading, record the actual spreadsheet row number for each test case (= data array index + 1, accounting for 1-based indexing). Store as `sheetRow` per test case. This is critical for writing results back accurately.
 
 Print at start:
 ```
-Loaded {total} test cases: {pending} pending, {done} already executed (skipping)
+[Zephyr format detected] Loaded {total} test cases: {pending} pending, {done} already executed (skipping)
 ```
-Only execute `pendingRows` (unless user says "re-run all").
+
+---
+
+#### Zephyr grouping logic (replaces Precondition Group column)
+
+Since Zephyr format has no dedicated group column, derive groups by comparing the `PreConditions` text of consecutive rows:
+
+1. Take the first 200 characters of the PreConditions text (normalized: trim whitespace, lowercase)
+2. Consecutive rows where this prefix is **identical** → same group (reuse browser session)
+3. Consecutive rows where prefix differs → new group (reset browser, re-run preconditions)
+4. Empty PreConditions → solo group (reset browser before this case)
+
+```
+Example:
+  DVC1  precond="mở trình duyệt, vào url..."  → Group A (execute preconditions)
+  DVC2  precond="mở trình duyệt, vào url..."  → Group A (same prefix, reuse session)
+  DVC6  precond="đăng nhập với tài khoản..."  → Group B (different prefix, new group)
+  DVC7  precond="đăng nhập với tài khoản..."  → Group B (reuse session)
+```
+
+Commit to the first grouping derived — do NOT re-analyze or reconsider.
 
 ---
 
 ### Step 2 — Prepare Evidence sheet
 
-Read test cases first (Step 1 must complete before this step).
-
-Check if an `"Evidence"` tab exists:
+Check if `"Evidence"` tab exists:
 ```
 mcp__gsheets__list_sheets(spreadsheetId)
 ```
 
-If not found, create it, write the header row, then pre-populate column A with **all test case IDs** (from `pendingRows` + `doneRows`, in original order):
+If not found → create it:
 ```
 mcp__gsheets__create_sheet(spreadsheetId, "Evidence")
 mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A1:B1", [["Test ID", "Screenshot"]])
-
-# Pre-populate column A with all test IDs
-# e.g. if test IDs are FE-001…FE-020, write them to A2:A21
 mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A2:A{n+1}", [[id] for id in allTestIds])
 ```
 
-If the Evidence sheet **already exists**, read its current content to determine which rows already have screenshots (column B non-empty) so you can skip re-writing those rows.
-
-Track the next available Evidence row: find the first row in column A that has a Test ID but an empty column B (or append after the last populated row).
-
-**Important:** column A is the source of truth for row positions — always look up the Evidence row for a given Test ID by scanning column A, do not assume sequential order.
+If already exists → read column A to build a `testId → evidenceRow` lookup map. Never assume sequential order.
 
 ---
 
-### Step 3 — Group by Precondition Group
+### Step 3 — Execute each group
 
-**Group consecutive rows** sharing the same `Precondition Group` value (column C).
+#### 3a — Execute Precondition Steps (once per group)
 
-- Empty column C → solo group (browser resets before this case).
-- Non-consecutive appearances of the same group name → separate group instances (re-execute preconditions).
+**Standard format:** Execute the JSON array from column D using Playwright tools.
 
-```
-Example:
-  FE-001  group=login-admin   → Group A (first case — execute preconditions)
-  FE-002  group=login-admin   → Group A (reuse session)
-  FE-003  group=login-admin   → Group A (reuse session)
-  FE-004  group=login-guest   → Group B (new group — execute preconditions)
-  FE-005  group=login-guest   → Group B (reuse session)
-  FE-006  group=              → Solo (reset browser)
-  FE-007  group=login-admin   → Group C (non-consecutive — re-execute preconditions)
-```
+**Zephyr format:** Parse the PreConditions text from the group's first row:
 
----
+1. Extract URL if present (pattern: `https?://[^\s]+`) → `browser_navigate(url=...)`
+2. Extract login credentials if present:
+   - Email pattern: `[\w.+-]+@[\w-]+\.[a-z]+`
+   - Password: text after `mật khẩu` or `password:`
+   - → Fill login form: `browser_fill` email field, `browser_fill` password field, `browser_click` login button
+3. Wait for page to settle: `browser_wait_for(time=2)`
+4. Take snapshot to confirm page loaded
 
-### Step 4 — Execute each group
+After all precondition steps succeed → record `entryUrl` (current URL from snapshot).
 
-#### 4a — Execute Precondition Steps (once per group, first case only)
+If preconditions fail → mark all cases in group as ERROR: `"Precondition failed: {detail}"`. Close browser. Skip to next group.
 
-Take `Precondition Steps` (column D) from the **first row** of the group (subsequent rows' column D is ignored even if non-empty).
-
-Precondition steps execute the login flow, navigate to the feature page, and establish the **entry state** for all test cases in the group.
-
-Execute each step using Playwright MCP tools (see [browser-control.md](references/browser-control.md)):
-
-```json
-[
-  {"action": "goto", "url": "https://app.example.com/login"},
-  {"action": "fill", "selector": "#email", "value": "admin@test.com"},
-  {"action": "fill", "selector": "#password", "value": "Admin@123"},
-  {"action": "click", "selector": "button[type=submit]"},
-  {"action": "wait_for", "selector": ".dashboard", "timeout": 5000},
-  {"action": "goto", "url": "https://app.example.com/feature"},
-  {"action": "wait_for", "selector": ".feature-list", "timeout": 3000}
-]
-```
-
-After all precondition steps complete successfully, record the **entry URL** (current page URL from snapshot). This URL is used to reset state between test cases within the group.
-
-If any precondition step fails → mark **all cases in the group** as ERROR: `"Precondition failed: {step_index} — {detail}"`. Close browser. Skip to next group.
-
-#### 4b — Execute each test case in the group
+#### 3b — Execute each test case
 
 For each test row, in order:
 
-**4b-1: Reset to entry state (skip for the first case in the group)**
-
-For the 2nd and subsequent cases: navigate back to the entry URL before running steps.
+**3b-1: Reset to entry state (skip for the first case in each group)**
 
 ```
 mcp__playwright__browser_navigate(url=entryUrl)
-mcp__playwright__browser_wait_for(selector=lastPreconditionWaitSelector, timeout=3000)
+mcp__playwright__browser_wait_for(time=2)
 ```
 
-This ensures each test starts from the same page without re-doing the full login flow.
+**3b-2: Execute test Steps**
 
-**4b-2: Execute test Steps (column E)**
+**Standard format:** Execute the JSON array from column E using Playwright tools (see [browser-control.md](references/browser-control.md)).
 
-```json
-[
-  {"action": "click", "selector": "#btn-create"},
-  {"action": "fill", "selector": "#form-name", "value": "Test Item"},
-  {"action": "click", "selector": "#btn-submit"},
-  {"action": "wait_for", "selector": ".success-toast", "timeout": 3000}
-]
-```
+**Zephyr format:** The Steps column contains numbered human-readable steps. Execute each step sequentially:
 
-Execute using Playwright MCP tools. See [browser-control.md](references/browser-control.md) for action → tool mapping.
+1. Parse numbered steps: split on `\n`, strip step numbers (`1.`, `2.`, etc.)
+2. For each step text:
+   - **Take snapshot** to see current page state
+   - Determine the appropriate Playwright action based on step description:
 
-On step failure:
-- Capture screenshot immediately.
-- Record step index and error detail.
-- Stop executing further steps.
-- Proceed to assertions (they will likely fail too, providing more context).
+| Step text pattern | Playwright action |
+|-------------------|------------------|
+| Contains URL (`https?://`) | `browser_navigate(url=...)` |
+| "click", "nhấn", "bấm" + element description | `browser_click(element=<find from snapshot>)` |
+| "nhập", "điền", "enter" + value + field description | `browser_fill(element=<find from snapshot>, value=...)` |
+| "chờ", "wait", "tải trang" | `browser_wait_for(time=2)` |
+| "scroll", "cuộn" | `browser_evaluate(script="window.scrollBy(0, 300)")` |
+| "hover", "di chuột" | `browser_hover(element=<find from snapshot>)` |
 
-**4b-3: Run Assertions (column F)**
+   - Use snapshot's accessibility tree to find the correct `ref` for elements mentioned in the step
+   - On step failure: capture screenshot, record error, stop further steps for this case
 
-```json
-[
-  {"type": "visible",          "selector": ".success-toast"},
-  {"type": "not_visible",      "selector": ".error-message"},
-  {"type": "text_equals",      "selector": "h1",            "value": "Tạo mới thành công"},
-  {"type": "text_contains",    "selector": ".status-badge", "value": "Đang xử lý"},
-  {"type": "value_equals",     "selector": "#input-name",   "value": "Tên sản phẩm A"},
-  {"type": "attribute_equals", "selector": "#btn-save",     "attribute": "disabled", "value": "true"},
-  {"type": "count_equals",     "selector": ".table-row",    "value": 5},
-  {"type": "url_contains",     "value": "/dashboard"},
-  {"type": "url_equals",       "value": "https://app.example.com/dashboard"}
-]
-```
+**3b-3: Validate result**
 
-**Assertion type reference:**
+**Standard format:** Evaluate each assertion in the JSON array from column F against a fresh snapshot.
 
-| type | Checks | Required fields |
-|------|--------|----------------|
-| `visible` | Element exists and is visible | `selector` |
-| `not_visible` | Element absent or hidden | `selector` |
-| `text_equals` | Element text = value (exact, trimmed) | `selector`, `value` |
-| `text_contains` | Element text contains value | `selector`, `value` |
-| `value_equals` | Input/textarea `.value` = value | `selector`, `value` |
-| `attribute_equals` | Element attribute = value | `selector`, `attribute`, `value` |
-| `count_equals` | Number of matching elements = value | `selector`, `value` (integer) |
-| `url_contains` | Current URL contains value | `value` |
-| `url_equals` | Current URL = value (exact) | `value` |
+**Zephyr format:** The Expected Result column contains a human-readable description. Validate by:
 
-Use `mcp__playwright__browser_snapshot` to get the current page state, then evaluate assertions against the snapshot.
+1. Take a fresh snapshot
+2. Check if **key phrases** from the Expected Result text appear in the snapshot's visible text
+3. If expected result mentions a URL pattern → also check `browser_evaluate("window.location.href")`
+4. Record as PASS if key phrases are present; FAIL with detail if absent
 
-On first failure → record `"Assertion failed [{type}]: selector={selector}, expected={value}, got={actual}"`. Continue remaining assertions to collect all failures.
+Key phrase extraction: take noun phrases and quoted strings from the expected result. Example:
+- "Hệ thống đăng nhập thành công, điều hướng tới trang Discuss" → check for "Discuss" in snapshot + URL contains `/discuss`
+- "Hiển thị thông báo lỗi 'Sai mật khẩu'" → check for "Sai mật khẩu" in snapshot
 
-**4b-4: Capture screenshot**
+**3b-4: Capture screenshot**
 
-Always capture screenshot regardless of pass/fail:
-
+Always capture, regardless of pass/fail:
 ```
 mcp__playwright__browser_take_screenshot(
   filename="screenshots/{testId}_{yyyyMMdd_HHmmss}.png",
@@ -260,88 +241,78 @@ mcp__playwright__browser_take_screenshot(
 )
 ```
 
-Save to a `screenshots/` folder relative to the working directory.
+**3b-5: Write result**
 
-**4b-5: Write result**
-
-Write to test sheet immediately:
+**Standard format** — write to the test sheet:
 ```
-mcp__gsheets__update_cells(spreadsheetId, "Frontend Tests", rowIndex, {
-  G: "PASS" | "FAIL" | "ERROR",
-  H: errorMessage or "",
-  I: screenshotPath,
-  J: ISO timestamp
-})
+mcp__gsheets__update_cells(spreadsheetId, sheetName, "G{sheetRow}:J{sheetRow}", [[
+  "PASS"|"FAIL"|"ERROR",
+  errorMessage or "",
+  screenshotPath,
+  isoTimestamp
+]])
 ```
 
-Write to Evidence sheet — find the row whose column A matches `testId`, then write an `=IMAGE()` formula to column B so the screenshot renders as a viewable image in the sheet:
+**Zephyr format** — write to the test sheet using the exact `sheetRow` recorded in Step 1:
 ```
-# Find Evidence row by testId (from the pre-populated column A)
-evidenceRow = lookup row in Evidence where A == testId
+# Write Actual Result
+mcp__gsheets__update_cells(spreadsheetId, sheetName, "{actualResultCol}{sheetRow}", [[actualResultText]])
 
-# Write IMAGE formula to column B
-# screenshotUrl must be a web-accessible URL (https://...)
-# If screenshots are saved locally, upload to a public host first (e.g. Google Drive
-# shared link, imgbb, etc.) and use that URL here.
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", f"B{evidenceRow}",
-  [[f'=IMAGE("{screenshotUrl}")']]
-)
+# Write PASS/FAIL to result column
+mcp__gsheets__update_cells(spreadsheetId, sheetName, "{resultCol}{sheetRow}", [["PASS"|"FAIL"|"ERROR"]])
 ```
 
-**Obtaining a web-accessible screenshot URL:**
-- If the Playwright MCP returns a public URL for the screenshot, use it directly.
-- If only a local file path is available, attempt to upload the file to Google Drive using any available `mcp__gdrive__*` upload tool, then use the shareable `https://drive.google.com/uc?id=FILE_ID` link.
-- If no upload mechanism is available, fall back to writing the local file path as plain text (the image will not render inline but the path is preserved for reference).
+Write to Evidence sheet — find the row where column A = testId, write screenshot path to column B:
+```
+evidenceRow = lookup in evidenceMap[testId]
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", f"B{evidenceRow}", [[screenshotPath]])
+```
 
-#### 4c — Close browser after each group
+#### 3c — Close browser after each group
 
-After all cases in a group complete (or on group-level ERROR), close the browser context:
 ```
 mcp__playwright__browser_close()
 ```
 
 ---
 
-### Step 5 — Print summary
+### Step 4 — Print summary
 
 ```
 === Frontend Test Execution Summary ===
+Format: Standard | Zephyr
 Total:  {n}
 PASS:   {n}  ✓
 FAIL:   {n}  ✗
 ERROR:  {n}  ⚠
 
 Screenshots saved to: screenshots/
-Evidence sheet: "Evidence" tab in the spreadsheet
 
 FAILED cases:
-  - FE-003 "Tạo item mới": Assertion failed — ".success-toast" not visible
-
+  - DVC-003 "Tạo item mới": Expected "thành công" not found in page
 ERROR cases:
-  - FE-006 "Xem chi tiết": Precondition failed: step 2 — selector "#email" not found
+  - DVC-006 "Xem chi tiết": Precondition failed — login form not found
 ```
 
 ---
 
 ## Guardrails
 
-- **Never modify** columns A–F (user input). Only write to G, H, I, J.
-- **Never skip writing results** — even on ERROR, write the result row.
-- **Never re-execute** rows where column G is already non-empty unless explicitly instructed.
+- **Never modify** user-input columns. Only write to Result, Actual Result, Screenshot, Executed At columns.
+- **Never skip writing results** — even on ERROR.
+- **Never re-execute** already-executed rows unless explicitly instructed.
 - **Always close the browser** after each group, even on error.
-- Screenshot filenames must not contain spaces or special characters — use `{testId}_{yyyyMMdd_HHmmss}.png`.
+- Screenshot filenames must not contain spaces — use `{testId}_{yyyyMMdd_HHmmss}.png`.
+- **Commit to the detected format immediately.** Do not switch format mid-execution.
 
 ## ⛔ Anti-loop rules
 
-These situations require an **immediate STOP + ask user** — never attempt to auto-adapt or analyze further:
+These are the ONLY situations that require stopping to ask the user:
 
 | Situation | Action |
 |-----------|--------|
-| Sheet tab `"Frontend Tests"` not found | List sheets → ask user which tab |
-| Row 1 headers don't match expected schema | Print found headers → ask user to confirm mapping |
-| Column E or F contains human-readable text, not JSON | Ask user if they want to convert or use a different skill |
-| No Precondition Group column (column C empty for all rows) | Ask user: "Không có cột Precondition Group. Tất cả test cases chạy riêng lẻ (reset browser mỗi case). Tiếp tục không?" |
-| Cannot determine Test ID from a row | Skip that row, log `"Could not parse row {n}"`, continue |
-| Same blocker occurs 2+ times in a row | STOP all execution, report to user |
+| Format cannot be auto-detected (neither Standard nor Zephyr markers found) | Print found headers → ask user |
+| Cannot determine which column is the Result column | Ask user once, then proceed |
+| Same execution blocker occurs 3+ times in a row | STOP all execution, report to user |
 
-**Analysis limit**: If you catch yourself re-reading the same sheet data, re-examining the same snapshot, or reconsidering the same grouping strategy more than twice → STOP and ask the user instead.
+**Analysis limit**: If you catch yourself re-reading the same sheet data, reconsidering the same grouping, or re-examining the same snapshot more than twice to answer the same question → commit to the best available interpretation and proceed.
