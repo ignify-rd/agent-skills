@@ -7,6 +7,8 @@ description: Execute frontend/UI test cases from a Google Sheets spreadsheet usi
 
 Reads frontend test cases from Google Sheets, executes each via Playwright browser automation, and writes results back. Supports two spreadsheet formats, detected automatically.
 
+Uses **subagent-per-batch** execution to prevent token accumulation across test cases.
+
 ---
 
 ## Prerequisites
@@ -179,123 +181,121 @@ mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A2:A{n+1}", [[id] for id 
 
 If already exists → read column A to build a `testId → evidenceRow` lookup map. Never assume sequential order.
 
+**Build `evidenceMap`**: a mapping of `testId → evidence sheet row number`. This is passed to subagents.
+
 ---
 
-### Step 3 — Execute each group
+### Step 2b — Group + batch splitting
 
-#### 3a — Execute Precondition Steps (once per group)
+**Standard format**: Group consecutive rows by column C (Precondition Group). Empty C → solo group.
 
-**Standard format:** Execute the JSON array from column D using Playwright tools.
+**Zephyr format**: Group by PreConditions text prefix (see Zephyr grouping logic above).
 
-**Zephyr format:** Parse the PreConditions text from the group's first row:
+**Batch splitting** — after grouping, split large groups into batches:
 
-1. Extract URL if present (pattern: `https?://[^\s]+`) → `browser_navigate(url=...)`
-2. Extract login credentials if present:
-   - Email pattern: `[\w.+-]+@[\w-]+\.[a-z]+`
-   - Password: text after `mật khẩu` or `password:`
-   - → Fill login form: `browser_fill` email field, `browser_fill` password field, `browser_click` login button
-3. Wait for page to settle: `browser_wait_for(time=2)`
-4. Take snapshot to confirm page loaded
+- `MAX_BATCH = 5` — if a group has more than 5 pending test cases, split into sub-batches of 5
+- Each sub-batch re-runs preconditions independently (minor overhead, major token savings)
 
-After all precondition steps succeed → record `entryUrl` (current URL from snapshot).
+Example: Group A has 12 cases → Batch A1 (cases 1–5), Batch A2 (cases 6–10), Batch A3 (cases 11–12).
 
-If preconditions fail → mark all cases in group as ERROR: `"Precondition failed: {detail}"`. Close browser. Skip to next group.
+---
 
-#### 3b — Execute each test case
+### Step 3 — Execute batches via subagents
 
-For each test row, in order:
+To prevent token accumulation, each batch is executed by a **separate subagent** with a fresh context. The subagent writes results directly to the sheet.
 
-**3b-1: Reset to entry state (skip for the first case in each group)**
+**Small run shortcut**: If total pending test cases ≤ 3, skip subagents and execute directly following [execute-batch.md](references/execute-batch.md) instructions inline.
+
+#### Subagent prompt template — Standard format
 
 ```
-mcp__playwright__browser_navigate(url=entryUrl)
-mcp__playwright__browser_wait_for(time=2)
-```
+Agent(
+  description="FE test {startId}–{endId}",
+  prompt="""
+Read these files for execution instructions:
+- {skillDir}/references/execute-batch.md
+- {skillDir}/references/browser-control.md
 
-**3b-2: Execute test Steps**
+## Data
 
-**Standard format:** Execute the JSON array from column E using Playwright tools (see [browser-control.md](references/browser-control.md)).
+spreadsheetId: {spreadsheetId}
+sheetName: {sheetName}
+format: Standard
 
-**Zephyr format:** The Steps column contains numbered human-readable steps. Execute each step sequentially:
+### Precondition Steps (execute once before test cases):
+{preconditionStepsJSON or "None"}
 
-1. Parse numbered steps: split on `\n`, strip step numbers (`1.`, `2.`, etc.)
-2. For each step text:
-   - **Take snapshot** to see current page state
-   - Determine the appropriate Playwright action based on step description:
+### Test cases to execute:
+| Sheet Row | Test ID | Steps (JSON) | Assertions (JSON) |
+|-----------|---------|-------------|-------------------|
+| {row} | {id} | {steps} | {assertions} |
+...
 
-| Step text pattern | Playwright action |
-|-------------------|------------------|
-| Contains URL (`https?://`) | `browser_navigate(url=...)` |
-| "click", "nhấn", "bấm" + element description | `browser_click(element=<find from snapshot>)` |
-| "nhập", "điền", "enter" + value + field description | `browser_fill(element=<find from snapshot>, value=...)` |
-| "chờ", "wait", "tải trang" | `browser_wait_for(time=2)` |
-| "scroll", "cuộn" | `browser_evaluate(script="window.scrollBy(0, 300)")` |
-| "hover", "di chuột" | `browser_hover(element=<find from snapshot>)` |
+### Evidence row mapping:
+| Test ID | Evidence Row |
+|---------|-------------|
+| {id} | {evidenceRow} |
+...
 
-   - Use snapshot's accessibility tree to find the correct `ref` for elements mentioned in the step
-   - On step failure: capture screenshot, record error, stop further steps for this case
-
-**3b-3: Validate result**
-
-**Standard format:** Evaluate each assertion in the JSON array from column F against a fresh snapshot.
-
-**Zephyr format:** The Expected Result column contains a human-readable description. Validate by:
-
-1. Take a fresh snapshot
-2. Check if **key phrases** from the Expected Result text appear in the snapshot's visible text
-3. If expected result mentions a URL pattern → also check `browser_evaluate("window.location.href")`
-4. Record as PASS if key phrases are present; FAIL with detail if absent
-
-Key phrase extraction: take noun phrases and quoted strings from the expected result. Example:
-- "Hệ thống đăng nhập thành công, điều hướng tới trang Discuss" → check for "Discuss" in snapshot + URL contains `/discuss`
-- "Hiển thị thông báo lỗi 'Sai mật khẩu'" → check for "Sai mật khẩu" in snapshot
-
-**3b-4: Capture screenshot**
-
-Always capture, regardless of pass/fail:
-```
-mcp__playwright__browser_take_screenshot(
-  filename="screenshots/{testId}_{yyyyMMdd_HHmmss}.png",
-  type="png"
+Follow execute-batch.md workflow (Standard format sections).
+Write results to columns G–J. Report summary when done.
+"""
 )
 ```
 
-**3b-5: Write result**
-
-**Standard format** — write to the test sheet:
-```
-mcp__gsheets__update_cells(spreadsheetId, sheetName, "G{sheetRow}:J{sheetRow}", [[
-  "PASS"|"FAIL"|"ERROR",
-  errorMessage or "",
-  screenshotPath,
-  isoTimestamp
-]])
-```
-
-**Zephyr format** — write to the test sheet using the exact `sheetRow` recorded in Step 1:
-```
-# Write Actual Result
-mcp__gsheets__update_cells(spreadsheetId, sheetName, "{actualResultCol}{sheetRow}", [[actualResultText]])
-
-# Write PASS/FAIL to result column
-mcp__gsheets__update_cells(spreadsheetId, sheetName, "{resultCol}{sheetRow}", [["PASS"|"FAIL"|"ERROR"]])
-```
-
-Write to Evidence sheet — find the row where column A = testId, write screenshot path to column B:
-```
-evidenceRow = lookup in evidenceMap[testId]
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", f"B{evidenceRow}", [[screenshotPath]])
-```
-
-#### 3c — Close browser after each group
+#### Subagent prompt template — Zephyr format
 
 ```
-mcp__playwright__browser_close()
+Agent(
+  description="FE test {startId}–{endId}",
+  prompt="""
+Read these files for execution instructions:
+- {skillDir}/references/execute-batch.md
+- {skillDir}/references/browser-control.md
+
+## Data
+
+spreadsheetId: {spreadsheetId}
+sheetName: {sheetName}
+format: Zephyr
+
+### Column mapping:
+- Actual Result column: {actualResultCol}
+- Result column: {resultCol}
+
+### Precondition text (execute once):
+{preconditionText or "None"}
+
+### Test cases to execute:
+| Sheet Row | Test ID | Steps | Expected Result |
+|-----------|---------|-------|----------------|
+| {row} | {id} | {steps} | {expected} |
+...
+
+### Evidence row mapping:
+| Test ID | Evidence Row |
+|---------|-------------|
+| {id} | {evidenceRow} |
+...
+
+Follow execute-batch.md workflow (Zephyr format sections).
+Write Actual Result + PASS/FAIL to the specified columns. Report summary when done.
+"""
+)
 ```
+
+**Replace `{skillDir}`** with the actual absolute path to this skill's directory.
+
+**Important execution rules:**
+- Execute batches **sequentially** — Playwright MCP supports only one browser session at a time.
+- After each subagent returns, collect its pass/fail/error counts.
+- If a subagent reports a blocker → resolve with user, then re-spawn.
 
 ---
 
 ### Step 4 — Print summary
+
+Aggregate results from all subagent summaries:
 
 ```
 === Frontend Test Execution Summary ===

@@ -15,6 +15,7 @@ These rules apply when the `execute-test-case-frontend` skill is active. A proje
 | Skip already-executed rows | true | Yes |
 | Entry state reset selector | Last `wait_for` in precondition steps | Yes — set `entry_selector` in project AGENTS.md |
 | Continue on assertion failure | false (stop at first) | Yes |
+| Max batch size (subagent) | 5 | Yes — controls how many test cases per subagent (lower = less tokens, more overhead) |
 
 ---
 

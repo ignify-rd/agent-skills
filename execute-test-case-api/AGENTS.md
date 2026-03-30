@@ -15,6 +15,7 @@ These rules apply when the `execute-test-case-api` skill is active. A project-le
 | Response truncation length | 500 characters | Yes |
 | Result column start | Column K | No |
 | Skip already-executed rows | true | Yes — set to false to force re-run |
+| Max batch size (subagent) | 5 | Yes — controls how many test cases per subagent (lower = less tokens, more overhead) |
 
 ---
 
