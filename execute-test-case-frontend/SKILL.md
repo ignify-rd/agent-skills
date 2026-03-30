@@ -45,14 +45,43 @@ Store filter as `idFilter` (list of IDs, or null for all). Applied after Step 1 
 ### Step 1 — Read test cases
 
 ```
-mcp__gsheets__get_sheet_data(spreadsheetId, sheetName="Frontend Tests")
+mcp__gsheets__list_sheets(spreadsheetId)
 ```
 
-- Default tab name: `"Frontend Tests"`. If not found, call `mcp__gsheets__list_sheets` and ask the user.
-- Row 1 is the header. Skip it.
-- Skip rows where column A (Test ID) is empty.
+- Default tab name: `"Frontend Tests"`. If not in the list → ask user which tab to use. **Do NOT guess.**
 
-Column mapping (1-indexed):
+```
+mcp__gsheets__get_sheet_data(spreadsheetId, sheetName=<confirmed tab>)
+```
+
+- Row 1 is the header. Skip rows where column A (Test ID) is empty.
+
+**⛔ Schema validation — STOP if mismatch:**
+
+After reading, inspect row 1 (column headers). Expected layout:
+
+| Col | Expected keyword |
+|-----|-----------------|
+| A | Test ID / ID |
+| B | Title / Name |
+| E | Steps |
+| F | Assertions |
+
+If row 1 does NOT contain these keywords in roughly the right columns:
+1. Print: `Found columns: [A="{val}", B="{val}", C="{val}", D="{val}", E="{val}", F="{val}", G="{val}", ...]`
+2. **STOP. Ask user:**
+   > "Sheet format không khớp schema mong đợi. Tìm thấy: [actual headers]. Đây có phải đúng tab không? Nếu không, hãy cho biết tên tab hoặc mapping cột."
+3. **Do NOT attempt to auto-map, infer column meanings from content, or adapt.** Wait for explicit user confirmation.
+
+**⛔ Steps/Assertions format check — STOP if not JSON:**
+
+After identifying data rows, check the **first non-empty value** in column E (Steps) and column F (Assertions):
+- Each must be a valid JSON array starting with `[`
+- If either is human-readable text (e.g. "1. Click button...", "Hệ thống hiển thị...") → **STOP. Ask user:**
+  > "Cột Steps (E) / Assertions (F) chứa text thường, không phải JSON array. Skill này yêu cầu JSON steps và assertions. Bạn có muốn convert không, hay cần dùng skill khác?"
+- **Do NOT attempt to execute human-readable steps** by interpreting them manually.
+
+Column mapping (after schema confirmed):
 
 | Col | Field | Notes |
 |-----|-------|-------|
@@ -301,3 +330,18 @@ ERROR cases:
 - **Never re-execute** rows where column G is already non-empty unless explicitly instructed.
 - **Always close the browser** after each group, even on error.
 - Screenshot filenames must not contain spaces or special characters — use `{testId}_{yyyyMMdd_HHmmss}.png`.
+
+## ⛔ Anti-loop rules
+
+These situations require an **immediate STOP + ask user** — never attempt to auto-adapt or analyze further:
+
+| Situation | Action |
+|-----------|--------|
+| Sheet tab `"Frontend Tests"` not found | List sheets → ask user which tab |
+| Row 1 headers don't match expected schema | Print found headers → ask user to confirm mapping |
+| Column E or F contains human-readable text, not JSON | Ask user if they want to convert or use a different skill |
+| No Precondition Group column (column C empty for all rows) | Ask user: "Không có cột Precondition Group. Tất cả test cases chạy riêng lẻ (reset browser mỗi case). Tiếp tục không?" |
+| Cannot determine Test ID from a row | Skip that row, log `"Could not parse row {n}"`, continue |
+| Same blocker occurs 2+ times in a row | STOP all execution, report to user |
+
+**Analysis limit**: If you catch yourself re-reading the same sheet data, re-examining the same snapshot, or reconsidering the same grouping strategy more than twice → STOP and ask the user instead.
