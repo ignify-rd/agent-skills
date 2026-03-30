@@ -96,25 +96,44 @@ Skip rows where column A is empty. Pending = column G empty.
 
 #### Zephyr/TestRail format — column mapping
 
-Locate each field by scanning the header row for the keyword (column position may vary):
+**Step 1: Build column map from ALL header rows (multi-header support)**
 
-| Keyword in header | Field | Agent reads/writes |
-|-------------------|-------|--------------------|
+Zephyr sheets often have 2 stacked header rows (section-level + column-level). Do NOT assume a single header row. Instead:
+
+1. Scan rows from the top until the first valid data row (see "Data row detection" below).
+2. Treat ALL rows in that pre-data zone as potential header rows.
+3. Merge column labels across all those rows: for each column index, collect every non-empty label found across all header rows.
+4. Use the merged label set to locate each field.
+
+Example merged scan for column Z: section header says "Kết quả hiện tại", column header is empty → result column = Z. ✓
+
+**Step 2: Locate each field by keyword (position may vary)**
+
+| Keyword in any header row | Field | Agent reads/writes |
+|---------------------------|-------|--------------------|
 | `External ID` | Test ID | reads |
-| `Name` (in test case section) | Title | reads |
+| `Name` (in test case section, not "Name" in section header) | Title | reads |
 | `PreConditions` | Precondition text | reads |
 | `Step` | Test steps text | reads |
 | `Expected Result` | Expected outcome text | reads |
 | `Actual Result` | Actual outcome | **agent writes** |
-| `Kết quả` / last `Lần N` column | Result | **agent writes**: PASS / FAIL / ERROR |
+| `Kết quả` or `Kết quả hiện tại` | Result status | **agent writes**: PASS / FAIL / ERROR |
 
-**Row detection:** Skip rows where Test ID column is empty (metadata/header rows). First data row is the first row where Test ID is non-empty.
+**Result column rule:** Only accept a column as the result column if its merged label contains a recognized keyword (`Kết quả`, `Result`, `Lần 1`/`Lần 2`/`Lần 3`). **Never** use a column as the result column because its header cell happens to contain a result value (`"FAIL"`, `"PASS"`, `"PENDING"`) — that indicates data contamination in the header area, not a column name.
 
-**Pending rows:** Rows where the Result column (`Kết quả` / `Lần N`) is empty or contains `"PENDING"`.
+**Data row detection — skip invalid rows:**
+
+A row is a valid test case data row if ALL of the following are true:
+1. The External ID cell is **non-empty** AND does **not** start with `#` (formula errors: `#REF!`, `#DIV/0!`, `#N/A`, `#VALUE!`, etc.)
+2. The External ID value looks like a test case ID (alphanumeric, e.g. `DVC1`, `FE-001`, `TC_001`)
+
+Skip ALL other rows regardless of other column content.
+
+**Pending rows:** Rows where the Result column is empty or contains `"PENDING"`.
 
 **Already-executed rows:** Result column is `"PASS"` or `"FAIL"` — skip unless `--force`.
 
-**Row number tracking:** After reading, record the actual spreadsheet row number for each test case (= data array index + 1, accounting for 1-based indexing). Store as `sheetRow` per test case. This is critical for writing results back accurately.
+**Row number tracking:** After reading, record the actual spreadsheet row number for each test case as `sheetRow = dataArrayIndex + 1` (1-based sheet row). Store this per test case **at read time**. This is critical for writing results back accurately — never recompute it later.
 
 Print at start:
 ```
