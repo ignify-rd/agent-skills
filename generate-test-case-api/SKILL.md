@@ -300,6 +300,33 @@ python $SKILL_SCRIPTS/upload_gsheet.py <tên-test-case> --project-root .
 
 ---
 
+### Step 8: Cleanup — Xóa files trung gian
+
+Sau khi Step 7 hoàn thành, xóa tất cả files trung gian trong output folder:
+
+```bash
+python3 -c "
+import os, glob
+output_dir = '{OUTPUT_DIR}'
+keep = {'inventory.json', 'patch.json', 'test-cases.json', 'test-design-api.md'}
+patterns = ['tc-context.json', 'batch-*.json', 'validate-batch-*.json', 'test-cases-merged.json', '.tc-validate-done']
+removed = []
+for pat in patterns:
+    for f in glob.glob(os.path.join(output_dir, pat)):
+        if os.path.basename(f) not in keep:
+            os.remove(f)
+            removed.append(os.path.basename(f))
+if removed:
+    print('Removed: ' + ', '.join(removed))
+else:
+    print('No intermediate files to remove.')
+"
+```
+
+**Giữ lại:** `inventory.json`, `patch.json`, `test-cases.json`, `test-design-api.md` (nếu có)
+
+---
+
 ## Project AGENTS.md Override
 
 **Scope — what project `AGENTS.md` CAN override:**

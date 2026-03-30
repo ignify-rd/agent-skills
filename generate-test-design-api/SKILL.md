@@ -317,3 +317,30 @@ Thông báo user:
 ```
 
 Nếu có `### [SỬA]` trong output → thông báo số lượng items được tự động thêm/sửa.
+
+---
+
+### Step 8: Cleanup — Xóa files trung gian
+
+Sau khi Step 7 hoàn thành, xóa tất cả files trung gian trong output folder:
+
+```bash
+python3 -c "
+import os, glob
+output_dir = '{output-folder}'
+keep = {'inventory.json', 'patch.json', 'test-design-api.md'}
+patterns = ['validate-batch-*.md', '.td-validate-done']
+removed = []
+for pat in patterns:
+    for f in glob.glob(os.path.join(output_dir, pat)):
+        if os.path.basename(f) not in keep:
+            os.remove(f)
+            removed.append(os.path.basename(f))
+if removed:
+    print('Removed: ' + ', '.join(removed))
+else:
+    print('No intermediate files to remove.')
+"
+```
+
+**Giữ lại:** `inventory.json`, `patch.json`, `test-design-api.md` (nếu có)
