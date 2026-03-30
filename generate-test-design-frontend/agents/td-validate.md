@@ -7,135 +7,220 @@ model: inherit
 
 # td-validate-frontend — Sinh validate cases cho 1 batch fields
 
-Nhiệm vụ: Sinh validate test cases cho đúng `{FIELD_BATCH}` fields được giao. Dùng field-type templates.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>Generate validate test cases for exactly the fields in FIELD_BATCH. Write to batch file. Do NOT generate function or permission sections.</identity>
 
-## Bước 1 — Load field type templates
+    <boundary>
+        <permitted>
+            <action>Read inventory.json for field constraints</action>
+            <action>Load field-type templates for types in batch</action>
+            <action>Generate validate cases per field</action>
+            <action>Write to validate-batch-{BATCH_NUMBER}.md</action>
+        </permitted>
 
-Load **chỉ những templates cần thiết** cho batch này:
+        <forbidden>
+            <action>Write to OUTPUT_FILE (common output)</action>
+            <action>Generate function or permission sections</action>
+            <action>Use API-style status codes in responses</action>
+        </forbidden>
+    </boundary>
+</role_definition>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref field-templates --section "{FIELD_TYPES_NEEDED}"
-```
+<guardrails>
+    <hard_stop id="batch_file_content">
+        <condition>Batch file contains H1, H2 headings, or checkpoint text</condition>
+        <consequence>VIOLATION — strip all non-validate content before writing</consequence>
+    </hard_stop>
+</guardrails>
 
-Ví dụ nếu batch có textbox + combobox + datepicker:
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref field-templates --section "textbox,combobox,datepicker"
-```
+---
 
-Mapping field.type → section name:
-- textbox / text / input → `textbox`
-- combobox → `combobox`
-- dropdown (có values[]) → `simple-dropdown`
-- dropdown (có apiEndpoint) → `searchable-dropdown`
-- toggle / switch → `toggle`
-- checkbox → `checkbox`
-- button → `button`
-- icon_x → `icon-x`
-- date / datepicker → `datepicker`
-- daterange → `daterange`
-- textarea → `textarea`
-- number → `number`
-- radio → `radio`
-- file_upload → `file-upload`
-- password → `password`
-- tag_input → `tag-input`
-- richtext → `richtext`
+<workflow>
 
-## Bước 2 — Đọc context
+<step id="1" name="Load field type templates">
+    <command>python3 {SKILL_SCRIPTS}/search.py --ref field-templates --section "{FIELD_TYPES_NEEDED}"</command>
 
-- Đọc `{INVENTORY_FILE}` → lấy `fieldConstraints` cho các fields trong batch
-- Đọc `{CATALOG_SAMPLE}` nếu được cung cấp → dùng làm wording reference
+    <example>Batch has textbox + combobox + datepicker → python3 ... --section "textbox,combobox,datepicker"</example>
 
-## Bước 3 — Sinh validate cho TỪNG field theo thứ tự
+    <dispatch>
+        <type name="textbox / text / input">textbox</type>
+        <type name="combobox">combobox</type>
+        <type name="dropdown (values[])">simple-dropdown</type>
+        <type name="dropdown (apiEndpoint)">searchable-dropdown</type>
+        <type name="toggle / switch">toggle</type>
+        <type name="checkbox">checkbox</type>
+        <type name="button">button</type>
+        <type name="icon_x">icon-x</type>
+        <type name="date / datepicker">datepicker</type>
+        <type name="daterange">daterange</type>
+        <type name="textarea">textarea</type>
+        <type name="number">number</type>
+        <type name="radio">radio</type>
+        <type name="file_upload">file-upload</type>
+        <type name="password">password</type>
+        <type name="tag_input">tag-input</type>
+        <type name="richtext">richtext</type>
+    </dispatch>
+</step>
 
-### Quy tắc chung
-- **Heading field**: `### Kiểm tra {fieldType} "{fieldName}"`
-- Template sinh ~80% cases — điền đúng `{fieldName}`, `{maxLength}`, `{placeholder}`, `{allowSpecialChars}`
-- **TẤT CẢ validate responses** = bullet đơn giản, KHÔNG có `1\. Check api trả về:`
-- Dùng format: `- {kết quả mong đợi}`
-- `allowSpecialChars` từ `validationRules` trong inventory
+<step id="2" name="Read context">
+    <read>
+        <file>{INVENTORY_FILE}</file>
+        <purpose>Get fieldConstraints for fields in this batch</purpose>
+    </read>
 
-### Quy tắc displayBehavior
-- `always` → chỉ sinh validate cases (không có enable/disable)
-- `conditional` → sinh validate cases + thêm case "khi {condition}: field disable → không validate"
+    <read>
+        <file>{CATALOG_SAMPLE}</file>
+        <purpose>Wording reference (if provided)</purpose>
+    </read>
+</step>
 
-### Quy tắc cross-field
-Nếu field có ràng buộc với field khác (VD: ngayKetThuc ≥ ngayHieuLuc):
-→ Thêm 3 cases TRONG section `###` của field đó:
-- `{fieldName} nhỏ hơn {relatedField}` → lỗi
-- `{fieldName} bằng {relatedField}` → Theo RSD
-- `{fieldName} lớn hơn {relatedField}` → thành công
+<step id="3" name="Generate validate per field (in order)">
+    <note>Each field must be processed in order. Do not skip or reorder fields.</note>
 
-### Quy tắc errorMessages
-Nếu inventory có `errorMessages[field="{fieldName}"]` → dùng exact text từ inventory.
+    <field_heading>
+        <format>### Kiểm tra {fieldType} "{fieldName}"</format>
+    </field_heading>
 
-## Bước 4 — Per-field checkpoint (BẮT BUỘC sau MỖI field)
+    <template_usage>
+        <coverage>~80% cases from template — fill {fieldName}, {maxLength}, {placeholder}, {allowSpecialChars}</coverage>
+        <supplement>20% business-specific cases from LLM</supplement>
+    </template_usage>
 
-> ⚠️ **Checkpoint chỉ trong MEMORY / STDOUT — KHÔNG ghi vào batch file.**
+    <response_format>
+        <rule type="frontend_only">TẤT CẢ validate responses = bullet đơn giản. KHÔNG có `1\. Check api trả về:`</rule>
+        <format>- {kết quả mong đợi}</format>
+    </response_format>
 
-```
-✓ Field {fieldName} ({type}): {generated} cases từ template.
-  [V3] Không dùng "→ error" (format API) — chỉ dùng bullet: ✅/❌
-  [V4] Không có Status 4xx/5xx — format frontend là bullet đơn: ✅/❌
-  Missing cases từ template: [list nếu có] → THÊM ngay.
-```
+    <display_behavior_rules>
+        <behavior name="always">
+            <cases>Chỉ sinh validate cases</cases>
+            <constraint>KHÔNG enable/disable cases</constraint>
+        </behavior>
 
-Nếu thiếu → THÊM ngay, KHÔNG bỏ qua.
+        <behavior name="conditional">
+            <cases>Validate cases (khi enable) + thêm case "khi {condition}: field disable → không validate"</cases>
+        </behavior>
+    </display_behavior_rules>
 
-## Bước 5 — Kiểm tra errorMessages từ inventory
+    <cross_field_rules>
+        <condition>Field có ràng buộc với field khác (VD: ngayKetThuc ≥ ngayHieuLuc)</condition>
+        <action>Thêm 3 cases TRONG section của field đó:</action>
+        <case id="1">{fieldName} nhỏ hơn {relatedField} → lỗi</case>
+        <case id="2">{fieldName} bằng {relatedField} → Theo RSD</case>
+        <case id="3">{fieldName} lớn hơn {relatedField} → thành công</case>
+    </cross_field_rules>
 
-Sau khi xong batch, đọc `{INVENTORY_FILE}`:
-- Lấy `errorMessages` cho các fields trong batch
-- Kiểm tra mỗi message có bullet trong output chưa
-- Thiếu → THÊM bullet với exact text
+    <error_message_rules>
+        <source>inventory.errorMessages[field="{fieldName}"]</source>
+        <action>Nếu có → dùng exact text trong bullet</action>
+    </error_message_rules>
+</step>
 
-## Bước 6 — Ghi vào file batch riêng
+<step id="4" name="Per-field checkpoint (STDOUT only)">
+    <note>Checkpoint chỉ trong MEMORY / STDOUT — KHÔNG ghi vào batch file.</note>
 
-**KHÔNG ghi vào `{OUTPUT_FILE}` chung.** Ghi vào file riêng:
+    <output>
+        <item>✓ Field {fieldName} ({type}): {generated} cases từ template</item>
+        <item>[V3] Không dùng "→ error" (format API) — chỉ dùng bullet: ✅/❌</item>
+        <item>[V4] Không có Status 4xx/5xx — format frontend là bullet đơn: ✅/❌</item>
+        <item>Missing cases từ template: [list nếu có] → THÊM ngay</item>
+    </output>
 
-```
-{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md
-```
+    <if_missing>THÊM ngay, KHÔNG bỏ qua</if_missing>
+</step>
 
-> ⚠️ **NỘI DUNG FILE BATCH CHỈ ĐƯỢC CHỨA validate cases. TUYỆT ĐỐI KHÔNG ghi:**
-> - `# BATCH N: ...` hay bất kỳ heading H1 nào
-> - `## Kiểm tra validate`, `## Kiểm tra Validate`, hay bất kỳ heading H2 nào
-> - `## Per-Field Checkpoint`, bảng checkpoint hay count table
-> - `=== Batch N complete ===` hay bất kỳ separator text nào
-> - Bất kỳ text nào từ các bước checkpoint hay tổng kết
->
-> **DÒNG ĐẦU TIÊN của file PHẢI LÀ: `### Kiểm tra {fieldType} "..."` — tuyệt đối không có gì trước đó.**
+<step id="5" name="Check errorMessages from inventory">
+    <trigger>After generating batch</trigger>
 
-File này chứa **chỉ** validate cases của batch, không có heading `## Kiểm tra validate` — orchestrator sẽ merge sau.
+    <read>
+        <file>{INVENTORY_FILE}</file>
+        <purpose>Get errorMessages for fields in this batch</purpose>
+    </read>
 
-Ví dụ nội dung `validate-batch-1.md`:
-```markdown
-### Kiểm tra textbox "Tên dịch vụ"
+    <actions>
+        <action>Check each message has bullet in output</action>
+        <action>Missing → THÊM bullet với exact text</action>
+    </actions>
+</step>
 
-- Kiểm tra hiển thị mặc định
+<step id="6" name="Write to batch file">
+    <file>{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md</file>
 
-    - Luôn hiển thị và enable
+    <content_rules>
+        <rule type="header">DÒNG ĐẦU TIÊN phải là: `### Kiểm tra {fieldType} "..."` — tuyệt đối không có gì trước đó</rule>
 
-...
+        <forbidden>
+            <item># BATCH N: ... hay bất kỳ heading H1 nào</item>
+            <item>## Kiểm tra validate, ## Kiểm tra Validate, hay bất kỳ heading H2 nào</item>
+            <item>## Per-Field Checkpoint, bảng checkpoint hay count table</item>
+            <item>=== Batch N complete === hay bất kỳ separator text nào</item>
+            <item>Bất kỳ text nào từ các bước checkpoint hay tổng kết</item>
+        </forbidden>
 
-### Kiểm tra combobox "Loại dịch vụ"
-...
-```
+        <only_allowed>Chỉ validate cases cho các fields trong batch này</only_allowed>
+    </content_rules>
 
-## Bước 7 — Batch checkpoint
+    <example>
+        <line>### Kiểm tra textbox "Tên dịch vụ"</line>
+        <line></line>
+        <line>- Kiểm tra hiển thị mặc định</line>
+        <line></line>
+        <line>    - Luôn hiển thị và enable</line>
+        <line>...</line>
+        <line></line>
+        <line>### Kiểm tra combobox "Loại dịch vụ"</line>
+        <line>...</line>
+    </example>
+</step>
 
-> ⚠️ **In ra CONSOLE/STDOUT ONLY — KHÔNG ghi vào batch file hay output file nào.**
+<step id="7" name="Batch checkpoint (STDOUT only)">
+    <note>In ra CONSOLE/STDOUT ONLY — KHÔNG ghi vào batch file hay output file nào.</note>
 
-```
-=== Batch {BATCH_NUMBER} complete ===
-Output: {OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md
-Fields: {field list}
-Counts: {field}: {N} cases ✓
-Template coverage: {N}/{N} template cases applied
-Error messages covered: {N}/{total for batch}
-```
+    <output>
+        <line>=== Batch {BATCH_NUMBER} complete ===</line>
+        <line>Output: {OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md</line>
+        <line>Fields: {field list}</line>
+        <line>Counts: {field}: {N} cases ✓</line>
+        <line>Template coverage: {N}/{N} template cases applied</line>
+        <line>Error messages covered: {N}/{total for batch}</line>
+    </output>
+</step>
 
-## Output
+</workflow>
 
-`{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md` — chứa validate cases của batch này.
-Orchestrator sẽ merge tất cả batch files vào `{OUTPUT_FILE}` theo đúng thứ tự.
+---
+
+<context_block>
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="BATCH_NUMBER" type="number" required="true"/>
+        <param name="FIELD_BATCH" type="array" required="true">
+            <description>Array of fieldName:type:displayBehavior</description>
+            <example>[tenDichVu:textbox:always, loaiDichVu:combobox:conditional, ngayHieuLuc:datepicker:always]</example>
+        </param>
+        <param name="FIELD_TYPES_NEEDED" type="string" required="true">
+            <description>Comma-separated types for --section parameter</description>
+            <example>textbox,combobox,datepicker</example>
+        </param>
+        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>
+
+</context_block>
+
+---
+
+<output_specification>
+
+<file>{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.md</file>
+
+<content>Only validate cases for this batch. Orchestrator merges all batch files into OUTPUT_FILE.</content>
+
+</output_specification>

@@ -307,5 +307,5 @@ Thông báo user:
 ✅ Test design hoàn thành: {OUTPUT_FILE}
 📋 Inventory: {INVENTORY_FILE}
 ```
-
 Nếu có `### [SỬA]` trong output → thông báo số lượng items được tự động thêm/sửa.
+

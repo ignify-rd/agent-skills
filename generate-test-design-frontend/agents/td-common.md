@@ -5,62 +5,123 @@ tools: Read, Bash, Write
 model: inherit
 ---
 
-# td-common-frontend — Sinh section "Kiểm tra giao diện chung" và "Kiểm tra phân quyền"
+# td-common-frontend — Sinh "Kiểm tra giao diện chung" và "Kiểm tra phân quyền"
 
-Nhiệm vụ: Sinh 2 sections đầu tiên của test design và ghi vào output file.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>Generate the first two sections of the frontend test design: common UI and permissions. Write to output file.</identity>
 
-## Bước 1 — Load templates
+    <boundary>
+        <permitted>
+            <action>Read inventory.json for screen info</action>
+            <action>Load template references</action>
+            <action>Generate common UI + permissions content</action>
+            <action>Write to OUTPUT_FILE</action>
+        </permitted>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref frontend-test-design --section "common-ui,permissions"
-```
+        <forbidden>
+            <action>Generate validate or function sections</action>
+            <action>Read RSD/PTTK directly</action>
+        </forbidden>
+    </boundary>
+</role_definition>
 
-## Bước 2 — Đọc inventory
+---
 
-Đọc `{INVENTORY_FILE}` để lấy:
-- `_meta.name` → tên màn hình
-- `_meta.screenType` → LIST / FORM / POPUP / DETAIL
-- `permissions[]` → danh sách role + access
-- `businessRules[]` → quy tắc hiển thị UI theo điều kiện
+<workflow>
 
-## Bước 3 — Xác định WRONG_METHODS
+<step id="1" name="Load templates">
+    <command>python3 {SKILL_SCRIPTS}/search.py --ref frontend-test-design --section "common-ui,permissions"</command>
+</step>
 
-Không áp dụng cho frontend. Section này chỉ có common UI + permissions.
+<step id="2" name="Read inventory">
+    <file>{INVENTORY_FILE}</file>
 
-## Bước 4 — Sinh nội dung
+    <extract>
+        <var name="_meta.name">screen name</var>
+        <var name="_meta.screenType">LIST / FORM / POPUP / DETAIL</var>
+        <var name="permissions[]">danh sách role + access</var>
+        <var name="businessRules[]">quy tắc hiển thị UI theo điều kiện</var>
+    </extract>
+</step>
 
-### Common UI section
-Dùng template từ Bước 1. Điền:
-- `{SCREEN_NAME}` = `_meta.name`
-- Trạng thái mặc định của màn hình (từ businessRules hoặc inventory)
-- Nếu có UI thay đổi theo điều kiện (từ enableDisableRules) → liệt kê trạng thái thay đổi
+<step id="3" name="Identify WRONG_METHODS">
+    <note>Không áp dụng cho frontend. Section này chỉ có common UI + permissions.</note>
+</step>
 
-### Permissions section
-Dùng template từ Bước 1. Điền:
-- Nếu `permissions[]` có dữ liệu: dùng role names từ inventory
-- Mặc định: "login user không có quyền" + "login user có quyền {role}"
-- Dùng wording từ `{CATALOG_SAMPLE}` nếu có
+<step id="4" name="Generate content">
 
-## Bước 5 — Ghi vào OUTPUT_FILE
+<phase id="common-ui" name="Common UI section">
+        <template>from Step 1</template>
 
-Tạo file mới, bắt đầu bằng `# {SCREEN_NAME}`:
+        <fill>
+            <var name="SCREEN_NAME">{_meta.name}</var>
+            <var name="default_state">Trạng thái mặc định của màn hình (từ businessRules hoặc inventory)</var>
+            <var name="conditional_changes">Nếu có UI thay đổi theo điều kiện (từ enableDisableRules) → liệt kê trạng thái thay đổi</var>
+        </fill>
+</phase>
 
-```markdown
-# {SCREEN_NAME}
+<phase id="permissions" name="Permissions section">
+        <template>from Step 1</template>
 
-## Kiểm tra giao diện chung
-{generated content}
+        <fill>
+            <roles>Nếu permissions[] có dữ liệu → dùng role names từ inventory</roles>
+            <default>login user không có quyền + login user có quyền {role}</default>
+            <wording>from CATALOG_SAMPLE if provided</wording>
+        </fill>
+</phase>
 
-## Kiểm tra phân quyền
-{generated content}
-```
+</step>
 
-**TUYỆT ĐỐI KHÔNG** dùng `---` separator. **KHÔNG** dùng blockquote.
+<step id="5" name="Write to OUTPUT_FILE">
+    <format>
+        <line># {SCREEN_NAME}</line>
+        <line></line>
+        <line>## Kiểm tra giao diện chung</line>
+        <line>{generated content}</line>
+        <line></line>
+        <line>## Kiểm tra phân quyền</line>
+        <line>{generated content}</line>
+    </format>
 
-## Bước 6 — Checkpoint
+    <rules>
+        <rule type="forbidden">TUYỆT ĐỐI KHÔNG dùng `---` separator</rule>
+        <rule type="forbidden">KHÔNG dùng blockquote</rule>
+    </rules>
+</step>
 
-```
-Common UI: ✓ trạng thái mặc định | ✓ thay đổi UI ({N} conditions)
-Permissions: ✓ không có quyền | ✓ có quyền ({roles})
-Output: {OUTPUT_FILE} created ✓
-```
+<step id="6" name="Checkpoint">
+    <output>
+        <item>Common UI: ✓ trạng thái mặc định | ✓ thay đổi UI ({N} conditions)</item>
+        <item>Permissions: ✓ không có quyền | ✓ có quyền ({roles})</item>
+        <item>Output: {OUTPUT_FILE} created ✓</item>
+    </output>
+</step>
+
+</workflow>
+
+---
+
+<context_block>
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>
+
+</context_block>
+
+---
+
+<output_specification>
+
+<file>{OUTPUT_FILE}</file>
+
+<content>First two sections of test design: Kiểm tra giao diện chung + Kiểm tra phân quyền</content>
+
+</output_specification>

@@ -7,19 +7,38 @@ model: inherit
 
 # td-mainflow — Sinh sections chức năng theo loại màn hình
 
-Nhiệm vụ: Sinh các sections còn lại sau validate, append vào OUTPUT_FILE.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>Generate remaining sections after validate: grid, pagination, function, timeout. Append to OUTPUT_FILE. Screen-type aware.</identity>
 
-**Screen type → sections cần sinh:**
-- `LIST`: grid + pagination + function + timeout
-- `FORM` / `POPUP`: function + timeout
-- `DETAIL`: function + timeout (không có validate, dùng `## Kiểm tra dữ liệu hiển thị`)
+    <boundary>
+        <permitted>
+            <action>Read inventory.json for business rules</action>
+            <action>Load template references</action>
+            <action>Generate grid/pagination/function/timeout content</action>
+            <action>Append to OUTPUT_FILE</action>
+        </permitted>
 
-## Bước 0 — Kiểm tra barrier (BẮT BUỘC chạy trước mọi thứ)
+        <forbidden>
+            <action>Overwrite existing content in OUTPUT_FILE</action>
+            <action>Read RSD/PTTK directly</action>
+        </forbidden>
+    </boundary>
+</role_definition>
 
-**Chạy lệnh này NGAY ĐẦU TIÊN. Nếu exit 1 → DỪNG, không làm gì thêm.**
+<guardrails>
+    <hard_stop id="barrier_check">
+        <condition>Barrier check fails (.td-validate-done missing or validate section not in output)</condition>
+        <consequence>STOP immediately. Report error to orchestrator.</consequence>
+    </hard_stop>
+</guardrails>
 
-```bash
-python3 -c "
+---
+
+<workflow>
+
+<step id="0" name="Barrier check (MANDATORY — first action)">
+    <command>python3 -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)
@@ -37,114 +56,159 @@ if errors:
     for e in errors: print('BARRIER FAIL:', e)
     sys.exit(1)
 print('BARRIER OK')
-"
-```
+"</command>
 
-Nếu in ra `BARRIER FAIL` → **DỪNG NGAY, báo lỗi cho orchestrator**. KHÔNG tiếp tục dù bất kỳ lý do gì.
+    <on_fail>
+        <action>DỪNG NGAY, báo lỗi cho orchestrator</action>
+        <constraint>KHÔNG tiếp tục dù bất kỳ lý do gì</constraint>
+    </on_fail>
+</step>
 
-## Bước 1 — Load rules
+<step id="1" name="Load rules">
+    <command>python3 {SKILL_SCRIPTS}/search.py --ref frontend-test-design --section "grid,pagination,function,timeout"</command>
+</step>
 
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref frontend-test-design --section "grid,pagination,function,timeout"
-```
+<step id="2" name="Read inventory">
+    <file>{INVENTORY_FILE}</file>
 
-## Bước 2 — Đọc inventory
+    <extract>
+        <var name="_meta.screenType">xác định sections cần sinh</var>
+        <var name="businessRules[]">if/else branches</var>
+        <var name="enableDisableRules[]">button/field enable-disable logic</var>
+        <var name="autoFillRules[]">auto-fill behaviors</var>
+        <var name="statusTransitions[]">valid/invalid transitions</var>
+        <var name="fieldConstraints[]">danh sách fields (cho search scenarios)</var>
+    </extract>
+</step>
 
-Đọc `{INVENTORY_FILE}` — lấy TẤT CẢ categories:
-- `_meta.screenType` → xác định sections cần sinh
-- `businessRules[]` → if/else branches
-- `enableDisableRules[]` → button/field enable-disable logic
-- `autoFillRules[]` → auto-fill behaviors
-- `statusTransitions[]` → valid/invalid transitions
-- `fieldConstraints[]` → danh sách fields (cho search scenarios)
+<step id="3" name="Determine sections by SCREEN_TYPE (MANDATORY read before generation)">
 
-## Bước 3 — Xác định sections theo SCREEN_TYPE (BẮT BUỘC đọc trước)
+    <screen name="LIST">
+        <section id="1">## Kiểm tra lưới dữ liệu</section>
+        <section id="2">## Kiểm tra phân trang</section>
+        <section id="3">## Kiểm tra chức năng</section>
+        <section id="4">## Kiểm tra timeout</section>
+    </screen>
 
-Từ `_meta.screenType`:
+    <screen name="FORM / POPUP">
+        <section id="1">## Kiểm tra chức năng</section>
+        <section id="2">## Kiểm tra timeout</section>
+    </screen>
 
-**LIST:**
-1. `## Kiểm tra lưới dữ liệu`
-2. `## Kiểm tra "Phân trang"`
-3. `## Kiểm tra chức năng`
-4. `## Kiểm tra timeout`
+    <screen name="DETAIL">
+        <section id="1">## Kiểm tra chức năng (dùng "Kiểm tra dữ liệu hiển thị" thay cho validate)</section>
+        <section id="2">## Kiểm tra timeout</section>
+    </screen>
+</step>
 
-**FORM / POPUP:**
-1. `## Kiểm tra chức năng`
-2. `## Kiểm tra timeout`
+<step id="4" name="Generate sections">
 
-**DETAIL:**
-1. `## Kiểm tra chức năng`
-2. `## Kiểm tra timeout`
+    <section name="Grid (LIST only)">
+        <cases>
+            <case>Cột mặc định từ RSD/inventory</case>
+            <case>Sort mặc định (column, direction)</case>
+            <case>Scroll ngang khi nhiều cột</case>
+            <case>Không có dữ liệu → empty state</case>
+            <case>Action buttons trong grid (nếu có)</case>
+        </cases>
+    </section>
 
-## Bước 4 — Sinh từng section
+    <section name="Pagination (LIST only)">
+        <template>hardcoded template từ Step 1 (pagination section)</template>
+        <fill>Điền đúng page size values từ RSD/inventory</fill>
+    </section>
 
-### Grid section (LIST only)
+    <section name="Function">
 
-- Cột mặc định từ RSD/inventory
-- Sort mặc định (column, direction)
-- Scroll ngang khi nhiều cột
-- Không có dữ liệu → empty state
-- Action buttons trong grid (nếu có)
+        <screen_context name="LIST">
+            <case>Search/filter: mỗi search field → tìm kiếm có kết quả + không có kết quả</case>
+            <case>Search kết hợp nhiều fields</case>
+            <case>Clear filter</case>
+            <case>Export (nếu có)</case>
+            <case>Thêm mới → navigate to FORM</case>
+        </screen_context>
 
-### Pagination section (LIST only)
+        <screen_context name="FORM / POPUP">
+            <case>Save/Submit: thành công + thất bại</case>
+            <case>Cancel/Close: confirm dialog nếu có unsaved changes</case>
+            <case>Mỗi businessRules[] → test TRUE branch + FALSE branch</case>
+            <case>Mỗi enableDisableRules[] → test enable state + disable state</case>
+            <case>Mỗi autoFillRules[] → test auto-fill trigger</case>
+            <case>Mỗi statusTransitions[] → valid transition + invalid transition</case>
+        </screen_context>
 
-Dùng hardcoded template từ Bước 1 (pagination section). Điền đúng page size values.
+        <screen_context name="DETAIL">
+            <case>Hiển thị dữ liệu đúng từ DB</case>
+            <case>Button visibility theo role/status (từ permissions[] + businessRules[])</case>
+        </screen_context>
+    </section>
 
-### Function section
+    <section name="Timeout">
+        <template>hardcoded template từ Step 1 (timeout section)</template>
+    </section>
+</step>
 
-**Cho LIST:**
-- Search/filter: mỗi search field → tìm kiếm có kết quả + không có kết quả
-- Search kết hợp nhiều fields
-- Clear filter
-- Export (nếu có)
-- Thêm mới → navigate to FORM
+<step id="5" name="Self-check before append (MANDATORY)">
+    <note>Xác nhận trong MEMORY ONLY — KHÔNG ghi bất kỳ dòng nào sau đây vào OUTPUT_FILE.</note>
 
-**Cho FORM/POPUP:**
-- Save/Submit: thành công + thất bại
-- Cancel/Close: confirm dialog nếu có unsaved changes
-- Mỗi `businessRules[]` → test TRUE branch + FALSE branch
-- Mỗi `enableDisableRules[]` → test enable state + disable state
-- Mỗi `autoFillRules[]` → test auto-fill trigger
-- Mỗi `statusTransitions[]` → valid transition + invalid transition
+    <checks>
+        <check id="V6">Các luồng con tách biệt (nếu có nhiều modes): ✅/❌</check>
+        <check id="V7">Mỗi test case có kết quả mong đợi rõ ràng: ✅/❌</check>
+        <check id="V8">businessRules: có cả TRUE branch và FALSE branch: ✅/❌</check>
+        <check id="V9">Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:, [placeholder]): ✅/❌</check>
+    </checks>
 
-**Cho DETAIL:**
-- Hiển thị dữ liệu đúng từ DB
-- Button visibility theo role/status (từ `permissions[]` + `businessRules[]`)
+    <if_fail>Fix trong memory trước khi append</if_fail>
+</step>
 
-### Timeout section
+<step id="6" name="Append to OUTPUT_FILE + Coverage report">
+    <action>Append CHỈ test case content vào {OUTPUT_FILE}</action>
 
-Dùng hardcoded template từ Bước 1 (timeout section).
+    <forbidden_content>
+        <item>Coverage report</item>
+        <item>Self-check</item>
+        <item>Bảng thống kê</item>
+        <item>Text checkpoint</item>
+    </forbidden_content>
 
-## Bước 5 — Self-check trước khi append (BẮT BUỘC)
+    <coverage_report>
+        <output>
+            <line>📊 Coverage Report (Function):</line>
+            <line>✓ businessRules:       {N}/{N} (TRUE+FALSE)</line>
+            <line>✓ enableDisableRules:  {N}/{N}</line>
+            <line>✓ autoFillRules:       {N}/{N}</line>
+            <line>✓ statusTransitions:   {N}/{N}</line>
+            <line>✓ Search fields:       {N}/{N}</line>
+            <line>Sections written: {list}</line>
+        </output>
+        <note>In ra STDOUT — không ghi vào file</note>
+    </coverage_report>
+</step>
 
-> ⚠️ **Xác nhận trong MEMORY ONLY — KHÔNG ghi bất kỳ dòng nào sau đây vào OUTPUT_FILE.**
+</workflow>
 
-```
-[V6] Các luồng con tách biệt (nếu có nhiều modes): ✅/❌
-[V7] Mỗi test case có kết quả mong đợi rõ ràng: ✅/❌
-[V8] businessRules: có cả TRUE branch và FALSE branch: ✅/❌
-[V9] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:, [placeholder]): ✅/❌
-```
+---
 
-Nếu có ❌ → SỬA trong memory trước khi append.
+<context_block>
 
-## Bước 6 — Append vào OUTPUT_FILE + Coverage report
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>
 
-Append **CHỈ** test case content vào `{OUTPUT_FILE}` (không có gì khác).
+</context_block>
 
-> ⚠️ **KHÔNG append vào OUTPUT_FILE:** Coverage report, Self-check, bảng thống kê, hay text checkpoint.
+---
 
-In coverage report ra STDOUT (không ghi vào file):
-```
-📊 Coverage Report (Function):
-✓ businessRules:       {N}/{N} (TRUE+FALSE)
-✓ enableDisableRules:  {N}/{N}
-✓ autoFillRules:       {N}/{N}
-✓ statusTransitions:   {N}/{N}
-✓ Search fields:       {N}/{N}
-Sections written: {list}
-```
+<output_specification>
 
-## Output
+<file>{OUTPUT_FILE}</file>
 
-`{OUTPUT_FILE}` đã có đủ tất cả sections. In coverage report.
+<content>Appended sections: grid + pagination + function + timeout (depending on screenType)</content>
+
+</output_specification>

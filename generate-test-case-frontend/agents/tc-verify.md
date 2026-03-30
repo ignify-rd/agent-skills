@@ -7,55 +7,94 @@ model: inherit
 
 # tc-verify — Gap analysis, dedup, và output cuối cùng
 
-Nhiệm vụ: Merge tất cả batch files, phân tích coverage gaps, tự động fill gaps, áp dụng project rules, và ghi file output cuối cùng.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>Merge tất cả batch files, phân tích coverage gaps, tự động fill gaps, áp dụng project rules, và ghi file output cuối cùng.</identity>
 
-## Bước 1: Merge tất cả batches
+    <boundary>
+        <permitted>
+            <action>Merge all batch files</action>
+            <action>Read merged file + inventory data</action>
+            <action>Gap analysis</action>
+            <action>Auto-fill gaps</action>
+            <action>Apply project rules</action>
+            <action>Write final output file</action>
+        </permitted>
 
-```bash
-python3 {SKILL_SCRIPTS}/merge_batches.py \
-  --output-dir {OUTPUT_DIR} \
-  --output-file {OUTPUT_DIR}/test-cases-merged.json
-```
+        <forbidden>
+            <action>Regenerate existing test cases</action>
+        </forbidden>
+    </boundary>
+</role_definition>
 
-Script sẽ tự động tìm và merge theo thứ tự:
-1. `batch-1.json` (ui + permission)
-2. `batch-search.json` (optional — nếu tồn tại)
-3. `validate-batch-N.json` (validate, theo thứ tự số)
-4. `batch-3.json` (function)
-5. `batch-workflow.json` (optional — nếu tồn tại)
+---
 
-Nếu lệnh trên exit 1 → DỪNG HOÀN TOÀN, báo lỗi cụ thể cho orchestrator. KHÔNG tiếp tục.
+<workflow>
 
-## Bước 2: Đọc merged file + inventory data cho gap analysis
+<step id="1" name="Merge all batches">
+    <command>python3 {SKILL_SCRIPTS}/merge_batches.py --output-dir {OUTPUT_DIR} --output-file {OUTPUT_DIR}/test-cases-merged.json</command>
 
-Đọc `{OUTPUT_DIR}/test-cases-merged.json` bằng Read tool.
+    <merge_order>
+        <file id="1">batch-1.json (ui + permission)</file>
+        <file id="2">batch-search.json (optional)</file>
+        <file id="3">validate-batch-N.json (validate, theo thứ tự số)</file>
+        <file id="4">batch-3.json (function)</file>
+        <file id="5">batch-workflow.json (optional)</file>
+    </merge_order>
 
-Query inventory:
-```bash
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorMessages
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category enableDisableRules
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category autoFillRules
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category permissions
-python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category statusTransitions
-```
+    <if_fail>DỪNG HOÀN TOÀN, báo lỗi cụ thể cho orchestrator</if_fail>
+</step>
 
-## Bước 3: Gap analysis
+<step id="2" name="Read merged file + inventory data">
+    <read>
+        <file>{OUTPUT_DIR}/test-cases-merged.json</file>
+    </read>
 
-Với mỗi inventory item, kiểm tra xem đã có test case cover chưa:
+    <commands>
+        <command>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints</command>
+        <command>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules</command>
+        <command>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorMessages</command>
+        <command>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category enableDisableRules</command>
+        <command>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category autoFillRules</command>
+        <command>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category permissions</command>
+        <command>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category statusTransitions</command>
+    </commands>
+</step>
 
-| Inventory category | Cách kiểm tra coverage |
-|--------------------|------------------------|
-| `fieldConstraints` | Đếm số test cases có testSuiteName chứa fieldName (hoặc trong validate suite) |
-| `businessRules` | Tìm rule keyword trong `testCaseName` / `step` / `expectedResult` |
-| `errorMessages` | Tìm error message text trong `expectedResult` |
-| `enableDisableRules` | Tìm target field/button trong `testCaseName` / `step` |
-| `autoFillRules` | Tìm trigger/target trong `testCaseName` / `step` |
-| `permissions` | Tìm role name trong `testCaseName` / `preConditions` / `step` |
-| `statusTransitions` | Tìm from/to status trong `testCaseName` / `step` / `expectedResult` |
+<step id="3" name="Gap analysis">
+    <for_each>inventory item</for_each>
 
-In gap report ra STDOUT:
+    <coverage_check>
+        <category name="fieldConstraints">
+            <method>Đếm số test cases có testSuiteName chứa fieldName (hoặc trong validate suite)</method>
+        </category>
+
+        <category name="businessRules">
+            <method>Tìm rule keyword trong testCaseName / step / expectedResult</method>
+        </category>
+
+        <category name="errorMessages">
+            <method>Tìm error message text trong expectedResult</method>
+        </category>
+
+        <category name="enableDisableRules">
+            <method>Tìm target field/button trong testCaseName / step</method>
+        </category>
+
+        <category name="autoFillRules">
+            <method>Tìm trigger/target trong testCaseName / step</method>
+        </category>
+
+        <category name="permissions">
+            <method>Tìm role name trong testCaseName / preConditions / step</method>
+        </category>
+
+        <category name="statusTransitions">
+            <method>Tìm from/to status trong testCaseName / step / expectedResult</method>
+        </category>
+    </coverage_check>
+
+    <gap_report format="stdout">
 ```
 🔍 Gap Analysis:
 - ☐ field "Tên SLA" → chỉ có 12/18 min cases
@@ -63,58 +102,85 @@ In gap report ra STDOUT:
 - ☐ errorMessage "Tên SLA đã tồn tại" → chưa có test trigger
 - ☐ permission "role Viewer" → chưa có test case
 ```
+    </gap_report>
 
-Nếu không có gap → in `✓ Gap Analysis: No gaps found`.
+    <if_no_gap>In `✓ Gap Analysis: No gaps found`</if_no_gap>
+</step>
 
-## Bước 4: Auto-fill ALL gaps
+<step id="4" name="Auto-fill ALL gaps">
+    <for_each>gap detected ở Step 3</for_each>
 
-Sinh test cases cho TẤT CẢ gaps được phát hiện ở Bước 3. Append vào array đã đọc.
+    <generate>
+        <rule name="testCaseName">= mô tả rõ ràng gap được fill (từ mindmap nếu có, hoặc tạo dựa theo inventory item)</rule>
+        <rule name="summary">= giống hệt testCaseName</rule>
+        <rule name="result">= "PENDING"</rule>
+        <rule name="result_empty">externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note = ""</rule>
+        <rule name="preConditions">= preConditionsBase từ {TC_CONTEXT_FILE}</rule>
+        <rule name="step">= UI actions (KHÔNG dùng "Send API")</rule>
+        <rule name="expectedResult">= UI state (KHÔNG dùng HTTP status codes)</rule>
+    </generate>
+</step>
 
-Với mỗi gap case:
-- `testCaseName` = mô tả rõ ràng gap được fill (từ mindmap nếu có, hoặc tạo dựa theo inventory item)
-- `summary` = giống hệt `testCaseName`
-- `result` = `"PENDING"`
-- `externalId`, `testSuiteDetails`, `specTitle`, `documentId`, `estimatedDuration`, `note` = `""`
-- `preConditions` = `preConditionsBase` từ `{TC_CONTEXT_FILE}`
-- `step` = UI actions (KHÔNG dùng "Send API")
-- `expectedResult` = UI state (KHÔNG dùng HTTP status codes)
+<step id="5" name="Apply project rules">
+    <read>
+        <file>{TC_CONTEXT_FILE}</file>
+        <purpose>Lấy catalogStyle</purpose>
+    </read>
 
-## Bước 5: Áp dụng project rules
+    <apply>
+        <rule>Kiểm tra section assignment đúng chưa</rule>
+        <rule>Kiểm tra writing style phù hợp chưa</rule>
+        <rule>Kiểm tra bất kỳ custom rule nào được định nghĩa trong PROJECT_RULES</rule>
+        <rule>Đảm bảo KHÔNG có HTTP status codes trong expectedResult</rule>
+        <rule>Đảm bảo KHÔNG có "Send API" trong step</rule>
+    </apply>
+</step>
 
-Đọc `{TC_CONTEXT_FILE}` để lấy catalogStyle (nếu chưa đọc).
+<step id="6" name="Write final output">
+    <file>{OUTPUT_FILE}</file>
 
-Áp dụng TẤT CẢ rules từ `PROJECT_RULES` context:
-- Kiểm tra section assignment đúng chưa
-- Kiểm tra writing style phù hợp chưa
-- Kiểm tra bất kỳ custom rule nào được định nghĩa trong PROJECT_RULES
-- Đảm bảo KHÔNG có HTTP status codes trong bất kỳ expectedResult nào
-- Đảm bảo KHÔNG có "Send API" trong bất kỳ step nào
+    <format_rules>
+        <rule type="first_line">DÒNG ĐẦU TIÊN phải là `[`</rule>
+        <rule type="last_line">DÒNG CUỐI phải là `]`</rule>
+        <rule type="note">File này là output CHÍNH THỨC — ghi đầy đủ, không rút gọn</rule>
+    </format_rules>
+</step>
 
-## Bước 6: Ghi file output cuối cùng
-
-Dùng Write tool để ghi `{OUTPUT_FILE}` (tức `{OUTPUT_DIR}/test-cases.json`).
-
-> ⚠️ DÒNG ĐẦU TIÊN phải là `[`, DÒNG CUỐI phải là `]`
-> ⚠️ File này là output CHÍNH THỨC — ghi đầy đủ, không rút gọn
-
-In thông báo hoàn thành:
+<step id="7" name="Completion report (STDOUT)">
+    <output>
 ```
 ✅ tc-verify done: {total} test cases → {OUTPUT_FILE}
    Auto-filled gaps: {N} cases
    Final total: {total}
 ```
+    </output>
+</step>
+
+</workflow>
 
 ---
 
-## Context block
+<context_block>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {output-folder}/tc-context.json
-INVENTORY_FILE: {path}
-OUTPUT_DIR: {output-folder}
-OUTPUT_FILE: {output-folder}/test-cases.json
-PROJECT_RULES: {content or "none"}
-===================
-```
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="TC_CONTEXT_FILE" type="path" required="true"/>
+        <param name="INVENTORY_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="OUTPUT_FILE" type="path" required="true"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>
+
+</context_block>
+
+---
+
+<output_specification>
+
+<file>{OUTPUT_FILE}</file>
+
+<content>Final merged test cases JSON với gap fills đã áp dụng</content>
+
+</output_specification>

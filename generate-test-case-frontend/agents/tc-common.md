@@ -7,90 +7,135 @@ model: inherit
 
 # tc-common — Sinh BATCH 1: Giao diện chung + Phân quyền
 
-Nhiệm vụ: Sinh test cases cho các sections TRƯỚC `## Kiểm tra Validate` (giao diện chung, phân quyền, và các sections pre-validate tương tự). Ghi kết quả vào `batch-1.json`.
+<role_definition>
+    <task_type>sub-agent</task_type>
+    <identity>Sinh test cases cho các sections TRƯỚC `## Kiểm tra Validate`. Ghi kết quả vào `batch-1.json`.</identity>
 
-## Bước 1: Đọc tc-context.json
+    <boundary>
+        <permitted>
+            <action>Read tc-context.json</action>
+            <action>Read test design file</action>
+            <action>Extract pre-validate sections</action>
+            <action>Generate test cases per section</action>
+            <action>Write batch-1.json</action>
+        </permitted>
 
-Đọc `{TC_CONTEXT_FILE}` bằng Read tool. Lấy:
-- `preConditionsBase` — dùng cho tất cả test cases
-- `catalogStyle` — dùng để follow đúng format/wording
-- `screenType` — để xác định context màn hình
-
-## Bước 2: Đọc test design file — trích xuất sections pre-validate
-
-Đọc `{TEST_DESIGN_FILE}`. Tìm và trích xuất tất cả sections `##` TRƯỚC section `## Kiểm tra Validate` (hoặc `## Kiểm tra validate`).
-
-Thông thường bao gồm:
-- `## Kiểm tra giao diện chung`
-- `## Kiểm tra phân quyền`
-- Các sections tương tự khác xuất hiện trước validate
-
-Với mỗi section, thu thập tất cả bullets `- Kiểm tra ...` — mỗi bullet = 1 test case cần sinh.
-
-## Bước 3: Load rules
-
-```bash
-python3 {SKILL_SCRIPTS}/search.py --ref fe-test-case
-```
-
-## Bước 4: Sinh test cases cho từng section
-
-Với mỗi section và mỗi bullet case trong test design:
-
-| Trường | Giá trị |
-|--------|---------|
-| `testSuiteName` | Tên section (VD: `"Kiểm tra giao diện chung"`, `"Kiểm tra phân quyền"`) |
-| `testCaseName` | Lấy TRỰC TIẾP từ bullet text trong mindmap — KHÔNG thêm prefix, KHÔNG thêm tên màn hình |
-| `summary` | Giống hệt `testCaseName` |
-| `preConditions` | `preConditionsBase` từ tc-context.json |
-| `step` | Mô tả UI actions theo catalogStyle.stepExample — dùng động từ: Click, Nhập, Chọn, Quan sát, etc. |
-| `expectedResult` | UI state theo catalogStyle.expectedResultExample — dùng: Hiển thị, Enable, Disable, Redirect, etc. KHÔNG dùng HTTP status codes |
-| `importance` | `"Kiểm tra giao diện chung"` → `"Low"` ; `"Kiểm tra phân quyền"` → `"Medium"` |
-| `result` | `"PENDING"` |
-| `externalId` | `""` |
-| `testSuiteDetails` | `""` |
-| `specTitle` | `""` |
-| `documentId` | `""` |
-| `estimatedDuration` | `""` |
-| `note` | `""` |
-
-> ⚠️ testCaseName = lấy TRỰC TIẾP từ mindmap bullet text — KHÔNG thêm prefix
-> ⚠️ summary = giống hệt testCaseName
-> ⚠️ result = "PENDING" — KHÔNG để ""
-> ⚠️ expectedResult = UI state (Hiển thị, Enable, Disable, Redirect...) — KHÔNG có HTTP status codes
-> ⚠️ KHÔNG rút gọn cases — mỗi bullet trong mindmap phải có 1 test case tương ứng
-
-## Bước 5: Per-section checkpoint (STDOUT ONLY)
-
-Sau khi sinh xong mỗi section, in ra STDOUT:
-
-```
-✓ Section "{sectionName}": {N} cases generated
-Missing cases vs mindmap: [list nếu thiếu] → APPEND immediately
-```
-
-Nếu thiếu cases → APPEND ngay trước khi qua section tiếp theo.
-
-> ⚠️ Checkpoint chỉ được in ra STDOUT. TUYỆT ĐỐI KHÔNG ghi checkpoint text vào batch file.
-
-## Bước 6: Ghi batch-1.json
-
-Dùng Write tool để ghi `{OUTPUT_DIR}/batch-1.json`.
-
-> ⚠️ DÒNG ĐẦU TIÊN phải là `[` — không có text, comment, hay markdown trước đó
-> ⚠️ DÒNG CUỐI CÙNG phải là `]`
-> ⚠️ KHÔNG ghi bất kỳ text nào ngoài JSON array thuần túy
+        <forbidden>
+            <action>Generate validate cases</action>
+            <action>Generate function cases</action>
+        </forbidden>
+    </boundary>
+</role_definition>
 
 ---
 
-## Context block
+<workflow>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {output-folder}/tc-context.json
-TEST_DESIGN_FILE: {path}
-OUTPUT_DIR: {output-folder}
-PROJECT_RULES: {content or "none"}
-===================
-```
+<step id="1" name="Read tc-context.json">
+    <file>{TC_CONTEXT_FILE}</file>
+
+    <extract>
+        <var name="preConditionsBase">dùng cho tất cả test cases</var>
+        <var name="catalogStyle">dùng để follow đúng format/wording</var>
+        <var name="screenType">để xác định context màn hình</var>
+    </extract>
+</step>
+
+<step id="2" name="Read test design — extract pre-validate sections">
+    <file>{TEST_DESIGN_FILE}</file>
+
+    <extract_rule>Tìm và trích xuất tất cả sections `##` TRƯỚC section `## Kiểm tra Validate` (hoặc `## Kiểm tra validate`)</extract_rule>
+
+    <typical_sections>
+        <section>## Kiểm tra giao diện chung</section>
+        <section>## Kiểm tra phân quyền</section>
+    </typical_sections>
+
+    <case_extraction>
+        <rule>Mỗi bullet `- Kiểm tra ...` = 1 test case cần sinh</rule>
+    </case_extraction>
+</step>
+
+<step id="3" name="Load rules">
+    <command>python3 {SKILL_SCRIPTS}/search.py --ref fe-test-case</command>
+</step>
+
+<step id="4" name="Generate test cases per section">
+    <for_each>section + bullet case trong test design</for_each>
+
+    <test_case_template>
+        <field name="testSuiteName">{sectionName}</field>
+        <field name="testCaseName">Lấy TRỰC TIẾP từ bullet text trong mindmap — KHÔNG thêm prefix, KHÔNG thêm tên màn hình</field>
+        <field name="summary">Giống hệt `testCaseName`</field>
+        <field name="preConditions">{preConditionsBase}</field>
+        <field name="step">Mô tả UI actions theo catalogStyle.stepExample — dùng động từ: Click, Nhập, Chọn, Quan sát, etc.</field>
+        <field name="expectedResult">UI state theo catalogStyle.expectedResultExample — dùng: Hiển thị, Enable, Disable, Redirect, etc. KHÔNG dùng HTTP status codes</field>
+        <field name="importance">"Kiểm tra giao diện chung" → "Low" ; "Kiểm tra phân quyền" → "Medium"</field>
+        <field name="result">"PENDING"</field>
+        <field name="externalId">""</field>
+        <field name="testSuiteDetails">""</field>
+        <field name="specTitle">""</field>
+        <field name="documentId">""</field>
+        <field name="estimatedDuration">""</field>
+        <field name="note">""</field>
+    </test_case_template>
+
+    <rules>
+        <rule type="testCaseName">= lấy TRỰC TIẾP từ mindmap — KHÔNG thêm prefix</rule>
+        <rule type="summary">= giống hệt testCaseName</rule>
+        <rule type="result">= "PENDING" — KHÔNG để ""</rule>
+        <rule type="expectedResult">= UI state — KHÔNG có HTTP status codes</rule>
+        <rule type="completeness">Mỗi bullet trong mindmap phải có 1 test case tương ứng</rule>
+    </rules>
+</step>
+
+<step id="5" name="Per-section checkpoint (STDOUT ONLY)">
+    <after>Sinh xong mỗi section</after>
+
+    <output>
+        <line>✓ Section "{sectionName}": {N} cases generated</line>
+        <line>Missing cases vs mindmap: [list nếu thiếu] → APPEND immediately</line>
+    </output>
+
+    <if_missing>APPEND ngay trước khi qua section tiếp theo</if_missing>
+
+    <rule type="forbidden">TUYỆT ĐỐI KHÔNG ghi checkpoint text vào batch file</rule>
+</step>
+
+<step id="6" name="Write batch-1.json">
+    <file>{OUTPUT_DIR}/batch-1.json</file>
+
+    <rules>
+        <rule type="first_line">DÒNG ĐẦU TIÊN phải là `[` — không có text, comment, hay markdown trước đó</rule>
+        <rule type="last_line">DÒNG CUỐI CÙNG phải là `]`</rule>
+        <rule type="content">KHÔNG ghi bất kỳ text nào ngoài JSON array thuần túy</rule>
+    </rules>
+</step>
+
+</workflow>
+
+---
+
+<context_block>
+
+<task_context>
+    <parameters>
+        <param name="SKILL_SCRIPTS" type="path" required="true"/>
+        <param name="TC_CONTEXT_FILE" type="path" required="true"/>
+        <param name="TEST_DESIGN_FILE" type="path" required="true"/>
+        <param name="OUTPUT_DIR" type="path" required="true"/>
+        <param name="PROJECT_RULES" type="string" default="none"/>
+    </parameters>
+</task_context>
+
+</context_block>
+
+---
+
+<output_specification>
+
+<file>{OUTPUT_DIR}/batch-1.json</file>
+
+<content>JSON array of BATCH 1 test cases: giao diện chung + phân quyền</content>
+
+</output_specification>
