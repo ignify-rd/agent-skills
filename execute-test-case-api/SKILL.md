@@ -49,13 +49,36 @@ Store filter as `idFilter` (list of IDs, or null for all). Applied after Step 1 
 ### Step 1 — Read test cases
 
 ```
-mcp__gsheets__get_sheet_data(spreadsheetId, sheetName="API Tests")
+mcp__gsheets__list_sheets(spreadsheetId)
 ```
 
-- Default tab: `"API Tests"`. If not found, call `mcp__gsheets__list_sheets` and ask the user.
-- Row 1 is header. Skip it. Skip rows with empty column A.
+- Default tab: `"API Tests"`. If not in the list → ask user which tab to use. **Do NOT guess.**
 
-Column mapping:
+```
+mcp__gsheets__get_sheet_data(spreadsheetId, sheetName=<confirmed tab>)
+```
+
+- Row 1 is header. Skip rows with empty column A.
+
+**⛔ Schema validation — STOP if mismatch:**
+
+After reading, inspect row 1 (column headers). Expected layout:
+
+| Col | Expected header keyword |
+|-----|------------------------|
+| A | Test ID / ID |
+| B | Title / Name |
+| E | Method |
+| F | URL |
+| I | Expected Status |
+
+If row 1 does NOT contain these keywords in roughly the right columns:
+1. Print: `Found columns: [A="{val}", B="{val}", C="{val}", D="{val}", E="{val}", ...]`
+2. **STOP. Ask user:**
+   > "Sheet format không khớp schema mong đợi. Tìm thấy: [actual headers]. Đây có phải đúng tab không? Nếu không, hãy cho biết tên tab hoặc mapping cột."
+3. **Do NOT attempt to auto-map, adapt, or infer** column meanings from content. Wait for explicit user confirmation before continuing.
+
+Column mapping (after schema confirmed):
 
 | Col | Field | Notes |
 |-----|-------|-------|
@@ -131,6 +154,14 @@ mcp__playwright__browser_navigate("https://web.postman.co")
 ```
 
 Check login state via snapshot. If login screen appears → follow [postman-web.md](references/postman-web.md) login instructions. Once on workspace, open a new HTTP request tab — this single tab is reused for all test cases (just update fields each time).
+
+**⛔ Environment check — STOP if missing:**
+
+After reaching the workspace, take a snapshot and check the environment selector (top-right area, shows current environment name or "No environment"):
+
+- If it shows **"No environment"** AND any test case URL or header contains `{{variable}}` syntax → **STOP. Ask user:**
+  > "Postman chưa chọn environment. Một số request dùng `{{variables}}` (e.g. `{{serviceUrl}}`, `{{token}}`). Vui lòng chọn environment phù hợp trong Postman, hoặc cung cấp giá trị thực tế (base URL + token) để tôi điền trực tiếp."
+- Wait for user to either select an environment or provide literal values. **Do NOT proceed with unresolved `{{variables}}`.**
 
 ---
 
@@ -277,3 +308,17 @@ FAILED cases:
 - **Never re-execute** rows where column K is non-empty unless explicitly instructed.
 - **Always close Postman browser** after all groups complete.
 - Screenshot filenames must not contain spaces: use `{testId}_{yyyyMMdd_HHmmss}.png`.
+
+## ⛔ Anti-loop rules
+
+These situations require an **immediate STOP + ask user** — never attempt to auto-adapt or analyze further:
+
+| Situation | Action |
+|-----------|--------|
+| Sheet tab `"API Tests"` not found | List sheets → ask user which tab |
+| Row 1 headers don't match expected schema | Print found headers → ask user to confirm mapping |
+| Postman shows "No environment" with `{{variables}}` in requests | Ask user to select environment or provide literal values |
+| Cannot determine Test ID or Method from a row | Skip that row, log `"Could not parse row {n}"`, continue |
+| Same blocker occurs 2+ times in a row | STOP all execution, report to user |
+
+**Analysis limit**: If you catch yourself re-reading the same sheet data or re-examining the same snapshot more than twice to answer the same question → STOP and ask the user instead.
