@@ -175,6 +175,15 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 - JSON mở đầu ngay sau `1.2.Response:` trên dòng tiếp theo
 - JSON body thụt 6 spaces: `      "code": "..."`
 
+**⛔ Quy tắc heading — TUYỆT ĐỐI KHÔNG vi phạm:**
+- Heading mô tả **ĐIỀU KIỆN kiểm tra**, KHÔNG chứa giá trị cụ thể truyền vào
+- SAI: `- Kiểm tra truyền trường slaName = " test "` (chứa giá trị)
+- SAI: `- Kiểm tra truyền trường slaName = "SLA xử lý Báo cáo"` (chứa giá trị)
+- ĐÚNG: `- Kiểm tra truyền trường slaName có khoảng trắng đầu/cuối`
+- ĐÚNG: `- Kiểm tra truyền trường slaName = {maxLen+1} ký tự`
+- ĐÚNG: `- Kiểm tra truyền trường slaName chứa ký tự đặc biệt`
+- Ngoại lệ duy nhất: `= null`, `= ""`, `= 0`, `= true/false` — đây là từ khóa kỹ thuật, KHÔNG phải giá trị test
+
 ---
 
 <!-- @section: String Required -->
@@ -740,3 +749,9 @@ Sau khi generate luồng chính, re-read RSD:
 
 **[V10] Format đầu ra đúng**
 → Kiểm tra: (a) dòng đầu tiên là `# {API_NAME}`, (b) không có `---` trước `#`, (c) section common dùng `- status:` không dùng `1\. Check api trả về:`.
+
+**[V11] Heading validate mô tả điều kiện, KHÔNG chứa giá trị**
+→ Scan tất cả `- Kiểm tra truyền trường` trong validate. Nếu heading chứa giá trị cụ thể (chuỗi trong ngoặc kép, số nhiều chữ số, text tiếng Việt dài) thay vì mô tả điều kiện → ❌. Ngoại lệ: `= null`, `= ""`, `= 0`, `= true/false` là hợp lệ.
+
+**[V12] Không có ### [SỬA] heading**
+→ Tìm `### [SỬA]` trong output. ❌ nếu tìm thấy — nội dung thiếu phải được insert in-place tại đúng vị trí, không append xuống cuối.

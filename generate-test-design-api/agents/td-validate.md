@@ -71,6 +71,18 @@ model: inherit
         <rule>
             <case_format>1 bullet per case: "- Kiểm tra ..." + nested response (NO #### sub-heading)</case_format>
         </rule>
+        <rule id="heading_describes_condition" type="hard_constraint">
+            <description>⛔ Case heading mô tả ĐIỀU KIỆN KIỂM TRA, KHÔNG mô tả giá trị cụ thể truyền vào.</description>
+            <wrong>- Kiểm tra truyền trường slaName = " test "</wrong>
+            <wrong>- Kiểm tra truyền trường slaName = "SLA xử lý Báo cáo đề xuất tín dụng"</wrong>
+            <wrong>- Kiểm tra truyền trường slaName = "ABCDEFGHIJ..."</wrong>
+            <correct>- Kiểm tra truyền trường slaName có khoảng trắng đầu/cuối</correct>
+            <correct>- Kiểm tra truyền trường slaName hợp lệ</correct>
+            <correct>- Kiểm tra truyền trường slaName = {maxLen+1} ký tự</correct>
+            <correct>- Kiểm tra truyền trường slaName chứa ký tự đặc biệt</correct>
+            <correct>- Kiểm tra truyền trường slaName = null</correct>
+            <principle>Heading trả lời "kiểm tra CÁI GÌ" (điều kiện), KHÔNG trả lời "truyền GIÁ TRỊ GÌ". Giá trị cụ thể nằm trong phần body/response bên dưới, KHÔNG nằm trong heading.</principle>
+        </rule>
         <rule>
             <status_for_validate>ALL validate responses use Status: 200</status_for_validate>
             <note>NOT 400/422/500</note>

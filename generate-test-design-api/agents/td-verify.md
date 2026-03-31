@@ -55,8 +55,14 @@ model: inherit
     </gap_report>
 
     <fill_action>
-        <description>Fill each gap — add to end of corresponding section with ### [SỬA] prefix</description>
+        <description>Fill each gap IN-PLACE at the correct position within its section using Edit tool. Do NOT append to the end with ### [SỬA] prefix.</description>
         <tool>Edit tool</tool>
+        <rules>
+            <rule>errorCode[section="validate"] gap → insert into the corresponding ### Trường {fieldName} section, right after the last existing bullet for that field</rule>
+            <rule>errorCode[section="main"] gap → insert into ## Kiểm tra chức năng, right before ## Kiểm tra ngoại lệ</rule>
+            <rule>dbField gap → add to the SQL SELECT within the relevant happy path test case</rule>
+            <rule>⛔ NEVER create ### [SỬA] headings. NEVER append to end of file. Always use Edit tool to insert at the CORRECT location within existing sections.</rule>
+        </rules>
     </fill_action>
 </step>
 
@@ -172,6 +178,32 @@ grep -cn "^---$" "{OUTPUT_FILE}"</script>
     </on_fail>
 </step>
 
+<step id="5b" name="V11: Validate heading contains values instead of conditions">
+    <description>Scan all `- Kiểm tra truyền trường` headings in validate section. Flag if heading contains a literal test value (quoted string, long number, Vietnamese text) instead of describing the test condition.</description>
+
+    <allowed_values>= null, = "", = 0, = true, = false, = {maxLen} ký tự, = {maxLen+1} ký tự, = {maxLen-1} ký tự</allowed_values>
+    <forbidden_values>= " test ", = "ABC...", = "SLA xử lý...", = 99999, any quoted Vietnamese sentence</forbidden_values>
+
+    <on_invalid>
+        <action>Use Edit tool to rewrite the heading to describe the TEST CONDITION instead of the test value.</action>
+        <example_fix>
+            OLD: - Kiểm tra truyền trường slaName = " test "
+            NEW: - Kiểm tra truyền trường slaName có khoảng trắng đầu/cuối
+        </example_fix>
+    </on_invalid>
+</step>
+
+<step id="5c" name="V12: No ### [SỬA] headings in output">
+    <actions>
+        <action type="bash">
+            <script>grep -cn "\[SỬA\]" "{OUTPUT_FILE}"</script>
+        </action>
+    </actions>
+    <on_find>
+        <action>Each [SỬA] section must be moved to its correct position in the file using Edit tool, then the [SỬA] prefix removed.</action>
+    </on_find>
+</step>
+
 <step id="6" name="Self-check result (MANDATORY output)">
     <output format="stdout">
 ```
@@ -182,7 +214,9 @@ grep -cn "^---$" "{OUTPUT_FILE}"</script>
 [V5c]  Ngoại lệ ONLY timeout+500:      ✅/❌ ({N} business errors moved)
 [V9]   No forbidden words:              ✅/❌ ({N} occurrences)
 [V10]  Format correct (# header):       ✅/❌
-=== KẾT QUẢ: {N}/6 ===
+[V11]  Validate headings = conditions:  ✅/❌ ({N} value-headings fixed)
+[V12]  No ### [SỬA] headings:          ✅/❌ ({N} moved in-place)
+=== KẾT QUẢ: {N}/8 ===
 ```
     </output>
 </step>
