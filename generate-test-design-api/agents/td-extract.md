@@ -72,7 +72,9 @@ model: inherit
         </section>
 
         <section name="modes">
-            <description>Sub-flows (Lưu nháp, Gửi duyệt, Phê duyệt, Xóa...)</description>
+            <description>Sub-flows (Lưu nháp, Gửi duyệt, Phê duyệt, Xóa...) — CHỈ các mode thuộc CHÍNH API này (theo endpoint/method). KHÔNG extract modes từ API khác được đề cập trong cùng tài liệu.</description>
+            <rule>Nếu RSD mô tả nhiều API trong cùng 1 tài liệu, chỉ lấy modes của API có endpoint khớp với API_NAME/METHOD được chỉ định.</rule>
+            <rule>Nếu không tìm thấy mode nào thuộc API này → để modes = []</rule>
         </section>
 
         <section name="dbOperations">

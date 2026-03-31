@@ -49,6 +49,10 @@ print('BARRIER OK')
         </forbidden_in_mainflow>
     </rule>
 
+    <rule type="catalog_scope">
+        <description>CATALOG_SAMPLE dùng để tham khảo format response/wording ONLY. TUYỆT ĐỐI KHÔNG đọc catalog để suy ra modes, flows, hay business logic. Nguồn duy nhất cho modes/businessRules là INVENTORY_FILE.</description>
+    </rule>
+
     <rule type="checkpoint_destination">
         <description>All checkpoints go to STDOUT ONLY — NOT to output file</description>
     </rule>
