@@ -226,21 +226,29 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     </error_handling>
 </step>
 
-<step id="4b" name="Clarify modes with user (if ambiguous)" type="user_interaction">
-    <trigger>After Step 4 — ONLY if inventory.modes[] has ≥ 2 entries</trigger>
-    <description>When API has multiple modes, ask user which modes to include in test design</description>
+<step id="4b" name="Clarify modes with user (if conflict detected)" type="user_interaction">
+    <trigger>After Step 4 — ONLY if conflict between user intent and inventory.modes[]</trigger>
 
-    <condition>inventory.modes[].length >= 2</condition>
+    <conflict_detection>
+        <description>Compare user's original request with inventory.modes[]</description>
+        <signals_single_api>
+            <signal>User used "chỉ" (e.g. "chỉ generate", "chỉ test")</signal>
+            <signal>User named exactly 1 API or 1 action (e.g. "api chỉnh sửa", "api tạo mới")</signal>
+            <signal>User did NOT mention multiple flows/modes explicitly</signal>
+        </signals_single_api>
+        <conflict>inventory.modes[].length >= 2 AND any signal_single_api present → CONFLICT</conflict>
+        <no_conflict>User explicitly listed multiple modes, or said "tất cả modes" → skip this step</no_conflict>
+    </conflict_detection>
 
     <action type="ask_user">
         <message>
-API này có {N} mode trong inventory:
-{list modes[].name}
+Bạn nói "{user's original phrasing}" nhưng inventory có {N} mode:
+{list modes[].name + description}
 
 Bạn muốn sinh test design cho:
 A. Tất cả modes
-B. Chỉ mode: [user chọn]
-C. Không chia theo mode — chỉ test API đơn thuần (không phân luồng)
+B. Chỉ một mode cụ thể: [user chọn]
+C. Không chia theo mode — chỉ test API đơn thuần
 
 (Nếu không chắc, chọn C)
         </message>
@@ -251,10 +259,10 @@ C. Không chia theo mode — chỉ test API đơn thuần (không phân luồng)
             <action>Pass all modes to td-mainflow as-is</action>
         </case>
         <case value="B">
-            <action>Filter inventory.modes[] to only selected modes before spawning td-mainflow</action>
+            <action>Filter inventory.modes[] to only selected mode before spawning td-mainflow</action>
         </case>
         <case value="C">
-            <action>Set modes = [] in context passed to td-mainflow — agent will treat as single-flow API</action>
+            <action>Set modes = [] in context passed to td-mainflow — treat as single-flow API</action>
         </case>
     </on_response>
 </step>
