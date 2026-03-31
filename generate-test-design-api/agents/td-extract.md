@@ -98,7 +98,22 @@ model: inherit
     <extract>
         <section name="fieldConstraints">
             <field name="name">Field name</field>
-            <field name="type">Exact from PTTK (Long/Integer/String/Date/Boolean/Array)</field>
+            <field name="type">
+                Map EXACTLY from PTTK label — do NOT upgrade types:
+                | PTTK says | inventory type |
+                |-----------|---------------|
+                | Int / Integer / int | Integer |
+                | Long / long | Long |
+                | String / string / varchar | String |
+                | Date / DateTime / date | Date |
+                | Boolean / boolean / bool | Boolean |
+                | Array / List / array | Array |
+                | JSONB / JSON / jsonb | JSONB |
+                | Number / Decimal / Float / double | Number |
+
+                CRITICAL: "Int" → "Integer". NEVER map "Int" to "Long".
+                Only use "Long" if PTTK explicitly says "Long".
+            </field>
             <field name="maxLength">maxLength</field>
             <field name="required">Y/N</field>
             <field name="validationRules">validation rules</field>
