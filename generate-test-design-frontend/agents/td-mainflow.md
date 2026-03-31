@@ -38,7 +38,7 @@ model: inherit
 <workflow>
 
 <step id="0" name="Barrier check (MANDATORY — first action)">
-    <command>python3 -c "
+    <command>python3 -X utf8 -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)

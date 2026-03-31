@@ -21,6 +21,10 @@ Python 3 installed. Check:
 python3 --version || python --version
 ```
 
+## ⛔ Temp File Rules
+
+**CẤM TUYỆT ĐỐI** tạo file script tạm trên đĩa (`_*.py`, `_*.ps1`, `_check_*.py`, v.v.). Dùng `python3 -X utf8 -c "..."` inline trong Bash, hoặc dùng Read/Edit/Write tools trực tiếp.
+
 ## ⛔ ORCHESTRATOR KHÔNG ĐỌC test-design-frontend.md, inventory.json TRỰC TIẾP
 
 **Orchestrator TUYỆT ĐỐI KHÔNG đọc nội dung file `test-design-frontend.md` hay `inventory.json` trực tiếp.** Orchestrator chỉ dùng các lệnh query để lấy fieldConstraints cho việc batch, và truyền file paths cho sub-agents.
@@ -72,7 +76,7 @@ OUTPUT_FILE = <output-folder>/test-cases.json
 
 ```bash
 # Resolve SKILL_SCRIPTS — dùng Python thay vì find (cross-platform)
-SKILL_SCRIPTS=$(python3 -c "
+SKILL_SCRIPTS=$(python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -85,7 +89,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
         break
 " "$(pwd)/generate-test-case-frontend/scripts/search.py" 2>/dev/null || echo "generate-test-case-frontend/scripts")
 
-SKILL_AGENTS=$(python3 -c "
+SKILL_AGENTS=$(python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -219,7 +223,7 @@ Mỗi sub-agent ghi vào file riêng — KHÔNG ghi chung. Spawn TẤT CẢ song
 **Sau khi TẤT CẢ parallel agents hoàn thành — kiểm tra:**
 
 ```bash
-python3 -c "
+python3 -X utf8 -c "
 import sys, os, glob
 output_dir = '{OUTPUT_DIR}'
 batches = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-*.json')))
@@ -236,7 +240,7 @@ Nếu exit 1 → re-spawn batch bị thiếu.
 
 Sau khi tất cả batch files tồn tại → tạo sentinel:
 ```bash
-python3 -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
+python3 -X utf8 -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
 ```
 
 ---
@@ -244,7 +248,7 @@ python3 -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
 > ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 5c:**
 >
 > ```bash
-> python3 -c "
+> python3 -X utf8 -c "
 > import sys, os
 > sentinel = '{OUTPUT_DIR}/.tc-validate-done'
 > if not os.path.exists(sentinel):
@@ -287,7 +291,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 Kiểm tra xem inventory có permissions hoặc statusTransitions không:
 
 ```bash
-python3 -c "
+python3 -X utf8 -c "
 import json, sys
 inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
 if inv.get('permissions') or inv.get('statusTransitions'):

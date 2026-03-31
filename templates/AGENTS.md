@@ -115,6 +115,12 @@ catalog/
 - testSuiteName convention (field sub-suites or flat?)
 - Section grouping
 
+## Temp File Rules
+
+<!-- Non-overridable — applies to all skills: -->
+<!-- NEVER write temp/helper scripts to disk (_*.py, _*.ps1, _check_*.py, etc.) -->
+<!-- Use python3 -X utf8 -c "..." inline in Bash, or Read/Edit/Write tools directly. -->
+
 ## Quality Rules
 
 <!-- Uncomment and edit only what differs from defaults: -->

@@ -37,7 +37,7 @@ model: inherit
 <workflow>
 
 <step id="0" name="Inventory check (MANDATORY)">
-    <command>python3 -c "
+    <command>python3 -X utf8 -c "
 import sys, json
 inv = json.load(open(r'{INVENTORY_FILE}', encoding='utf-8'))
 has_roles = len(inv.get('permissions', [])) > 0

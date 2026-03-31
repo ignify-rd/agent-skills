@@ -66,6 +66,13 @@ Extract: inputFields (name, type, maxLength, required, validationRules), outputF
 - Output starts with `# {API_NAME}` — NO blockquote, NO `---` horizontal rules
 - SQL: concrete values (`WHERE ID = 10001`), UPPERCASE columns, NO placeholders
 
+## Temp File Rules
+
+- **NEVER write temp/helper scripts to disk** (`_*.py`, `_*.ps1`, `_check_*.py`, etc.)
+- For Python logic: use `python3 -X utf8 -c "..."` inline in Bash
+- For file ops: use Read / Edit / Write tools directly
+- Violation = architecture breach — all agents must follow this rule
+
 ## Quality Rules
 
 - 100% Vietnamese, keep field/button names exactly as in RSD/PTTK

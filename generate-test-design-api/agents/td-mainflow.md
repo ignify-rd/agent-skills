@@ -15,7 +15,7 @@ model: inherit
 <guardrails>
     <rule type="hard_stop" id="barrier_check">
         <description>Barrier check — MUST run first. If fails, STOP completely.</description>
-        <script>python3 -c "
+        <script>python3 -X utf8 -c "
 import sys, os
 output_file = r'{OUTPUT_FILE}'
 output_dir = os.path.dirname(output_file)

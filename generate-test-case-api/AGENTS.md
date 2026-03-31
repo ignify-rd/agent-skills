@@ -129,6 +129,12 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 <!-- Projects can override by adding this section in their own AGENTS.md: -->
 <!-- testAccount: "your_username/ your_password" -->
 
+## Temp File Rules
+
+- **NEVER write temp/helper scripts to disk** (`_*.py`, `_*.ps1`, `_check_*.py`, etc.)
+- For Python logic: use `python3 -X utf8 -c "..."` inline in Bash
+- For file ops: use Read / Edit / Write tools directly
+
 ## Quality Rules
 
 - 100% Vietnamese, keep field/button names exactly as in RSD/PTTK

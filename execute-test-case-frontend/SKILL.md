@@ -19,6 +19,12 @@ Uses **subagent-per-batch** execution to prevent token accumulation across test 
 
 ---
 
+## ⛔ Temp File Rules
+
+**NEVER** write helper/temp script files to disk (`_*.py`, `_*.ps1`, `_check_*.py`, etc.). Use `python3 -X utf8 -c "..."` inline in Bash, or use Read/Edit/Write tools directly.
+
+---
+
 ## Workflow
 
 ### Step 0 — Parse spreadsheet URL

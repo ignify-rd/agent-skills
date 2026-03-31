@@ -73,3 +73,4 @@ These rules apply when the `execute-test-case-api` skill is active. A project-le
 - NEVER re-execute a row with a non-empty Result (column K) unless explicitly instructed.
 - NEVER store credentials or auth tokens to disk or sheet columns.
 - NEVER print auth tokens or passwords in the execution summary.
+- **NEVER write temp/helper scripts to disk** (`_*.py`, `_*.ps1`, `_check_*.py`, etc.) — use `python3 -X utf8 -c "..."` inline in Bash, or use Read/Edit/Write tools directly.

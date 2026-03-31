@@ -56,6 +56,12 @@ description: Generate API test cases from RSD/PTTK (or mindmap) and output to te
         <consequence>Use skill defaults + notify user</consequence>
         <message>Project chưa có AGENTS.md. Đang dùng rules mặc định.</message>
     </soft_warning>
+
+    <hard_stop id="no_temp_files">
+        <condition>Any agent is about to write a helper/temp script file (e.g. _*.py, _*.ps1, _check_*.py, _append_*.ps1, etc.)</condition>
+        <consequence>VIOLATION — do NOT create temp script files on disk under any circumstances</consequence>
+        <recovery>Use python3 -X utf8 -c "..." inline in Bash, or use the Read/Edit/Write tools directly. Never write a helper script to disk.</recovery>
+    </hard_stop>
 </guardrails>
 
 ---
@@ -116,7 +122,7 @@ description: Generate API test cases from RSD/PTTK (or mindmap) and output to te
 <step id="1" name="Resolve SKILL_SCRIPTS and SKILL_AGENTS paths">
     <actions>
         <action type="bash">
-            <script>python3 -c "
+            <script>python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -131,7 +137,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
             <stores>SKILL_SCRIPTS</stores>
         </action>
         <action type="bash">
-            <script>python3 -c "
+            <script>python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -287,7 +293,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 
     <completion_check>
         <action type="bash">
-            <script>python3 -c "
+            <script>python3 -X utf8 -c "
 import sys, os, glob
 output_dir = '{OUTPUT_DIR}'
 batches = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-*.json')))
@@ -313,7 +319,7 @@ for b in batches:
 
     <barrier id="validate_barrier">
         <description>SEQUENTIAL BARRIER — MUST check before proceeding to Step 5c</description>
-        <script>python3 -c "
+        <script>python3 -X utf8 -c "
 import sys, os
 sentinel = '{OUTPUT_DIR}/.tc-validate-done'
 if not os.path.exists(sentinel):
@@ -420,6 +426,8 @@ print('READY')
         <pattern>validate-batch-*.json</pattern>
         <pattern>test-cases-merged.json</pattern>
         <pattern>.tc-validate-done</pattern>
+        <pattern>_*.py</pattern>
+        <pattern>_*.ps1</pattern>
     </delete_patterns>
 </step>
 

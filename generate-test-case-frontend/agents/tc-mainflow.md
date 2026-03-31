@@ -38,7 +38,7 @@ model: inherit
 <workflow>
 
 <step id="0" name="Barrier check (MANDATORY)">
-    <command>python3 -c "
+    <command>python3 -X utf8 -c "
 import sys, os
 sentinel = '{OUTPUT_DIR}/.tc-validate-done'
 if not os.path.exists(sentinel):

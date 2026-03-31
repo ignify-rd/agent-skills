@@ -135,3 +135,4 @@ If snapshot cannot be taken → ERROR: `"Cannot take snapshot for assertions"`.
 - NEVER re-execute a row with a non-empty Result (column G) unless explicitly instructed.
 - ALWAYS close the browser after each group completes or errors.
 - NEVER store passwords in screenshot filenames or error messages.
+- **NEVER write temp/helper scripts to disk** (`_*.py`, `_*.ps1`, `_check_*.py`, etc.) — use `python3 -X utf8 -c "..."` inline in Bash, or use Read/Edit/Write tools directly.

@@ -26,3 +26,9 @@ Project `AGENTS.md` must not override:
 
 - collection schema version (`v2.1.0`)
 - JSON validity requirement
+
+## Temp File Rules
+
+- **NEVER write temp/helper scripts to disk** (`_*.py`, `_*.ps1`, `_check_*.py`, etc.)
+- For Python logic: use `python3 -X utf8 -c "..."` inline in Bash
+- For file ops: use Read / Edit / Write tools directly

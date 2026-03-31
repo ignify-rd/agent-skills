@@ -23,6 +23,12 @@ Generate a Postman Collection v2.1.0 from CSV or JSON input with a template-agno
   - Converts rows to canonical test cases.
   - Outputs a `.postman_collection.json` file.
 
+## ⛔ Temp File Rules
+
+**NEVER** write helper/temp script files to disk (`_*.py`, `_*.ps1`, `_check_*.py`, etc.). Use `python3 -X utf8 -c "..."` inline in Bash, or use Read/Edit/Write tools directly.
+
+---
+
 ## Workflow
 
 ### Step 0: Bootstrap Request Signature (Mandatory)

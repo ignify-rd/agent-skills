@@ -37,7 +37,7 @@ model: inherit
 <workflow>
 
 <step id="0" name="Screen type check (MANDATORY)">
-    <command>python3 -c "
+    <command>python3 -X utf8 -c "
 import sys, json
 ctx = json.load(open(r'{TC_CONTEXT_FILE}', encoding='utf-8'))
 if ctx.get('screenType', '').upper() != 'LIST':

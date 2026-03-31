@@ -101,6 +101,12 @@ Templates generate ~80% of test cases (19 field types). LLM supplements business
 | FORM/POPUP | Yes | No | No | Save success/fail, field interactions, cancel |
 | DETAIL | No (→ "dữ liệu hiển thị") | No | No | Button visibility by status/permission |
 
+## Temp File Rules
+
+- **NEVER write temp/helper scripts to disk** (`_*.py`, `_*.ps1`, `_check_*.py`, etc.)
+- For Python logic: use `python3 -X utf8 -c "..."` inline in Bash
+- For file ops: use Read / Edit / Write tools directly
+
 ## Quality Rules
 
 - 100% Vietnamese, keep field/button names exactly as in RSD/PTTK

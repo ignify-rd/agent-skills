@@ -22,6 +22,10 @@ Python 3 installed. Check: `python3 --version || python --version`
 
 Dùng Read tool với `pages` parameter cho file lớn. **CẤM TUYỆT ĐỐI** tạo script parse PDF.
 
+## ⛔ Temp File Rules
+
+**CẤM TUYỆT ĐỐI** tạo file script tạm trên đĩa (`_*.py`, `_*.ps1`, `_check_*.py`, v.v.). Dùng `python3 -X utf8 -c "..."` inline trong Bash, hoặc dùng Read/Edit/Write tools trực tiếp.
+
 ---
 
 ## Workflow — Orchestrator
@@ -54,7 +58,7 @@ NEVER scan folders hoặc đoán file paths. Nếu thiếu → hỏi.
 
 ```bash
 # Resolve SKILL_SCRIPTS — dùng Python thay vì find (cross-platform)
-SKILL_SCRIPTS=$(python3 -c "
+SKILL_SCRIPTS=$(python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -68,7 +72,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 " "$(pwd)/generate-test-design-frontend/scripts/search.py" 2>/dev/null || echo "generate-test-design-frontend/scripts")
 
 # Resolve SKILL_AGENTS
-SKILL_AGENTS=$(python3 -c "
+SKILL_AGENTS=$(python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -215,7 +219,7 @@ Nếu exit 1 → đọc error, re-spawn batch bị lỗi.
 > ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 5c:**
 >
 > ```bash
-> python3 -c "
+> python3 -X utf8 -c "
 > import sys, os
 > sentinel = '{output-folder}/.td-validate-done'
 > output = '{OUTPUT_FILE}'
@@ -260,7 +264,7 @@ PROJECT_RULES: {projectRules hoặc "none"}
 > ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 6:**
 >
 > ```bash
-> python3 -c "
+> python3 -X utf8 -c "
 > import sys
 > c = open('{OUTPUT_FILE}', encoding='utf-8').read()
 > required = ['## Kiểm tra giao diện chung', '## Kiểm tra phân quyền',

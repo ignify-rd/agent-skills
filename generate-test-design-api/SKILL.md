@@ -49,6 +49,12 @@ description: Generate API test design mindmap from RSD/PTTK. For API endpoints o
         <condition>catalog/ directory not found at project root</condition>
         <consequence>STOP — prompt user to run test-genie init</consequence>
     </hard_stop>
+
+    <hard_stop id="no_temp_files">
+        <condition>Any agent is about to write a helper/temp script file (e.g. _*.py, _*.ps1, _check_*.py, _append_*.ps1, etc.)</condition>
+        <consequence>VIOLATION — do NOT create temp script files on disk under any circumstances</consequence>
+        <recovery>Use python3 -X utf8 -c "..." inline in Bash, or use the Read/Edit/Write tools directly. Never write a helper script to disk.</recovery>
+    </hard_stop>
 </guardrails>
 
 ---
@@ -119,7 +125,7 @@ description: Generate API test design mindmap from RSD/PTTK. For API endpoints o
 <step id="2" name="Resolve SKILL_SCRIPTS and SKILL_AGENTS paths">
     <actions>
         <action type="bash">
-            <script>python3 -c "
+            <script>python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -134,7 +140,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
             <stores>SKILL_SCRIPTS</stores>
         </action>
         <action type="bash">
-            <script>python3 -c "
+            <script>python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -345,7 +351,7 @@ C. Không chia theo mode — chỉ test API đơn thuần
 
     <post_merge_field_coverage_check>
         <description>Verify ALL fields from bodyParams are present in output — catch silent sub-agent failures</description>
-        <script>python3 -c "
+        <script>python3 -X utf8 -c "
 import json, sys
 inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
 fields = [f['name'] for f in inv.get('requestSchema', {}).get('bodyParams', [])]
@@ -370,7 +376,7 @@ print('FIELD_COVERAGE OK: ' + str(len(fields)) + '/' + str(len(fields)))
 
     <barrier id="validate_barrier">
         <description>SEQUENTIAL BARRIER — MUST check before proceeding to Step 5c</description>
-        <script>python3 -c "
+        <script>python3 -X utf8 -c "
 import sys, os
 sentinel = '{OUTPUT_DIR}/.td-validate-done'
 output = '{OUTPUT_FILE}'
@@ -397,7 +403,7 @@ print('READY')
 
     <barrier>
         <description>Barrier check before spawning</description>
-        <script>python3 -c "
+        <script>python3 -X utf8 -c "
 import sys
 c = open('{OUTPUT_FILE}', encoding='utf-8').read()
 checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra chức năng']
@@ -488,6 +494,8 @@ sys.exit(0 if not missing else 1)
     <delete_patterns>
         <pattern>validate-batch-*.md</pattern>
         <pattern>.td-validate-done</pattern>
+        <pattern>_*.py</pattern>
+        <pattern>_*.ps1</pattern>
     </delete_patterns>
 </step>
 
