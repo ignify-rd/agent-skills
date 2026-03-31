@@ -117,8 +117,12 @@ model: inherit
 
                 CRITICAL: "Int" → "Integer". NEVER map "Int" to "Long".
                 Only use "Long" if PTTK explicitly says "Long".
+                CRITICAL: JSONB/JSON fields stay JSONB regardless of required/optional — NEVER map to String.
             </field>
-            <field name="maxLength">maxLength</field>
+            <field name="maxLength">For String fields only — character length limit</field>
+            <field name="maxDigits">For Integer/Number fields — digit count limit (e.g. "tối đa 2 chữ số" → maxDigits: 2). NEVER use maxLength for digit constraints.</field>
+            <field name="min">Minimum numeric value (for Number/Integer with range constraint)</field>
+            <field name="max">Maximum numeric value (for Number/Integer with range constraint)</field>
             <field name="required">Y/N</field>
             <field name="validationRules">validation rules</field>
         </section>
