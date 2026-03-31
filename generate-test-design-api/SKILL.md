@@ -226,6 +226,39 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     </error_handling>
 </step>
 
+<step id="4b" name="Clarify modes with user (if ambiguous)" type="user_interaction">
+    <trigger>After Step 4 — ONLY if inventory.modes[] has ≥ 2 entries</trigger>
+    <description>When API has multiple modes, ask user which modes to include in test design</description>
+
+    <condition>inventory.modes[].length >= 2</condition>
+
+    <action type="ask_user">
+        <message>
+API này có {N} mode trong inventory:
+{list modes[].name}
+
+Bạn muốn sinh test design cho:
+A. Tất cả modes
+B. Chỉ mode: [user chọn]
+C. Không chia theo mode — chỉ test API đơn thuần (không phân luồng)
+
+(Nếu không chắc, chọn C)
+        </message>
+    </action>
+
+    <on_response>
+        <case value="A">
+            <action>Pass all modes to td-mainflow as-is</action>
+        </case>
+        <case value="B">
+            <action>Filter inventory.modes[] to only selected modes before spawning td-mainflow</action>
+        </case>
+        <case value="C">
+            <action>Set modes = [] in context passed to td-mainflow — agent will treat as single-flow API</action>
+        </case>
+    </on_response>
+</step>
+
 <step id="5a" name="Spawn td-common" type="sub-agent">
     <description>Generate "Kiểm tra token" and "Kiểm tra Endpoint & Method" sections</description>
     <trigger>After Step 4</trigger>
@@ -301,6 +334,26 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
             <action>Re-spawn failed batch with note</action>
         </on_exit_1>
     </merge>
+
+    <post_merge_field_coverage_check>
+        <description>Verify ALL fields from bodyParams are present in output — catch silent sub-agent failures</description>
+        <script>python3 -c "
+import json, sys
+inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
+fields = [f['name'] for f in inv.get('requestSchema', {}).get('bodyParams', [])]
+content = open('{OUTPUT_FILE}', encoding='utf-8').read()
+missing = [f for f in fields if ('### Trường ' + f) not in content]
+if missing:
+    print('MISSING_FIELDS: ' + ', '.join(missing))
+    sys.exit(1)
+print('FIELD_COVERAGE OK: ' + str(len(fields)) + '/' + str(len(fields)))
+"</script>
+        <on_missing_fields>
+            <action>Identify which batch numbers cover the missing fields</action>
+            <action>Re-spawn ONLY the failed batches with same context</action>
+            <action>Re-run merge after re-spawn completes</action>
+        </on_missing_fields>
+    </post_merge_field_coverage_check>
 
     <completion_criteria>
         <file_exists>{OUTPUT_DIR}/.td-validate-done</file_exists>

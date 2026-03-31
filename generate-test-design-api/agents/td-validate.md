@@ -127,8 +127,8 @@ model: inherit
         |------|-----|
         | String Required | ≥ 19 |
         | String Optional | ≥ 17 |
-        | Integer Required / Long | ≥ 19 |
-        | Integer with Default | ≥ 19 |
+        | Integer Required / Long | ≥ 20 |
+        | Integer with Default | ≥ 20 |
         | Integer Optional | ≥ 13 |
         | Boolean Required | ≥ 11 |
         | Boolean Optional | ≥ 9 |

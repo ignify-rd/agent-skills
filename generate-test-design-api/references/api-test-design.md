@@ -115,6 +115,23 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 
 **CRITICAL:** ALL validate responses dùng Status: 200 — KHÔNG dùng 400/422/500 cho validate.
 
+### Quy tắc chống duplicate / merge cases (áp dụng cho MỌI type)
+
+Trước khi generate, kiểm tra các tình huống sau và xử lý theo rule:
+
+| Tình huống | Rule |
+|-----------|------|
+| 2 case khác giá trị nhưng cùng mục đích kiểm tra + cùng response | Giữ 1, bỏ case còn lại |
+| Constraint dạng "tối đa N chữ số" → max = 10^N - 1 | Chỉ generate: (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1). KHÔNG thêm "số rất lớn" hay các giá trị vượt khác |
+| Constraint dạng "min ≤ x ≤ max" (giá trị số) | Generate: min-1, min, max, max+1, số rất lớn |
+| Không có constraint cụ thể | Generate "số rất lớn" như 1 case độc lập |
+| Case âm nhỏ (−1) và âm thập phân (−0.01) cùng field Integer | Giữ số âm nguyên (−1), bỏ −0.01 vì Integer không nhận thập phân — thập phân đã có case riêng |
+| "Space ở giữa" và "All space" và "Space đầu/cuối" | Đây là 3 case **khác nhau**, giữ cả 3 |
+
+**Nguyên tắc chung:** Mỗi case phải kiểm tra đúng 1 điều khác biệt. Nếu 2 case cho cùng 1 response và không phân biệt được về mặt behavior → merge thành 1.
+
+---
+
 ### Quy tắc ký tự đặc biệt cho String
 
 | Tài liệu có `allowedSpecialChars`? | Sinh cases |
@@ -189,7 +206,20 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 ---
 
 <!-- @section: Integer Required -->
-### INTEGER Required (no default) — 19 cases
+### INTEGER Required (no default) — 20 cases
+
+**Boundary case rules — đọc trước khi generate:**
+
+- Nếu constraint là **giá trị số** (ví dụ: min=0, max=100):
+  → Generate: min-1, min, max, max+1, số rất lớn (5 cases riêng biệt)
+- Nếu constraint là **số chữ số** (ví dụ: "tối đa N chữ số"):
+  → max = 10^N - 1, generate: max (N chữ số), max+1 (N+1 chữ số) — **"số rất lớn" đã bao gồm trong max+1, KHÔNG generate thêm**
+  → Ví dụ "tối đa 2 chữ số": max=99, chỉ cần 9 (1 chữ số), 99 (2 chữ số), 100 (3 chữ số)
+- Nếu **không có constraint** cụ thể: generate "số rất lớn vượt giới hạn Integer" như 1 case độc lập
+
+**Deduplication rules:**
+- KHÔNG generate case trùng lặp về mục đích kiểm tra dù giá trị khác nhau (ví dụ: -1 và -0.01 cùng test "số âm/không hợp lệ" → chỉ giữ 1)
+- KHÔNG generate thêm "số rất lớn" nếu đã có max+1 từ digit-count constraint
 
 | Case | Marker |
 |------|--------|
@@ -206,6 +236,7 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 | Ký tự đặc biệt (@#$) | `→ error` |
 | All space | `→ error` |
 | Space đầu / cuối | `→ error` |
+| Space ở giữa | `→ error` |
 | Boolean | `→ error` |
 | Mảng | `→ error` |
 | Object | `→ error` |
@@ -215,9 +246,11 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 ---
 
 <!-- @section: Integer Default -->
-### INTEGER with Default Value — 19 cases
+### INTEGER with Default Value — 20 cases
 
 Heading: `### {fieldName}: Integer (Required, default = {defaultValue})`
+
+> Áp dụng cùng boundary case rules và deduplication rules như INTEGER Required.
 
 | Case | Marker |
 |------|--------|
@@ -234,6 +267,7 @@ Heading: `### {fieldName}: Integer (Required, default = {defaultValue})`
 | Ký tự đặc biệt (@#$) | `→ error` |
 | All space | `→ error` |
 | Space đầu / cuối | `→ error` |
+| Space ở giữa | `→ error` |
 | Boolean | `→ error` |
 | Mảng | `→ error` |
 | Object | `→ error` |
