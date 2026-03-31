@@ -9,7 +9,7 @@ model: inherit
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>You generate the final 2 sections based on inventory, append to output file.</identity>
+    <identity>You generate the final 2 sections based on inventory, append to output file. You trace the spec's decision flow — NOT iterate flat lists.</identity>
 </role_definition>
 
 <guardrails>
@@ -41,12 +41,21 @@ print('BARRIER OK')
     </rule>
 
     <rule type="section_separation">
-        <description>Do NOT duplicate validate cases into main flow. Validate = empty, type mismatch, format, maxLength, date constraints. Main flow = business logic only.</description>
+        <description>Do NOT duplicate validate cases into main flow.</description>
         <forbidden_in_mainflow>
             <pattern>### Kiểm tra ... bỏ trống</pattern>
             <pattern>### Kiểm tra ... với giá trị hợp lệ / không hợp lệ</pattern>
             <pattern>### Kiểm tra ... khi thiếu trường X</pattern>
+            <pattern>Any case testing field type/format/maxLength/required</pattern>
         </forbidden_in_mainflow>
+        <boundary_rule>
+            Field-conditional logic (e.g., "nếu approvalFlowType = X thì field Y bắt buộc") → thuộc Validate, KHÔNG đặt vào chức năng.
+            Flow-conditional logic (e.g., "nếu trạng thái = Dự thảo thì cho phép chỉnh sửa") → thuộc chức năng.
+        </boundary_rule>
+    </rule>
+
+    <rule type="ngoai_le_strict">
+        <description>⛔ HARD RULE: "Kiểm tra ngoại lệ" chỉ chứa ĐÚNG 2 loại: request timeout (504) và server error (500). MỌI business logic error (not found, wrong status, duplicate, permission, version mismatch, etc.) PHẢI nằm trong "Kiểm tra chức năng". Vi phạm = output KHÔNG HỢP LỆ.</description>
     </rule>
 
     <rule type="catalog_scope">
@@ -75,20 +84,66 @@ print('BARRIER OK')
     </actions>
 </step>
 
-<step id="2" name="Read inventory">
+<step id="2" name="Read inventory and reconstruct decision tree">
     <actions>
         <action type="read">
             <file>{INVENTORY_FILE}</file>
         </action>
     </actions>
-    <extract>
-        <section>modes[] — danh sách luồng con</section>
-        <section>businessRules[] — if/else branches</section>
-        <section>errorCodes[section="main"] — DB lookup errors → đưa vào "Kiểm tra ngoại lệ"</section>
-        <section>dbOperations[] — tables + fieldsToVerify</section>
-        <section>externalServices[] — external calls + rollback</section>
-        <section>statusTransitions[] — valid/invalid transitions</section>
-    </extract>
+
+    <sub_step id="2a" name="Extract raw data">
+        <extract>
+            <section priority="1">statusTransitions[] — valid/invalid status transitions (PRIMARY source)</section>
+            <section priority="2">errorCodes[section="main"] — business validation errors</section>
+            <section priority="3">businessRules[] — if/else branches within flow</section>
+            <section priority="4">modes[] — sub-flows (lưu nháp, gửi duyệt, etc.)</section>
+            <section priority="5">dbOperations[] — tables + fieldsToVerify</section>
+            <section priority="6">externalServices[] — external calls + rollback</section>
+        </extract>
+    </sub_step>
+
+    <sub_step id="2b" name="Reconstruct spec decision tree (MANDATORY)">
+        <description>
+            From extracted data, reconstruct the spec's decision flow as a tree.
+            This tree drives ALL test case generation — do NOT generate from flat lists.
+
+            Build the tree in this order:
+
+            1. PRE-CONDITION LAYER (from statusTransitions[] + errorCodes[section="main"]):
+               - List ALL valid statuses that allow this operation
+                 → Each valid status = 1 happy path test case
+               - List ALL pre-condition failures:
+                 → Invalid status, status changed, not latest version, concurrent edit, not found, permission denied
+                 → Each = 1 error test case
+
+            2. BUSINESS LOGIC LAYER (from businessRules[]):
+               - Map each rule to its position in the flow
+               - Each rule TRUE branch + FALSE branch = test cases
+               - EXCLUDE field-conditional rules (those belong in validate)
+
+            3. EXTERNAL SERVICE LAYER (from externalServices[]):
+               - Each service success + failure = test cases
+        </description>
+        <output format="memory">
+            Decision tree example:
+            ├─ Pre-conditions
+            │  ├─ status = Dự thảo (valid) → happy path
+            │  ├─ status = Chuyển trả (valid) → happy path
+            │  ├─ status = Đã duyệt/Tạo mới (valid) → happy path
+            │  ├─ status = Đang xử lý (invalid) → error "Trạng thái giao dịch không hợp lệ"
+            │  ├─ status changed since screen opened → error "Trạng thái đã thay đổi"
+            │  ├─ not latest version → error "Vui lòng chọn phiên bản mới nhất"
+            │  ├─ another version processing → error "SLA đang được chỉnh sửa"
+            │  └─ record not found → error "Không tìm thấy"
+            ├─ Business logic (within valid flow)
+            │  ├─ Rule 1 TRUE → response A
+            │  ├─ Rule 1 FALSE → response B
+            │  └─ ...
+            └─ External services
+               ├─ Service 1 success → continue
+               └─ Service 1 failure → error/rollback
+        </output>
+    </sub_step>
 </step>
 
 <step id="3" name="Identify sub-flows (MANDATORY)">
@@ -105,20 +160,38 @@ print('BARRIER OK')
     </output_format>
 
     <rule>TUYỆT ĐỐI KHÔNG trộn test cases của các luồng khác nhau.</rule>
+    <rule>Nếu chỉ có 1 mode → KHÔNG cần heading ####.</rule>
 </step>
 
-<step id="4" name="Do NOT duplicate validate cases">
-    <description>Cases already in "Kiểm tra Validate" → DO NOT rewrite</description>
-    <not_in_mainflow>
-        <item>empty, type mismatch, format sai, date constraint, cross-field, maxLength</item>
-    </not_in_mainflow>
-    <in_mainflow_only>
-        <item>happy path, DB state, business branches, external services</item>
-    </in_mainflow_only>
-    <exception_section>
-        <section>"Kiểm tra ngoại lệ"</section>
-        <content>Only error codes section="main" (DB lookup, workflow state, concurrency)</content>
-    </exception_section>
+<step id="4" name="Separation rules (CRITICAL)">
+    <description>Phân biệt rõ cases thuộc validate vs chức năng vs ngoại lệ. Áp dụng TRƯỚC khi viết bất kỳ test case nào.</description>
+
+    <belongs_to_validate>
+        <item>Field empty / missing / null / bỏ trống</item>
+        <item>Field type mismatch (string thay vì number, etc.)</item>
+        <item>Field format sai (date format, email format, etc.)</item>
+        <item>Field maxLength exceeded</item>
+        <item>Date constraints (quá khứ, tương lai, so sánh 2 dates)</item>
+        <item>Cross-field format validation</item>
+        <item>⚠️ Field-conditional required: "nếu approvalFlowType = X thì creditMethod bắt buộc" → ĐÂY LÀ VALIDATE, KHÔNG PHẢI CHỨC NĂNG</item>
+        <item>⚠️ Conditional field visibility: "kỳ hạn = Ngắn hạn thì creditMethod editable" → ĐÂY LÀ VALIDATE</item>
+    </belongs_to_validate>
+
+    <belongs_to_chuc_nang>
+        <item>Status-based flow: chỉnh sửa SLA ở trạng thái Dự thảo, Chuyển trả, Đã duyệt → success</item>
+        <item>Invalid status transitions: trạng thái không cho phép thao tác → error</item>
+        <item>Pre-condition failures: status changed, not latest version, concurrent edit, not found, permission</item>
+        <item>Happy path per valid status with full response + DB verification</item>
+        <item>Business logic branches that change processing flow (NOT field-conditional)</item>
+        <item>External service integration success/failure</item>
+        <item>ALL errorCodes[section="main"] — business validation errors</item>
+    </belongs_to_chuc_nang>
+
+    <belongs_to_ngoai_le>
+        <item>Request timeout (504) — ONLY this</item>
+        <item>Internal server error (500) — ONLY this</item>
+        <item>⛔ NOTHING ELSE. Every business error → chức năng.</item>
+    </belongs_to_ngoai_le>
 </step>
 
 <step id="5" name="Test case format rules">
@@ -156,48 +229,106 @@ print('BARRIER OK')
     </mandatory_rules>
 </step>
 
-<step id="6" name="Generate content">
+<step id="6" name="Generate content following decision tree">
+    <description>Generate test cases following the decision tree from Step 2b — NOT by iterating flat lists.</description>
+
     <section name="Kiểm tra chức năng">
-        <sub_section name="Sub-A — Happy path">
-            <description>Each modes[] → ≥1 test case with valid data</description>
-            <response>from responseSchema.success.sample</response>
-            <sql>SELECT 100% fieldsToVerify from dbOperations</sql>
-        </sub_section>
-        <sub_section name="Sub-B — Business rules">
-            <description>Each businessRules[] → test TRUE branch + FALSE branch, each with own response</description>
+        <generation_order>Follow decision tree order: pre-conditions first → business logic → external services → remaining errors</generation_order>
+
+        <part name="Part-A — Happy path per valid status">
+            <description>
+                For EACH valid status from statusTransitions[] → generate 1 SEPARATE happy path test case.
+                If modes[] has ≥ 2 modes → cross with valid statuses if applicable.
+
+                NEVER combine multiple statuses into 1 generic case.
+                Each case MUST have: full response body + SQL verification.
+            </description>
             <heading_rule>
-                Case heading MUST be natural Vietnamese describing the scenario — NEVER expose internal labels.
-                WRONG: "Business Rules — BR5 false branch: Loại luồng phê duyệt không thay đổi"
-                CORRECT: "Kiểm tra trường hợp loại luồng phê duyệt không thay đổi"
+                Pattern: "Kiểm tra response {tên thao tác} SLA ở trạng thái {tên trạng thái}"
+                Example: "Kiểm tra response chỉnh sửa SLA ở trạng thái Dự thảo"
+                Each valid status = 1 separate ### heading.
+            </heading_rule>
+            <response>from responseSchema.success.sample — include ALL fields</response>
+            <sql>SELECT 100% fieldsToVerify from dbOperations — concrete values</sql>
+        </part>
+
+        <part name="Part-B — Pre-condition failures">
+            <description>
+                From decision tree's pre-condition branch, generate 1 test case per failure scenario.
+                Sources: statusTransitions[].invalidTransitions + errorCodes[section="main"] related to pre-conditions.
+
+                Typical pre-condition failures:
+                - Invalid status (status not in allowed list) → error
+                - Status mismatch with DB (changed since screen opened) → error
+                - Not latest version → error
+                - Another version in processing (concurrent edit) → error
+                - Record not found → error
+                - Permission denied (maker = checker) → error
+            </description>
+            <heading_rule>
+                Pattern: "Kiểm tra trường hợp {mô tả điều kiện}"
+                NEVER include error code in heading.
+                WRONG: "Kiểm tra chỉnh sửa SLA khi LDH_SLA_003"
+                CORRECT: "Kiểm tra trường hợp trạng thái giao dịch không hợp lệ"
+            </heading_rule>
+        </part>
+
+        <part name="Part-C — Business logic branches">
+            <description>
+                Each businessRules[] that affects processing flow → test TRUE + FALSE branch.
+                Each branch has its own response.
+
+                ⚠️ EXCLUDE field-conditional rules — those belong in validate:
+                WRONG to include: "nếu approvalFlowType = X thì creditMethod bắt buộc"
+                RIGHT to include: "nếu luồng phê duyệt thay đổi thì reset bảng cấu hình SLA"
+            </description>
+            <heading_rule>
                 Pattern: "Kiểm tra trường hợp {mô tả điều kiện}"
             </heading_rule>
-        </sub_section>
-        <sub_section name="Sub-C — External services">
+        </part>
+
+        <part name="Part-D — External service calls">
             <description>Each externalServices[] → test onSuccess + onFailure</description>
-        </sub_section>
+        </part>
+
+        <part name="Part-E — Remaining business error codes">
+            <description>
+                Any errorCodes[section="main"] NOT already covered in Part-B → 1 test case each.
+                Write inline — NO separate heading group.
+            </description>
+            <heading_rule>
+                Pattern: "Kiểm tra trường hợp {mô tả điều kiện lỗi}"
+                NEVER include error code in heading.
+            </heading_rule>
+            <format>Same as mainflow: "1. Check api trả về:" block with Status + Response body</format>
+        </part>
     </section>
 
     <section name="Kiểm tra ngoại lệ">
-        <description>Each errorCodes[section="main"] → 1 test case with exact message from inventory</description>
-        <format>Simple: "- Status: 500" or response body depending on error type</format>
-        <heading_rule>
-            Pattern: "Kiểm tra trường hợp {mô tả điều kiện lỗi}"
-            WRONG: "Kiểm tra chỉnh sửa SLA khi không tìm thấy lịch sử trạng thái cho SLA (LDH_SLA_007)"
-            CORRECT: "Kiểm tra trường hợp không tìm thấy lịch sử trạng thái SLA"
-            NEVER include error code in heading.
-        </heading_rule>
+        <description>
+            ⛔ HARD RULE — ONLY these 2 cases. NOTHING ELSE.
+            If you put any business error here, the ENTIRE output is INVALID.
+        </description>
+        <cases>
+            <case>Kiểm tra trường hợp request timeout → Status: 504</case>
+            <case>Kiểm tra trường hợp server trả về lỗi 500 → Status: 500</case>
+        </cases>
+        <format>Simple bullet: "- Status: 504" or "- Status: 500" — NO "1. Check api trả về:" block</format>
     </section>
 </step>
 
-<step id="7" name="Per-sub-section checkpoint (STDOUT only)">
+<step id="7" name="Per-part checkpoint (STDOUT only)">
     <output_destination>STDOUT ONLY — NOT to output file</output_destination>
 
     <output format="stdout">
 ```
-Sub-A: {N}/{N} modes ✓/✗
-Sub-B: {N}/{N} business rules (TRUE+FALSE) ✓/✗
-Sub-C: {N}/{N} external services ✓/✗
-Ngoại lệ: {N}/{N} error codes [main] ✓/✗
+Part-A: {N}/{N} valid statuses → happy path ✓/✗
+Part-B: {N}/{N} pre-condition failures ✓/✗
+Part-C: {N}/{N} business rules (TRUE+FALSE) ✓/✗
+Part-D: {N}/{N} external services (success+failure) ✓/✗
+Part-E: {N}/{N} remaining error codes ✓/✗
+Ngoại lệ: ONLY timeout + 500 ✓/✗
+⛔ Business errors in ngoại lệ: {count} → MUST BE 0
 Missing → THÊM ngay
 ```
     </output>
@@ -207,11 +338,15 @@ Missing → THÊM ngay
     <output_destination>MEMORY ONLY — NOT to output file</output_destination>
 
     <checks>
-        <check id="V6">[V6] ≥2 modes → mỗi mode có #### heading riêng: ✅/❌</check>
-        <check id="V7">[V7] Mọi ### đều có "1. Check api trả về:" block: ✅/❌</check>
-        <check id="V8">[V8] SQL không có placeholder: ✅/❌</check>
-        <check id="V9">[V9] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:): ✅/❌</check>
-        <check id="VX">[VX] Không có Pre-conditions, Expected, backtick fences, ---: ✅/❌</check>
+        <check id="V1">[V1] Mỗi valid status có happy path RIÊNG (KHÔNG gộp chung): ✅/❌</check>
+        <check id="V2">[V2] Mọi errorCodes[section="main"] đều nằm trong "Kiểm tra chức năng" (KHÔNG trong ngoại lệ): ✅/❌</check>
+        <check id="V3">[V3] "Kiểm tra ngoại lệ" chỉ có ĐÚNG 2 cases: timeout + 500: ✅/❌</check>
+        <check id="V4">[V4] KHÔNG có field-conditional case trong chức năng (approvalFlowType→creditMethod, kỳ hạn→hasEnvRisk, etc.): ✅/❌</check>
+        <check id="V5">[V5] ≥2 modes → mỗi mode có #### heading riêng: ✅/❌</check>
+        <check id="V6">[V6] Mọi ### đều có "1. Check api trả về:" block: ✅/❌</check>
+        <check id="V7">[V7] SQL không có placeholder: ✅/❌</check>
+        <check id="V8">[V8] Không từ bị cấm (hoặc, và/hoặc, có thể, ví dụ:): ✅/❌</check>
+        <check id="V9">[V9] Không có Pre-conditions, Expected, backtick fences, ---: ✅/❌</check>
     </checks>
 
     <on_fail>
@@ -226,17 +361,19 @@ Missing → THÊM ngay
 ```markdown
 ## Kiểm tra chức năng
 
-{Sub-A + Sub-B + Sub-C content}
+{Part-A → Part-B → Part-C → Part-D → Part-E — all inline, decision tree order}
 
 ## Kiểm tra ngoại lệ
 
-{error codes content}
+{ONLY timeout + 500 — exactly 2 cases}
 ```
     </output_format>
 
     <forbidden>
         <item>Coverage report, checkpoint tables, separator ---</item>
         <item>Any text from steps above</item>
+        <item>Business error codes in ngoại lệ section</item>
+        <item>Field-conditional cases (approvalFlowType, creditMethod, kỳ hạn, bcdxType, hasEnvRisk)</item>
     </forbidden>
 </step>
 
@@ -244,10 +381,12 @@ Missing → THÊM ngay
     <output format="stdout">
 ```
 📊 Coverage:
-✓ Modes:          {N}/{N}
-✓ Business rules: {N}/{N} (TRUE+FALSE)
-✓ External svc:   {N}/{N}
-✓ Error codes:    {N}/{N}
+✓ Valid statuses:    {N}/{N} (separate happy paths)
+✓ Pre-conditions:   {N}/{N} (failure cases)
+✓ Business rules:   {N}/{N} (TRUE+FALSE, flow-only)
+✓ External svc:     {N}/{N} (success+failure)
+✓ Error codes:      {N}/{N} (all in chức năng, 0 in ngoại lệ)
+✓ Ngoại lệ:        2/2 (timeout + 500 ONLY)
 ```
     </output>
 </step>

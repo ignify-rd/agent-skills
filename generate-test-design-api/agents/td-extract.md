@@ -87,6 +87,30 @@ model: inherit
         <section name="externalServices">
             <description>S3, email, notification... + onFailure + rollback behavior</description>
         </section>
+
+        <section name="statusTransitions">
+            <description>
+                Extract ALL status-based conditions from spec flow steps.
+                For edit/approve/reject APIs, the spec typically defines:
+                - Which statuses ALLOW the operation (validStatuses)
+                - Which statuses BLOCK the operation (invalidStatuses)
+                - Pre-condition checks: version latest, status unchanged since screen opened, no concurrent edit, permission
+
+                Read the spec's step-by-step flow (e.g., steps 5-9) and extract EVERY decision branch related to status/state/version/permission.
+            </description>
+            <format>
+                Each entry: {"from": "status_or_condition", "allowed": true/false, "errorCode": "if_blocked", "errorMessage": "message_if_blocked", "source": "RSD tr.X"}
+            </format>
+            <examples>
+                {"from": "Dự thảo", "allowed": true, "errorCode": null, "errorMessage": null, "source": "RSD tr.5"}
+                {"from": "Chuyển trả", "allowed": true, "errorCode": null, "errorMessage": null, "source": "RSD tr.5"}
+                {"from": "Đang xử lý", "allowed": false, "errorCode": "LDH_SLA_003", "errorMessage": "Trạng thái giao dịch không hợp lệ", "source": "RSD tr.8"}
+                {"from": "status_changed_since_open", "allowed": false, "errorCode": "LDH_SLA_005", "errorMessage": "Trạng thái đã thay đổi", "source": "RSD tr.8"}
+                {"from": "not_latest_version", "allowed": false, "errorCode": "LDH_SLA_008", "errorMessage": "Chỉ được chỉnh sửa phiên bản mới nhất", "source": "RSD tr.6"}
+                {"from": "concurrent_edit", "allowed": false, "errorCode": "LDH_SLA_009", "errorMessage": "SLA đang được chỉnh sửa", "source": "RSD tr.8"}
+            </examples>
+            <rule>This section is CRITICAL for td-mainflow. If the spec has status/state checks, they MUST appear here — not only in errorCodes.</rule>
+        </section>
     </extract>
 </step>
 
@@ -170,6 +194,10 @@ model: inherit
     {"table": "TABLE_NAME", "operation": "UPDATE", "fieldsToVerify": ["COL1","COL2","COL3"], "source": "PTTK"}
   ],
   "externalServices": [],
+  "statusTransitions": [
+    {"from": "Dự thảo", "allowed": true, "errorCode": null, "errorMessage": null, "source": "RSD tr.X"},
+    {"from": "Đang xử lý", "allowed": false, "errorCode": "ERR_003", "errorMessage": "Trạng thái không hợp lệ", "source": "RSD tr.X"}
+  ],
   "fieldConstraints": [
     {"name": "fieldName", "type": "String", "maxLength": 100, "required": true, "source": "PTTK"}
   ],
@@ -236,7 +264,7 @@ model: inherit
 <output_file>{INVENTORY_FILE}</output_file>
 
 <contains>
-    <item>Business logic (errorCodes, businessRules, modes, dbOperations, externalServices)</item>
+    <item>Business logic (errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions)</item>
     <item>fieldConstraints (for td-validate)</item>
     <item>requestSchema + responseSchema + testData (for generate-test-case-api)</item>
 </contains>

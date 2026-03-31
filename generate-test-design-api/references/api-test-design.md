@@ -589,18 +589,29 @@ Nếu API chỉ có 1 luồng duy nhất → không cần heading phân nhóm. N
 
 **Luồng chính chỉ test business logic chưa được cover ở validate** (trạng thái SLA không hợp lệ, quyền, overlap với SLA khác, DB không tồn tại...).
 
+**⚠️ Field-conditional validation KHÔNG thuộc luồng chính.** Ví dụ: "nếu approvalFlowType = X thì creditMethod bắt buộc" → đây là validate, KHÔNG phải chức năng. Chỉ flow-conditional logic (trạng thái, version, permission) mới thuộc luồng chính.
+
 > Response body cấu trúc tùy theo PTTK/RSD của từng API — KHÔNG có format cố định. Các ví dụ dùng `errorCode`, `poErrorCode`, `data` chỉ là MẪU từ project demo.
 
-### Nội dung bắt buộc
+### Nội dung bắt buộc (theo thứ tự ưu tiên)
 
-1. **Response fields verification** — list ALL output fields (camelCase) với sample values
-2. **DB mapping verification** — SQL đầy đủ SELECT/FROM/WHERE/ORDER BY, concrete values
-3. **Search scenarios** — chính xác, gần đúng (LIKE), kết hợp nhiều điều kiện, không tồn tại
-4. **Sort order verification** — kiểm tra ORDER BY đúng
-5. **Business logic branches** — mỗi if/else → test TRUE + FALSE, mỗi branch có Response riêng
-6. **DB validations** — tồn tại/không tồn tại → test cả 2, mỗi cái có Response
-7. **Mode variations** — mỗi mode (tạo/sửa/xóa) → test riêng, có Response
-8. **Status transitions** — valid/invalid transitions, mỗi cái có Response
+1. **Status transitions (ƯU TIÊN CAO NHẤT)** — mỗi valid status → happy path RIÊNG (KHÔNG gộp chung). Mỗi invalid status/pre-condition failure → error case riêng. Đây là NỘI DUNG CHÍNH của luồng chức năng cho API edit/approve/reject.
+2. **Response fields verification** — list ALL output fields (camelCase) với sample values
+3. **DB mapping verification** — SQL đầy đủ SELECT/FROM/WHERE/ORDER BY, concrete values
+4. **Business logic branches** — mỗi if/else → test TRUE + FALSE, mỗi branch có Response riêng. CHỈ flow-conditional (thay đổi luồng xử lý), KHÔNG field-conditional.
+5. **DB validations** — tồn tại/không tồn tại → test cả 2, mỗi cái có Response
+6. **Mode variations** — mỗi mode (tạo/sửa/xóa) → test riêng, có Response
+7. **External services** — mỗi service → test success + failure
+8. **Search scenarios** — chính xác, gần đúng (LIKE), kết hợp nhiều điều kiện, không tồn tại (cho search APIs)
+9. **Sort order verification** — kiểm tra ORDER BY đúng (cho list APIs)
+
+### "Kiểm tra ngoại lệ" — STRICTLY system-level ONLY
+
+⛔ Section "Kiểm tra ngoại lệ" chỉ chứa ĐÚNG 2 loại:
+- Request timeout (504)
+- Internal server error (500)
+
+MỌI business error (not found, wrong status, duplicate, permission, version mismatch, etc.) → PHẢI nằm trong "Kiểm tra chức năng". Đặt business error vào ngoại lệ = SAI.
 
 ### SQL query rules
 
