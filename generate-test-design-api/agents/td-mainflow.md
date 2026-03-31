@@ -165,6 +165,12 @@ print('BARRIER OK')
         </sub_section>
         <sub_section name="Sub-B — Business rules">
             <description>Each businessRules[] → test TRUE branch + FALSE branch, each with own response</description>
+            <heading_rule>
+                Case heading MUST be natural Vietnamese describing the scenario — NEVER expose internal labels.
+                WRONG: "Business Rules — BR5 false branch: Loại luồng phê duyệt không thay đổi"
+                CORRECT: "Kiểm tra trường hợp loại luồng phê duyệt không thay đổi"
+                Pattern: "Kiểm tra trường hợp {mô tả điều kiện}"
+            </heading_rule>
         </sub_section>
         <sub_section name="Sub-C — External services">
             <description>Each externalServices[] → test onSuccess + onFailure</description>
@@ -174,6 +180,12 @@ print('BARRIER OK')
     <section name="Kiểm tra ngoại lệ">
         <description>Each errorCodes[section="main"] → 1 test case with exact message from inventory</description>
         <format>Simple: "- Status: 500" or response body depending on error type</format>
+        <heading_rule>
+            Pattern: "Kiểm tra trường hợp {mô tả điều kiện lỗi}"
+            WRONG: "Kiểm tra chỉnh sửa SLA khi không tìm thấy lịch sử trạng thái cho SLA (LDH_SLA_007)"
+            CORRECT: "Kiểm tra trường hợp không tìm thấy lịch sử trạng thái SLA"
+            NEVER include error code in heading.
+        </heading_rule>
     </section>
 </step>
 

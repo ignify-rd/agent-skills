@@ -60,9 +60,11 @@ model: inherit
             <section_assignment>
                 <target name="validate">
                     <description>Field-level errors (empty, type, format, date constraint, cross-field like expiredDate ≥ effectiveDate) — no DB query needed</description>
+                    <examples>missing field, wrong type, maxLength, date format, empty value</examples>
                 </target>
                 <target name="main">
-                    <description>DB lookup, duplicate name/code, wrong workflow state, external service failure</description>
+                    <description>Requires DB lookup or business state check: not found, duplicate name/code, wrong workflow state, concurrency lock, permission, external service failure</description>
+                    <examples>SLA not found, tên trùng, trạng thái không hợp lệ, không được tự phê duyệt, đang được chỉnh sửa, không phải phiên bản mới nhất</examples>
                 </target>
             </section_assignment>
         </section>

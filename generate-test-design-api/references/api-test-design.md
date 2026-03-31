@@ -212,9 +212,10 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 
 - Nếu constraint là **giá trị số** (ví dụ: min=0, max=100):
   → Generate: min-1, min, max, max+1, số rất lớn (5 cases riêng biệt)
-- Nếu constraint là **số chữ số** (ví dụ: "tối đa N chữ số"):
-  → max = 10^N - 1, generate: max (N chữ số), max+1 (N+1 chữ số) — **"số rất lớn" đã bao gồm trong max+1, KHÔNG generate thêm**
-  → Ví dụ "tối đa 2 chữ số": max=99, chỉ cần 9 (1 chữ số), 99 (2 chữ số), 100 (3 chữ số)
+- Nếu constraint là **số chữ số** — nhận biết qua: PTTK nói "tối đa N chữ số", hoặc inventory có `maxDigits: N`:
+  → max = 10^N - 1. Generate DUY NHẤT 3 boundary cases: (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1)
+  → **"số rất lớn" đã bao gồm trong max+1, KHÔNG generate thêm case 999 hay 99999**
+  → Ví dụ `maxDigits: 2`: max=99, chỉ cần **9** (1 chữ số), **99** (2 chữ số), **100** (3 chữ số)
 - Nếu **không có constraint** cụ thể: generate "số rất lớn vượt giới hạn Integer" như 1 case độc lập
 
 **Deduplication rules:**
