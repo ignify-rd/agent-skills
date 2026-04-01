@@ -270,9 +270,16 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 | 17 | Object | → error | |
 | 18 | Mảng | → error | |
 
-**Boundary case rules:**
-- Constraint **giá trị số** (min=0, max=100): Generate min-1, min, max, max+1
-- Constraint **số chữ số** (maxDigits: N): max = 10^N - 1. Generate (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1)
+**Boundary case rules — CHỈ sinh đúng số cases cần thiết, KHÔNG thêm giá trị trung gian:**
+
+| Constraint | Cases cần sinh | Ví dụ |
+|-----------|---------------|-------|
+| Có cả min VÀ max (VD: 0–100) | **4 cases**: min-1, min, max, max+1 | -1, 0, 100, 101 |
+| Chỉ có max (VD: max=100) | **3 cases**: max-1, max, max+1 | 99, 100, 101 |
+| Chỉ có min (VD: min=0) | **3 cases**: min-1, min, min+1 | -1, 0, 1 |
+| Số chữ số (maxDigits: N) | **3 cases**: (N-1) chữ số, N chữ số (=max), N+1 chữ số | maxDigits=2 → 9, 99, 100 |
+
+**⛔ KHÔNG sinh giá trị trung gian** (VD: min=0, max=100 → KHÔNG sinh 1, 50, 99). Chỉ sinh đúng boundary values.
 
 ---
 
