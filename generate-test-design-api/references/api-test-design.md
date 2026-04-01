@@ -325,7 +325,7 @@ Heading: `### {fieldName}: Integer (Optional)`
 | 1 | Để trống | → success | Khác Required |
 | 2 | Không truyền | → success | Khác Required |
 | 3 | Truyền null | → success | Khác Required |
-| 4–18 | (giống INTEGER Required cases 4–18) | → error | |
+| 4–18 | (giống INTEGER Required cases 4–18) | → error |
 ---
 
 <!-- @section: JSONB Required -->

@@ -507,8 +507,29 @@ sys.exit(0 if not missing else 1)
 </step>
 
 <step id="7" name="Final Output">
-    <description>Report completion to user</description>
+    <description>Verify output file, then report completion to user</description>
     <trigger>After Step 6</trigger>
+
+    <verify_output>
+        <script>python3 -X utf8 -c "
+import sys
+checks = [
+    ('## Kiểm tra chức năng', 'td-mainflow output'),
+    ('## Kiểm tra Validate', 'td-validate output'),
+    ('## Kiểm tra token', 'td-common output'),
+]
+missing = []
+for section, label in checks:
+    with open('test-design-api.md', encoding='utf-8') as f:
+        if section not in f.read():
+            missing.append(f'{section} (mising: {label})')
+if missing:
+    print('MISSING SECTIONS: ' + ', '.join(missing))
+    sys.exit(1)
+print('ALL_SECTIONS_PRESENT')
+"</script>
+        <failure_action>Retry spawn td-verify or report to user</failure_action>
+    </verify_output>
 
     <output_message>
 ```

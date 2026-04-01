@@ -84,14 +84,6 @@ function installWithAutoDetect(primaryAi) {
     }
   }
 
-  // Auto-detect codex
-  if (primaryAi !== 'codex') {
-    const codexHome = process.env.CODEX_HOME || join(os.homedir(), '.codex');
-    if (existsSync(join(codexHome, 'skills'))) {
-      toInstall.push('codex');
-    }
-  }
-
   if (toInstall.length > 1) {
     logger.info(`Auto-detected existing configs: ${toInstall.slice(1).join(', ')}`);
     console.log();

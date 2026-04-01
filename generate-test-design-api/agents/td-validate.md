@@ -183,6 +183,28 @@ model: inherit
         | Array Required | ≥ 10 |
         | Array Optional | ≥ 10 |
     </min_case_counts>
+
+    <boundary_rules>
+        <description>⛔ CHỈ sinh đúng số boundary cases theo constraint, KHÔNG thêm giá trị trung gian.</description>
+        <table>
+            | Constraint | Cases cần sinh | Ví dụ |
+            |---|---|---|
+            | Có cả min VÀ max (VD: 0–100) | **4 cases**: min-1, min, max, max+1 | -1, 0, 100, 101 |
+            | Chỉ có max (VD: max=100) | **3 cases**: max-1, max, max+1 | 99, 100, 101 |
+            | Chỉ có min (VD: min=0) | **3 cases**: min-1, min, min+1 | -1, 0, 1 |
+            | Số chữ số (maxDigits: N) | **3 cases**: (N-1) chữ số, N chữ số (=max), N+1 chữ số | maxDigits=2 → 9, 99, 100 |
+        </table>
+        <examples>
+            <wrong_cases>
+                - min=0, max=100 → KHÔNG sinh: 1, 50, 99 (giá trị trung gian)
+            </wrong_cases>
+            <correct_cases>
+                - min=0, max=100 → CHỈ sinh: -1, 0, 100, 101
+                - max=100 → CHỈ sinh: 99, 100, 101
+                - min=0 → CHỈ sinh: -1, 0, 1
+            </correct_cases>
+        </examples>
+    </boundary_rules>
 </step>
 
 <step id="4" name="Per-field checkpoint (IMMEDIATELY after each field)">

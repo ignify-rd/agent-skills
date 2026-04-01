@@ -156,7 +156,7 @@ def main():
     # ── Step 4: Append to output file ─────────────────────────────────────────
     with open(args.output_file, "a", encoding="utf-8") as f:
         f.write("\n\n## Kiểm tra Validate\n\n")
-        f.write("\n\n".join(batch_parts))
+        f.write("\n".join(batch_parts))
 
     # ── Step 5: Write sentinel ─────────────────────────────────────────────────
     sentinel = os.path.join(args.output_dir, ".td-validate-done")
