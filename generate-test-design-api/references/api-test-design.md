@@ -128,6 +128,55 @@ Mỗi field type có danh sách cases BẮT BUỘC từ `fieldTestTemplates.js`.
 | Constraint dạng "min ≤ x ≤ max" (giá trị số) | Generate: min-1, min, max, max+1 |
 | "Space ở giữa" và "All space" và "Space đầu/cuối" | Đây là 3 case **khác nhau**, giữ cả 3 |
 
+### ⛔ CRITICAL: BASE TEMPLATE OVERLAPS VỚI BOUNDARY RULES — PHẢI MERGE
+
+**Vấn đề gốc:** Base template (18 cases cho Integer) và Boundary Rules hoạt động ĐỘC LẬP, dẫn đến cùng 1 giá trị được test 2 lần.
+
+**Quy trình bắt buộc (3 bước):**
+
+**Bước 1 — Thu thập base cases:** Lấy tất cả cases từ template bảng. Đánh dấu mỗi case bằng nhãn loại: type-group.
+
+**Bước 2 — Thu thập constraint cases:** Dựa vào rsdConstraints (min, max, maxDecimalPlaces...) → tính constraint values.
+
+**Bước 3 — MERGE loại bỏ overlap:**
+
+| Base case (template) | Trùng với constraint nào? | Hành động |
+|----------------------|---------------------------|-----------|
+| "Số âm" (VD: -1) | min-1 | **MERGE** → dùng boundary case, BỎ base case |
+| "Số thập phân" (VD: 1.5) | maxDecimalPlaces boundary | **MERGE** → dùng boundary case, BỎ base case |
+| "maxLength-1/max/max+1" | String maxLength | **MERGE** → dùng boundary case |
+| "Số 0" | min=0 hoặc max=0 | **MERGE** → dùng boundary case |
+| "Boolean" (true/false) | Không trùng number | GIỮ base case |
+| "XSS", "SQL", "Object", "Mảng" | Không trùng | GIỮ base case |
+| "Leading zero", "Số rất lớn" | Không trùng | GIỮ base case |
+
+**Ví dụ min=0, max=100, maxDecimalPlaces=2 (warningYellowPct):**
+
+```
+❌ SAI (trùng lặp):
+   Base: "Số âm" → error  (test -1)
+   Base: "Số thập phân" → error  (test 1.5)
+   Boundary: "Kiểm tra = -1 (min-1)" → error  (test -1 lần 2!)
+   Boundary: "Kiểm tra = 1.5 (decimal hợp lệ)" → success  (test 1.5 lần 2!)
+
+✅ ĐÚNG (sau merge):
+   Base (non-overlap): Boolean, XSS, SQL, Object, Mảng, Leading zero, Số rất lớn...
+   + Boundary (MERGED): -1, 0, 100, 101
+   + Decimal (MERGED): 1.5, 1.55, 1.555
+   = TỔNG: ~9-12 cases (thay vì 21+)
+```
+
+**Min counts sau MERGE (ước tính):**
+
+| Type | Trước merge | Sau merge (ước tính) |
+|------|------|------------|-----------------|
+| Number min=0,max=100,decimal=2 | ~25 | ~9-12 |
+| Number chỉ có min/max | ~22 | ~6-8 |
+| Integer Required (có boundary) | ~22 | ~6-8 |
+| String Required (maxLength=100) | ~17 | ~17 |
+
+> **Lưu ý:** min_case_counts vẫn giữ nguyên ≥18 cho Number Required — nhưng sau MERGE, số case thực tế sẽ giảm đáng kể. Rule đảm bảo KHÔNG THIẾU cases, không phải LUÔN ĐẠT ≥18.
+
 **CRITICAL — Space cases:** `Space ở giữa`, `All space`, `Space đầu/cuối` là 3 case **hoàn toàn khác nhau** — TUYỆT ĐỐI KHÔNG merge.
 
 ### Quy tắc ký tự đặc biệt cho String
@@ -499,18 +548,78 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 ---
 
 <!-- @section: Number Required -->
-### NUMBER Required (decimal/float) — ≥ 18 cases
+### NUMBER Required (decimal/float) — ≥ 18 cases (sau MERGE: ~9-12)
 
-> Dùng cùng template cases như INTEGER Required (≥ 18 cases), VỚI thay đổi:
-> - Case "Số thập phân" → **success** (vì Number cho phép decimal)
-> - Thêm case "Số thập phân hợp lệ" → success
+> **⛔ ÁP DỤNG R7 MERGE:** Base template + Boundary rules TRÙNG LẶP → PHẢI MERGE trước khi sinh.
+
+**Cases sau khi MERGE** (áp dụng overlap rules):
+
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống | → error | |
+| 2 | Không truyền | → error | |
+| 3 | Truyền null | → error | |
+| 4 | Boundary min-1 | → error | **MERGE** từ base "Số âm" + boundary rule |
+| 5 | Boundary min | → success | |
+| 6 | Boundary max | → success | |
+| 7 | Boundary max+1 | → error | |
+| 8 | Decimal hợp lệ (VD: 1.5) | → success | **MERGE** base "Số thập phân" + decimal rule |
+| 9 | Decimal hợp lệ (VD: 1.55) | → success | |
+| 10 | Decimal vượt quá (VD: 1.555) | → error | |
+| 11 | Số có leading zero | → error | |
+| 12 | Số rất lớn vượt giới hạn | → error | |
+| 13 | Chuỗi ký tự | → error | |
+| 14 | Chuỗi chữ lẫn số | → error | |
+| 15 | Ký tự đặc biệt | → error | |
+| 16 | All space | → error | |
+| 17 | Boolean | → error | |
+| 18 | XSS / SQL Injection / Object / Mảng | → error | |
+
+**Bổ sung thêm nếu rsdConstraints có min/max:**
+- Nếu min > 0 → thêm boundary min-1 (số âm)
+- Nếu max > 0 → boundary max = giá trị max
+- Nếu maxDecimalPlaces > 0 → thêm 3 decimal cases
+
+**Số case sau MERGE (ước tính):**
+- Có min+max+decimal → ~9-12 cases
+- Chỉ có min+max → ~6-8 cases
+- Không có constraint → ~18 cases
+
+> **Lưu ý:** Số cases thực tế sau MERGE thường ÍT HƠN min_case_counts (≥18), nhưng vẫn đảm bảo đủ coverage. min_case_counts là cap TỐI THIỂU, không phải target.
 
 ---
 
 <!-- @section: Number Optional -->
-### NUMBER Optional — ≥ 18 cases
+### NUMBER Optional — ≥ 18 cases (sau MERGE: ~9-12)
 
-> Giống NUMBER Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success**.
+> **⛔ ÁP DỤNG R7 MERGE:** Giống NUMBER Required, VỚI thay đổi:
+> - Để trống / Không truyền / Truyền null → **success**
+> - Boundary cases → **error** (vì giá trị nằm ngoài range)
+
+**Cases sau khi MERGE:**
+
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống | → success | Khác Required |
+| 2 | Không truyền | → success | Khác Required |
+| 3 | Truyền null | → success | Khác Required |
+| 4 | Boundary min-1 | → error | |
+| 5 | Boundary min | → success | |
+| 6 | Boundary max | → success | |
+| 7 | Boundary max+1 | → error | |
+| 8 | Decimal hợp lệ (VD: 1.5) | → success | |
+| 9 | Decimal hợp lệ (VD: 1.55) | → success | |
+| 10 | Decimal vượt quá (VD: 1.555) | → error | |
+| 11 | Số có leading zero | → error | |
+| 12 | Số rất lớn | → error | |
+| 13 | Chuỗi ký tự | → error | |
+| 14 | Chuỗi chữ lẫn số | → error | |
+| 15 | Ký tự đặc biệt | → error | |
+| 16 | All space | → error | |
+| 17 | Boolean | → error | |
+| 18 | XSS / SQL Injection / Object / Mảng | → error | |
+
+> **Lưu ý:** Number Optional KHÔNG bỏ trống → vẫn error (khác với String Optional).
 
 ---
 
@@ -717,8 +826,9 @@ Sau khi generate luồng chính, re-read RSD:
 [V8] SQL giá trị cụ thể: ✅ / ❌ {query nào dùng placeholder}
 [V9] Không có từ bị cấm: ✅ / ❌ {case nào, từ nào}
 [V10] Format đầu ra đúng: ✅ / ❌ {vi phạm gì}
-[V13] Không có cases của API khác: ✅ / ❌ {case nào thuộc API/luồng ngoài scope}
-=== KẾT QUẢ: {số ✅}/11 — {PASS / CẦN SỬA} ===
+[V13] Không trùng lặp cases do BASE + BOUNDARY overlap: ✅ / ❌ {giá trị nào bị trùng, case nào thừa}
+[V14] Không có cases của API khác: ✅ / ❌ {case nào thuộc API/luồng ngoài scope}
+=== KẾT QUẢ: {số ✅}/12 — {PASS / CẦN SỬA} ===
 ```
 
 ### Hướng dẫn scan từng mục
@@ -727,7 +837,7 @@ Sau khi generate luồng chính, re-read RSD:
 → Tìm tất cả Date field có ràng buộc so sánh (expiredDate vs effectiveDate...). Kiểm tra các case `nhỏ hơn/bằng/lớn hơn` có nằm trong `###` section của field đó không. ❌ nếu chúng nằm ngoài field section.
 
 **[V2] Số case tối thiểu**
-→ Đếm `- Kiểm tra` bullet trong mỗi `###` field section. Min: String Req ≥18 | String Opt ≥17 | Int Req ≥16 | Date ≥14 | Boolean Req ≥11 | JSONB Req ≥14 | Array ≥10 | Number Req ≥15. ❌ nếu thiếu.
+→ Đếm `- Kiểm tra` bullet trong mỗi `###` field section. Min: String Req ≥18 | String Opt ≥17 | Int Req ≥18 | Date ≥14 | Boolean Req ≥11 | JSONB Req ≥14 | Array ≥10 | Number Req ≥18. ❌ nếu thiếu.
 
 **[V3] Response nhóm đúng loại**
 → Scan validate: cases Nhóm 1 (XSS, SQL injection, sai kiểu, Boolean/Mảng/Object) phải có error response. Cases Nhóm 3 (null, ký tự đặc biệt, space, dấu tiếng Việt) phải có response dựa trên `rsdConstraints` từ inventory. ❌ nếu Nhóm 1 có success response hoặc Nhóm 3 dùng error response khi inventory chỉ rõ cho phép.
@@ -759,5 +869,8 @@ Sau khi generate luồng chính, re-read RSD:
 **[V12] Không có ### [SỬA] heading**
 → Tìm `### [SỬA]` trong output. ❌ nếu tìm thấy — nội dung thiếu phải được insert in-place tại đúng vị trí, không append xuống cuối.
 
-**[V13] Không có cases thuộc LUỒNG XỬ LÝ của API khác**
+**[V13] Không trùng lặp cases do BASE + BOUNDARY overlap**
+→ Sau khi MERGE (R7), kiểm tra: (a) giá trị -1 chỉ xuất hiện 1 lần, không 2 lần (base "Số âm" + boundary). (b) giá trị decimal như 1.5/1.55 chỉ xuất hiện 1 lần, không 2 lần. (c) không có 2 cases cùng giá trị, cùng response, cùng mục đích. ❌ nếu phát hiện trùng lặp.
+
+**[V14] Không có cases thuộc LUỒNG XỬ LÝ của API khác**
 → Đọc lại từng `###` heading trong `## Kiểm tra chức năng`. Phân biệt: test field VALUE thuộc API này (action="Đẩy duyệt") = ✅ hợp lệ; test PROCESSING FLOW của API khác ("SLA sau khi được phê duyệt", "hiển thị trên danh sách") = ❌ vi phạm. Chỉ ❌ khi heading mô tả một luồng xử lý mà API KHÁC đảm nhiệm.

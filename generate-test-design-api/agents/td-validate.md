@@ -30,6 +30,60 @@ model: inherit
     <rule type="checkpoint_destination">
         <description>Checkpoint goes to STDOUT ONLY — NEVER to batch file</description>
     </rule>
+
+    <rule type="dedup_overlap" id="R7">
+        <description>
+            ⛔ BASE TEMPLATE OVERLAPS VỚI BOUNDARY RULES — PHẢI MERGE trước khi sinh cases.
+            Agent KHÔNG được sinh base cases VÀ boundary cases ĐỘC LẬP. PHẢI merge thành 1 danh sách cuối cùng.
+        </description>
+
+        <step name="pre_generation_merge" type="MANDATORY_BEFORE_STEP_3">
+            <description>Trước khi sinh bất kỳ case nào, PHẢI thực hiện 3 bước merge:</description>
+
+            <substep id="1" name="Thu thập base cases">
+                Lấy tất cả cases từ template bảng (rows 1-N của section type tương ứng).
+                ĐÁNH DẤU mỗi base case bằng nhãn loại: type-group (String, Number, Integer, Date...).
+            </substep>
+
+            <substep id="2" name="Thu thập constraint cases">
+                Dựa vào rsdConstraints (min, max, maxDecimalPlaces, maxLength...) → tính constraint values.
+                VÍ DỤ: min=0, max=100, maxDecimalPlaces=2 → boundary values = [-1, 0, 100, 101, 1.5, 1.55, 1.555].
+            </substep>
+
+            <substep id="3" name="MERGE — loại bỏ overlap">
+                Với mỗi constraint value, tìm base case cùng loại/nhóm:
+                - Base case "Số âm" (-1) trùng boundary value (-1) → MERGE → giữ boundary case, BỎ base case.
+                - Base case "Số thập phân" (1.5) trùng decimal boundary (1.5) → MERGE → giữ boundary case, BỎ base case.
+                - Base case "Boolean" (true/false) → KHÔNG trùng với number boundary → GIỮ base case.
+                KẾT QUẢ = final_case_list = (base_cases − overlapping) + constraint_cases
+            </substep>
+        </step>
+
+        <overlap_map>
+            <description>Bảng map overlap GIỮA base template VÀ constraint rules:</description>
+            <table>
+                | Base case (template) | Trùng với constraint nào? | Hành động |
+                |----------------------|---------------------------|-----------|
+                | "Số âm" (VD: -1) | min-1 (nếu min > min-1) | MERGE → dùng boundary case |
+                | "Số thập phân" (VD: 1.5) | maxDecimalPlaces boundary | MERGE → dùng boundary case |
+                | "maxLength-1/max/max+1" | String maxLength constraint | MERGE → dùng boundary case |
+                | "Số 0" | min=0 hoặc max=0 | MERGE → dùng boundary case |
+                | "Boolean" (true/false) | Không trùng number | GIỮ base case |
+                | "XSS", "SQL", "Object", "Mảng" | Không trùng | GIỮ base case |
+                | "Leading zero", "Số rất lớn" | Không trùng | GIỮ base case |
+            </table>
+        </overlap_map>
+
+        <wrong_approach>
+            <description>SAI — làm thế này = VI PHẠM R7:</description>
+            <example>Sinh base case "Số âm" → error RỒI sinh tiếp boundary case "-1" → error → TRÙNG LẶP!</example>
+        </wrong_approach>
+
+        <correct_approach>
+            <description>ĐÚNG — sau khi MERGE:</description>
+            <example>CHỈ 1 case cho -1: "Kiểm tra truyền trường warningYellowPct nhỏ hơn min = -1" → error</example>
+        </correct_approach>
+    </rule>
 </guardrails>
 
 ---
@@ -66,8 +120,34 @@ model: inherit
     </extract_from_inventory>
 </step>
 
+<step id="2b" name="Pre-generation — MERGE base + boundary (MANDATORY)">
+    <description>
+        ⛔ BẮT BUỘC thực hiện TRƯỚC KHI sinh bất kỳ case nào.
+        Thực hiện theo R7 dedup_overlap trong guardrails.
+    </description>
+    <actions>
+        <action type="merge">
+            <input>base_template_cases + constraint_values_from_rsdConstraints</input>
+            <output>final_case_list (deduplicated)</output>
+        </action>
+    </actions>
+
+    <output>
+        <item>final_case_list: danh sách cases sau khi MERGE loại bỏ overlap</item>
+        <item>case_count: số cases cuối cùng</item>
+    </output>
+
+    <checkpoint>
+        Sau khi merge, in ra console:
+        ```
+        [R7] MERGE complete: {base_count} base + {constraint_count} constraint → {final_count} final cases
+        Overlaps removed: {list giá trị bị loại}
+        ```
+    </checkpoint>
+</step>
+
 <step id="3" name="Generate validate per field (in order)">
-    <description>Generate ALL validate cases for each field in FIELD_BATCH sequentially</description>
+    <description>Generate ALL validate cases for each field in FIELD_BATCH sequentially — dùng final_case_list từ Step 2b</description>
 
     <response_resolution>
         <description>
@@ -95,8 +175,8 @@ model: inherit
         </rule>
 
         <completeness_rule>
-            ⛔ CRITICAL: Agent PHẢI sinh ĐẦY ĐỦ mọi case trong bảng template cho field type tương ứng.
-            KHÔNG được bỏ sót bất kỳ case nào. Chỉ được THÊM cases nếu RSD/PTTK đề cập thêm.
+            ⛔ CRITICAL: Agent PHẢI sinh ĐẦY ĐỦ mọi case trong **final_case_list** (sau khi MERGE từ Step 2b).
+            KHÔNG được bỏ sót bất kỳ case nào trong final_case_list.
         </completeness_rule>
     </response_resolution>
 
@@ -216,7 +296,12 @@ model: inherit
     </checkpoint_categories>
 
     <checkpoint_categories per_type="Integer Required / Long / Integer Default / Integer Optional">
-        Bỏ trống ✓ | Không truyền ✓ | Null ✓ | Số âm ✓ | Số thập phân ✓ | Leading zero ✓ | Số rất lớn ✓ | Chuỗi ✓ | Chữ lẫn số ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space đầu/cuối ✓ | Boolean ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
+        Để trống ✓ | Không truyền ✓ | Null ✓ | Boundary ✓ | Số thập phân ✓ | Leading zero ✓ | Số rất lớn ✓ | Chuỗi ✓ | Chữ lẫn số ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space đầu/cuối ✓ | Boolean ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="Number Required / Number Optional">
+        Để trống ✓ | Không truyền ✓ | Null ✓ | Boundary ✓ | Số thập phân hợp lệ ✓ | Leading zero ✓ | Số rất lớn ✓ | Chuỗi ✓ | Chữ lẫn số ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space đầu/cuối ✓ | Boolean ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
+        *(Ghi chú: "Boundary" = min-1/min/max/max+1 đã MERGE từ base "Số âm" + boundary rule. "Số thập phân hợp lệ" = maxDecimalPlaces cases đã MERGE từ base "Số thập phân")*
     </checkpoint_categories>
 
     <output format="stdout">
