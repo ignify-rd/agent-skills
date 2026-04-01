@@ -411,6 +411,61 @@ print('FIELD_COVERAGE OK: ' + str(len(fields)) + '/' + str(len(fields)))
         </on_missing_fields>
     </post_merge_field_coverage_check>
 
+    <post_merge_dedup_check>
+        <description>Scan output for BASE + BOUNDARY overlap violations (R7). RE-SPAWN if overlap found.</description>
+        <script>python3 -X utf8 -c "
+import re, sys
+content = open('{OUTPUT_FILE}', encoding='utf-8').read()
+
+# Detect overlap patterns after R7 MERGE enforcement
+overlap_issues = []
+
+# Pattern 1: Same value tested multiple times with same error code
+# e.g., '= -1' and 'nhỏ hơn min = -1' both appear
+neg_values = re.findall(r'= (-?\d+(?:\.\d+)?)', content)
+from collections import Counter
+neg_counts = Counter(neg_values)
+
+# Check for Number/Integer boundary overlap: -1 + min-1 = duplicate
+# Check for decimal overlap: 1.5 + 1.5 decimal = duplicate
+# Pattern: specific values that should have been MERGED
+values_to_check = ['-1', '-0.01', '1', '50', '99', '999', '-100', '1.5']
+for v in values_to_check:
+    pattern = r'= ' + re.escape(v) + r'(?!\d)'
+    matches = re.findall(pattern, content)
+    if len(matches) > 1:
+        overlap_issues.append(f'OVERLAP: giá trị {v} xuất hiện {len(matches)} lần — có thể chưa MERGE')
+
+# Pattern 2: Count bullets per field — if Number field has >15 cases, flag for review
+field_sections = re.findall(r'### Trường (\w+)
+(.*?)(?=### Trường|$)', content, re.DOTALL)
+for field_name, section in field_sections:
+    bullet_count = len(re.findall(r'^- ', section, re.MULTILINE))
+    # Check if field is Number/Decimal type in inventory
+    try:
+        inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
+        field_type = next((f.get('type','') for f in inv.get('requestSchema',{}).get('bodyParams',[]) if f.get('name') == field_name), '')
+        constraints = next((f.get('rsdConstraints',{}) for f in inv.get('requestSchema',{}).get('bodyParams',[]) if f.get('name') == field_name), {})
+        has_minmax = bool(constraints.get('min') is not None or constraints.get('max') is not None)
+        has_decimal = constraints.get('maxDecimalPlaces') is not None
+        if field_type in ('Number', 'decimal') and has_minmax and bullet_count > 15:
+            overlap_issues.append(f'WARN: {field_name} có {bullet_count} cases (>15) — có thể chưa MERGE (Number + min/max + decimal)')
+    except:
+        pass
+
+if overlap_issues:
+    print('R7_DEDUP_FAIL: ' + '; '.join(overlap_issues))
+    print('RECOMMENDATION: Re-spawn td-validate với R7 MERGE enforcement')
+    sys.exit(1)
+print('R7_DEDUP_OK: No overlap detected')
+"</script>
+        <on_overlap_found>
+            <action>RE-SPAWN td-validate với explicit R7 MERGE note trong context</action>
+            <action>Pass danh sách fields có overlap vào FIELD_BATCH lại</action>
+            <action>Re-run merge + dedup scan sau khi re-spawn</action>
+        </on_overlap_found>
+    </post_merge_dedup_check>
+
     <completion_criteria>
         <file_exists>{OUTPUT_DIR}/.td-validate-done</file_exists>
         <content_check>{OUTPUT_FILE} contains "## Kiểm tra Validate"</content_check>

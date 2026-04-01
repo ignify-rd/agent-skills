@@ -80,3 +80,41 @@ Extract: inputFields (name, type, maxLength, required, validationRules), outputF
 - 1 test = 1 check (atomic)
 - Forbidden: "và/hoặc", "hoặc", "có thể", "nên", "ví dụ:", "[placeholder]"
 - Response body format comes from PTTK (no fixed format)
+
+## R7: BASE + BOUNDARY MERGE (CRITICAL)
+
+**⛔ ĐÂY LÀ RULE BẮT BUỘC — TUYỆT ĐỐI KHÔNG ĐƯỢC VI PHẠM.**
+
+Base template cases và Boundary/Decimal rules TRÙNG LẶP nhau. **PHẢI MERGE** trước khi sinh cases.
+
+**Quy trình bắt buộc (3 bước):**
+
+1. **Thu thập base cases** từ template bảng
+2. **Thu thập constraint cases** từ rsdConstraints (min, max, maxDecimalPlaces)
+3. **MERGE loại bỏ overlap:**
+
+| Base case | Trùng với constraint | Hành động |
+|-----------|---------------------|-----------|
+| "Số âm" (VD: -1) | min-1 | **MERGE** → dùng boundary case |
+| "Số thập phân" (VD: 1.5) | maxDecimalPlaces | **MERGE** → dùng boundary case |
+| "maxLength-1/max/max+1" | String maxLength | **MERGE** → dùng boundary case |
+| "Số 0" | min=0 hoặc max=0 | **MERGE** → dùng boundary case |
+| "Boolean", "XSS", "SQL", "Object", "Mảng" | Không trùng | GIỮ base case |
+
+**Ví dụ min=0, max=100, maxDecimalPlaces=2 (warningYellowPct):**
+
+```
+❌ SAI — chưa MERGE:
+   - "Số âm" → error  (test -1)          ← base
+   - "Kiểm tra = -1" → error  (test -1)   ← boundary ← TRÙNG!
+   - "Số thập phân" → error  (test 1.5)    ← base
+   - "Kiểm tra = 1.5" → success (test 1.5) ← decimal ← TRÙNG!
+
+✅ ĐÚNG — sau MERGE:
+   - Boundary (MERGED): -1, 0, 100, 101
+   - Decimal (MERGED): 1.5, 1.55, 1.555
+   - Base (non-overlap): Boolean, XSS, SQL, Object, Mảng...
+   = ~9-12 cases (thay vì 21+)
+```
+
+**⚠️ Number fields sau MERGE sẽ CÓ ÍT HƠN min_case_counts (≥18).** Đây là bình thường — min_case_counts là cap TỐI THIỂU (không thiếu), không phải target cố định.
