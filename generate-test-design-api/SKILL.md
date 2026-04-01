@@ -444,18 +444,18 @@ print('READY')
     <trigger>After validate barrier passes</trigger>
 
     <barrier>
-        <description>Barrier check before spawning</description>
+        <description>Barrier check before spawning — only check prerequisites that ALREADY exist (token + validate). Do NOT check for "Kiểm tra chức năng" here — td-mainflow creates it.</description>
         <script>python3 -X utf8 -c "
 import sys
 c = open('{OUTPUT_FILE}', encoding='utf-8').read()
-checks = ['## Kiểm tra token', '## Kiểm tra Validate', '## Kiểm tra chức năng']
+checks = ['## Kiểm tra token', '## Kiểm tra Validate']
 missing = [s for s in checks if s not in c]
 print('READY' if not missing else 'NOT READY: MISSING: ' + str(missing))
 sys.exit(0 if not missing else 1)
 "</script>
 
         <on_not_ready>
-            <action>STOP COMPLETELY. Do NOT spawn Step 6.</action>
+            <action>STOP COMPLETELY. Do NOT spawn td-mainflow.</action>
         </on_not_ready>
     </barrier>
 

@@ -9,7 +9,7 @@ model: inherit
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>You generate validate test cases for exactly the fields in FIELD_BATCH (≤3 fields). You read field templates from api-test-design.md (3 nhóm: luôn lỗi / luôn thành công / phụ thuộc spec) and resolve spec-dependent cases using rsdConstraints from inventory.</identity>
+    <identity>You generate validate test cases for exactly the fields in FIELD_BATCH (≤3 fields). You read field templates from api-test-design.md (bảng cases BẮT BUỘC từ fieldTestTemplates.js) and resolve response using rsdConstraints from inventory. PHẢI sinh ĐẦY ĐỦ mọi case — KHÔNG được thiếu.</identity>
 </role_definition>
 
 <guardrails>
@@ -24,7 +24,7 @@ model: inherit
     </rule>
 
     <rule type="consistency">
-        <description>MỌI field cùng type PHẢI có ĐÚNG cùng số cases Nhóm 1 + Nhóm 2. Nhóm 3 chỉ khác nhau về RESPONSE (dựa trên rsdConstraints), KHÔNG khác về SỐ LƯỢNG cases.</description>
+        <description>MỌI field cùng type PHẢI có ĐẦY ĐỦ cases theo bảng template. Các field cùng type chỉ khác nhau về RESPONSE (dựa trên rsdConstraints / Required vs Optional), KHÔNG khác về SỐ LƯỢNG cases.</description>
     </rule>
 
     <rule type="checkpoint_destination">
@@ -37,7 +37,7 @@ model: inherit
 ## Workflow
 
 <step id="1" name="Load field type templates">
-    <description>Load ONLY the templates needed for this batch — templates now have 3 nhóm thay vì bảng marker</description>
+    <description>Load templates cần cho batch — mỗi type có bảng cases BẮT BUỘC từ fieldTestTemplates.js. Agent PHẢI sinh ĐẦY ĐỦ mọi case trong bảng, KHÔNG được bỏ sót.</description>
     <actions>
         <action type="bash">
             <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,{FIELD_TYPES_NEEDED}"</script>
@@ -60,8 +60,8 @@ model: inherit
 
     <extract_from_inventory>
         <item>fieldConstraints[] → filter by field names in FIELD_BATCH → get rsdConstraints per field</item>
-        <item>errorCodes[section="validate"] → error code + message for Nhóm 1 cases</item>
-        <item>responseSchema.success → success response for Nhóm 2 cases</item>
+        <item>errorCodes[section="validate"] → error code + message for error cases</item>
+        <item>responseSchema.success → success response for success cases</item>
         <item>responseSchema.error → error response structure</item>
     </extract_from_inventory>
 </step>
@@ -70,26 +70,34 @@ model: inherit
     <description>Generate ALL validate cases for each field in FIELD_BATCH sequentially</description>
 
     <response_resolution>
-        <nhom1 name="Luôn lỗi">
-            <description>Cases listed under "Nhóm 1" in template</description>
+        <description>
+            Mỗi case trong bảng template có cột "Response mặc định". Agent fill response theo logic sau:
+        </description>
+
+        <rule name="error">
+            <condition>Cột ghi "→ error"</condition>
             <response>Error code từ errorCodes[section="validate"] trong inventory. Status: 200.</response>
-        </nhom1>
+        </rule>
 
-        <nhom2 name="Luôn thành công">
-            <description>Cases listed under "Nhóm 2" in template</description>
+        <rule name="success">
+            <condition>Cột ghi "→ success"</condition>
             <response>Success response từ responseSchema.success trong inventory. Status: 200.</response>
-        </nhom2>
+        </rule>
 
-        <nhom3 name="Phụ thuộc spec">
-            <description>Cases listed under "Nhóm 3" in template — each references a rsdConstraints field</description>
+        <rule name="theo_rsd">
+            <condition>Cột ghi "→ Theo RSD: rsdConstraints.X (mặc định: Y)"</condition>
             <resolution_logic>
-                1. Đọc rsdConstraints field tương ứng (VD: case "Truyền null" → đọc rsdConstraints.allowNull)
+                1. Đọc rsdConstraints.X trong inventory cho field hiện tại
                 2. Nếu giá trị = true/"success" → dùng success response
                 3. Nếu giá trị = false/"error" → dùng error response
-                4. Nếu giá trị = string khác (custom) → dùng response tùy chỉnh theo mô tả
-                5. Nếu giá trị = null (tài liệu không đề cập) → dùng error response (default an toàn)
+                4. Nếu giá trị = null (tài liệu không đề cập) → dùng response MẶC ĐỊNH ghi trong template (thường là error)
             </resolution_logic>
-        </nhom3>
+        </rule>
+
+        <completeness_rule>
+            ⛔ CRITICAL: Agent PHẢI sinh ĐẦY ĐỦ mọi case trong bảng template cho field type tương ứng.
+            KHÔNG được bỏ sót bất kỳ case nào. Chỉ được THÊM cases nếu RSD/PTTK đề cập thêm.
+        </completeness_rule>
     </response_resolution>
 
     <general_rules>
@@ -157,19 +165,23 @@ model: inherit
     <min_case_counts>
         | Type | Min |
         |------|-----|
-        | String Required | ≥ 18 |
+        | String Required | ≥ 17 |
         | String Optional | ≥ 17 |
-        | Integer Required / Long | ≥ 16 |
-        | Integer with Default | ≥ 16 |
-        | Integer Optional | ≥ 13 |
+        | Integer Required / Long | ≥ 18 |
+        | Integer with Default | ≥ 18 |
+        | Integer Optional | ≥ 18 |
         | Boolean Required | ≥ 11 |
         | Boolean Optional | ≥ 9 |
-        | Number Required | ≥ 15 |
-        | Number Optional | ≥ 11 |
+        | Number Required | ≥ 18 |
+        | Number Optional | ≥ 18 |
         | JSONB Required | ≥ 14 |
         | JSONB Optional | ≥ 12 |
-        | Date Required | ≥ 14 |
+        | Date Required | ≥ 15 |
+        | Date Optional | ≥ 15 |
+        | DateTime Required | ≥ 17 |
+        | DateTime Optional | ≥ 17 |
         | Array Required | ≥ 10 |
+        | Array Optional | ≥ 10 |
     </min_case_counts>
 </step>
 
@@ -178,17 +190,17 @@ model: inherit
     <description>Check AFTER each field, not after entire batch</description>
 
     <checkpoint_categories per_type="String Required / String Optional">
-        Bỏ trống (null/empty/"") ✓ | Đúng định dạng ✓ | maxLength ✓ | maxLength+1 ✓ | maxLength-1 ✓ | Chỉ khoảng trắng ✓ | Khoảng trắng đầu/cuối ✓ | Khoảng trắng giữa ✓ | Chữ có dấu ✓ | Ký tự đặc biệt ✓ | Emoji ✓ | XSS ✓ | SQL injection ✓ | Unicode ✓
+        Bỏ trống ✓ | Không truyền ✓ | Null ✓ | maxLength-1 ✓ | maxLength ✓ | maxLength+1 ✓ | Ký tự số ✓ | Chữ không dấu ✓ | Chữ có dấu ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space giữa ✓ | Space đầu/cuối ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
     </checkpoint_categories>
 
-    <checkpoint_categories per_type="Integer Required / Long / Integer Default">
-        Bỏ trống ✓ | Chuỗi ✓ | Số thập phân ✓ | Âm ✓ | Hợp lệ ✓ | Boolean ✓ | Mảng ✓ | Object ✓ | Null ✓ | XSS ✓ | SQL injection ✓
+    <checkpoint_categories per_type="Integer Required / Long / Integer Default / Integer Optional">
+        Bỏ trống ✓ | Không truyền ✓ | Null ✓ | Số âm ✓ | Số thập phân ✓ | Leading zero ✓ | Số rất lớn ✓ | Chuỗi ✓ | Chữ lẫn số ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space đầu/cuối ✓ | Boolean ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
     </checkpoint_categories>
 
     <output format="stdout">
 ```
 ✓ Field {fieldName} ({type}): {generated}/{min} cases.
-  [V3] Nhóm 1 all error, Nhóm 2 all success: ✅/❌
+  [V3] Error cases → error response, Success cases → success response: ✅/❌
   [V4] Status validate = 200: ✅/❌
   Missing categories: [list cụ thể nếu có] → THÊM ngay.
 ```

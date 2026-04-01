@@ -105,35 +105,30 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 <!-- @section: validate-rules -->
 ## Phase 3: Kiểm tra validate
 
-### Cách xác định response cho validate cases
+### Nguồn tham chiếu chính: fieldTestTemplates.js
 
-Mỗi validate case thuộc 1 trong 3 nhóm:
+Mỗi field type có danh sách cases BẮT BUỘC từ `fieldTestTemplates.js`. Agent PHẢI sinh ĐẦY ĐỦ tất cả cases — KHÔNG được thiếu. Chỉ được THÊM cases (nếu tài liệu RSD/PTTK đề cập thêm).
 
-| Nhóm | Cách xác định response | Ví dụ |
-|------|----------------------|-------|
-| **Nhóm 1: Luôn lỗi** | Hardcode → error response (error code từ `errorCodes[section="validate"]` trong inventory) | Sai kiểu dữ liệu, XSS, SQL injection, Boolean/Mảng/Object vào String field |
-| **Nhóm 2: Luôn thành công** | Hardcode → success response (từ `responseSchema.success` trong inventory) | Giá trị hợp lệ đúng type, trong maxLength, chữ không dấu |
-| **Nhóm 3: Phụ thuộc spec** | Đọc `fieldConstraints[].rsdConstraints` trong inventory → nếu có dữ liệu cụ thể thì fill response theo; nếu `null` thì dùng error response (default an toàn) | Truyền null, ký tự đặc biệt, space, dấu tiếng Việt, emoji |
+### Cách xác định response
+
+| Loại response | Cách xác định | Áp dụng khi |
+|---------------|---------------|-------------|
+| **Error** (mặc định) | Dùng error code từ `errorCodes[section="validate"]` trong inventory | Cases ghi "→ error" trong template |
+| **Success** | Dùng success response từ `responseSchema.success` trong inventory | Cases ghi "→ success" trong template |
+| **Theo RSD** | Đọc `rsdConstraints` trong inventory → nếu có dữ liệu → fill theo; nếu `null` → dùng **error** (default an toàn) | Cases ghi "→ Theo RSD: rsdConstraints.X" |
 
 **CRITICAL:** ALL validate responses dùng Status: 200 — KHÔNG dùng 400/422/500 cho validate.
 
 ### Quy tắc chống duplicate / merge cases (áp dụng cho MỌI type)
 
-Trước khi generate, kiểm tra các tình huống sau và xử lý theo rule:
-
 | Tình huống | Rule |
 |-----------|------|
 | 2 case khác giá trị nhưng cùng mục đích kiểm tra + cùng response | Giữ 1, bỏ case còn lại |
-| Constraint dạng "tối đa N chữ số" → max = 10^N - 1 | Chỉ generate: (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1). KHÔNG thêm bất kỳ giá trị vượt khác |
+| Constraint dạng "tối đa N chữ số" → max = 10^N - 1 | Chỉ generate: (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1) |
 | Constraint dạng "min ≤ x ≤ max" (giá trị số) | Generate: min-1, min, max, max+1 |
-| Case âm nhỏ (−1) và âm thập phân (−0.01) cùng field Integer | Giữ số âm nguyên (−1), bỏ −0.01 vì Integer không nhận thập phân — thập phân đã có case riêng |
 | "Space ở giữa" và "All space" và "Space đầu/cuối" | Đây là 3 case **khác nhau**, giữ cả 3 |
 
-**CRITICAL — Space cases:** `Space ở giữa`, `All space`, `Space đầu/cuối` là 3 case **hoàn toàn khác nhau** — TUYỆT ĐỐI KHÔNG merge, TUYỆT ĐỐI KHÔNG bỏ bất kỳ case nào trong 3 case này.
-
-**Nguyên tắc chung:** Mỗi case phải kiểm tra đúng 1 điều khác biệt. Nếu 2 case cho cùng 1 response và không phân biệt được về mặt behavior → merge thành 1.
-
----
+**CRITICAL — Space cases:** `Space ở giữa`, `All space`, `Space đầu/cuối` là 3 case **hoàn toàn khác nhau** — TUYỆT ĐỐI KHÔNG merge.
 
 ### Quy tắc ký tự đặc biệt cho String
 
@@ -142,9 +137,9 @@ Trước khi generate, kiểm tra các tình huống sau và xử lý theo rule:
 | inventory có `allowedChars`? | Sinh cases |
 |------------------------------------|-----------|
 | Có (VD: `["_", "-"]`) | Tách 2 case: "cho phép (_, -)" → success + "không cho phép (!@#$%^&*)" → error |
-| Không có / null | 1 case chung "ký tự đặc biệt" → đọc rsdConstraints, nếu null → dùng error response |
+| Không có / null | 1 case chung "ký tự đặc biệt" → error |
 
-**CRITICAL:** Case "không cho phép" LUÔN LUÔN error — KHÔNG được fill response thành công vào case này.
+**CRITICAL:** Case "không cho phép" LUÔN LUÔN error.
 
 ### Per-field output format
 
@@ -192,205 +187,195 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 ---
 
 <!-- @section: String Required -->
-### STRING Required — 18 cases
+### STRING Required — ≥ 17 cases (từ fieldTestTemplates.js)
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Để trống ("")
-- Không truyền field
-- {maxLen+1} ký tự
-- Boolean (true/false)
-- Mảng ([])
-- Object ({})
-- XSS (`<script>alert(1)</script>`)
-- SQL INJECTION (`' OR 1=1 --`)
+**Cases BẮT BUỘC** (mapping từ `generateStringFieldTests(fieldName, isRequired=true, maxLength)`):
 
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- {maxLen-1} ký tự
-- {maxLen} ký tự
-- Chữ thường/hoa không dấu
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống ("") | → error | |
+| 2 | Không truyền field | → error | |
+| 3 | Truyền null | → error | |
+| 4 | {maxLen-1} ký tự hợp lệ | → success | Chỉ khi có maxLength |
+| 5 | {maxLen} ký tự hợp lệ | → success | Chỉ khi có maxLength |
+| 6 | {maxLen+1} ký tự hợp lệ | → error | Chỉ khi có maxLength |
+| 7 | Ký tự số | → success | |
+| 8 | Chữ thường/hoa không dấu | → success | |
+| 9 | Chữ có dấu tiếng Việt | → error | Theo RSD: `rsdConstraints.allowAccents` (mặc định: error) |
+| 10 | Ký tự đặc biệt | → error | Theo RSD: `rsdConstraints.allowSpecialChars` + `allowedChars` (mặc định: error) |
+| 11 | All space | → error | |
+| 12 | Space ở giữa | → error | |
+| 13 | Space đầu/cuối | → error | |
+| 14 | XSS (`<script>alert(1)</script>`) | → error | |
+| 15 | SQL Injection (`' OR 1=1 --`) | → error | |
+| 16 | Object ({}) | → error | |
+| 17 | Mảng ([]) | → error | |
 
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Truyền null → `rsdConstraints.allowNull`
-- Chữ có dấu tiếng Việt → `rsdConstraints.allowAccents`
-- Ký tự đặc biệt → `rsdConstraints.allowSpecialChars` + `allowedChars`
-- All space → `rsdConstraints.allowSpaces`
-- Space đầu / cuối → `rsdConstraints.allowSpaces`
-- Space ở giữa → `rsdConstraints.allowSpaces`
-- Emoji/icons (1 case duy nhất) → spec-dependent
-- Unicode đặc biệt (1 case duy nhất) → spec-dependent
+> Không có maxLength → bỏ case 4, 5, 6 → ≥ 14 cases.
+
+---
+
+<!-- @section: String Optional -->
+### STRING Optional — ≥ 17 cases (từ fieldTestTemplates.js)
+
+**Cases BẮT BUỘC** (mapping từ `generateStringFieldTests(fieldName, isRequired=false, maxLength)`):
+
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống ("") | → success | Khác Required |
+| 2 | Không truyền field | → success | Khác Required |
+| 3 | Truyền null | → success | Khác Required |
+| 4 | {maxLen-1} ký tự hợp lệ | → success | Chỉ khi có maxLength |
+| 5 | {maxLen} ký tự hợp lệ | → success | Chỉ khi có maxLength |
+| 6 | {maxLen+1} ký tự hợp lệ | → error | Chỉ khi có maxLength |
+| 7 | Ký tự số | → success | |
+| 8 | Chữ thường/hoa không dấu | → success | |
+| 9 | Chữ có dấu tiếng Việt | → error | Theo RSD: `rsdConstraints.allowAccents` (mặc định: error) |
+| 10 | Ký tự đặc biệt | → error | Theo RSD: `rsdConstraints.allowSpecialChars` + `allowedChars` (mặc định: error) |
+| 11 | All space | → error | |
+| 12 | Space ở giữa | → error | |
+| 13 | Space đầu/cuối | → error | |
+| 14 | XSS (`<script>alert(1)</script>`) | → error | |
+| 15 | SQL Injection (`' OR 1=1 --`) | → error | |
+| 16 | Object ({}) | → error | |
+| 17 | Mảng ([]) | → error | |
+
+> Không có maxLength → bỏ case 4, 5, 6 → ≥ 14 cases.
 
 ---
 
 <!-- @section: Integer Required -->
-### INTEGER Required (no default) — 16 cases
+### INTEGER Required (no default) — ≥ 18 cases (từ fieldTestTemplates.js)
 
-**Boundary case rules — đọc trước khi generate:**
+**Cases BẮT BUỘC** (mapping từ `generateNumberFieldTests(fieldName, isRequired=true, type='Integer')`):
 
-- Nếu constraint là **giá trị số** (ví dụ: min=0, max=100):
-  → Generate: min-1, min, max, max+1 (4 cases riêng biệt)
-- Nếu constraint là **số chữ số** — nhận biết qua: PTTK nói "tối đa N chữ số", hoặc inventory có `maxDigits: N`:
-  → max = 10^N - 1. Generate DUY NHẤT 3 boundary cases: (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1)
-  → Ví dụ `maxDigits: 2`: max=99, chỉ cần **9** (1 chữ số), **99** (2 chữ số), **100** (3 chữ số)
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống | → error | |
+| 2 | Không truyền | → error | |
+| 3 | Truyền null | → error | |
+| 4 | Số âm (VD: -1) | → error | |
+| 5 | Số thập phân (VD: 1.5) | → error | |
+| 6 | Số có leading zero (VD: 00123) | → error | |
+| 7 | Số rất lớn vượt giới hạn Integer | → error | |
+| 8 | Chuỗi ký tự (VD: "abc") | → error | |
+| 9 | Chuỗi chữ lẫn số (VD: "10abc000") | → error | |
+| 10 | Ký tự đặc biệt (VD: @#$%, *, -, +) | → error | |
+| 11 | All space | → error | |
+| 12 | Space đầu/cuối (VD: " 123 ") | → error | |
+| 13 | Space ở giữa (VD: "1 23") | → error | |
+| 14 | Boolean (true/false) | → error | |
+| 15 | XSS (`<script>alert(1)</script>`) | → error | |
+| 16 | SQL Injection (`' OR 1=1 --`) | → error | |
+| 17 | Object | → error | |
+| 18 | Mảng | → error | |
 
-**Deduplication rules:**
-- KHÔNG generate case trùng lặp về mục đích kiểm tra dù giá trị khác nhau (ví dụ: -1 và -0.01 cùng test "số âm/không hợp lệ" → chỉ giữ 1)
-
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Để trống
-- Không truyền
-- Chuỗi ký tự
-- Ký tự đặc biệt (@#$)
-- All space
-- Space đầu / cuối
-- Space ở giữa
-- Boolean
-- Mảng
-- Object
-- XSS
-- SQL INJECTION
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Số nguyên hợp lệ
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Truyền null → `rsdConstraints.allowNull`
-- Số âm → `rsdConstraints.allowNegative` (nếu null → error)
-- Số thập phân → `rsdConstraints.allowDecimal` (nếu null → error)
+**Boundary case rules:**
+- Constraint **giá trị số** (min=0, max=100): Generate min-1, min, max, max+1
+- Constraint **số chữ số** (maxDigits: N): max = 10^N - 1. Generate (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1)
 
 ---
 
 <!-- @section: Integer Default -->
-### INTEGER with Default Value — 16 cases
+### INTEGER with Default Value — ≥ 18 cases
 
 Heading: `### {fieldName}: Integer (Required, default = {defaultValue})`
 
-> Áp dụng cùng boundary case rules và deduplication rules như INTEGER Required.
+> Cùng cases như INTEGER Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success** + ghi chú "Hệ thống sử dụng default {fieldName} = {defaultValue}".
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Chuỗi ký tự
-- Ký tự đặc biệt (@#$)
-- All space
-- Space đầu / cuối
-- Space ở giữa
-- Boolean
-- Mảng
-- Object
-- XSS
-- SQL INJECTION
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Để trống → success + ghi chú: "Hệ thống sử dụng default {fieldName} = {defaultValue}"
-- Không truyền → success + ghi chú default
-- Truyền null → success + ghi chú default
-- Số nguyên hợp lệ
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Số âm → `rsdConstraints.allowNegative` (nếu null → error)
-- Số thập phân → `rsdConstraints.allowDecimal` (nếu null → error)
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống | → success + ghi chú default | Khác Required |
+| 2 | Không truyền | → success + ghi chú default | Khác Required |
+| 3 | Truyền null | → success + ghi chú default | Khác Required |
+| 4 | Số âm (VD: -1) | → error | |
+| 5 | Số thập phân (VD: 1.5) | → error | |
+| 6 | Số có leading zero (VD: 00123) | → error | |
+| 7 | Số rất lớn vượt giới hạn Integer | → error | |
+| 8 | Chuỗi ký tự (VD: "abc") | → error | |
+| 9 | Chuỗi chữ lẫn số (VD: "10abc000") | → error | |
+| 10 | Ký tự đặc biệt (VD: @#$%, *, -, +) | → error | |
+| 11 | All space | → error | |
+| 12 | Space đầu/cuối (VD: " 123 ") | → error | |
+| 13 | Space ở giữa (VD: "1 23") | → error | |
+| 14 | Boolean (true/false) | → error | |
+| 15 | XSS (`<script>alert(1)</script>`) | → error | |
+| 16 | SQL Injection (`' OR 1=1 --`) | → error | |
+| 17 | Object | → error | |
+| 18 | Mảng | → error | |
 
 ---
 
 <!-- @section: Integer Optional -->
-### INTEGER Optional (null = tìm tất cả) — 13 cases
+### INTEGER Optional — ≥ 18 cases
 
-Heading: `### {fieldName}: Integer (Optional, null = tìm tất cả)`
+Heading: `### {fieldName}: Integer (Optional)`
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Chuỗi
-- Boolean
-- Mảng
-- Object
-- XSS
-- SQL INJECTION
+> Cùng cases như INTEGER Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success**.
 
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Để trống → success + "Trả về TẤT CẢ bản ghi"
-- Không truyền → success + "Trả về TẤT CẢ bản ghi"
-- Truyền null → success + "Trả về TẤT CẢ bản ghi"
-- Giá trị hợp lệ → success + "CHỈ trả về bản ghi khớp"
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Giá trị không hợp lệ → `rsdConstraints`
-- Số âm → `rsdConstraints.allowNegative`
-- Số thập phân → `rsdConstraints.allowDecimal`
-
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống | → success | Khác Required |
+| 2 | Không truyền | → success | Khác Required |
+| 3 | Truyền null | → success | Khác Required |
+| 4–18 | (giống INTEGER Required cases 4–18) | → error | |
 ---
 
 <!-- @section: JSONB Required -->
 ### JSONB Required — 14 cases
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Để trống
-- Không truyền
-- JSON sai syntax (không parse được)
-- Mảng `[]` thay vì object
-- Chuỗi rỗng
-- String thuần (không phải JSON)
-- Number
-- Boolean
-- XSS trong JSON value
-- SQL injection trong JSON value
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- JSON hợp lệ
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Truyền null → `rsdConstraints.allowNull`
-- JSON sai format nghiệp vụ (thiếu trường bắt buộc trong JSON) → `rsdConstraints`
-- Object rỗng `{}` → `rsdConstraints`
+| # | Case | Response mặc định |
+|---|------|-------------------|
+| 1 | Để trống | → error |
+| 2 | Không truyền | → error |
+| 3 | Truyền null | → error |
+| 4 | JSON sai syntax (không parse được) | → error |
+| 5 | Mảng `[]` thay vì object | → error |
+| 6 | Chuỗi rỗng | → error |
+| 7 | String thuần (không phải JSON) | → error |
+| 8 | Number | → error |
+| 9 | Boolean | → error |
+| 10 | XSS trong JSON value | → error |
+| 11 | SQL injection trong JSON value | → error |
+| 12 | JSON hợp lệ | → success |
+| 13 | JSON sai format nghiệp vụ (thiếu trường bắt buộc) | → Theo RSD (mặc định: error) |
+| 14 | Object rỗng `{}` | → Theo RSD (mặc định: error) |
 
 ---
 
 <!-- @section: JSONB Optional -->
 ### JSONB Optional — 12 cases
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- JSON sai syntax (không parse được)
-- Mảng `[]` thay vì object
-- Chuỗi rỗng
-- String thuần (không phải JSON)
-- Number
-- Boolean
-- XSS trong JSON value
-- SQL injection trong JSON value
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Không truyền
-- Truyền null
-- JSON hợp lệ
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- JSON sai format nghiệp vụ → `rsdConstraints`
-- Object rỗng `{}` → `rsdConstraints`
+> Giống JSONB Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success**.
 
 ---
 
 <!-- @section: Date Required -->
-### DATE Required — 14 cases (format theo PTTK/RSD)
+### DATE Required — ≥ 15 cases (từ fieldTestTemplates.js)
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Để trống
-- Không truyền
-- Sai định dạng
-- Số nguyên
-- Boolean
-- Mảng
-- Object
-- XSS
-- SQL INJECTION
+**Cases BẮT BUỘC** (mapping từ `generateDateFieldTests(fieldName, isRequired=true, constraints, dateFormat)`):
 
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Đúng định dạng
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Truyền null → `rsdConstraints.allowNull`
-- Ngày quá khứ → `rsdConstraints` (nếu null → error)
-- Ngày hiện tại → `rsdConstraints`
-- Ngày tương lai → `rsdConstraints`
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống | → error | |
+| 2 | Không truyền | → error | |
+| 3 | Truyền null | → error | |
+| 4 | Đúng định dạng (VD: 25/12/2024) | → success | Format theo PTTK/RSD |
+| 5 | Sai định dạng (VD: yyyy/dd/MM thay vì dd/MM/yyyy) | → error | |
+| 6 | Chuỗi không phải ngày tháng (VD: "abc123") | → error | |
+| 7 | Ngày không tồn tại (VD: 30/02/2025, 32/01/2025) | → error | |
+| 8 | Ngày quá khứ (VD: 01/01/2020) | → Theo RSD: `rsdConstraints.allowPastDate` (mặc định: success) | |
+| 9 | Ngày hiện tại | → Theo RSD: `rsdConstraints.allowCurrentDate` (mặc định: success) | |
+| 10 | Ngày tương lai (VD: 31/12/2099) | → Theo RSD: `rsdConstraints.allowFutureDate` (mặc định: success) | |
+| 11 | Số nguyên | → error | |
+| 12 | XSS (`<script>alert(1)</script>`) | → error | |
+| 13 | SQL Injection (`' OR 1=1 --`) | → error | |
+| 14 | Object | → error | |
+| 15 | Mảng | → error | |
 
 **So sánh với Date field khác (khi có ràng buộc):**
 
-Đọc `rsdConstraints.crossFieldRules` trong inventory. Khi một Date field có ràng buộc so sánh với Date field khác (VD: `expiredDate` phải >= `effectiveDate`), thêm các case sau NGAY TRONG section `###` của field đó:
+Đọc `rsdConstraints.crossFieldRules` trong inventory. Khi một Date field có ràng buộc so sánh với Date field khác (VD: `expiredDate` phải >= `effectiveDate`), thêm các case NGAY TRONG section `###` của field đó:
 
 - {fieldName} nhỏ hơn {relatedField} → error
 - {fieldName} bằng {relatedField} → spec-dependent
@@ -398,31 +383,80 @@ Heading: `### {fieldName}: Integer (Optional, null = tìm tất cả)`
 
 ---
 
+<!-- @section: Date Optional -->
+### DATE Optional — ≥ 15 cases
+
+> Giống DATE Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success**.
+
+---
+
+<!-- @section: DateTime Required -->
+### DATETIME Required — ≥ 18 cases (từ fieldTestTemplates.js)
+
+**Cases BẮT BUỘC** (mapping từ `generateDateTimeFieldTests(fieldName, isRequired=true, constraints, dateFormat)`):
+
+| # | Case | Response mặc định | Ghi chú |
+|---|------|--------------------|---------|
+| 1 | Để trống | → error | |
+| 2 | Không truyền | → error | |
+| 3 | Truyền null | → error | |
+| 4 | Đúng định dạng (VD: 25/12/2024 14:30:45) | → success | Format theo PTTK/RSD |
+| 5 | Sai định dạng ngày (VD: yyyy/dd/MM HH:mm:ss) | → error | |
+| 6 | Sai định dạng giờ (VD: 25/12/2024 25:70:90) | → error | |
+| 7 | Chỉ có ngày không có giờ (VD: 25/12/2024) | → error | |
+| 8 | Chuỗi không phải ngày giờ (VD: "abc123") | → error | |
+| 9 | Ngày không tồn tại (VD: 30/02/2025 14:30:45) | → error | |
+| 10 | Ngày giờ quá khứ (VD: 01/01/2020 10:00:00) | → Theo RSD: `rsdConstraints.allowPastDateTime` (mặc định: success) | |
+| 11 | Ngày giờ hiện tại | → Theo RSD: `rsdConstraints.allowCurrentDateTime` (mặc định: success) | |
+| 12 | Ngày giờ tương lai (VD: 31/12/2099 23:59:59) | → Theo RSD: `rsdConstraints.allowFutureDateTime` (mặc định: success) | |
+| 13 | Số nguyên | → error | |
+| 14 | XSS (`<script>alert(1)</script>`) | → error | |
+| 15 | SQL Injection (`' OR 1=1 --`) | → error | |
+| 16 | Object | → error | |
+| 17 | Mảng | → error | |
+
+---
+
+<!-- @section: DateTime Optional -->
+### DATETIME Optional — ≥ 18 cases
+
+> Giống DATETIME Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success**.
+
+---
+
 <!-- @section: Array Required -->
-### ARRAY Required — 10 cases
+### ARRAY Required — ≥ 10 cases (từ fieldTestTemplates.js)
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Không truyền
-- Mảng rỗng `[]`
-- Mảng chứa phần tử rỗng `[{}]`
-- String thay vì array
-- Number thay vì array
-- Object thay vì array
-- Boolean thay vì array
-- XSS trong phần tử
-- SQL injection trong phần tử
+**Cases BẮT BUỘC** (mapping từ `generateArrayFieldTests(fieldName, isRequired=true, childFieldNames)`):
 
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Truyền null → `rsdConstraints.allowNull`
+| # | Case | Response mặc định |
+|---|------|-------------------|
+| 1 | Không truyền | → error |
+| 2 | Truyền null | → error |
+| 3 | Mảng rỗng `[]` | → error |
+| 4 | Mảng chứa phần tử rỗng `[{}]` | → error |
+| 5 | String thay vì array | → error |
+| 6 | Number thay vì array | → error |
+| 7 | Object thay vì array | → error |
+| 8 | Boolean thay vì array | → error |
+| 9 | XSS (`<script>alert(1)</script>`) | → error |
+| 10 | SQL Injection (`' OR 1=1 --`) | → error |
 
 > Với Array có child fields: sinh thêm validate cases cho từng child field riêng (`### {childFieldName}`).
+
+---
+
+<!-- @section: Array Optional -->
+### ARRAY Optional — ≥ 10 cases
+
+> Giống ARRAY Required, NGOẠI TRỪ: Không truyền / Truyền null → **success**.
 
 ---
 
 <!-- @section: Long -->
 ### INTEGER / LONG — cùng template, khác heading
 
-Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required (no default)** template (≥ 16 cases).
+Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required** template (≥ 18 cases).
 
 - Type trong PTTK/RSD là `int` / `Integer` / `integer` → Heading: `### {fieldName}: Integer (Required)`
 - Type trong PTTK/RSD là `long` / `Long` → Heading: `### {fieldName}: Long (Required)`
@@ -434,127 +468,42 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 <!-- @section: Boolean Required -->
 ### BOOLEAN Required — 11 cases
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Để trống
-- Không truyền
-- Số khác 0 và 1
-- Chuỗi bất kỳ (abc)
-- Mảng
-- Object
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- true
-- false
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Truyền null → `rsdConstraints.allowNull`
-- Chuỗi "true" / "false" → `rsdConstraints`
-- Số nguyên (0/1) → `rsdConstraints`
+| # | Case | Response mặc định |
+|---|------|-------------------|
+| 1 | Để trống | → error |
+| 2 | Không truyền | → error |
+| 3 | Truyền null | → error |
+| 4 | Số khác 0 và 1 | → error |
+| 5 | Chuỗi bất kỳ (abc) | → error |
+| 6 | Mảng | → error |
+| 7 | Object | → error |
+| 8 | true | → success |
+| 9 | false | → success |
+| 10 | Chuỗi "true" / "false" | → Theo RSD (mặc định: error) |
+| 11 | Số nguyên (0/1) | → Theo RSD (mặc định: error) |
 
 ---
 
 <!-- @section: Boolean Optional -->
 ### BOOLEAN Optional — 9 cases
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Chuỗi bất kỳ (abc)
-- Mảng
-- Object
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Không truyền
-- Truyền null
-- true
-- false
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Chuỗi "true" / "false" → `rsdConstraints`
-- Số nguyên (0/1) → `rsdConstraints`
+> Giống BOOLEAN Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success**.
 
 ---
 
 <!-- @section: Number Required -->
-### NUMBER Required (decimal/float, có thể có range) — ≥ 15 cases
+### NUMBER Required (decimal/float) — ≥ 18 cases
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Để trống
-- Không truyền
-- Chuỗi ký tự (abc)
-- Ký tự đặc biệt (@#$)
-- All space
-- Space đầu / cuối
-- Boolean
-- Mảng
-- Object
-- XSS
-- SQL INJECTION
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Số nguyên hợp lệ
-- Số thập phân hợp lệ
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Truyền null → `rsdConstraints.allowNull`
-- Số âm → `rsdConstraints.allowNegative` (nếu null → error)
-
-> Nếu inventory có `rsdConstraints.min` / `rsdConstraints.max`: thêm "Giá trị < min" → error và "Giá trị > max" → error
+> Dùng cùng template cases như INTEGER Required (≥ 18 cases), VỚI thay đổi:
+> - Case "Số thập phân" → **success** (vì Number cho phép decimal)
+> - Thêm case "Số thập phân hợp lệ" → success
 
 ---
 
 <!-- @section: Number Optional -->
-### NUMBER Optional — ≥ 11 cases
+### NUMBER Optional — ≥ 18 cases
 
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- Chuỗi
-- Boolean
-- Mảng
-- Object
-- XSS
-- SQL INJECTION
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Không truyền
-- Truyền null
-- Số nguyên hợp lệ
-- Số thập phân hợp lệ
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Số âm → `rsdConstraints.allowNegative`
-
-> Nếu inventory có `rsdConstraints.min` / `rsdConstraints.max`: thêm "Giá trị < min" → error và "Giá trị > max" → error
-
----
-
-<!-- @section: String Optional -->
-### STRING Optional — ≥ 17 cases
-
-#### Nhóm 1: Luôn lỗi (hardcode error response)
-- {maxLen+1} ký tự
-- Boolean
-- Mảng
-- Object
-- XSS
-- SQL INJECTION
-
-#### Nhóm 2: Luôn thành công (hardcode success response)
-- Không truyền
-- Truyền null
-- {maxLen-1} ký tự
-- {maxLen} ký tự
-- Chữ thường/hoa không dấu
-
-#### Nhóm 3: Phụ thuộc spec (đọc rsdConstraints từ inventory)
-- Để trống ("") → `rsdConstraints.allowEmpty`
-- Ký tự số → `rsdConstraints.allowNumbers`
-- Chữ có dấu tiếng Việt → `rsdConstraints.allowAccents`
-- Ký tự đặc biệt → `rsdConstraints.allowSpecialChars` + `allowedChars`
-- All space → `rsdConstraints.allowSpaces`
-- Space đầu / cuối → `rsdConstraints.allowSpaces`
-- Space ở giữa → `rsdConstraints.allowSpaces`
-- Emoji/icons (1 case duy nhất) → spec-dependent
-- Unicode đặc biệt (1 case duy nhất) → spec-dependent
-
-> Nếu không có maxLength: bỏ qua 3 cases maxLen → ≥ 14 cases.
+> Giống NUMBER Required, NGOẠI TRỪ: Để trống / Không truyền / Truyền null → **success**.
 
 ---
 
@@ -565,7 +514,7 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 Field {fieldName} ({type}): {generated}/{min} cases. Missing: [list] → THÊM ngay.
 ```
 
-Min counts: String Required ≥ 18 | String Optional ≥ 17 | Integer Required ≥ 16 | Integer with Default ≥ 16 | Long ≥ 16 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date ≥ 14 | Array ≥ 10 | Boolean Required ≥ 11 | Boolean Optional ≥ 9 | Number Required ≥ 15 | Number Optional ≥ 11
+Min counts: String Required ≥ 17 | String Optional ≥ 17 | Integer Required ≥ 18 | Integer with Default ≥ 18 | Integer Optional ≥ 18 | Long ≥ 18 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date Required ≥ 15 | Date Optional ≥ 15 | DateTime Required ≥ 17 | DateTime Optional ≥ 17 | Array Required ≥ 10 | Array Optional ≥ 10 | Boolean Required ≥ 11 | Boolean Optional ≥ 9 | Number Required ≥ 18 | Number Optional ≥ 18
 
 ---
 
