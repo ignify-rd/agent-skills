@@ -294,43 +294,50 @@ Mỗi case = 1 **bullet** `- Kiểm tra ...` + response lồng trong, theo forma
 ---
 
 <!-- @section: Integer Required -->
-### INTEGER Required (no default) — ≥ 18 cases (từ fieldTestTemplates.js)
+<!-- @section: Integer Required -->
+### INTEGER Required (no default) — base 15 cases + boundary cases (nếu inventory CÓ constraint)
 
-**Cases BẮT BUỘC** (mapping từ `generateNumberFieldTests(fieldName, isRequired=true, type='Integer')`):
+**⛔ CẤU TRÚC BẮT BUỘC — Đọc kỹ trước khi sinh:**
 
-| # | Case | Response mặc định | Ghi chú |
-|---|------|--------------------|---------|
-| 1 | Để trống | → error | |
-| 2 | Không truyền | → error | |
-| 3 | Truyền null | → error | |
-| 4 | Số âm (VD: -1) | → error | |
-| 5 | Số thập phân (VD: 1.5) | → error | |
-| 6 | Số có leading zero (VD: 00123) | → error | |
-| 7 | Số rất lớn vượt giới hạn Integer | → error | |
-| 8 | Chuỗi ký tự (VD: "abc") | → error | |
-| 9 | Chuỗi chữ lẫn số (VD: "10abc000") | → error | |
-| 10 | Ký tự đặc biệt (VD: @#$%, *, -, +) | → error | |
-| 11 | All space | → error | |
-| 12 | Space đầu/cuối (VD: " 123 ") | → error | |
-| 13 | Space ở giữa (VD: "1 23") | → error | |
-| 14 | Boolean (true/false) | → error | |
-| 15 | XSS (`<script>alert(1)</script>`) | → error | |
-| 16 | SQL Injection (`' OR 1=1 --`) | → error | |
-| 17 | Object | → error | |
-| 18 | Mảng | → error | |
+**A. Base cases (LUÔN LUÔN sinh):**
 
-**Boundary case rules — CHỈ sinh đúng số cases cần thiết, KHÔNG thêm giá trị trung gian:**
+| # | Case | Response mặc định |
+|---|------|--------------------|
+| 1 | Để trống | → error |
+| 2 | Không truyền | → error |
+| 3 | Truyền null | → error |
+| 4 | Số rất lớn vượt giới hạn Integer | → error |
+| 5 | Chuỗi ký tự | → error |
+| 6 | Chuỗi chữ lẫn số | → error |
+| 7 | Ký tự đặc biệt | → error |
+| 8 | All space | → error |
+| 9 | Space đầu/cuối | → error |
+| 10 | Space ở giữa | → error |
+| 11 | Boolean | → error |
+| 12 | XSS | → error |
+| 13 | SQL Injection | → error |
+| 14 | Object | → error |
+| 15 | Mảng | → error |
 
-| Constraint | Cases cần sinh | Ví dụ |
-|-----------|---------------|-------|
-| Có cả min VÀ max (VD: 0–100) | **4 cases**: min-1, min, max, max+1 | -1, 0, 100, 101 |
-| Chỉ có max (VD: max=100) | **3 cases**: max-1, max, max+1 | 99, 100, 101 |
-| Chỉ có min (VD: min=0) | **3 cases**: min-1, min, min+1 | -1, 0, 1 |
-| Số chữ số (maxDigits: N) | **3 cases**: (N-1) chữ số, N chữ số (=max), N+1 chữ số | maxDigits=2 → 9, 99, 100 |
+**B. Boundary cases (CHỈ sinh khi inventory CÓ rsdConstraints rõ ràng):**
 
-**⛔ KHÔNG sinh giá trị trung gian** (VD: min=0, max=100 → KHÔNG sinh 1, 50, 99). Chỉ sinh đúng boundary values.
+| # | Case | Ghi chú |
+|---|------|---------|
+| 16 | Boundary min-1 → error | **THAY THẾ** "Số âm" trong base (không cộng thêm) |
+| 17 | Boundary min → success | |
+| 18 | Boundary max → success | |
+| 19 | Boundary max+1 → error | |
+| 20 | maxDigits-1 chữ số → success | Chỉ khi có maxDigits |
+| 21 | maxDigits chữ số → success | |
+| 22 | maxDigits+1 chữ số → error | |
+
+**⛔ R7 MERGE (QUAN TRỌNG):**
+- B16–B19 **THAY THẾ**, không cộng thêm. Nếu inventory có min/max → sinh B16–B19 **thay cho** "Số âm" trong base.
+- Nếu inventory **KHÔNG CÓ** min/max/maxDigits → **CHỈ sinh phần A (15 cases)**, không tự suy ra boundary.
+- **KHÔNG sinh giá trị trung gian** (1, 50, 99...). Chỉ sinh đúng boundary values.
 
 ---
+
 
 <!-- @section: Integer Default -->
 ### INTEGER with Default Value — ≥ 18 cases
@@ -548,44 +555,45 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 ---
 
 <!-- @section: Number Required -->
-### NUMBER Required (decimal/float) — ≥ 18 cases (sau MERGE: ~9-12)
+### NUMBER Required (decimal/float) — base 15 cases + boundary cases (nếu inventory CÓ constraint)
 
-> **⛔ ÁP DỤNG R7 MERGE:** Base template + Boundary rules TRÙNG LẶP → PHẢI MERGE trước khi sinh.
+**⛔ CẤU TRÚC BẮT BUỘC — Đọc kỹ trước khi sinh:**
 
-**Cases sau khi MERGE** (áp dụng overlap rules):
+**A. Base cases (LUÔN LUÔN sinh):**
 
-| # | Case | Response mặc định | Ghi chú |
-|---|------|--------------------|---------|
-| 1 | Để trống | → error | |
-| 2 | Không truyền | → error | |
-| 3 | Truyền null | → error | |
-| 4 | Boundary min-1 | → error | **MERGE** từ base "Số âm" + boundary rule |
-| 5 | Boundary min | → success | |
-| 6 | Boundary max | → success | |
-| 7 | Boundary max+1 | → error | |
-| 8 | Decimal hợp lệ (VD: 1.5) | → success | **MERGE** base "Số thập phân" + decimal rule |
-| 9 | Decimal hợp lệ (VD: 1.55) | → success | |
-| 10 | Decimal vượt quá (VD: 1.555) | → error | |
-| 11 | Số có leading zero | → error | |
-| 12 | Số rất lớn vượt giới hạn | → error | |
-| 13 | Chuỗi ký tự | → error | |
-| 14 | Chuỗi chữ lẫn số | → error | |
-| 15 | Ký tự đặc biệt | → error | |
-| 16 | All space | → error | |
-| 17 | Boolean | → error | |
-| 18 | XSS / SQL Injection / Object / Mảng | → error | |
+| # | Case | Response mặc định |
+|---|------|--------------------|
+| 1 | Để trống | → error |
+| 2 | Không truyền | → error |
+| 3 | Truyền null | → error |
+| 4 | Số có leading zero | → error |
+| 5 | Số rất lớn vượt giới hạn | → error |
+| 6 | Chuỗi ký tự | → error |
+| 7 | Chuỗi chữ lẫn số | → error |
+| 8 | Ký tự đặc biệt | → error |
+| 9 | All space | → error |
+| 10 | Boolean | → error |
+| 11 | XSS | → error |
+| 12 | SQL Injection | → error |
+| 13 | Object | → error |
+| 14 | Mảng | → error |
 
-**Bổ sung thêm nếu rsdConstraints có min/max:**
-- Nếu min > 0 → thêm boundary min-1 (số âm)
-- Nếu max > 0 → boundary max = giá trị max
-- Nếu maxDecimalPlaces > 0 → thêm 3 decimal cases
+**B. Boundary cases (CHỈ sinh khi inventory CÓ rsdConstraints rõ ràng):**
 
-**Số case sau MERGE (ước tính):**
-- Có min+max+decimal → ~9-12 cases
-- Chỉ có min+max → ~6-8 cases
-- Không có constraint → ~18 cases
+| # | Case | Ghi chú |
+|---|------|---------|
+| 15 | Boundary min-1 → error | **THAY THẾ** base "Số âm" (không cộng thêm) |
+| 16 | Boundary min → success | |
+| 17 | Boundary max → success | |
+| 18 | Boundary max+1 → error | |
+| 19 | Decimal hợp lệ 1 (VD: 1.5) → success | **THAY THẾ** base "Số thập phân" (không cộng thêm) |
+| 20 | Decimal hợp lệ 2 (VD: 1.55) → success | |
+| 21 | Decimal vượt quá (VD: 1.555) → error | |
 
-> **Lưu ý:** Số cases thực tế sau MERGE thường ÍT HƠN min_case_counts (≥18), nhưng vẫn đảm bảo đủ coverage. min_case_counts là cap TỐI THIỂU, không phải target.
+**⛔ R7 MERGE (QUAN TRỌNG):**
+- B15–B18 **THAY THẾ** "Số âm" trong base. B19–B21 **THAY THẾ** "Số thập phân" trong base. KHÔNG cộng thêm.
+- Nếu inventory **KHÔNG CÓ** min/max/maxDecimalPlaces → **CHỈ sinh phần A (14 cases)**, không tự suy ra boundary.
+- Số cases sau MERGE: có min+max+decimal → ~12–15 cases; không có constraint → 14 cases.
 
 ---
 
