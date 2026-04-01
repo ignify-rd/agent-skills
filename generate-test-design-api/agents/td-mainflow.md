@@ -62,6 +62,24 @@ print('BARRIER OK')
         <description>CATALOG_SAMPLE dùng để tham khảo format response/wording ONLY. TUYỆT ĐỐI KHÔNG đọc catalog để suy ra modes, flows, hay business logic. Nguồn duy nhất cho modes/businessRules là INVENTORY_FILE.</description>
     </rule>
 
+    <rule type="scope_boundary" id="field_value_vs_processing_flow">
+        <description>
+            ⛔ PHÂN BIỆT: field VALUE ≠ processing FLOW
+
+            Field VALUE = giá trị truyền vào field của API này (VD: action="Đẩy duyệt", status="Dự thảo")
+            → ✅ ĐƯỢC PHÉP test — đây là input/state của API đang thiết kế
+
+            Processing FLOW = luồng xử lý mà API KHÁC đảm nhiệm (VD: "SLA sau khi được phê duyệt", "hiển thị trên danh sách")
+            → ❌ KHÔNG ĐƯỢC test — đây là scope của API khác
+
+            Ví dụ API Chỉnh sửa SLA:
+            ✅ "Kiểm tra response khi action = Đẩy duyệt" → test giá trị field action
+            ✅ "Kiểm tra response chỉnh sửa SLA ở trạng thái Dự thảo" → happy path
+            ❌ "Kiểm tra SLA sau khi được phê duyệt" → API Phê duyệt
+            ❌ "Kiểm tra hiển thị SLA trên danh sách" → API Danh sách
+        </description>
+    </rule>
+
     <rule type="checkpoint_destination">
         <description>All checkpoints go to STDOUT ONLY — NOT to output file</description>
     </rule>

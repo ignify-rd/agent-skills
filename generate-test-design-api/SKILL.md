@@ -148,10 +148,10 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     if depth > 3:
         dirs[:] = []
         continue
-    if 'td-extract.md' in files and 'agents' in root:
+    if 'td-extract-logic.md' in files and 'agents' in root:
         print(root)
         break
-" "$(pwd)/generate-test-design-api/agents/td-extract.md" 2>/dev/null || echo "generate-test-design-api/agents"</script>
+" "$(pwd)/generate-test-design-api/agents/td-extract-logic.md" 2>/dev/null || echo "generate-test-design-api/agents"</script>
             <stores>SKILL_AGENTS</stores>
         </action>
     </actions>
@@ -197,43 +197,85 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     <note>Catalog = highest priority source for wording. Always use CATALOG_SAMPLE for sub-agents.</note>
 </step>
 
-<step id="4" name="Spawn td-extract" type="sub-agent">
-    <description>Extract business logic from RSD/PTTK and build inventory.json</description>
+<step id="4" name="Spawn td-extract-logic + td-extract-fields (PARALLEL)" type="parallel">
+    <description>Extract business logic AND field definitions from RSD/PTTK in parallel. Both write to same inventory.json but to DIFFERENT categories.</description>
     <trigger>After Step 3</trigger>
 
-    <actions>
-        <action type="read_agent_instructions">
-            <file>SKILL_AGENTS/td-extract.md</file>
-        </action>
-        <action type="spawn_subagent">
-            <agent_type>td-extract</agent_type>
-            <prompt>{td-extract.md content}</prompt>
-            <context>
-                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
-                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
-                <param name="RSD_FILE">{RSD_FILE}</param>
-                <param name="PTTK_FILE">{PTTK_FILE or "none"}</param>
-                <param name="API_NAME">{from RSD title}</param>
-                <param name="METHOD">{HTTP method}</param>
-                <param name="PROJECT_RULES">{projectRules or "none"}</param>
-            </context>
-        </action>
-    </actions>
+    <sub_step id="4a" name="Spawn td-extract-logic">
+        <description>Extracts: errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions. Also runs inventory init.</description>
+        <actions>
+            <action type="read_agent_instructions">
+                <file>SKILL_AGENTS/td-extract-logic.md</file>
+            </action>
+            <action type="spawn_subagent">
+                <agent_type>td-extract-logic</agent_type>
+                <prompt>{td-extract-logic.md content}</prompt>
+                <context>
+                    <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                    <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                    <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                    <param name="RSD_FILE">{RSD_FILE}</param>
+                    <param name="PTTK_FILE">{PTTK_FILE or "none"}</param>
+                    <param name="API_NAME">{from RSD title}</param>
+                    <param name="METHOD">{HTTP method}</param>
+                    <param name="PROJECT_RULES">{projectRules or "none"}</param>
+                </context>
+            </action>
+        </actions>
+    </sub_step>
+
+    <sub_step id="4b" name="Spawn td-extract-fields">
+        <description>Extracts: fieldConstraints (with rsdConstraints), requestSchema, responseSchema, testData.</description>
+        <actions>
+            <action type="read_agent_instructions">
+                <file>SKILL_AGENTS/td-extract-fields.md</file>
+            </action>
+            <action type="spawn_subagent">
+                <agent_type>td-extract-fields</agent_type>
+                <prompt>{td-extract-fields.md content}</prompt>
+                <context>
+                    <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                    <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                    <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                    <param name="RSD_FILE">{RSD_FILE}</param>
+                    <param name="PTTK_FILE">{PTTK_FILE or "none"}</param>
+                    <param name="API_NAME">{from RSD title}</param>
+                    <param name="METHOD">{HTTP method}</param>
+                    <param name="PROJECT_RULES">{projectRules or "none"}</param>
+                </context>
+            </action>
+        </actions>
+    </sub_step>
+
+    <execution_order>
+        <rule>td-extract-logic MUST start first (runs inventory init)</rule>
+        <rule>td-extract-fields starts immediately after (patches into existing inventory)</rule>
+        <rule>Both can run in parallel — they write to different inventory categories</rule>
+    </execution_order>
 
     <completion_criteria>
-        <condition>inventory.json created and summary non-empty</condition>
+        <condition>Both agents complete successfully</condition>
+        <condition>inventory.json has fieldConstraints with rsdConstraints + errorCodes + statusTransitions</condition>
     </completion_criteria>
+
+    <post_completion>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py summary --file {INVENTORY_FILE}</script>
+        </action>
+    </post_completion>
 
     <error_handling>
         <condition>errorCodes = 0</condition>
         <action>Ask user before continuing</action>
+        <condition>Any fieldConstraints missing rsdConstraints</condition>
+        <action>Re-spawn td-extract-fields with note to fill missing rsdConstraints</action>
         <condition>Conflicts between PTTK and RSD detected</condition>
         <action>Ask user to confirm</action>
     </error_handling>
 </step>
 
-<step id="4b" name="Clarify modes with user (if conflict detected)" type="user_interaction">
-    <trigger>After Step 4 — ONLY if conflict between user intent and inventory.modes[]</trigger>
+<step id="4c" name="Clarify modes with user (if conflict detected)" type="user_interaction">
+    <trigger>After Step 4 completes (both extract agents done) — ONLY if conflict between user intent and inventory.modes[]</trigger>
 
     <conflict_detection>
         <description>Compare user's original request with inventory.modes[]</description>
@@ -275,7 +317,7 @@ C. Không chia theo mode — chỉ test API đơn thuần
 
 <step id="5a" name="Spawn td-common" type="sub-agent">
     <description>Generate "Kiểm tra token" and "Kiểm tra Endpoint & Method" sections</description>
-    <trigger>After Step 4</trigger>
+    <trigger>After Step 4c</trigger>
 
     <actions>
         <action type="read_agent_instructions">
@@ -441,7 +483,7 @@ sys.exit(0 if not missing else 1)
 
 <step id="6" name="Spawn td-verify" type="sub-agent">
     <description>Gap analysis, V5 duplicate check, V9 global scan, V10 format check</description>
-    <note>V1-V4 handled by td-validate. V6-V9 handled by td-mainflow. td-verify only covers: gap analysis, V5 duplicate, V9 global, V10 format.</note>
+    <note>V1-V4 handled by td-validate. V6-V9 handled by td-mainflow. td-verify covers: gap analysis, V5 duplicate, V9 global, V10 format, V13 scope.</note>
     <trigger>After Step 5c</trigger>
 
     <actions>
@@ -508,11 +550,12 @@ generate-test-design-api/
 ├── SKILL.md                      ← Orchestrator workflow (this file)
 ├── AGENTS.md                     ← Skill-level default rules
 ├── agents/
-│   ├── td-extract.md             ← Extract RSD/PTTK → inventory.json
+│   ├── td-extract-fields.md      ← Extract fields + rsdConstraints → inventory.json
+│   ├── td-extract-logic.md       ← Extract business logic → inventory.json
 │   ├── td-common.md              ← Generate common sections (token, endpoint)
-│   ├── td-validate.md            ← Generate validate per field batch
+│   ├── td-validate.md            ← Generate validate per field batch (reads rsdConstraints)
 │   ├── td-mainflow.md            ← Generate main flow + exceptions
-│   └── td-verify.md             ← Gap analysis, dedup, format check
+│   └── td-verify.md              ← Gap analysis, dedup, format check
 ├── references/
 │   ├── api-test-design.md
 │   ├── priority-rules.md

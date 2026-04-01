@@ -204,6 +204,58 @@ grep -cn "^---$" "{OUTPUT_FILE}"</script>
     </on_find>
 </step>
 
+<step id="5d" name="V13: No cases belonging to other API's processing flow">
+    <description>
+        Check that "Kiểm tra chức năng" does NOT contain cases testing another API's processing flow.
+        IMPORTANT: Testing field VALUES (action="Đẩy duyệt") is ALLOWED — those are inputs to THIS API.
+        Only flag cases that test DOWNSTREAM PROCESSING by ANOTHER API.
+    </description>
+
+    <script>
+```python
+import re, json
+
+with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
+    content = f.read()
+
+with open(r"{INVENTORY_FILE}", encoding="utf-8") as f:
+    inv = json.load(f)
+
+api_name = inv.get("_meta", {}).get("name", "")
+modes = [m.get("name", "") for m in inv.get("modes", [])]
+
+mainflow_match = re.search(r'## Kiểm tra chức năng(.*?)(?=## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
+if not mainflow_match:
+    print("⚠️ V13: Kiểm tra chức năng section not found")
+else:
+    headings = re.findall(r'^###\s+(.+)$', mainflow_match.group(1), re.MULTILINE)
+    # Patterns indicating another API's processing flow
+    flow_patterns = [
+        r'sau khi.*(duyệt|tạo|xóa|chỉnh sửa)',
+        r'hiển thị.*trên.*(danh sách|màn hình)',
+        r'kết quả.*(tìm kiếm|danh sách).*sau',
+    ]
+    invalid = []
+    for h in headings:
+        h_lower = h.lower()
+        for pat in flow_patterns:
+            if re.search(pat, h_lower):
+                invalid.append(h)
+                break
+    if invalid:
+        print(f"❌ V13: {len(invalid)} cases may belong to another API's flow:")
+        for h in invalid:
+            print(f"  - {h}")
+    else:
+        print(f"✅ V13: All {len(headings)} mainflow cases within API scope")
+```
+    </script>
+
+    <on_invalid>
+        <action>Use Edit tool to remove cases that test another API's processing flow from "Kiểm tra chức năng"</action>
+    </on_invalid>
+</step>
+
 <step id="6" name="Self-check result (MANDATORY output)">
     <output format="stdout">
 ```
@@ -216,7 +268,8 @@ grep -cn "^---$" "{OUTPUT_FILE}"</script>
 [V10]  Format correct (# header):       ✅/❌
 [V11]  Validate headings = conditions:  ✅/❌ ({N} value-headings fixed)
 [V12]  No ### [SỬA] headings:          ✅/❌ ({N} moved in-place)
-=== KẾT QUẢ: {N}/8 ===
+[V13]  No other API's flow cases:       ✅/❌ ({N} cases removed)
+=== KẾT QUẢ: {N}/9 ===
 ```
     </output>
 </step>
