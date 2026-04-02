@@ -100,6 +100,11 @@ Base template cases và Boundary/Decimal rules TRÙNG LẶP nhau. **PHẢI MERGE
 | "maxLength-1/max/max+1" | String maxLength | **MERGE** → dùng boundary case |
 | "Số 0" | min=0 hoặc max=0 | **MERGE** → dùng boundary case |
 | "Boolean", "XSS", "SQL", "Object", "Mảng" | Không trùng | GIỮ base case |
+| MultipartFile: "Định dạng hợp lệ .xls" | allowedExtensions chỉ có .xlsx | **BỎ** case không áp dụng |
+| MultipartFile: "Định dạng hợp lệ .xlsx" | allowedExtensions chỉ có .xls | **BỎ** case không áp dụng |
+| MultipartFile: "Vượt dung lượng" | maxFileSizeMB = null | **BỎ** case không có constraint |
+| MultipartFile: "Vượt số bản ghi" | maxRecords = null | **BỎ** case không có constraint |
+| MultipartFile: trùng tên | allowDuplicate = true | **BỎ** case không báo lỗi trùng |
 
 **Ví dụ min=0, max=100, maxDecimalPlaces=2 (warningYellowPct):**
 

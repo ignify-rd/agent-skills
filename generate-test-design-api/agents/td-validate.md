@@ -71,6 +71,11 @@ model: inherit
                 | "Boolean" (true/false) | Không trùng number | GIỮ base case |
                 | "XSS", "SQL", "Object", "Mảng" | Không trùng | GIỮ base case |
                 | "Leading zero", "Số rất lớn" | Không trùng | GIỮ base case |
+                | MultipartFile: "Định dạng hợp lệ .xls" | allowedExtensions chỉ có .xlsx | BỎ case .xls (không áp dụng) |
+                | MultipartFile: "Định dạng hợp lệ .xlsx" | allowedExtensions chỉ có .xls | BỎ case .xlsx (không áp dụng) |
+                | MultipartFile: "Vượt dung lượng" | maxFileSizeMB = null | BỎ case (constraint không có) |
+                | MultipartFile: "Vượt số bản ghi" | maxRecords = null | BỎ case (constraint không có) |
+                | MultipartFile: trùng tên (Đang kiểm tra / Đã kiểm tra / Đã đẩy duyệt) | allowDuplicate = true | BỎ case (không báo lỗi trùng) |
             </table>
         </overlap_map>
 
@@ -174,6 +179,20 @@ model: inherit
             </resolution_logic>
         </rule>
 
+        <rule name="multipartfile_error_codes">
+            <condition>MultipartFile field — error response cases</condition>
+            <resolution_logic>
+                MultipartFile error responses use errorCodes[section="validate"] from inventory:
+                - GOV0014: File không đúng định dạng
+                - GOV0015: File upload quá dung lượng tối đa cho phép
+                - GOV0016: File upload không được vượt quá N bản ghi
+                - GOV0017: Tên file chứa ký tự đặc biệt không hợp lệ
+                - GOV0018: Tệp đính kèm đã tồn tại
+                - GOV0019: Không có nội dung giao dịch trong file
+                Use Status: 200 for all MultipartFile validate errors (business logic validation).
+            </resolution_logic>
+        </rule>
+
         <completeness_rule>
             ⛔ CRITICAL: Agent PHẢI sinh ĐẦY ĐỦ mọi case trong **final_case_list** (sau khi MERGE từ Step 2b).
             KHÔNG được bỏ sót bất kỳ case nào trong final_case_list.
@@ -240,6 +259,14 @@ model: inherit
 2. {fieldName} bằng {relatedField} → spec-dependent
 3. {fieldName} lớn hơn {relatedField} → success</output>
         </rule>
+        <rule name="multipartfile_allowed_chars">
+            <condition>MultipartFile field — tên file với allowedChars</condition>
+            <output>For MultipartFile, allowedChars in rsdConstraints determines:
+1. "Tên chứa ký tự đặc biệt không thuộc danh sách cho phép" → error (GOV0017)
+2. "Tên chứa khoảng trắng" → success/error tùy allowedChars có " " (space)
+3. "Tên chứa dấu tiếng Việt" → success/error tùy allowedChars có accented chars
+If allowedChars = null → default: khoảng trắng = error, dấu tiếng Việt = error</output>
+        </rule>
     </special_rules>
 
     <min_case_counts>
@@ -262,6 +289,8 @@ model: inherit
         | DateTime Optional | ≥ 17 |
         | Array Required | ≥ 15 |
         | Array Optional | ≥ 15 |
+        | MultipartFile Required | ≥ 16 |
+        | MultipartFile Optional | ≥ 14 |
     </min_case_counts>
 
     <boundary_rules>
@@ -310,6 +339,14 @@ model: inherit
 
     <checkpoint_categories per_type="Boolean Required / Boolean Optional">
         Để trống ✓ | Không truyền ✓ | Null ✓ | true ✓ | false ✓ | Chuỗi "true"/"false" ✓ | Số nguyên (0/1) ✓ | Số khác 0 và 1 ✓ | Chuỗi bất kỳ ✓ | Mảng ✓ | Object ✓
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="MultipartFile Required">
+        Để trống ✓ | Không truyền ✓ | Null ✓ | File rỗng (0 byte) ✓ | Định dạng hợp lệ ✓ | Định dạng không hợp lệ ✓ | Vượt dung lượng ✓ | Vượt số bản ghi ✓ | Tên chứa ký tự đặc biệt không cho phép ✓ | Tên chứa khoảng trắng ✓ | Tên chứa dấu tiếng Việt ✓ | Trùng tên Đang kiểm tra ✓ | Trùng tên Đã kiểm tra ✓ | Trùng tên Đã đẩy duyệt ✓ | Trùng tên Có lỗi kiểm tra ✓ | Không đúng template ✓ | Nội dung trống ✓
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="MultipartFile Optional">
+        Không truyền ✓ | Null ✓ | File rỗng (0 byte) ✓ | Định dạng hợp lệ ✓ | Định dạng không hợp lệ ✓ | Vượt dung lượng ✓ | Vượt số bản ghi ✓ | Tên chứa ký tự đặc biệt không cho phép ✓ | Tên chứa khoảng trắng ✓ | Tên chứa dấu tiếng Việt ✓ | Trùng tên Đang kiểm tra ✓ | Trùng tên Đã kiểm tra ✓ | Trùng tên Đã đẩy duyệt ✓ | Trùng tên Có lỗi kiểm tra ✓ | Không đúng template ✓ | Nội dung trống ✓
     </checkpoint_categories>
 
     <checkpoint_categories per_type="JSONB Required / JSONB Optional">
@@ -430,7 +467,7 @@ Error codes covered: {N}/{total validate errors}
         </param>
         <param name="FIELD_TYPES_NEEDED" type="string" required="true">
             <description>Comma-separated types for --section parameter</description>
-            <example>String Required,Date Required,Long</example>
+            <example>String Required,Date Required,Long,MultipartFile Required</example>
         </param>
         <param name="CATALOG_SAMPLE" type="string" default="none"/>
         <param name="PROJECT_RULES" type="string" default="none"/>

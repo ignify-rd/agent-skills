@@ -301,10 +301,87 @@ ${requiredCases}
 `
 }
 
+/**
+ * Generate comprehensive test cases for a MULTIPART FILE field (file upload API)
+ * @param {string} fieldName - Field name (e.g., "file")
+ * @param {boolean} isRequired - Whether field is required
+ * @param {Object} constraints - Optional constraints from RSD/PTTK
+ *   - allowedExtensions: string[] (e.g., [".xls", ".xlsx"])
+ *   - maxFileSizeMB: number (e.g., 10 for 10MB)
+ *   - maxRecords: number (max rows in file)
+ *   - allowedChars: string[] (allowed filename characters)
+ *   - allowDuplicate: boolean (whether duplicate filename is allowed)
+ */
+export function generateMultipartFileFieldTests(fieldName, isRequired, constraints = {}) {
+  const {
+    allowedExtensions = ['.xls', '.xlsx'],
+    maxFileSizeMB = null,
+    maxRecords = null,
+    allowedChars = ['a-z', 'A-Z', '0-9', ' ', '_', '-', '.', '(', ')'],
+    allowDuplicate = false,
+  } = constraints
+
+  // File format extension group (from allowedExtensions)
+  const validExt = allowedExtensions[0] || '.xlsx'
+  const validExt2 = allowedExtensions[1] || validExt
+  // A non-allowed extension (for format test)
+  const invalidExt = '.pdf'
+
+  // Build extension cases
+  const extensionCases = allowedExtensions.length >= 2
+    ? `#### Truyền file có định dạng hợp lệ ${validExt} (VD: file_hop_le${validExt})
+
+#### Truyền file có định dạng hợp lệ ${validExt2} (VD: file_hop_le${validExt2})
+
+#### Truyền file có định dạng không hợp lệ ${invalidExt} → error`
+    : `#### Truyền file có định dạng hợp lệ ${validExt} (VD: file_hop_le${validExt})
+
+#### Truyền file có định dạng không hợp lệ ${invalidExt} → error`
+
+  const requiredCases = isRequired ? `
+#### Để trống field file (body: "${fieldName}": "")
+#### Không truyền field file (body rỗng)
+#### Truyền ${fieldName} = null` : `
+#### Không truyền field file (body rỗng)
+#### Truyền ${fieldName} = null`
+
+  const sizeCases = maxFileSizeMB
+    ? `#### Truyền file vượt dung lượng tối đa (> ${maxFileSizeMB}MB)`
+    : ''
+
+  const recordCases = maxRecords
+    ? `#### Truyền file vượt số bản ghi tối đa (> ${maxRecords} bản ghi)`
+    : ''
+
+  const allowedCharsStr = allowedChars.length > 0
+    ? `#### Truyền file có tên chứa ký tự đặc biệt không thuộc danh sách cho phép (VD: file!@#name${validExt})`
+    : ''
+
+  const duplicateCases = !allowDuplicate
+    ? `#### Truyền file trùng tên với file ở trạng thái Đang kiểm tra của cùng CIF
+#### Truyền file trùng tên với file ở trạng thái Đã kiểm tra của cùng CIF
+#### Truyền file trùng tên với file ở trạng thái Đã đẩy duyệt của cùng CIF
+#### Truyền file trùng tên với file có lỗi kiểm tra của cùng CIF`
+    : ''
+
+  return `### ${fieldName} : MultipartFile${isRequired ? ' (Required)' : ' (Optional)'}
+${requiredCases}
+#### Truyền file rỗng (0 byte)
+${extensionCases}
+${sizeCases}
+${recordCases}
+${allowedCharsStr}
+#### Truyền file có tên chứa khoảng trắng (VD: file name${validExt})
+#### Truyền file có tên chứa dấu tiếng Việt (VD: file_tên_${validExt})
+${duplicateCases}
+#### Truyền file không đúng template/mẫu (thiếu cột bắt buộc)`
+}
+
 export default {
   generateStringFieldTests,
   generateNumberFieldTests,
   generateDateFieldTests,
   generateDateTimeFieldTests,
   generateArrayFieldTests,
+  generateMultipartFileFieldTests,
 }

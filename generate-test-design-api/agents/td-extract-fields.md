@@ -52,10 +52,12 @@ model: inherit
                 | Array / List / array | Array |
                 | JSONB / JSON / jsonb | JSONB |
                 | Number / Decimal / Float / double | Number |
+                | MultipartFile / file upload / File / file | MultipartFile |
 
                 CRITICAL: "Int" → "Integer". NEVER map "Int" to "Long".
                 Only use "Long" if PTTK explicitly says "Long".
                 CRITICAL: JSONB/JSON fields stay JSONB regardless of required/optional.
+                CRITICAL: MultipartFile type is for file upload fields (file input, multipart/form-data). ALWAYS map file upload fields to MultipartFile.
             </field>
             <field name="maxLength">For String fields — character length limit</field>
             <field name="maxDigits">For Integer/Number — digit count limit (e.g. "tối đa 2 chữ số" → maxDigits: 2)</field>
@@ -138,6 +140,19 @@ model: inherit
         <field name="customRules" type="array">
             Other spec-specific rules as plain text, e.g. ["Không cho phép trùng tên SLA", "Tự động trim khoảng trắng"]
         </field>
+        <!-- MultipartFile-specific fields -->
+        <field name="allowedExtensions" type="array|null">
+            (For MultipartFile) Allowed file extensions, e.g. [".xls", ".xlsx"]. null = not specified
+        </field>
+        <field name="maxFileSizeMB" type="number|null">
+            (For MultipartFile) Maximum file size in MB, e.g. 10 for 10MB. null = not specified
+        </field>
+        <field name="maxRecords" type="number|null">
+            (For MultipartFile) Maximum number of rows/records allowed in file. null = not specified
+        </field>
+        <field name="allowDuplicate" type="boolean|null">
+            (For MultipartFile) Whether duplicate filename is allowed. false = error GOV0018. null = unknown → default false
+        </field>
     </rsdConstraints_schema>
 
     <extraction_rules>
@@ -146,10 +161,15 @@ model: inherit
             - "ký tự đặc biệt", "khoảng trắng", "tiếng Việt", "dấu"
             - "giá trị hợp lệ", "danh sách giá trị", enum definitions
             - "so sánh với", "lớn hơn", "nhỏ hơn", cross-field references
+            - "định dạng", "file", "upload", "dung lượng", "bản ghi", "trùng" (cho MultipartFile)
         </rule>
         <rule>If spec does NOT mention a constraint for a field → set that rsdConstraints field to null</rule>
         <rule>EVERY field MUST have rsdConstraints object — even if all values are null</rule>
         <rule>crossFieldRules and customRules default to empty arrays []</rule>
+        <!-- MultipartFile defaults -->
+        <rule>MultipartFile: allowDuplicate defaults to false if not specified (default safe = error on duplicate)</rule>
+        <rule>MultipartFile: maxFileSizeMB defaults to null if not specified</rule>
+        <rule>MultipartFile: maxRecords defaults to null if not specified</rule>
     </extraction_rules>
 </step>
 

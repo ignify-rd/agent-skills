@@ -561,6 +561,46 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 
 ---
 
+<!-- @section: MultipartFile Required -->
+### MULTIPARTFILE Required — ≥ 16 cases (từ fieldTestTemplates.js)
+
+**Cases BẮT BUỘC** (mapping từ `generateMultipartFileFieldTests(fieldName, isRequired=true, constraints)`):
+
+Đọc `fieldConstraints[].rsdConstraints` trong inventory để lấy:
+- `allowedExtensions`: danh sách extension hợp lệ (VD: `[".xls", ".xlsx"]`)
+- `maxFileSizeMB`: giới hạn dung lượng (VD: `10` cho 10MB)
+- `maxRecords`: giới hạn số bản ghi (VD: `1000`)
+- `allowedChars`: ký tự cho phép trong tên file
+- `allowDuplicate`: có cho phép trùng tên file hay không
+
+|| # | Case | Response mặc định | Ghi chú |
+||---|------|--------------------|---------|
+|| 1 | Để trống field file (`"${fieldName}": ""`) | → error | |
+|| 2 | Không truyền field file (body rỗng `{}`) | → error | |
+|| 3 | Truyền `${fieldName} = null` | → error | |
+|| 4 | Truyền file rỗng (0 byte) | → error | |
+|| 5 | File có định dạng hợp lệ `.xls` | → success | Chỉ khi `allowedExtensions` có `.xls` |
+|| 6 | File có định dạng hợp lệ `.xlsx` | → success | Chỉ khi `allowedExtensions` có `.xlsx` |
+|| 7 | File có định dạng không hợp lệ `.pdf` | → error (GOV0014) | |
+|| 8 | File vượt dung lượng tối đa | → error (GOV0015) | Chỉ khi `maxFileSizeMB` có giá trị |
+|| 9 | File vượt số bản ghi tối đa | → error (GOV0016) | Chỉ khi `maxRecords` có giá trị |
+|| 10 | File có tên chứa ký tự đặc biệt không thuộc danh sách cho phép | → error (GOV0017) | Theo `allowedChars` |
+|| 11 | File có tên chứa khoảng trắng | → success hoặc error | Theo `allowedChars` |
+|| 12 | File có tên chứa dấu tiếng Việt | → success hoặc error | Theo `allowedChars` |
+|| 13 | File trùng tên với file ở trạng thái Đang kiểm tra (cùng CIF) | → error (GOV0018) | Theo `allowDuplicate` |
+|| 14 | File trùng tên với file ở trạng thái Đã kiểm tra (cùng CIF) | → error (GOV0018) | Theo `allowDuplicate` |
+|| 15 | File trùng tên với file ở trạng thái Đã đẩy duyệt (cùng CIF) | → error (GOV0018) | Theo `allowDuplicate` |
+|| 16 | File trùng tên với file có lỗi kiểm tra (cùng CIF) | → success | File có lỗi không thuộc trùng lặp |
+|| 17 | File không đúng template/mẫu (thiếu cột bắt buộc) | → error (GOV0014 hoặc GOV0019) | |
+|| 18 | File có nội dung trống (không có dữ liệu) | → error (GOV0019) | |
+
+> Nếu `allowDuplicate = true` → bỏ case 13–15 (không trùng lặp).
+> Nếu không có `maxFileSizeMB` → bỏ case 8.
+> Nếu không có `maxRecords` → bỏ case 9.
+> `allowedChars` nếu không có trong inventory → dùng default: `["_", "-", ".", "(", ")"]`.
+
+---
+
 <!-- @section: Number Required -->
 ### NUMBER Required (decimal/float) — base 15 cases + boundary cases (nếu inventory CÓ constraint)
 
@@ -645,7 +685,7 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 Field {fieldName} ({type}): {generated}/{min} cases. Missing: [list] → THÊM ngay.
 ```
 
-Min counts: String Required ≥ 17 | String Optional ≥ 17 | Integer Required ≥ 18 | Integer with Default ≥ 18 | Integer Optional ≥ 18 | Long ≥ 18 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date Required ≥ 15 | Date Optional ≥ 15 | DateTime Required ≥ 17 | DateTime Optional ≥ 17 | Array Required ≥ 15 | Array Optional ≥ 15 | Boolean Required ≥ 11 | Boolean Optional ≥ 9 | Number Required ≥ 18 | Number Optional ≥ 18
+Min counts: String Required ≥ 17 | String Optional ≥ 17 | Integer Required ≥ 18 | Integer with Default ≥ 18 | Integer Optional ≥ 18 | Long ≥ 18 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date Required ≥ 15 | Date Optional ≥ 15 | DateTime Required ≥ 17 | DateTime Optional ≥ 17 | Array Required ≥ 15 | Array Optional ≥ 15 | Boolean Required ≥ 11 | Boolean Optional ≥ 9 | Number Required ≥ 18 | Number Optional ≥ 18 | **MultipartFile Required ≥ 16 | MultipartFile Optional ≥ 14**
 
 ---
 
