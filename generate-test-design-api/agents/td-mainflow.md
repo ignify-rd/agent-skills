@@ -102,14 +102,24 @@ print('BARRIER OK')
     </actions>
 </step>
 
-<step id="2" name="Read inventory and reconstruct decision tree">
+<step id="2" name="Get inventory data via scripts (NOT read full file)">
+    <description>
+        ⛔ KHÔNG đọc toàn bộ inventory.json — dùng inventory.py get để lấy từng category cần thiết.
+    </description>
+
     <actions>
-        <action type="read">
-            <file>{INVENTORY_FILE}</file>
+        <action type="bash" name="Get all needed categories (run in parallel)">
+            <script_1>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category statusTransitions</script_1>
+            <script_2>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category errorCodes --filter section=main</script_2>
+            <script_3>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category businessRules</script_3>
+            <script_4>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category modes</script_4>
+            <script_5>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations</script_5>
+            <script_6>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category externalServices</script_6>
+            <script_7>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category responseSchema</script_7>
         </action>
     </actions>
 
-    <sub_step id="2a" name="Extract raw data">
+    <sub_step id="2a" name="Extract raw data from script outputs">
         <extract>
             <section priority="1">statusTransitions[] — valid/invalid status transitions (PRIMARY source)</section>
             <section priority="2">errorCodes[section="main"] — business validation errors</section>

@@ -19,6 +19,15 @@ model: inherit
         <action>Write to categories owned by td-extract-logic: errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions</action>
     </rule>
 
+    <rule type="file_content_fields">
+        <description>
+            Khi API có input là MultipartFile (file upload) VÀ PTTK mô tả cấu trúc file template (bảng "Mẫu file upload" hoặc section tương tự):
+            → PHẢI trích xuất TẤT CẢ các trường bên trong file template thành `fileContentFields`.
+            Đây là các trường mà backend validate khi xử lý nội dung file (job bất đồng bộ hoặc realtime).
+            KHÔNG bỏ sót bất kỳ trường nào trong bảng mô tả file template.
+        </description>
+    </rule>
+
     <rule type="encoding_workaround">
         <description>On Windows, use patch.json + inventory.py patch instead of --data with Vietnamese text</description>
     </rule>
@@ -173,6 +182,95 @@ model: inherit
     </extraction_rules>
 </step>
 
+<step id="2b" name="Extract file content fields (khi API có MultipartFile input)">
+    <condition>Khi fieldConstraints có ít nhất 1 field type = "MultipartFile" VÀ PTTK có section mô tả cấu trúc file template (VD: "Mẫu file upload", bảng mô tả các cột/trường trong file)</condition>
+
+    <description>
+        Trích xuất TẤT CẢ trường bên trong file template từ PTTK vào `fileContentFields`.
+        Đây là các trường mà user điền trong file Excel/CSV trước khi upload, và backend validate từng trường này.
+
+        ĐỌC KỸ:
+        1. Section "Mẫu file upload" (hoặc tương tự) trong PTTK → bảng liệt kê các cột trong file
+        2. Section "Logic xử lý" (4.2, 4.3...) trong PTTK → logic validate chi tiết cho từng trường
+           - Check tồn tại trong bảng tham số (Mã kho bạc trong TCC_DM_KHOBAC...)
+           - Cross-field validation (MST vs CIF login, loại tiền TK vs loại tiền GD...)
+           - Conditional required (bắt buộc nếu Nộp thay)
+           - Hạn mức, phân quyền TK...
+    </description>
+
+    <extract>
+        <section name="fileContentFields">
+            <description>Mỗi trường trong file template = 1 entry trong fileContentFields</description>
+            <field name="name">Tên trường (camelCase, VD: debitAccount, taxCode, taxPayerName)</field>
+            <field name="displayName">Tên hiển thị tiếng Việt (VD: "Tài khoản chuyển", "Mã Số thuế người nộp thuế")</field>
+            <field name="inputType">
+                Loại input trong file template:
+                | PTTK nói | inputType |
+                |----------|-----------|
+                | Text Input | TextInput |
+                | Number Input | NumberInput |
+                | Date Input | DateInput |
+                | Droplist / Click | Droplist |
+            </field>
+            <field name="required">Y / N / conditional (kèm condition)</field>
+            <field name="conditionalRequired">
+                Nếu required = conditional → mô tả điều kiện.
+                VD: "Bắt buộc nếu bản ghi Nộp thay"
+            </field>
+            <field name="maxLength">Độ dài tối đa (nếu có)</field>
+            <field name="allowedChars">
+                Ký tự cho phép nhập (lấy từ mô tả PTTK).
+                VD: ["0-9", "A-z", "a-z"] cho Tài khoản chuyển
+                VD: ["0-9", "A-z", "a-z", "@", "&", "-", ".", "(", ")", "_", ",", "/"] cho MST
+            </field>
+            <field name="allowAccents">Cho phép tiếng Việt có dấu (true/false)</field>
+            <field name="allowSpaces">Cho phép khoảng trắng (true/false)</field>
+            <field name="autoFormat">
+                VD: "UPPER CASE", "loại bỏ ký tự điều khiển", "chuẩn hóa khoảng trắng kép"
+            </field>
+            <field name="leadingZeroRule">
+                Quy tắc xử lý số 0 đầu tiên (nếu có).
+                VD: "Nhập ký tự ' để giữ số 0. Hệ thống tự động loại bỏ ký tự '"
+            </field>
+            <field name="referenceTable">
+                Bảng tham số / danh sách tham chiếu (cho Droplist).
+                VD: "TCC_DM_KHOBAC", "tab MA KBNN trong file excel"
+            </field>
+            <field name="parentField">
+                Trường cha ràng buộc (cho Droplist phụ thuộc).
+                VD: Mã cơ quan thu phụ thuộc vào Mã kho bạc đã chọn
+            </field>
+            <field name="crossFieldRules">
+                Các ràng buộc liên trường (từ logic validate section 4.x).
+                Mỗi rule: {"relatedField": "...", "rule": "...", "errorMessage": "..."}
+                VD:
+                - {"relatedField": "loginCifMst", "rule": "MST phải = MST CIF login (Nộp cho DN)", "errorMessage": "Mã số người thuế không khớp"}
+                - {"relatedField": "taxCode", "rule": "MST nộp thay != MST nộp thuế", "errorMessage": "Mã số thuế không được giống mã số người nộp thay"}
+                - {"relatedField": "debitAccountCurrency", "rule": "loại tiền TK = loại tiền GD", "errorMessage": "..."}
+            </field>
+            <field name="businessValidation">
+                Logic validate nghiệp vụ phức tạp (từ section 4.x PTTK).
+                Mỗi rule: {"check": "...", "errorMessage": "...", "source": "PTTK tr.X"}
+                VD:
+                - {"check": "Mã kho bạc tồn tại và trạng thái hoạt động trong TCC_DM_KHOBAC", "errorMessage": "Mã kho bạc nhà nước không hợp lệ. Vui lòng kiểm tra lại"}
+                - {"check": "Số tiền <= hạn mức KH từng giao dịch", "errorMessage": "Vượt hạn mức khách hàng"}
+                - {"check": "Kiểm tra tham số xử lý thủ công", "errorMessage": "..."}
+                - {"check": "Check trùng bản ghi (MST + Số tờ khai + Mã KB + TK NSNN + CQ thu + Mã chương + NDKT + Sắc thuế + Loại tiền HQ + Loại hình XNK)", "errorMessage": "Có bản ghi trùng lặp"}
+            </field>
+            <field name="dateFormat">Format ngày (cho DateInput). VD: "dd/mm/yyyy"</field>
+            <field name="enumValues">Giá trị cố định (nếu có). VD: ["1 - Doanh nghiệp", "2 - Cá nhân"]</field>
+        </section>
+    </extract>
+
+    <extraction_rules>
+        <rule>Đọc TOÀN BỘ section "Mẫu file upload" / "3.1" → extract TỪNG hàng thành 1 fileContentField</rule>
+        <rule>Đọc TOÀN BỘ section "Logic xử lý" (4.2, 4.3) → map các logic validate vào crossFieldRules + businessValidation của field tương ứng</rule>
+        <rule>Trường auto-generated (STT) → vẫn extract nhưng đánh dấu required = "auto"</rule>
+        <rule>Trường conditional required → ghi rõ condition trong conditionalRequired</rule>
+        <rule>KHÔNG bỏ sót trường nào — đếm số trường trong bảng PTTK và so sánh với số fileContentFields extracted</rule>
+    </extraction_rules>
+</step>
+
 <step id="3" name="Write patch.json">
     <output_file>{OUTPUT_DIR}/patch.json</output_file>
 
@@ -202,6 +300,29 @@ model: inherit
       }
     }
   ],
+  "fileContentFields": [
+    {
+      "name": "debitAccount",
+      "displayName": "Tài khoản chuyển",
+      "inputType": "TextInput",
+      "required": "Y",
+      "conditionalRequired": null,
+      "maxLength": 14,
+      "allowedChars": ["0-9", "A-z", "a-z"],
+      "allowAccents": false,
+      "allowSpaces": false,
+      "autoFormat": "loại bỏ khoảng trắng kép, ký tự điều khiển",
+      "leadingZeroRule": null,
+      "referenceTable": null,
+      "parentField": null,
+      "crossFieldRules": [],
+      "businessValidation": [
+        {"check": "TK trích nợ phải được phân quyền cho user", "errorMessage": "Tài khoản không được phân quyền"}
+      ],
+      "dateFormat": null,
+      "enumValues": null
+    }
+  ],
   "requestSchema": {
     "pathParams": [],
     "queryParams": [],
@@ -220,6 +341,7 @@ model: inherit
 
     <critical_rules>
         <rule>EVERY field in fieldConstraints MUST have rsdConstraints object</rule>
+        <rule>When MultipartFile detected + PTTK has file template section → fileContentFields MUST be populated with ALL fields from template</rule>
         <rule>Do NOT write errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions — those belong to td-extract-logic</rule>
     </critical_rules>
 </step>
@@ -241,6 +363,7 @@ model: inherit
 Fields extracted: {N}
 Fields with rsdConstraints: {N}/{N}
 Fields missing rsdConstraints: [list if any]
+fileContentFields: {N} (fields inside uploaded file template)
 requestSchema.bodyParams: {N}
 responseSchema: success={yes/no}, error={yes/no}
 testData: {N} fields

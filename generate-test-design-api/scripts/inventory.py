@@ -15,7 +15,7 @@ Usage:
   python inventory.py add     --file PATH --category CATEGORY --data JSON
   python inventory.py add     --file PATH --category CATEGORY --data-file ITEM.json
   python inventory.py patch   --file PATH --patch-file PATCH.json
-  python inventory.py get     --file PATH --category CATEGORY [--filter KEY=VALUE]
+  python inventory.py get     --file PATH --category CATEGORY [--filter KEY=VALUE] [--fields name1,name2] [--keys key1,key2]
   python inventory.py summary --file PATH
 
 Windows encoding note:
@@ -51,7 +51,7 @@ patch-file format — supports both arrays (extend) and objects (deep-merge):
 
 Categories (API):      errorCodes, businessRules, modes, dbOperations, externalServices,
                        statusTransitions, decisionCombinations, fieldConstraints,
-                       testData  (arrays — extend on patch)
+                       fileContentFields, testData  (arrays — extend on patch)
 Schema objects (API):  requestSchema, responseSchema  (dicts — deep-merge on patch)
 
 Categories (Frontend): fieldConstraints, businessRules, errorMessages, enableDisableRules,
@@ -129,6 +129,8 @@ def cmd_init(args):
         "statusTransitions": [],
         "decisionCombinations": [],
         "fieldConstraints": [],
+        # ── File content fields (fields inside uploaded file template) ──
+        "fileContentFields": [],
         # ── Frontend categories (shared schema) ──
         "errorMessages": [],
         "enableDisableRules": [],
@@ -216,6 +218,17 @@ def cmd_get(args):
     if args.filter and isinstance(value, list):
         key, val = args.filter.split("=", 1)
         value = [i for i in value if str(i.get(key, "")) == val]
+    # --fields: filter list items by name (comma-separated)
+    if args.fields and isinstance(value, list):
+        names = [n.strip() for n in args.fields.split(",")]
+        value = [i for i in value if i.get("name") in names]
+    # --keys: only output specific keys per item (comma-separated)
+    if args.keys and isinstance(value, list):
+        pick = [k.strip() for k in args.keys.split(",")]
+        value = [{k: i.get(k) for k in pick if k in i} for i in value]
+    elif args.keys and isinstance(value, dict):
+        pick = [k.strip() for k in args.keys.split(",")]
+        value = {k: value[k] for k in pick if k in value}
     print(json.dumps(value, ensure_ascii=False, indent=2))
 
 
@@ -269,8 +282,8 @@ def cmd_summary(args):
     array_categories = [
         "errorCodes", "businessRules", "modes", "dbOperations",
         "externalServices", "statusTransitions", "decisionCombinations",
-        "fieldConstraints", "errorMessages", "enableDisableRules",
-        "autoFillRules", "permissions",
+        "fieldConstraints", "fileContentFields", "errorMessages",
+        "enableDisableRules", "autoFillRules", "permissions",
     ]
     for cat in array_categories:
         items = data.get(cat, [])
@@ -312,6 +325,8 @@ def main():
     p_get.add_argument("--file", required=True)
     p_get.add_argument("--category", required=True)
     p_get.add_argument("--filter", default="", help="KEY=VALUE to filter results (lists only)")
+    p_get.add_argument("--fields", default="", help="Comma-separated field names to select (filters by 'name' key)")
+    p_get.add_argument("--keys", default="", help="Comma-separated keys to include in output (reduces output size)")
 
     p_sum = sub.add_parser("summary")
     p_sum.add_argument("--file", required=True)

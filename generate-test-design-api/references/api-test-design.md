@@ -601,6 +601,162 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 
 ---
 
+<!-- @section: FileContentField TextInput -->
+### FILE CONTENT FIELD — TextInput (trường text bên trong file upload)
+
+**Áp dụng khi:** API có MultipartFile input VÀ inventory có `fileContentFields[]` với `inputType = "TextInput"`.
+
+**Heading format:** `### Trường {displayName} trong file`
+
+**Cases BẮT BUỘC:** Sinh từ thông tin trong `fileContentFields[].allowedChars`, `maxLength`, `allowAccents`, `allowSpaces`, `crossFieldRules`, `businessValidation`.
+
+| # | Case | Response mặc định | Điều kiện |
+|---|------|--------------------|-----------|
+| 1 | Để trống {displayName} | → error | Khi required = Y |
+| 2 | Nhập {displayName} all space | → error | |
+| 3 | Nhập {displayName} = {maxLength} ký tự | → success | Khi có maxLength |
+| 4 | Nhập {displayName} = {maxLength+1} ký tự | → error | Khi có maxLength |
+| 5 | Nhập {displayName} = {maxLength-1} ký tự | → success | Khi có maxLength |
+| 6 | Nhập {displayName} là các ký tự đặc biệt thuộc danh sách cho phép | → success | Khi allowedChars có ký tự đặc biệt |
+| 7 | Nhập {displayName} là các ký tự đặc biệt ngoài danh sách cho phép | → error | |
+| 8 | Nhập {displayName} có dấu tiếng Việt | → success hoặc error | Theo allowAccents |
+| 9 | Nhập {displayName} có khoảng trắng kép, tab, enter, space đầu/cuối | → success (chuẩn hóa) | Khi có autoFormat |
+| 10 | Nhập {displayName} có số 0 ở đầu | → success (hệ thống xử lý) | Khi có leadingZeroRule |
+| 11 | Nhập {displayName} có space ở giữa | → Theo allowSpaces | |
+
+**Cases từ crossFieldRules:** Mỗi crossFieldRule → 1 case riêng.
+VD: "Nhập MST người nộp thuế khác MST tài khoản sử dụng" → error "Mã số người thuế không khớp"
+
+**Cases từ businessValidation:** Mỗi businessValidation rule → 1 case riêng.
+VD: "Nhập TK trích nợ user không được phân quyền" → error "Tài khoản không được phân quyền"
+
+**Cases conditional required:**
+Khi required = conditional → thêm 2 cases:
+- "Để trống {displayName} khi điều kiện {condition} = true" → error
+- "Để trống {displayName} khi điều kiện {condition} = false" → success
+
+> **Format heading:** "Kiểm tra truyền file hợp lệ, nội dung file {mô tả case}"
+
+---
+
+<!-- @section: FileContentField NumberInput -->
+### FILE CONTENT FIELD — NumberInput (trường số bên trong file upload)
+
+| # | Case | Response mặc định | Điều kiện |
+|---|------|--------------------|-----------|
+| 1 | Để trống {displayName} | → error | Khi required = Y |
+| 2 | Nhập {displayName} all space | → error | |
+| 3 | Nhập {displayName} = 0 | → Theo spec | |
+| 4 | Nhập {displayName} = {maxLength} ký tự số | → success | Khi có maxLength |
+| 5 | Nhập {displayName} = {maxLength+1} ký tự số | → error | Khi có maxLength |
+| 6 | Nhập {displayName} = {maxLength-1} ký tự số | → success | Khi có maxLength |
+| 7 | Nhập {displayName} là chữ | → error | |
+| 8 | Nhập {displayName} là ký tự đặc biệt | → error | |
+| 9 | Nhập {displayName} là số âm | → error | |
+| 10 | Nhập {displayName} là số thập phân | → error hoặc success | Theo spec |
+| 11 | Nhập {displayName} có số 0 ở đầu | → success (chuẩn hóa) | Khi có leadingZeroRule |
+
+**Cases từ businessValidation:** Mỗi rule → 1 case.
+VD:
+- "Nhập số tiền > số tiền tối đa" → error
+- "Nhập số tiền < số tiền tối thiểu" → error
+- "Nhập số tiền vượt hạn mức KH từng giao dịch" → error
+- "Nhập số tiền vượt hạn mức TK từng giao dịch" → error
+
+---
+
+<!-- @section: FileContentField DateInput -->
+### FILE CONTENT FIELD — DateInput (trường ngày bên trong file upload)
+
+| # | Case | Response mặc định |
+|---|------|-------------------|
+| 1 | Để trống {displayName} | → error (khi required = Y) |
+| 2 | Nhập {displayName} không đúng định dạng {dateFormat} | → error |
+| 3 | Nhập {displayName} là ngày hiện tại | → success |
+| 4 | Nhập {displayName} là ngày tương lai | → error hoặc success (theo spec) |
+| 5 | Nhập {displayName} là ngày quá khứ | → success hoặc error (theo spec) |
+
+---
+
+<!-- @section: FileContentField Droplist -->
+### FILE CONTENT FIELD — Droplist (trường chọn từ danh sách bên trong file upload)
+
+| # | Case | Response mặc định | Điều kiện |
+|---|------|--------------------|-----------|
+| 1 | Để trống {displayName} | → error | Khi required = Y |
+| 2 | Nhập {displayName} all space | → error | |
+| 3 | Nhập {displayName} không có trong {referenceTable} | → error | |
+| 4 | Nhập {displayName} có trong {referenceTable} nhưng không thuộc {parentField} đã chọn | → error | Khi có parentField |
+| 5 | Nhập {displayName} hợp lệ | → success | |
+
+**Cases từ businessValidation:** VD:
+- "Nhập Mã kho bạc không tồn tại" → error "Mã kho bạc nhà nước không hợp lệ"
+- "Nhập Mã kho bạc tồn tại nhưng trạng thái không hoạt động" → error
+
+---
+
+<!-- @section: FileContentField CrossField -->
+### FILE CONTENT FIELD — Cross-field & Business Logic (logic liên trường / nghiệp vụ)
+
+Sinh thêm các case từ logic validate PTTK section 4.x mà KHÔNG thuộc riêng 1 field cụ thể:
+
+| # | Case | Response mặc định |
+|---|------|-------------------|
+| 1 | Trùng thông tin bản ghi trong cùng file (theo tiêu chí check trùng) | → error |
+| 2 | Giao dịch thuộc tham số xử lý thủ công | → Theo spec |
+| 3 | Giao dịch thuộc tham số ngừng giao dịch | → error |
+| 4 | Gọi TCC validate không nhận phản hồi | → error |
+
+> Các cases này đặt trong section riêng: `### Logic nghiệp vụ liên trường trong file`
+
+---
+
+<!-- @section: FileContentField output-format -->
+### FILE CONTENT FIELD — Output format
+
+**Heading cấp section:** `## Kiểm tra Validate nội dung file`
+
+Đặt SAU section `## Kiểm tra Validate` (validate API params) và TRƯỚC `## Kiểm tra chức năng`.
+
+**Format cho từng trường:**
+```markdown
+## Kiểm tra Validate nội dung file
+
+### Trường Tài khoản chuyển
+
+- Kiểm tra truyền file hợp lệ, nội dung file Để trống Tài khoản chuyển
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response: Theo RSD — bản ghi không hợp lệ, mô tả lỗi tại cột mô tả
+
+- Kiểm tra truyền file hợp lệ, nội dung file Nhập Tài khoản chuyển 14 ký tự
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response: Bản ghi hợp lệ
+
+### Trường Mã Số thuế người nộp thuế
+
+...
+
+### Logic nghiệp vụ liên trường trong file
+
+- Kiểm tra truyền file hợp lệ, nội dung file Nhập trùng thông tin bản ghi
+
+    - 1. Check api trả về:
+      1.1.Status: 200
+      1.2.Response: error_code: "Có bản ghi trùng lặp..."
+```
+
+**⚠️ CRITICAL — Response cho file content field:**
+- File content fields validate qua **job bất đồng bộ** → response KHÔNG trả lỗi trực tiếp qua API upload
+- API upload trả SUCCESS (batchNo, batchId), sau đó job validate từng bản ghi
+- Kết quả validate hiển thị tại tab "Bản ghi hợp lệ" / "Bản ghi không hợp lệ" với mô tả lỗi cụ thể
+- Response format: mô tả trạng thái bản ghi + mô tả lỗi (nếu có), KHÔNG dùng error code API
+
+---
+
 <!-- @section: Number Required -->
 ### NUMBER Required (decimal/float) — base 15 cases + boundary cases (nếu inventory CÓ constraint)
 

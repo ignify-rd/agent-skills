@@ -54,16 +54,18 @@ model: inherit
     </mappings>
 </step>
 
-<step id="3" name="Read inventory for endpoint info">
+<step id="3" name="Get endpoint info from inventory via script">
     <actions>
-        <action type="read">
-            <file>{INVENTORY_FILE}</file>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get \
+  --file {INVENTORY_FILE} \
+  --category _meta</script>
         </action>
     </actions>
     <extract>
-        <field>_meta.endpoint</field>
-        <field>_meta.name</field>
-        <field>_meta.method</field>
+        <field>endpoint</field>
+        <field>name</field>
+        <field>method</field>
     </extract>
 </step>
 

@@ -349,9 +349,12 @@ C. Không chia theo mode — chỉ test API đơn thuần
     <spawn_mode>ALL batches simultaneously</spawn_mode>
 
     <preparation>
-        <action type="read">
-            <file>{INVENTORY_FILE}</file>
-            <purpose>Extract fieldConstraints for batching</purpose>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get \
+  --file {INVENTORY_FILE} \
+  --category fieldConstraints \
+  --keys name,type,required,maxLength</script>
+            <purpose>Get field list for batching — only name/type/required/maxLength, NOT full rsdConstraints</purpose>
         </action>
         <batch_strategy>
             <batch_size>3 fields per batch</batch_size>
@@ -494,6 +497,122 @@ print('READY')
     </barrier>
 </step>
 
+<step id="5b2" name="Spawn td-validate agents for fileContentFields (if any)" type="parallel">
+    <description>Generate validate cases for fields INSIDE uploaded file template (parallel)</description>
+    <trigger>After Step 5b completes — ONLY if inventory has fileContentFields[]</trigger>
+
+    <condition>
+        <script>python3 -X utf8 -c "
+import json, sys
+inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
+fcf = inv.get('fileContentFields', [])
+if not fcf:
+    print('NO_FILE_CONTENT_FIELDS')
+    sys.exit(0)
+print('FILE_CONTENT_FIELDS: ' + str(len(fcf)))
+for f in fcf:
+    print(f'  - {f[\"name\"]} ({f[\"inputType\"]}, required={f[\"required\"]})')
+"</script>
+        <on_no_fields>Skip this step entirely — proceed to Step 5c</on_no_fields>
+    </condition>
+
+    <preparation>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get \
+  --file {INVENTORY_FILE} \
+  --category fileContentFields \
+  --keys name,displayName,inputType,required,maxLength</script>
+            <purpose>Get file content field list for batching — only key info, NOT full constraints</purpose>
+        </action>
+        <batch_strategy>
+            <batch_size>3 fields per batch</batch_size>
+            <example>Batch 1: [debitAccount, taxCode, taxPayerName]; Batch 2: [taxPayerAddress, substitutesTaxCode, substitutesName]</example>
+        </batch_strategy>
+    </preparation>
+
+    <per_batch_actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/td-validate.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>td-validate</agent_type>
+            <prompt>{td-validate.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="BATCH_NUMBER">fc-{N} (use "fc-" prefix to distinguish from API field batches, e.g. fc-1, fc-2)</param>
+                <param name="FIELD_BATCH">[{name}:{inputType}:{required}:{maxLength}, ...]</param>
+                <param name="FIELD_TYPES_NEEDED">"FileContentField TextInput,FileContentField NumberInput,FileContentField DateInput,FileContentField Droplist"</param>
+                <param name="FIELD_SOURCE">fileContentFields</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE or "none"}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </per_batch_actions>
+
+    <file_naming>
+        <file pattern="{OUTPUT_DIR}/validate-batch-fc-{N}.md" />
+        <note>Use "fc-" prefix to distinguish from API field batch files (validate-batch-1.md, validate-batch-2.md...)</note>
+    </file_naming>
+
+    <merge>
+        <description>Merge file content field batches into output file under new section "## Kiểm tra Validate nội dung file"</description>
+        <script>python3 -X utf8 -c "
+import os, glob, sys, re
+
+output_dir = r'{OUTPUT_DIR}'
+output_file = r'{OUTPUT_FILE}'
+
+content = open(output_file, encoding='utf-8').read()
+
+if '## Kiểm tra Validate nội dung file' in content:
+    print('FILE_CONTENT_VALIDATE already exists')
+    sys.exit(0)
+
+# Find fc-* batch files in order
+fc_files = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-fc-*.md')),
+                  key=lambda x: int(re.search(r'fc-(\d+)', x).group(1)))
+
+if not fc_files:
+    print('No file content batches found')
+    sys.exit(0)
+
+fc_parts = []
+for bf in fc_files:
+    bc = open(bf, encoding='utf-8').read().strip()
+    if bc:
+        fc_parts.append(bc)
+
+fc_section = '\n\n## Kiểm tra Validate nội dung file\n\n' + '\n\n'.join(fc_parts)
+
+if '## Kiểm tra chức năng' in content:
+    content = content.replace('## Kiểm tra chức năng', fc_section + '\n\n## Kiểm tra chức năng')
+else:
+    content += fc_section
+
+with open(output_file, 'w', encoding='utf-8') as f:
+    f.write(content)
+print('FILE_CONTENT_VALIDATE merged: ' + str(len(fc_parts)) + ' batches')
+"</script>
+    </merge>
+
+    <post_merge_field_coverage_check>
+        <description>Verify ALL fileContentFields are present in output</description>
+        <script>python3 -X utf8 -c "
+import json, sys
+inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
+fields = [f['displayName'] for f in inv.get('fileContentFields', [])]
+content = open('{OUTPUT_FILE}', encoding='utf-8').read()
+missing = [f for f in fields if ('### Trường ' + f) not in content]
+if missing:
+    print('MISSING_FILE_CONTENT_FIELDS: ' + ', '.join(missing))
+    sys.exit(1)
+print('FILE_CONTENT_FIELD_COVERAGE OK: ' + str(len(fields)) + '/' + str(len(fields)))
+"</script>
+    </post_merge_field_coverage_check>
+</step>
+
 <step id="5c" name="Spawn td-mainflow" type="sub-agent">
     <description>Generate "Kiểm tra chức năng" and "Kiểm tra ngoại lệ" sections</description>
     <trigger>After validate barrier passes</trigger>
@@ -567,12 +686,18 @@ sys.exit(0 if not missing else 1)
 
     <verify_output>
         <script>python3 -X utf8 -c "
-import sys
+import json, sys
 checks = [
     ('## Kiểm tra chức năng', 'td-mainflow output'),
     ('## Kiểm tra Validate', 'td-validate output'),
     ('## Kiểm tra token', 'td-common output'),
 ]
+# Add file content validate check only if fileContentFields exist
+try:
+    inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
+    if inv.get('fileContentFields', []):
+        checks.append(('## Kiểm tra Validate nội dung file', 'file content field validate'))
+except: pass
 missing = []
 for section, label in checks:
     with open('test-design-api.md', encoding='utf-8') as f:
@@ -606,11 +731,13 @@ print('ALL_SECTIONS_PRESENT')
     <keep_files>
         <file>inventory.json</file>
         <file>patch.json</file>
+        <file>patch-logic.json</file>
         <file>test-design-api.md</file>
     </keep_files>
 
     <delete_patterns>
         <pattern>validate-batch-*.md</pattern>
+        <pattern>validate-batch-fc-*.md</pattern>
         <pattern>.td-validate-done</pattern>
         <pattern>_*.py</pattern>
         <pattern>_*.ps1</pattern>
