@@ -488,7 +488,7 @@ Heading: `### {fieldName}: Integer (Optional)`
 ---
 
 <!-- @section: Array Required -->
-### ARRAY Required — ≥ 10 cases (từ fieldTestTemplates.js)
+### ARRAY Required — ≥ 15 cases (từ fieldTestTemplates.js)
 
 **Cases BẮT BUỘC** (mapping từ `generateArrayFieldTests(fieldName, isRequired=true, childFieldNames)`):
 
@@ -504,13 +504,20 @@ Heading: `### {fieldName}: Integer (Optional)`
 | 8 | Boolean thay vì array | → error |
 | 9 | XSS (`<script>alert(1)</script>`) | → error |
 | 10 | SQL Injection (`' OR 1=1 --`) | → error |
+| 11 | Mảng 1 phần tử hợp lệ | → Theo RSD |
+| 12 | Mảng nhiều phần tử hợp lệ | → Theo RSD |
+| 13 | Mảng có phần tử trùng nhau (duplicate values) | → Theo RSD |
+| 14 | Mảng có phần tử là String (sai kiểu) | → error |
+| 15 | Mảng có phần tử là Integer/Number (sai kiểu) | → error |
+
+> **Lưu ý:** Case 14–15 áp dụng khi array chứa phần tử có kiểu xác định (VD: array of objects). Nếu array of primitives thì điều chỉnh theo kiểu phần tử mong đợi.
 
 > Với Array có child fields: sinh thêm validate cases cho từng child field riêng (`### {childFieldName}`).
 
 ---
 
 <!-- @section: Array Optional -->
-### ARRAY Optional — ≥ 10 cases
+### ARRAY Optional — ≥ 15 cases
 
 > Giống ARRAY Required, NGOẠI TRỪ: Không truyền / Truyền null → **success**.
 
@@ -638,7 +645,7 @@ Cả `int`/`Integer`/`integer` và `long`/`Long` đều dùng **INTEGER Required
 Field {fieldName} ({type}): {generated}/{min} cases. Missing: [list] → THÊM ngay.
 ```
 
-Min counts: String Required ≥ 17 | String Optional ≥ 17 | Integer Required ≥ 18 | Integer with Default ≥ 18 | Integer Optional ≥ 18 | Long ≥ 18 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date Required ≥ 15 | Date Optional ≥ 15 | DateTime Required ≥ 17 | DateTime Optional ≥ 17 | Array Required ≥ 10 | Array Optional ≥ 10 | Boolean Required ≥ 11 | Boolean Optional ≥ 9 | Number Required ≥ 18 | Number Optional ≥ 18
+Min counts: String Required ≥ 17 | String Optional ≥ 17 | Integer Required ≥ 18 | Integer with Default ≥ 18 | Integer Optional ≥ 18 | Long ≥ 18 | JSONB Required ≥ 14 | JSONB Optional ≥ 12 | Date Required ≥ 15 | Date Optional ≥ 15 | DateTime Required ≥ 17 | DateTime Optional ≥ 17 | Array Required ≥ 15 | Array Optional ≥ 15 | Boolean Required ≥ 11 | Boolean Optional ≥ 9 | Number Required ≥ 18 | Number Optional ≥ 18
 
 ---
 
@@ -845,7 +852,7 @@ Sau khi generate luồng chính, re-read RSD:
 → Tìm tất cả Date field có ràng buộc so sánh (expiredDate vs effectiveDate...). Kiểm tra các case `nhỏ hơn/bằng/lớn hơn` có nằm trong `###` section của field đó không. ❌ nếu chúng nằm ngoài field section.
 
 **[V2] Số case tối thiểu**
-→ Đếm `- Kiểm tra` bullet trong mỗi `###` field section. Min: String Req ≥18 | String Opt ≥17 | Int Req ≥18 | Date ≥14 | Boolean Req ≥11 | JSONB Req ≥14 | Array ≥10 | Number Req ≥18. ❌ nếu thiếu.
+→ Đếm `- Kiểm tra` bullet trong mỗi `###` field section. Min: String Req ≥18 | String Opt ≥17 | Int Req ≥18 | Date ≥14 | Boolean Req ≥11 | JSONB Req ≥14 | Array ≥15 | Number Req ≥18. ❌ nếu thiếu.
 
 **[V3] Response nhóm đúng loại**
 → Scan validate: cases Nhóm 1 (XSS, SQL injection, sai kiểu, Boolean/Mảng/Object) phải có error response. Cases Nhóm 3 (null, ký tự đặc biệt, space, dấu tiếng Việt) phải có response dựa trên `rsdConstraints` từ inventory. ❌ nếu Nhóm 1 có success response hoặc Nhóm 3 dùng error response khi inventory chỉ rõ cho phép.

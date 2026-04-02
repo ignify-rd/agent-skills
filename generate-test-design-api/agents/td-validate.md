@@ -260,8 +260,8 @@ model: inherit
         | Date Optional | ≥ 15 |
         | DateTime Required | ≥ 17 |
         | DateTime Optional | ≥ 17 |
-        | Array Required | ≥ 10 |
-        | Array Optional | ≥ 10 |
+        | Array Required | ≥ 15 |
+        | Array Optional | ≥ 15 |
     </min_case_counts>
 
     <boundary_rules>
@@ -296,12 +296,32 @@ model: inherit
     </checkpoint_categories>
 
     <checkpoint_categories per_type="Integer Required / Long / Integer Default / Integer Optional">
-        Để trống ✓ | Không truyền ✓ | Null ✓ | Boundary ✓ | Số thập phân ✓ | Leading zero ✓ | Số rất lớn ✓ | Chuỗi ✓ | Chữ lẫn số ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space đầu/cuối ✓ | Boolean ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
+        Để trống ✓ | Không truyền ✓ | Null ✓ | Boundary ✓ | Số thập phân ✓ | Leading zero ✓ | Số rất lớn ✓ | Chuỗi ✓ | Chữ lẫn số ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space đầu/cuối ✓ | Space giữa ✓ | Boolean ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
     </checkpoint_categories>
 
     <checkpoint_categories per_type="Number Required / Number Optional">
         Để trống ✓ | Không truyền ✓ | Null ✓ | Boundary ✓ | Số thập phân hợp lệ ✓ | Leading zero ✓ | Số rất lớn ✓ | Chuỗi ✓ | Chữ lẫn số ✓ | Ký tự đặc biệt ✓ | All space ✓ | Space đầu/cuối ✓ | Boolean ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
         *(Ghi chú: "Boundary" = min-1/min/max/max+1 đã MERGE từ base "Số âm" + boundary rule. "Số thập phân hợp lệ" = maxDecimalPlaces cases đã MERGE từ base "Số thập phân")*
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="Array Required / Array Optional">
+        Không truyền ✓ | Null ✓ | Mảng rỗng ✓ | Phần tử rỗng ✓ | String thay vì array ✓ | Number thay vì array ✓ | Object thay vì array ✓ | Boolean thay vì array ✓ | XSS ✓ | SQL injection ✓ | Mảng 1 phần tử ✓ | Mảng nhiều phần tử ✓ | Phần tử trùng nhau ✓ | Phần tử là String (sai kiểu) ✓ | Phần tử là Integer (sai kiểu) ✓
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="Boolean Required / Boolean Optional">
+        Để trống ✓ | Không truyền ✓ | Null ✓ | true ✓ | false ✓ | Chuỗi "true"/"false" ✓ | Số nguyên (0/1) ✓ | Số khác 0 và 1 ✓ | Chuỗi bất kỳ ✓ | Mảng ✓ | Object ✓
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="JSONB Required / JSONB Optional">
+        Để trống ✓ | Không truyền ✓ | Null ✓ | JSON sai syntax ✓ | Mảng thay vì object ✓ | Chuỗi rỗng ✓ | String thuần ✓ | Number ✓ | Boolean ✓ | XSS trong JSON value ✓ | SQL injection trong JSON value ✓ | JSON hợp lệ ✓ | JSON sai format nghiệp vụ ✓ | Object rỗng ✓
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="Date Required / Date Optional">
+        Để trống ✓ | Không truyền ✓ | Null ✓ | Đúng định dạng ✓ | Sai định dạng ✓ | Chuỗi không phải ngày tháng ✓ | Ngày không tồn tại ✓ | Ngày quá khứ ✓ | Ngày hiện tại ✓ | Ngày tương lai ✓ | Số nguyên ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
+    </checkpoint_categories>
+
+    <checkpoint_categories per_type="DateTime Required / DateTime Optional">
+        Để trống ✓ | Không truyền ✓ | Null ✓ | Đúng định dạng ✓ | Sai định dạng ngày ✓ | Sai định dạng giờ ✓ | Chỉ có ngày không có giờ ✓ | Chuỗi không phải ngày giờ ✓ | Ngày không tồn tại ✓ | Ngày giờ quá khứ ✓ | Ngày giờ hiện tại ✓ | Ngày giờ tương lai ✓ | Số nguyên ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
     </checkpoint_categories>
 
     <output format="stdout">

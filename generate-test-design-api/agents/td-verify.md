@@ -204,6 +204,57 @@ grep -cn "^---$" "{OUTPUT_FILE}"</script>
     </on_find>
 </step>
 
+<step id="5c2" name="V14: Array field — verify new cases present">
+    <description>For each Array field in validate section, check that the 5 new cases are present: mảng 1 phần tử, mảng nhiều phần tử, phần tử trùng nhau, phần tử là String (sai kiểu), phần tử là Integer (sai kiểu).</description>
+
+    <script>
+```python
+import re
+
+with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
+    content = f.read()
+
+validate_match = re.search(r'## Kiểm tra Validate(.*?)(?=## Kiểm tra chức năng|## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
+if not validate_match:
+    print("⚠️ V14: Validate section not found")
+else:
+    validate_text = validate_match.group(1)
+    # Find all ### field sections
+    field_sections = re.split(r'(?=^### )', validate_text, flags=re.MULTILINE)
+    array_fields = []
+    for sec in field_sections:
+        # Detect array fields by presence of "mảng rỗng" or "String thay vì array" patterns (heuristic)
+        if re.search(r'(mảng rỗng|String thay vì array|thay vì array)', sec, re.IGNORECASE):
+            heading = re.match(r'^### (.+)', sec)
+            field_name = heading.group(1) if heading else "unknown"
+            required_patterns = [
+                (r'1 phần tử', 'Mảng 1 phần tử'),
+                (r'nhiều phần tử', 'Mảng nhiều phần tử'),
+                (r'trùng nhau|duplicate', 'Phần tử trùng nhau'),
+                (r'phần tử là String|phần tử.*String.*sai kiểu', 'Phần tử là String (sai kiểu)'),
+                (r'phần tử là Integer|phần tử.*Integer.*sai kiểu|phần tử.*Number.*sai kiểu', 'Phần tử là Integer (sai kiểu)'),
+            ]
+            missing = []
+            for pattern, label in required_patterns:
+                if not re.search(pattern, sec, re.IGNORECASE):
+                    missing.append(label)
+            if missing:
+                array_fields.append((field_name, missing))
+
+    if array_fields:
+        print(f"❌ V14: Array fields missing new cases:")
+        for fname, missing in array_fields:
+            print(f"  - {fname}: thiếu {missing}")
+    else:
+        print(f"✅ V14: All array fields have required new cases")
+```
+    </script>
+
+    <on_fail>
+        <action>Use Edit tool to add missing cases into the corresponding ### Trường {fieldName} section</action>
+    </on_fail>
+</step>
+
 <step id="5d" name="V13: No cases belonging to other API's processing flow">
     <description>
         Check that "Kiểm tra chức năng" does NOT contain cases testing another API's processing flow.
@@ -269,7 +320,8 @@ else:
 [V11]  Validate headings = conditions:  ✅/❌ ({N} value-headings fixed)
 [V12]  No ### [SỬA] headings:          ✅/❌ ({N} moved in-place)
 [V13]  No other API's flow cases:       ✅/❌ ({N} cases removed)
-=== KẾT QUẢ: {N}/9 ===
+[V14]  Array fields — new cases present: ✅/❌ ({N} fields fixed)
+=== KẾT QUẢ: {N}/10 ===
 ```
     </output>
 </step>
