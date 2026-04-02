@@ -80,6 +80,36 @@ print('BARRIER OK')
         </description>
     </rule>
 
+    <rule type="api_not_ui" id="api_perspective">
+        <description>
+            ⛔ HARD RULE: Đây là API test design — TUYỆT ĐỐI KHÔNG viết test case theo góc nhìn UI/Web.
+
+            Test case API = test REQUEST (params, headers, body) → RESPONSE (status, body, DB).
+            Test case UI = test hành vi giao diện (bấm nút, scroll, hiển thị popup, reset bộ lọc...).
+
+            **Bị cấm (UI perspective):**
+            - "Kiểm tra response khi xóa bộ lọc — reset về trang mặc định" → đây là hành vi UI
+            - "Kiểm tra response khi phân trang — bấm trang giữa" → đây là hành vi UI
+            - "Kiểm tra hiển thị popup khi..." → đây là hành vi UI
+            - "Kiểm tra khi người dùng nhấn nút..." → đây là hành vi UI
+
+            **Đúng (API perspective):**
+            - "Kiểm tra response khi page = 0, size = 20" → test param page
+            - "Kiểm tra response khi page vượt totalPage" → test boundary param
+            - "Kiểm tra response khi không truyền filter" → test default behavior
+            - "Kiểm tra response khi truyền filter hợp lệ" → test search functionality
+
+            **Cho API Search/List — cases thuộc chức năng:**
+            - Tìm kiếm chính xác theo từng field (VD: slaCode = "SLA001")
+            - Tìm kiếm gần đúng LIKE (VD: slaName chứa "Test")
+            - Tìm kiếm kết hợp nhiều điều kiện
+            - Không tìm thấy kết quả → response data.list = []
+            - Phân trang: page=0 (trang đầu), page=totalPage-1 (trang cuối), page > totalPage (vượt)
+            - Sort order: kiểm tra ORDER BY đúng
+            - Tất cả đều test bằng TRUYỀN PARAMS vào API, KHÔNG bằng "bấm nút UI"
+        </description>
+    </rule>
+
     <rule type="checkpoint_destination">
         <description>All checkpoints go to STDOUT ONLY — NOT to output file</description>
     </rule>
@@ -116,6 +146,8 @@ print('BARRIER OK')
             <script_5>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category dbOperations</script_5>
             <script_6>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category externalServices</script_6>
             <script_7>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category responseSchema</script_7>
+            <script_8>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category requestSchema</script_8>
+            <script_9>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category _meta --keys method</script_9>
         </action>
     </actions>
 
@@ -127,6 +159,7 @@ print('BARRIER OK')
             <section priority="4">modes[] — sub-flows (lưu nháp, gửi duyệt, etc.)</section>
             <section priority="5">dbOperations[] — tables + fieldsToVerify</section>
             <section priority="6">externalServices[] — external calls + rollback</section>
+            <section priority="7">requestSchema — queryParams[], pathParams[] (for Search/List APIs)</section>
         </extract>
     </sub_step>
 
@@ -330,6 +363,34 @@ print('BARRIER OK')
             </heading_rule>
             <format>Same as mainflow: "1. Check api trả về:" block with Status + Response body</format>
         </part>
+
+        <part name="Part-F — Search/List API: query param coverage (conditional)">
+            <condition>method = GET AND requestSchema.queryParams has ≥ 1 item</condition>
+            <description>
+                ⛔ HARD RULE cho API Search/List/Danh sách:
+                PHẢI sinh test case cho TẤT CẢ queryParams từ requestSchema — KHÔNG được bỏ sót field nào.
+
+                Với MỖI queryParam trong requestSchema.queryParams[]:
+                1. Tìm kiếm theo field đó (giá trị hợp lệ) → response trả về đúng kết quả
+                2. Tìm kiếm theo field đó (giá trị không tồn tại) → response data.list = []
+
+                Ngoài ra:
+                - Tìm kiếm kết hợp nhiều điều kiện (dùng TẤT CẢ filter cùng lúc)
+                - Không truyền bất kỳ filter nào → response trả về tất cả (có phân trang)
+                - page/size: page=0 (trang đầu), page vượt totalPage → data.list = []
+                - sort: kiểm tra sắp xếp đúng thứ tự
+
+                Ví dụ với queryParams = [keyword, approvalFlowType, status, effectiveStatus, page, size, sort]:
+                → PHẢI có test case cho: keyword, approvalFlowType, status, effectiveStatus, page, size, sort
+                → KHÔNG được chỉ viết 2 trường rồi bỏ qua 5 trường còn lại
+            </description>
+            <heading_rule>
+                Pattern cho từng field: "Kiểm tra response khi tìm kiếm theo {tên field}"
+                Pattern cho kết hợp: "Kiểm tra response khi tìm kiếm kết hợp nhiều điều kiện"
+                Pattern cho không filter: "Kiểm tra response khi không truyền filter"
+                Pattern cho page: "Kiểm tra response khi page vượt totalPage"
+            </heading_rule>
+        </part>
     </section>
 
     <section name="Kiểm tra ngoại lệ">
@@ -355,6 +416,7 @@ Part-B: {N}/{N} pre-condition failures ✓/✗
 Part-C: {N}/{N} business rules (TRUE+FALSE) ✓/✗
 Part-D: {N}/{N} external services (success+failure) ✓/✗
 Part-E: {N}/{N} remaining error codes ✓/✗
+Part-F: {N}/{N} queryParams covered (Search/List only) ✓/✗
 Ngoại lệ: ONLY timeout + 500 ✓/✗
 ⛔ Business errors in ngoại lệ: {count} → MUST BE 0
 Missing → THÊM ngay
@@ -414,6 +476,7 @@ Missing → THÊM ngay
 ✓ Business rules:   {N}/{N} (TRUE+FALSE, flow-only)
 ✓ External svc:     {N}/{N} (success+failure)
 ✓ Error codes:      {N}/{N} (all in chức năng, 0 in ngoại lệ)
+✓ QueryParams:      {N}/{N} (Search/List only — all params covered)
 ✓ Ngoại lệ:        2/2 (timeout + 500 ONLY)
 ```
     </output>
