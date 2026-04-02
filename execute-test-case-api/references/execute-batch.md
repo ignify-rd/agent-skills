@@ -64,6 +64,12 @@ Replace `{{varName}}` in URL, headers, body with captured precondition variables
 mcp__playwright__browser_take_screenshot(type="png", filename="screenshots/{testId}_{yyyyMMdd_HHmmss}.png")
 ```
 
+- Upload screenshot to Google Drive:
+```bash
+python3 {skillDir}/scripts/gdrive_upload.py "screenshots/{testId}_{yyyyMMdd_HHmmss}.png" --name "{testId}_{yyyyMMdd_HHmmss}.png"
+```
+Save the `direct` URL from the JSON output for writing to Evidence sheet.
+
 **3d — Read response from Postman UI**
 
 Take snapshot. Extract:
@@ -90,10 +96,11 @@ mcp__gsheets__update_cells(spreadsheetId, sheetName, "K{row}:N{row}", [[
 ]])
 ```
 
-Evidence sheet — find the row where column A = testId, write screenshot path to column B:
+Evidence sheet — write `=IMAGE()` formula with Google Drive direct link to column B:
 ```
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", "B{evidenceRow}", [[screenshotPath]])
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "B{evidenceRow}", [['=IMAGE("{directUrl}")']])
 ```
+Where `{directUrl}` = the `direct` value from gdrive_upload.py output (e.g., `https://lh3.googleusercontent.com/d/...`).
 
 Clean up: `rm -f /tmp/tc_response.txt`
 

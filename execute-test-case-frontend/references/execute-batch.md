@@ -86,10 +86,16 @@ Take fresh snapshot. Evaluate each assertion:
 
 Take fresh snapshot. Check if key phrases from Expected Result appear in the snapshot's visible text. If expected mentions URL → also check `browser_evaluate("window.location.href")`.
 
-**2d — Capture screenshot** (always, regardless of result):
+**2d — Capture screenshot + upload to Google Drive** (always, regardless of result):
 ```
 mcp__playwright__browser_take_screenshot(filename="screenshots/{testId}_{yyyyMMdd_HHmmss}.png", type="png")
 ```
+
+Upload screenshot to Google Drive and get direct image link:
+```bash
+python3 {skillDir}/scripts/gdrive_upload.py "screenshots/{testId}_{yyyyMMdd_HHmmss}.png" --name "{testId}_{yyyyMMdd_HHmmss}.png"
+```
+Output JSON contains `direct` field — this is the image URL for `=IMAGE()`.
 
 **2e — Write results immediately**
 
@@ -106,10 +112,11 @@ mcp__gsheets__update_cells(spreadsheetId, sheetName, "{actualResultCol}{sheetRow
 mcp__gsheets__update_cells(spreadsheetId, sheetName, "{resultCol}{sheetRow}", [[result]])
 ```
 
-Evidence sheet — find row where column A = testId, write screenshot path to column B:
+Evidence sheet — write `=IMAGE()` formula with the Google Drive direct link to column B:
 ```
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", "B{evidenceRow}", [[screenshotPath]])
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "B{evidenceRow}", [['=IMAGE("{directUrl}")']])
 ```
+Where `{directUrl}` = the `direct` value from gdrive_upload.py output (e.g., `https://lh3.googleusercontent.com/d/...`).
 
 ---
 

@@ -18,6 +18,7 @@ Uses **subagent-per-batch** execution to prevent token accumulation across test 
 - **gsheets MCP** configured (`mcp__gsheets__*` tools available)
 - **Playwright MCP** configured (`mcp__playwright__*` tools available)
 - `curl` available in terminal (for precondition auth calls only)
+- **Google Drive OAuth** — `~/.gdrive-mcp/` credentials (from MCP gdrive setup) for screenshot upload
 - Google Sheet structured per the [API schema](references/test-case-schema.md)
 - Postman account (for Postman web login — see [postman-web.md](references/postman-web.md))
 

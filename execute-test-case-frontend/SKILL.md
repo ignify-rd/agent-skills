@@ -15,6 +15,7 @@ Uses **subagent-per-batch** execution to prevent token accumulation across test 
 
 - **gsheets MCP** configured (`mcp__gsheets__*` tools available)
 - **Playwright MCP** configured (`mcp__playwright__*` tools available)
+- **Google Drive OAuth** — `~/.gdrive-mcp/` credentials (from MCP gdrive setup) for screenshot upload
 - Google Sheet in Standard or Zephyr format (see Step 1)
 
 ---
