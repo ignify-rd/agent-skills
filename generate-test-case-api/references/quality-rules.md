@@ -54,13 +54,7 @@
 ## Các field LUÔN trống
 
 ```
-externalId = ""
-testSuiteDetails = ""
-specTitle = ""
-documentId = ""
-estimatedDuration = ""
-result = ""
-note = ""
+result = "PENDING"
 ```
 
 ## summary = testCaseName
