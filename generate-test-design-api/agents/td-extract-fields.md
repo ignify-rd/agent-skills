@@ -263,11 +263,45 @@ model: inherit
     </extract>
 
     <extraction_rules>
-        <rule>Đọc TOÀN BỘ section "Mẫu file upload" / "3.1" → extract TỪNG hàng thành 1 fileContentField</rule>
-        <rule>Đọc TOÀN BỘ section "Logic xử lý" (4.2, 4.3) → map các logic validate vào crossFieldRules + businessValidation của field tương ứng</rule>
+        <rule priority="CRITICAL">
+            **STEP A: Tìm section "Mẫu file upload" hoặc "3.1" trong PTTK/RSD**
+            - Tìm bảng liệt kê các cột/trường trong file Excel template upload
+            - Đây thường là bảng có các cột: STT, Tên trường, Kiểu dữ liệu, Bắt buộc, Giải thích
+            - KHÔNG bỏ qua phần này ngay cả khi API input chỉ có 1 field type=MultipartFile
+        </rule>
+
+        <rule priority="CRITICAL">
+            **STEP B: Đọc KỸ TOÀN BỘ bảng mẫu file — TỪNG HÀNG = 1 fileContentField**
+            - Scan từ hàng đầu tiên (sau header) đến hàng cuối cùng
+            - Với MỖI hàng trong bảng mẫu file upload:
+              * Extract: name (camelCase), displayName, inputType, required, maxLength, allowedChars, ...
+              * Không bỏ qua hàng nào (kể cả STT, trường ẩn, trường auto-generated)
+            - **ĐẾM tổng số hàng trong bảng** → PHẢI bằng với số fileContentFields extracted
+        </rule>
+
+        <rule priority="CRITICAL">
+            **STEP C: Đọc section "Logic xử lý" (4.2, 4.3...) để lấy validation rules**
+            - Scan section này để tìm các constraint cho từng field:
+              * allowedChars: "Ký tự cho phép...", "Chỉ chứa...", "Không có..."
+              * crossFieldRules: "MST phải = ", "Nộp thay != ", "loại tiền TK = ", "phụ thuộc vào..."
+              * businessValidation: "Tồn tại trong bảng...", "Kiểm tra tham số...", "Hạn mức...", "Phân quyền..."
+              * conditional required: "Bắt buộc nếu...", "Không bắt buộc khi..."
+            - Map các rule này vào field tương ứng trong fileContentFields[i]
+        </rule>
+
         <rule>Trường auto-generated (STT) → vẫn extract nhưng đánh dấu required = "auto"</rule>
-        <rule>Trường conditional required → ghi rõ condition trong conditionalRequired</rule>
-        <rule>KHÔNG bỏ sót trường nào — đếm số trường trong bảng PTTK và so sánh với số fileContentFields extracted</rule>
+        
+        <rule>Trường conditional required → ghi rõ condition trong conditionalRequired field</rule>
+
+        <rule priority="ENFORCEMENT">
+            **SANITY CHECK — KHÔNG ĐƯỢC BỎ SÓT:**
+            1. Đếm số hàng trong bảng "Mẫu file upload" (VD: 25 hàng)
+            2. Đếm số fileContentFields extracted (PHẢI = 25)
+            3. Nếu không bằng → **LỖI**: dừng lại và đọc lại bảng cẩn thận
+            4. Liệt kê tên fields extracted → so với bảng gốc để kiểm tra từng cái
+        </rule>
+
+        <rule>KHÔNG bỏ sót trường nào — hàng nào trong bảng PTTK mà không có trong fileContentFields → **LỖI GIAI ĐOẠN**</rule>
     </extraction_rules>
 </step>
 
