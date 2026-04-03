@@ -4,20 +4,14 @@
 
 ```typescript
 {
-  "externalId": "",              // LUÔN để trống — Excel formula tự điền (API_1, API_2...)
   "testSuiteName": string,       // Tên test suite = ## heading trong mindmap
-  "testSuiteDetails": "",        // LUÔN để trống
   "testCaseName": string,        // Tên test case (xem rules trong api/fe-test-case.md)
   "summary": string,             // = testCaseName (giống hệt)
   "preConditions": string,       // Multi-line
   "step": string,                // Numbered steps: "1. ...\n2. ..."
   "expectedResult": string,      // Expected outcome
   "importance": "Low" | "Medium" | "High",
-  "specTitle": "",               // LUÔN để trống
-  "documentId": "",              // LUÔN để trống
-  "estimatedDuration": "",       // LUÔN để trống
-  "result": "PENDING",           // LUÔN để "PENDING"
-  "note": ""                     // LUÔN để trống
+  "result": "PENDING"            // LUÔN để "PENDING"
 }
 ```
 
@@ -42,20 +36,14 @@
 
 ```json
 {
-  "externalId": "",
   "testSuiteName": "Kiểm tra các case common",
-  "testSuiteDetails": "",
   "testCaseName": "Method_Kiểm tra khi nhập sai method",
   "summary": "Method_Kiểm tra khi nhập sai method",
   "preConditions": "1. Send API login thành công\n2. Chuẩn bị request hợp lệ\n   2.1 Endpoint: POST {{BASE_URL}}/v1/fee/search\n   2.2 Header:\n   {\n     \"Authorization\": \"Bearer {JWT_TOKEN}\",\n     \"Content-Type\": \"application/json\"\n   }\n   2.3 Body:\n   {\n     \"regChannel\": \"WEB\",\n     \"pageSize\": 5,\n     \"pageIndex\": 1\n   }",
   "step": "1. Nhập invalid Method: GET\n2. Send API",
   "expectedResult": "1. Check api trả về:\n   1.1. Status: 107\n   1.2. Response:\n   {\n     \"message\": \"Error retrieving AuthorInfo for token from TokenLib: Token is invalid signature\"\n   }",
   "importance": "Low",
-  "specTitle": "",
-  "documentId": "",
-  "estimatedDuration": "",
-  "result": "PENDING",
-  "note": ""
+  "result": "PENDING"
 }
 ```
 
@@ -63,19 +51,13 @@
 
 ```json
 {
-  "externalId": "",
   "testSuiteName": "Kiểm tra validate",
-  "testSuiteDetails": "",
   "testCaseName": "regChannel_Bỏ trống field bắt buộc",
   "summary": "regChannel_Bỏ trống field bắt buộc",
   "preConditions": "1. Send API login thành công\n2. Chuẩn bị request hợp lệ\n   2.1 Endpoint: POST {{BASE_URL}}/v1/fee/search\n   2.2 Header:\n   {\n     \"Authorization\": \"Bearer {JWT_TOKEN}\",\n     \"Content-Type\": \"application/json\"\n   }\n   2.3 Body:\n   {\n     \"regChannel\": \"WEB\",\n     \"pageSize\": 5,\n     \"pageIndex\": 1\n   }",
   "step": "1. Bỏ trống regChannel (bắt buộc)\n2. Send API",
   "expectedResult": "1. Check api trả về:\n   1.1. Status: 200\n   1.2. Response:\n   {\n     \"message\": \"Dữ liệu không hợp lệ\"\n   }",
   "importance": "Medium",
-  "specTitle": "",
-  "documentId": "",
-  "estimatedDuration": "",
-  "result": "PENDING",
-  "note": ""
+  "result": "PENDING"
 }
 ```

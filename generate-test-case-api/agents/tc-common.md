@@ -116,30 +116,6 @@ model: inherit
             <value>PENDING</value>
             <note>NOT empty string ""</note>
         </mapping>
-        <mapping>
-            <output_field>externalId</output_field>
-            <value></value>
-        </mapping>
-        <mapping>
-            <output_field>testSuiteDetails</output_field>
-            <value></value>
-        </mapping>
-        <mapping>
-            <output_field>specTitle</output_field>
-            <value></value>
-        </mapping>
-        <mapping>
-            <output_field>documentId</output_field>
-            <value></value>
-        </mapping>
-        <mapping>
-            <output_field>estimatedDuration</output_field>
-            <value></value>
-        </mapping>
-        <mapping>
-            <output_field>note</output_field>
-            <value></value>
-        </mapping>
     </field_mappings>
 </step>
 

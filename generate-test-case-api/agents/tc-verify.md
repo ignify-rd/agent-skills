@@ -99,12 +99,6 @@ model: inherit
     <gap_case_fields>
         <field name="result">PENDING</field>
         <field name="summary">EXACTLY match testCaseName</field>
-        <field name="externalId"></field>
-        <field name="testSuiteDetails"></field>
-        <field name="specTitle"></field>
-        <field name="documentId"></field>
-        <field name="estimatedDuration"></field>
-        <field name="note"></field>
         <field name="preConditions">preConditionsBase from tc-context.json</field>
     </gap_case_fields>
 </step>

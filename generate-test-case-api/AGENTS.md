@@ -99,7 +99,7 @@ Each batch: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho se
 
 ## Output Rules
 
-- `externalId`, `testSuiteDetails`, `specTitle`, `documentId`, `estimatedDuration`, `note` = always `""`
+
 - `result` = always `"PENDING"`
 - `summary` = exactly same as `testCaseName`
 - testCaseName: with prefix `"{Field}_Mô tả"` using `_` underscore between category and description
