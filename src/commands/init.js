@@ -224,21 +224,6 @@ pandas==2.0.3
     logger.dim('requirements.txt already exists (skipped)');
   }
 
-  // Create example folder structure
-  const exampleDir = join(projectRoot, 'example');
-  mkdirSync(exampleDir, { recursive: true });
-
-  const exampleSubDirs = ['example/api', 'example/frontend', 'example/mobile'];
-  for (const dir of exampleSubDirs) {
-    const fullDir = join(projectRoot, dir);
-    mkdirSync(fullDir, { recursive: true });
-    const gitkeep = join(fullDir, '.gitkeep');
-    if (!existsSync(gitkeep)) {
-      writeFileSync(gitkeep, '', 'utf8');
-    }
-  }
-  logger.success('Created: example/ (for sample RSD, PTTK, test cases)');
-
   // Create catalog folder structure
   const catalogDirs = ['catalog/api', 'catalog/frontend', 'catalog/mobile'];
   for (const dir of catalogDirs) {
