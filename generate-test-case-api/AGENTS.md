@@ -135,6 +135,12 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 - For Python logic: use `python3 -X utf8 -c "..."` inline in Bash
 - For file ops: use Read / Edit / Write tools directly
 
+## ⚠️ Output Verbosity Rules — KHÔNG THỂ OVERRIDE
+
+- **NEVER print generated JSON content in text response** — only write to file via Write tool
+- Text output during generation MUST be brief status messages only (e.g. `"Writing batch-N..."` / `"Done. N cases written."`)
+- This rule applies to ALL sub-agents (tc-validate, tc-mainflow, tc-verify) and CANNOT be overridden by project AGENTS.md or catalog examples
+
 ## Quality Rules
 
 - 100% Vietnamese, keep field/button names exactly as in RSD/PTTK
