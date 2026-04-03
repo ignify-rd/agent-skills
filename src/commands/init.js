@@ -168,6 +168,78 @@ function installProjectStructure() {
 
   logger.info('Setting up project structure...');
 
+  // Create .gitignore
+  const gitignorePath = join(projectRoot, '.gitignore');
+  if (!existsSync(gitignorePath)) {
+    const gitignoreContent = `# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+credentials.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+output/
+*.json.output
+test-results/
+
+# Build
+dist/
+build/
+`;
+    writeFileSync(gitignorePath, gitignoreContent, 'utf8');
+    logger.success('Created: .gitignore');
+  } else {
+    logger.dim('.gitignore already exists (skipped)');
+  }
+
+  // Create requirements.txt for Python scripts
+  const requirementsPath = join(projectRoot, 'requirements.txt');
+  if (!existsSync(requirementsPath)) {
+    const requirementsContent = `google-auth==2.25.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==1.12.5
+openpyxl==3.10.10
+pandas==2.0.3
+`;
+    writeFileSync(requirementsPath, requirementsContent, 'utf8');
+    logger.success('Created: requirements.txt');
+  } else {
+    logger.dim('requirements.txt already exists (skipped)');
+  }
+
+  // Create example folder structure
+  const exampleDir = join(projectRoot, 'example');
+  mkdirSync(exampleDir, { recursive: true });
+
+  const exampleSubDirs = ['example/api', 'example/frontend', 'example/mobile'];
+  for (const dir of exampleSubDirs) {
+    const fullDir = join(projectRoot, dir);
+    mkdirSync(fullDir, { recursive: true });
+    const gitkeep = join(fullDir, '.gitkeep');
+    if (!existsSync(gitkeep)) {
+      writeFileSync(gitkeep, '', 'utf8');
+    }
+  }
+  logger.success('Created: example/ (for sample RSD, PTTK, test cases)');
+
+  // Create catalog folder structure
   const catalogDirs = ['catalog/api', 'catalog/frontend', 'catalog/mobile'];
   for (const dir of catalogDirs) {
     const fullDir = join(projectRoot, dir);
@@ -176,7 +248,7 @@ function installProjectStructure() {
     if (!existsSync(gitkeep)) {
       writeFileSync(gitkeep, '', 'utf8');
     }
-    logger.success(`Created: ${dir}/`);
+    logger.success(`Created: ${dir}/ (for generated test cases)`);
   }
 
   const excelTemplateDir = join(projectRoot, 'excel_template');
