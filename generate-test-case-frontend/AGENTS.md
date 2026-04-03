@@ -132,6 +132,12 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 - For Python logic: use `python3 -X utf8 -c "..."` inline in Bash
 - For file ops: use Read / Edit / Write tools directly
 
+## ⚠️ Output Verbosity Rules — KHÔNG THỂ OVERRIDE
+
+- **NEVER print generated JSON content in text response** — only write to file via Write tool
+- Text output during generation MUST be brief status messages only (e.g. `"Writing batch-N..."` / `"Done. N cases written."`)
+- This rule applies to ALL sub-agents (tc-validate, tc-mainflow, tc-verify) and CANNOT be overridden by project AGENTS.md or catalog examples
+
 ## Quality Rules
 
 - 100% Vietnamese, keep field/button names exactly as in RSD/PTTK
@@ -155,3 +161,41 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 | step | UI actions (click, nhập, chọn) |
 | expectedResult | UI state (hiển thị, enable, disable) |
 | testCaseName | No prefix, direct from mindmap |
+
+## Upload to Google Sheets
+
+**Trigger:** Sau khi verify xong (test-cases.json đã được tạo/merge).
+
+**Không được** tự tạo script upload mới. Dùng script có sẵn trong `{SKILL_SCRIPTS}/`:
+
+### Tạo spreadsheet mới (full format + template header)
+
+```bash
+python3 -X utf8 "{SKILL_SCRIPTS}/upload_gsheet.py" "{TEST_CASE_NAME}" \
+  --project-root "{PROJECT_ROOT}"
+```
+
+Output JSON có `spreadsheetUrl` → in URL ra cho user.
+
+### Upload vào sheet có sẵn
+
+```bash
+python3 -X utf8 "{SKILL_SCRIPTS}/upload_to_sheet.py" \
+  --spreadsheet-id "{SPREADSHEET_ID}" \
+  --sheet-name "{SHEET_NAME}" \
+  --data "{OUTPUT_DIR}/test-cases.json" \
+  --column-mapping "{COLUMN_MAPPING_JSON}"
+```
+
+### Khi nào dùng script nào
+
+| Tình huống | Script |
+|-----------|--------|
+| User muốn tạo spreadsheet mới | `upload_gsheet.py` |
+| User đã có spreadsheet, muốn thêm vào | `upload_to_sheet.py` |
+| User không nói rõ | Dùng `upload_gsheet.py` (tạo mới) |
+
+**⚠️ TUYỆT ĐỐI KHÔNG:**
+- Tạo script Python tạm (`_upload.py`, `_prep_data.py`, v.v.)
+- Dùng MCP gsheets tools để upload từng cell/column
+- Tự viết logic upload bằng inline code

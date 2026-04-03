@@ -25,6 +25,7 @@ model: inherit
             <action>Generate UI/common/permission cases</action>
             <action>Generate function cases</action>
             <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
+            <action>Print or display the generated JSON content in text response — ONLY write to file via Write tool. Text output must be brief status messages only (e.g. "Writing batch..." / "Done.").</action>
         </forbidden>
     </boundary>
 </role_definition>
