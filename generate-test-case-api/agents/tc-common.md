@@ -17,6 +17,7 @@ model: inherit
         <action>Read test-design-api.md directly</action>
         <action>Write non-JSON content to batch file</action>
         <action>Use empty string "" for result field</action>
+        <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
     </rule>
 
     <rule type="hard_constraint">

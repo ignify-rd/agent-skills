@@ -66,18 +66,6 @@ KHÔNG được gộp tất cả vào 1 case chung chỉ vì outcome giống nha
 - testCaseName = lấy trực tiếp từ bullet
 - KHÔNG mix cases của field A vào batch đang xử lý field B
 
-## Các field LUÔN trống
-
-```
-externalId = ""
-testSuiteDetails = ""
-specTitle = ""
-documentId = ""
-estimatedDuration = ""
-result = ""
-note = ""
-```
-
 ## summary = testCaseName
 
 `summary` phải **giống hệt** `testCaseName`. Không rút ngắn, không thay đổi.

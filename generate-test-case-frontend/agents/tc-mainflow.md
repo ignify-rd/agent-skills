@@ -29,6 +29,7 @@ model: inherit
 
         <forbidden>
             <action>Regenerate validate cases (cross-field validate đã có trong BATCH 2)</action>
+            <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
         </forbidden>
     </boundary>
 </role_definition>
@@ -109,12 +110,6 @@ print('READY: validate batches confirmed complete')
         <field name="expectedResult">UI state — Hiển thị thông báo, Redirect, Cập nhật dữ liệu, etc. KHÔNG có HTTP status codes</field>
         <field name="importance">"High" cho critical actions (Lưu, Đẩy duyệt); "Medium" cho actions khác</field>
         <field name="result">"PENDING"</field>
-        <field name="externalId">""</field>
-        <field name="testSuiteDetails">""</field>
-        <field name="specTitle">""</field>
-        <field name="documentId">""</field>
-        <field name="estimatedDuration">""</field>
-        <field name="note">""</field>
     </test_case_template>
 
     <rules>

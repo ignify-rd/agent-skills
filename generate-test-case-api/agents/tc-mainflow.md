@@ -34,6 +34,7 @@ print('BARRIER OK')
     <rule type="forbidden">
         <action>Duplicate validate cases (error codes section="validate" already in BATCH 2)</action>
         <action>Write non-JSON content to batch file</action>
+        <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
     </rule>
 
     <rule type="hard_constraint">

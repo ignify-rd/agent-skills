@@ -23,6 +23,7 @@ model: inherit
 
         <forbidden>
             <action>Regenerate existing test cases</action>
+            <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
         </forbidden>
     </boundary>
 </role_definition>
@@ -114,7 +115,6 @@ model: inherit
         <rule name="testCaseName">= mô tả rõ ràng gap được fill (từ mindmap nếu có, hoặc tạo dựa theo inventory item)</rule>
         <rule name="summary">= giống hệt testCaseName</rule>
         <rule name="result">= "PENDING"</rule>
-        <rule name="result_empty">externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note = ""</rule>
         <rule name="preConditions">= preConditionsBase từ {TC_CONTEXT_FILE}</rule>
         <rule name="step">= UI actions (KHÔNG dùng "Send API")</rule>
         <rule name="expectedResult">= UI state (KHÔNG dùng HTTP status codes)</rule>

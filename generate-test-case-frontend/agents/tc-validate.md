@@ -24,6 +24,7 @@ model: inherit
         <forbidden>
             <action>Generate UI/common/permission cases</action>
             <action>Generate function cases</action>
+            <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
         </forbidden>
     </boundary>
 </role_definition>
@@ -73,12 +74,6 @@ model: inherit
         <field name="expectedResult">UI state theo catalogStyle.expectedResultExample — VD: "Hiển thị thông báo lỗi: ...", "Field highlight đỏ". KHÔNG dùng HTTP status codes</field>
         <field name="importance">"Medium"</field>
         <field name="result">"PENDING"</field>
-        <field name="externalId">""</field>
-        <field name="testSuiteDetails">""</field>
-        <field name="specTitle">""</field>
-        <field name="documentId">""</field>
-        <field name="estimatedDuration">""</field>
-        <field name="note">""</field>
     </test_case_template>
 
     <rules>

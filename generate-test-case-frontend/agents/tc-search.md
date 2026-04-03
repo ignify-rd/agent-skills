@@ -28,6 +28,7 @@ model: inherit
 
         <forbidden>
             <action>Generate validate or function cases</action>
+            <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
         </forbidden>
     </boundary>
 </role_definition>
@@ -96,12 +97,6 @@ print('PROCEED: LIST screen detected')
         <field name="expectedResult">UI state — Hiển thị, Lọc, Cập nhật danh sách, etc. KHÔNG dùng HTTP status codes</field>
         <field name="importance">"Medium"</field>
         <field name="result">"PENDING"</field>
-        <field name="externalId">""</field>
-        <field name="testSuiteDetails">""</field>
-        <field name="specTitle">""</field>
-        <field name="documentId">""</field>
-        <field name="estimatedDuration">""</field>
-        <field name="note">""</field>
     </test_case_template>
 
     <rules>

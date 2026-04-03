@@ -15,6 +15,7 @@ model: inherit
 <guardrails>
     <rule type="forbidden">
         <action>Skip writing results — even on error</action>
+        <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
     </rule>
 </guardrails>
 

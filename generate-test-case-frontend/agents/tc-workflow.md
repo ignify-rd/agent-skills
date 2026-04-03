@@ -28,6 +28,7 @@ model: inherit
 
         <forbidden>
             <action>Generate validate cases</action>
+            <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
         </forbidden>
     </boundary>
 </role_definition>
@@ -111,12 +112,6 @@ print(f'PROCEED: {len(inv.get(\"permissions\",[]))} roles, {len(inv.get(\"status
         <field name="expectedResult">UI state — Hiển thị, Ẩn, Enable, Disable, Redirect, Thông báo lỗi, etc. KHÔNG có HTTP status codes</field>
         <field name="importance">"High" cho security/permission tests; "Medium" cho transition tests</field>
         <field name="result">"PENDING"</field>
-        <field name="externalId">""</field>
-        <field name="testSuiteDetails">""</field>
-        <field name="specTitle">""</field>
-        <field name="documentId">""</field>
-        <field name="estimatedDuration">""</field>
-        <field name="note">""</field>
     </test_case_template>
 
     <rules>

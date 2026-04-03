@@ -4,20 +4,14 @@
 
 ```typescript
 {
-  "externalId": "",              // LUÔN để trống — Excel formula tự điền (FE_1, FE_2...)
   "testSuiteName": string,       // Tên test suite = ## heading trong mindmap
-  "testSuiteDetails": "",        // LUÔN để trống
   "testCaseName": string,        // Tên test case (xem rules trong fe-test-case.md)
   "summary": string,             // = testCaseName (giống hệt)
   "preConditions": string,       // Multi-line
   "step": string,                // Numbered steps: "1. ...\n2. ..."
   "expectedResult": string,      // Expected outcome
   "importance": "Low" | "Medium" | "High",
-  "specTitle": "",               // LUÔN để trống
-  "documentId": "",              // LUÔN để trống
-  "estimatedDuration": "",       // LUÔN để trống
-  "result": "PENDING",           // LUÔN để "PENDING"
-  "note": ""                     // LUÔN để trống
+  "result": "PENDING"            // LUÔN để "PENDING"
 }
 ```
 
@@ -42,20 +36,14 @@
 
 ```json
 {
-  "externalId": "",
   "testSuiteName": "Kiểm tra giao diện chung",
-  "testSuiteDetails": "",
   "testCaseName": "Kiểm tra điều hướng đến màn hình Tần suất thu phí",
   "summary": "Kiểm tra điều hướng đến màn hình Tần suất thu phí",
   "preConditions": "Đ/k1: Vào màn hình:\n1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369\n2. Tại sitemap, người dùng truy cập màn hình Danh mục > Tần suất thu phí\nĐ/k2: Phân quyền\n3. User được phân quyền truy cập",
   "step": "1. Quan sát màn hình sau khi điều hướng",
   "expectedResult": "Điều hướng thành công đến màn hình Tần suất thu phí",
   "importance": "Low",
-  "specTitle": "",
-  "documentId": "",
-  "estimatedDuration": "",
   "result": "PENDING",
-  "note": ""
 }
 ```
 
@@ -63,20 +51,14 @@
 
 ```json
 {
-  "externalId": "",
   "testSuiteName": "Kiểm tra validate",
-  "testSuiteDetails": "",
   "testCaseName": "Kiểm tra khi nhập 101 ký tự",
   "summary": "Kiểm tra khi nhập 101 ký tự",
   "preConditions": "Đ/k1: Vào màn hình:\n1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369\n2. Tại sitemap, người dùng truy cập màn hình Danh mục > Tần suất thu phí\nĐ/k2: Phân quyền\n3. User được phân quyền truy cập",
   "step": "1. Tại textbox \"Tên tần suất\", nhập 101 ký tự\n2. Quan sát",
   "expectedResult": "Hiển thị cảnh báo \"Tên tần suất không được vượt quá 100 ký tự\"",
   "importance": "Medium",
-  "specTitle": "",
-  "documentId": "",
-  "estimatedDuration": "",
   "result": "PENDING",
-  "note": ""
 }
 ```
 
@@ -84,19 +66,13 @@
 
 ```json
 {
-  "externalId": "",
   "testSuiteName": "Kiểm tra chức năng",
-  "testSuiteDetails": "",
   "testCaseName": "Kiểm tra chức năng Tìm kiếm khi nhập điều kiện hợp lệ",
   "summary": "Kiểm tra chức năng Tìm kiếm khi nhập điều kiện hợp lệ",
   "preConditions": "Đ/k1: Vào màn hình:\n1. Người dùng đăng nhập thành công FEE trên Web với account: 164987/ Test@147258369\n2. Tại sitemap, người dùng truy cập màn hình Danh mục > Tần suất thu phí\nĐ/k2: Phân quyền\n3. User được phân quyền truy cập\n4. Có dữ liệu trong hệ thống",
   "step": "1. Nhập điều kiện tìm kiếm hợp lệ vào các fields bộ lọc\n2. Click button \"Tìm kiếm\"",
   "expectedResult": "Hiển thị kết quả khớp với điều kiện tìm kiếm đã nhập",
   "importance": "High",
-  "specTitle": "",
-  "documentId": "",
-  "estimatedDuration": "",
   "result": "PENDING",
-  "note": ""
 }
 ```
