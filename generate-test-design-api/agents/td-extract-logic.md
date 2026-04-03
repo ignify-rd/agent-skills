@@ -28,18 +28,17 @@ model: inherit
 
 ## Workflow
 
-<step id="1" name="Initialize inventory">
+<step id="1" name="Initialize inventory (empty skeleton)">
     <actions>
         <action type="bash">
             <script>python3 {SKILL_SCRIPTS}/inventory.py init \
-  --file {INVENTORY_FILE} \
-  --name "{API_NAME}" \
-  --method "{METHOD}"</script>
+  --file {INVENTORY_FILE}</script>
         </action>
     </actions>
     <note>
-        td-extract-logic runs init because it handles _meta. td-extract-fields patches into the same file.
-        METHOD comes from context block — actual value e.g. "GET", "POST", "PUT".
+        Init creates empty skeleton with all _meta fields = "".
+        ALL metadata (name, endpoint, method) will be populated by step 2a after reading RSD.
+        Do NOT pass --name or --method here — td-extract owns all metadata updates.
     </note>
 </step>
 
@@ -52,6 +51,14 @@ model: inherit
     </actions>
 
     <extract>
+        <section name="_meta">
+            <rule>Extract metadata from RSD for this API:</rule>
+            <field name="name">API name as stated in RSD (e.g., "API-Chỉnh sửa SLA")</field>
+            <field name="endpoint">Full URL path (e.g., "/sla-service/v1/slas/update")</field>
+            <field name="method">HTTP method from RSD (GET/POST/PUT/DELETE/PATCH)</field>
+            <rule>If RSD contains multiple APIs, match by API_NAME to find the correct section</rule>
+            <rule>Store all values — will be used in step 2a to update inventory metadata</rule>
+        </section>
         <section name="errorCodes">
             <rule>Read ALL error code table rows — do not miss any line</rule>
             <section_assignment>
@@ -107,7 +114,40 @@ model: inherit
     </extract>
 </step>
 
-<step id="3" name="Write patch-logic.json">
+<step id="2a" name="Update _meta from RSD">
+    <description>
+        Write all metadata extracted in step 2 (name, endpoint, method) into inventory.
+        This ALWAYS runs — inventory was initialized with empty _meta.
+    </description>
+    
+    <actions>
+        <action type="write">
+            <file>{OUTPUT_DIR}/patch-metadata.json</file>
+            <content>
+{
+  "_meta": {
+    "name": "{NAME_FROM_RSD}",
+    "endpoint": "{ENDPOINT_FROM_RSD}",
+    "method": "{METHOD_FROM_RSD}"
+  }
+}
+            </content>
+            <instruction>
+                Replace placeholders with actual values extracted from RSD in step 2.
+                name: API name (e.g., "API-Chỉnh sửa SLA")
+                endpoint: URL path (e.g., "/sla-service/v1/slas/update")
+                method: HTTP method (e.g., "PUT")
+            </instruction>
+        </action>
+        <action type="bash">
+            <script>python3 {SKILL_SCRIPTS}/inventory.py patch \
+  --file {INVENTORY_FILE} \
+  --patch-file {OUTPUT_DIR}/patch-metadata.json</script>
+        </action>
+    </actions>
+</step>
+
+<step id="3" name="Write patch-logic.json (business logic)">
     <output_file>{OUTPUT_DIR}/patch-logic.json</output_file>
 
     <structure>

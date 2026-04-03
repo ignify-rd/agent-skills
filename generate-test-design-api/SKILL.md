@@ -122,6 +122,7 @@ description: Generate API test design mindmap from RSD/PTTK. For API endpoints o
     </rules>
 </step>
 
+
 <step id="2" name="Resolve SKILL_SCRIPTS and SKILL_AGENTS paths">
     <actions>
         <action type="bash">
@@ -199,10 +200,10 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 
 <step id="4" name="Spawn td-extract-logic + td-extract-fields (PARALLEL)" type="parallel">
     <description>Extract business logic AND field definitions from RSD/PTTK in parallel. Both write to same inventory.json but to DIFFERENT categories.</description>
-    <trigger>After Step 3</trigger>
+    <trigger>After Step 3 (Catalog)</trigger>
 
     <sub_step id="4a" name="Spawn td-extract-logic">
-        <description>Extracts: errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions. Also runs inventory init.</description>
+        <description>Extracts: errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions, and endpoint from RSD. Also runs inventory init.</description>
         <actions>
             <action type="read_agent_instructions">
                 <file>SKILL_AGENTS/td-extract-logic.md</file>
