@@ -102,9 +102,9 @@ If snapshot cannot be taken → ERROR: `"Cannot take snapshot for assertions"`.
 
 - Tab name: `"Evidence"` (non-configurable — shared with API test runs in the same spreadsheet).
 - Create on first run if not present; write header row `Test ID | Screenshot`.
-- Append one row per executed test case regardless of PASS/FAIL/ERROR.
-- Column B contains the local screenshot file path (relative to working directory).
-- Never overwrite existing Evidence rows — always append to the next empty row.
+- Pre-populate column A with all test case IDs. Build `evidenceMap: testId → row number`.
+- Subagents write `=IMAGE()` formula to column B at the pre-mapped row for each test case.
+- Never overwrite evidence rows that already have a screenshot (column B non-empty).
 
 ## Screenshot settings
 

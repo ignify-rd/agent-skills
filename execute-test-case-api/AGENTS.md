@@ -44,14 +44,14 @@ These rules apply when the `execute-test-case-api` skill is active. A project-le
 
 - Tab name: `"Evidence"` (non-configurable — shared between API and Frontend test runs in the same spreadsheet).
 - Create on first run if not present; write header row `Test ID | Screenshot`.
-- Append one row per executed test case regardless of PASS/FAIL/ERROR.
-- Column B contains the local screenshot file path (relative to working directory).
-- Never overwrite existing Evidence rows — always append to the next empty row.
+- Pre-populate column A with all test case IDs. Build `evidenceMap: testId → row number`.
+- Subagents batch write `=IMAGE()` formulas to column B at the pre-mapped rows.
+- Never overwrite evidence rows that already have a screenshot (column B non-empty).
 
 ## Result writing
 
-- Write results **row by row** immediately after each test execution — do not accumulate and batch.
-- Use `mcp__gsheets__update_cells` for single-row writes.
+- Subagents **accumulate results** during the execution loop, then **batch write** all results at the end of the batch using `mcp__gsheets__update_cells` with contiguous ranges (e.g., `K2:N6`).
+- For non-contiguous rows, group contiguous ranges and write each group separately.
 - Timestamp format: `YYYY-MM-DDTHH:mm:ssZ` (ISO 8601 UTC).
 - Response body in column M: strip leading/trailing whitespace, truncate at configured limit, append `...` if truncated.
 

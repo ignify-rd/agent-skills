@@ -207,11 +207,23 @@ Example: Group A has 12 cases → Batch A1 (cases 1–5), Batch A2 (cases 6–10
 
 ---
 
+### Step 2c — Pre-load execution instructions (once)
+
+Read the condensed instructions file **once** before spawning any subagent:
+
+```
+Read({skillDir}/references/condensed-instructions.md)
+```
+
+Store the full content as `executionInstructions`. This will be embedded verbatim into each subagent prompt so subagents can start executing **immediately** without reading any files.
+
+---
+
 ### Step 3 — Execute batches via subagents
 
 To prevent token accumulation, each batch is executed by a **separate subagent** with a fresh context. The subagent writes results directly to the sheet.
 
-**Small run shortcut**: If total pending test cases ≤ 3, skip subagents and execute directly following [execute-batch.md](references/execute-batch.md) instructions inline.
+**Small run shortcut**: If total pending test cases ≤ 5, skip subagents and execute directly following [condensed-instructions.md](references/condensed-instructions.md) instructions inline. With batch writes the per-case overhead is low enough. When executing inline, substitute `{skillDir}` with this skill's absolute directory path (the directory containing this SKILL.md).
 
 #### Subagent prompt template — Standard format
 
@@ -219,12 +231,15 @@ To prevent token accumulation, each batch is executed by a **separate subagent**
 Agent(
   description="FE test {startId}–{endId}",
   prompt="""
-Read these files for execution instructions:
-- {skillDir}/references/execute-batch.md
-- {skillDir}/references/browser-control.md
+## Execution Instructions
+
+{executionInstructions}
+
+---
 
 ## Data
 
+skillDir: {skillDir}
 spreadsheetId: {spreadsheetId}
 sheetName: {sheetName}
 format: Standard
@@ -244,8 +259,9 @@ format: Standard
 | {id} | {evidenceRow} |
 ...
 
-Follow execute-batch.md workflow (Standard format sections).
-Write results to columns G–J. Report summary when done.
+Execute all test cases following the instructions above (Standard format sections).
+Batch write results to columns G–J + batch upload screenshots at the end.
+Report summary when done.
 """
 )
 ```
@@ -256,12 +272,15 @@ Write results to columns G–J. Report summary when done.
 Agent(
   description="FE test {startId}–{endId}",
   prompt="""
-Read these files for execution instructions:
-- {skillDir}/references/execute-batch.md
-- {skillDir}/references/browser-control.md
+## Execution Instructions
+
+{executionInstructions}
+
+---
 
 ## Data
 
+skillDir: {skillDir}
 spreadsheetId: {spreadsheetId}
 sheetName: {sheetName}
 format: Zephyr
@@ -285,13 +304,15 @@ format: Zephyr
 | {id} | {evidenceRow} |
 ...
 
-Follow execute-batch.md workflow (Zephyr format sections).
-Write Actual Result + PASS/FAIL to the specified columns. Report summary when done.
+Execute all test cases following the instructions above (Zephyr format sections).
+Batch write Actual Result + PASS/FAIL + batch upload screenshots at the end.
+Report summary when done.
 """
 )
 ```
 
 **Replace `{skillDir}`** with the actual absolute path to this skill's directory.
+**Replace `{executionInstructions}`** with the content loaded in Step 2c.
 
 **Important execution rules:**
 - Execute batches **sequentially** — Playwright MCP supports only one browser session at a time.

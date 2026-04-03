@@ -164,11 +164,23 @@ Example: Group A has 12 cases → Batch A1 (cases 1–5), Batch A2 (cases 6–10
 
 ---
 
+### Step 3b — Pre-load execution instructions (once)
+
+Read the condensed instructions file **once** before spawning any subagent:
+
+```
+Read({skillDir}/references/condensed-instructions.md)
+```
+
+Store the full content as `executionInstructions`. This will be embedded verbatim into each subagent prompt so subagents can start executing **immediately** without reading any files.
+
+---
+
 ### Step 4 — Execute batches via subagents
 
 To prevent token accumulation, each batch is executed by a **separate subagent** with a fresh context. The subagent writes results directly to the sheet.
 
-**Small run shortcut**: If total pending test cases ≤ 3, skip subagents and execute directly following [execute-batch.md](references/execute-batch.md) instructions inline. The overhead of spawning subagents is not worth it for very small runs.
+**Small run shortcut**: If total pending test cases ≤ 5, skip subagents and execute directly following [condensed-instructions.md](references/condensed-instructions.md) instructions inline. With batch writes the per-case overhead is low enough. When executing inline, substitute `{skillDir}` with this skill's absolute directory path (the directory containing this SKILL.md).
 
 #### For each batch, spawn a subagent:
 
@@ -176,13 +188,15 @@ To prevent token accumulation, each batch is executed by a **separate subagent**
 Agent(
   description="API test {startId}–{endId}",
   prompt="""
-Read these files for execution instructions:
-- {skillDir}/references/execute-batch.md
-- {skillDir}/references/postman-web.md
-- {skillDir}/references/execution-rules.md
+## Execution Instructions
+
+{executionInstructions}
+
+---
 
 ## Data
 
+skillDir: {skillDir}
 spreadsheetId: {spreadsheetId}
 sheetName: {sheetName}
 
@@ -201,13 +215,14 @@ sheetName: {sheetName}
 | {id} | {evidenceRow} |
 ...
 
-Follow execute-batch.md workflow. Write results to the sheet as you go.
+Execute all test cases following the instructions above. Batch write results + batch upload screenshots at the end.
 Report summary when done: total/pass/fail/error counts + failed test details.
 """
 )
 ```
 
 **Replace `{skillDir}`** with the actual absolute path to this skill's directory.
+**Replace `{executionInstructions}`** with the content loaded in Step 3b.
 
 **Important execution rules:**
 - Execute batches **sequentially** — wait for each subagent to finish before starting the next. Playwright MCP supports only one browser session at a time.

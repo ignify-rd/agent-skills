@@ -2,7 +2,9 @@
 
 Instructions for a subagent executing a batch of frontend test cases via Playwright browser automation. The subagent receives test case data and format details in its prompt.
 
-Read this companion file for detailed instructions:
+**Performance note:** This file is kept as a fallback reference. For optimal speed, the main agent embeds [condensed-instructions.md](condensed-instructions.md) directly into the subagent prompt — subagents should NOT need to read this file. If you were told to read this file, follow the workflow below. Otherwise, follow the instructions already in your prompt.
+
+Read this companion file only if NOT using condensed instructions:
 - [browser-control.md](browser-control.md) — Playwright MCP tool reference, snapshot-ref-act pattern, assertion evaluation
 
 ---
@@ -37,6 +39,12 @@ After preconditions succeed → record `entryUrl` (current URL from snapshot).
 
 ### 2 — Execute each test case
 
+Initialize result collectors:
+```
+results = []       # [{sheetRow, result, error, actualResult, screenshot, timestamp}]
+screenshots = []   # [{testId, filename}]
+```
+
 For each test case (in order):
 
 **2a — Reset to entry state** (skip for the first case in the batch):
@@ -49,78 +57,84 @@ If reset fails → ERROR for this case + all remaining cases: `"Entry reset fail
 **2b — Execute test steps**
 
 *Standard format* (JSON array):
-
 Execute each action using Playwright tools (see browser-control.md). Always call `mcp__playwright__browser_snapshot` before `click`/`fill` to get element refs.
 
 *Zephyr format* (numbered human-readable steps):
-
 Parse numbered steps (split on `\n`, strip step numbers). For each step:
 1. Take snapshot to see current page state
-2. Determine Playwright action from step text:
-
-| Step text pattern | Playwright action |
-|-------------------|------------------|
-| Contains URL (`https?://`) | `browser_navigate(url=...)` |
-| "click", "nhấn", "bấm" + element | `browser_click(element=<from snapshot>)` |
-| "nhập", "điền", "enter" + value | `browser_type(ref=<from snapshot>, text=...)` |
-| "chờ", "wait", "tải trang" | `browser_wait_for(time=2)` |
-| "scroll", "cuộn" | `browser_evaluate(script="window.scrollBy(0, 300)")` |
-| "hover", "di chuột" | `browser_hover(element=<from snapshot>)` |
+2. Determine Playwright action from step text (click/nhấn/bấm, nhập/điền/enter, chờ/wait, scroll/cuộn, hover/di chuột)
 
 On step failure → capture screenshot, record error, stop further steps for this case.
 
 **2c — Validate result**
 
 *Standard format* (JSON assertion array):
-
-Take fresh snapshot. Evaluate each assertion:
-- `visible` → element in snapshot, not hidden
-- `not_visible` → element absent or hidden
-- `text_contains` → element text contains value
-- `text_equals` → element text exactly equals value
-- `url_contains` → page URL contains value
-- `url_equals` → page URL exactly equals value
-- `count` → matching element count equals expected
+Take fresh snapshot. Evaluate each assertion (visible, not_visible, text_contains, text_equals, url_contains, url_equals, count).
 
 *Zephyr format* (human-readable expected result):
-
 Take fresh snapshot. Check if key phrases from Expected Result appear in the snapshot's visible text. If expected mentions URL → also check `browser_evaluate("window.location.href")`.
 
-**2d — Capture screenshot + upload to Google Drive** (always, regardless of result):
+**2d — Capture screenshot** (always, regardless of result):
 ```
 mcp__playwright__browser_take_screenshot(filename="screenshots/{testId}_{yyyyMMdd_HHmmss}.png", type="png")
 ```
+Add to screenshots list: `{testId, filename}`
 
-Upload screenshot to Google Drive and get direct image link:
+**2e — Collect result (do NOT write to sheet yet)**
+
+```
+results.push({sheetRow, result, error, actualResult, screenshot: filename, timestamp: isoTimestamp})
+```
+
+---
+
+### 3 — Batch upload screenshots
+
+After ALL test cases are done, upload all screenshots in one call:
+
 ```bash
-python3 {skillDir}/scripts/gdrive_upload.py "screenshots/{testId}_{yyyyMMdd_HHmmss}.png" --name "{testId}_{yyyyMMdd_HHmmss}.png"
-```
-Output JSON contains `direct` field — this is the image URL for `=IMAGE()`.
-
-**2e — Write results immediately**
-
-*Standard format* — test sheet:
-```
-mcp__gsheets__update_cells(spreadsheetId, sheetName, "G{sheetRow}:J{sheetRow}", [[
-  "PASS"|"FAIL"|"ERROR", errorMessage or "", screenshotPath, isoTimestamp
-]])
+python3 {skillDir}/scripts/gdrive_batch_upload.py screenshots/{file1} screenshots/{file2} ...
 ```
 
-*Zephyr format* — test sheet:
+Output: JSON array with `{name, id, direct}` per file. Map each `direct` URL to the corresponding test case by filename.
+
+---
+
+### 4 — Batch write results to sheets
+
+**Standard format** — test sheet (columns G–J):
+
+For contiguous rows, use a single range:
+```
+mcp__gsheets__update_cells(spreadsheetId, sheetName, "G{firstRow}:J{lastRow}", [
+  [result1, error1, screenshot1, ts1],
+  [result2, error2, screenshot2, ts2],
+  ...
+])
+```
+
+**Zephyr format** — test sheet:
+
+Write Actual Result + Result status. Batch contiguous rows where possible:
 ```
 mcp__gsheets__update_cells(spreadsheetId, sheetName, "{actualResultCol}{sheetRow}", [[actualResultText]])
 mcp__gsheets__update_cells(spreadsheetId, sheetName, "{resultCol}{sheetRow}", [[result]])
 ```
 
-Evidence sheet — write `=IMAGE()` formula with the Google Drive direct link to column B:
+**Evidence sheet** (both formats):
+
+Write `=IMAGE()` formulas. Batch contiguous evidence rows:
 ```
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", "B{evidenceRow}", [['=IMAGE("{directUrl}")']])
+mcp__gsheets__update_cells(spreadsheetId, "Evidence", "B{firstRow}:B{lastRow}", [
+  ['=IMAGE("{directUrl1}")'],
+  ['=IMAGE("{directUrl2}")'],
+  ...
+])
 ```
-Where `{directUrl}` = the `direct` value from gdrive_upload.py output (e.g., `https://lh3.googleusercontent.com/d/...`).
 
 ---
 
-### 3 — Close browser
+### 5 — Close browser
 
 ```
 mcp__playwright__browser_close()
@@ -130,7 +144,7 @@ Always close, even if errors occurred.
 
 ---
 
-### 4 — Return summary
+### 6 — Return summary
 
 ```
 Batch {startId}–{endId}: {pass} PASS, {fail} FAIL, {error} ERROR
@@ -146,3 +160,4 @@ Batch {startId}–{endId}: {pass} PASS, {fail} FAIL, {error} ERROR
 - **Never skip** writing results — even on ERROR.
 - **Always close** browser when done.
 - Screenshot filenames: `{testId}_{yyyyMMdd_HHmmss}.png` (no spaces).
+- **NEVER write temp/helper scripts to disk.**
