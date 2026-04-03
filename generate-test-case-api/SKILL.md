@@ -256,8 +256,9 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     </actions>
 
     <batch_strategy>
-        <batch_size>3 fields per batch</batch_size>
-        <example>Batch 1: [F1, F2, F3]; Batch 2: [F4, F5, F6]</example>
+        <batch_size>5 fields per batch</batch_size>
+        <example>Batch 1: [F1, F2, F3, F4, F5]; Batch 2: [F6, F7, F8, F9, F10]</example>
+        <note>Increased from 3 to 5 — tc-validate uses template format to reduce token overhead per batch, so more fields per batch is efficient.</note>
     </batch_strategy>
 </step>
 
@@ -266,6 +267,15 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     <trigger>After Step 5a</trigger>
 
     <spawn_mode>ALL batches simultaneously (parallel)</spawn_mode>
+
+    <approach>
+        **RECOMMENDED: Phase A (script expansion)**
+        Agent writes lightweight JSON list of cases → runs expand_validate.py → gets template-format batch.
+        This saves ~80% tokens per batch vs manual generation.
+
+        **Fallback: Phase B (manual template format)**
+        Use when cases have custom business-logic expectedResult not covered by standard patterns.
+    </approach>
 
     <per_batch_actions>
         <action type="read_agent_instructions">
@@ -285,9 +295,27 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
+
+        <compact_prompt_rule>
+            ⛔ CRITICAL: When constructing the sub-agent spawn prompt, pass ONLY:
+            1. The tc-validate.md agent instructions (full content)
+            2. The context params listed above (paths + FIELD_BATCH as compact "fieldName:type:required:maxLength" format)
+
+            DO NOT include in the prompt:
+            - Full test case descriptions or bullet lists from test-design-api.md (the sub-agent will read this file itself)
+            - Full field constraint details from inventory.json (the sub-agent queries inventory.py itself)
+            - Pre-generated test case names or expected results
+            - Any "here are the N test cases to generate" listings
+
+            The sub-agent has all the tools it needs (Read, Bash, Write) to fetch its own data.
+            Passing verbose data in the prompt wastes ~2-3K tokens per batch and the sub-agent ignores most of it.
+        </compact_prompt_rule>
     </per_batch_actions>
 
     <file_naming>
+        <!-- Intermediate output of Phase A (expand_validate.py reads this) -->
+        <file pattern="{OUTPUT_DIR}/validate-cases-{BATCH_NUMBER}.json" />
+        <!-- Final output of Phase A (merge_batches.py reads this) -->
         <file pattern="{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json" />
     </file_naming>
 
@@ -424,6 +452,7 @@ print('READY')
         <pattern>tc-context.json</pattern>
         <pattern>batch-*.json</pattern>
         <pattern>validate-batch-*.json</pattern>
+        <pattern>validate-cases-*.json</pattern>
         <pattern>test-cases-merged.json</pattern>
         <pattern>.tc-validate-done</pattern>
         <pattern>_*.py</pattern>
@@ -468,7 +497,10 @@ generate-test-case-api/
 └── scripts/
     ├── search.py
     ├── inventory.py
-    ├── merge_batches.py
+    ├── expand_validate.py       # Phase A: lightweight → template-format batch
+    ├── merge_batches.py         # Expand templates → flat array + dedup
+    ├── upload_gsheet.py         # Upload to Google Sheets (create new)
+    ├── upload_to_sheet.py       # Upload to Google Sheets (existing sheet)
     └── ...
 ```
 

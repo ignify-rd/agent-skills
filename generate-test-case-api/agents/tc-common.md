@@ -106,6 +106,11 @@ model: inherit
             <output_field>expectedResult</output_field>
             <source>catalogStyle.expectedResultExample</source>
             <description>Expected result from bullet in test design</description>
+            <response_json_rule>
+                If catalogStyle.responseJsonFormat = "multiline":
+                  Response JSON phải có \n + indent (2 spaces)
+                If "oneline": Response JSON trên 1 dòng
+            </response_json_rule>
         </mapping>
         <mapping>
             <output_field>importance</output_field>

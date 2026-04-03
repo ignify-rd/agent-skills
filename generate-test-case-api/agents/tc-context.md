@@ -134,6 +134,13 @@ model: inherit
         <pattern name="expectedResultExample">
             <description>First expectedResult example from catalog</description>
         </pattern>
+        <pattern name="responseJsonFormat">
+            <description>How catalog formats Response JSON in expectedResult:
+                - "multiline": JSON with \n + indent (e.g. "{\n  \"code\": ...\n}")
+                - "oneline": JSON on single line (e.g. "{\"code\":\"...\",\"message\":\"...\"}")
+                Determine by checking 2-3 expectedResult cells that contain Response JSON.
+            </description>
+        </pattern>
         <pattern name="testCaseNameFormat">
             <description>testCaseName format — with/without prefix underscore?</description>
         </pattern>
@@ -163,6 +170,7 @@ model: inherit
     "preConditionsExample": "{from Step 5}",
     "stepExample": "{from Step 5}",
     "expectedResultExample": "{from Step 5}",
+    "responseJsonFormat": "multiline | oneline",
     "testCaseNameFormat": "{from Step 5}"
   }
 }

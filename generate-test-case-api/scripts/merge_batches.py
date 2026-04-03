@@ -10,23 +10,32 @@ Batch file order:
   2. validate-batch-1.json, validate-batch-2.json, ... (validate cases, in order)
   3. batch-3.json          (main flow cases)
 
+Supported batch formats:
+  A. Flat format — JSON array of test case objects (batch-1, batch-3, legacy validate)
+  B. Template format — object with _template + testCases array (optimized validate batches)
+     The _template contains shared fields (preConditions, stepPrefix, baseParams, importance, result).
+     Each testCase only stores the diff (testCaseName, testSuiteName, paramOverride, expectedResult).
+     This script expands templates into full test case objects before merging.
+
 What it does:
   1. Finds batch files in the order above
-  2. Validates each is a JSON array — exits 1 with clear error if not
-  3. Merges all into one array
-  4. Deduplicates by testCaseName (case-insensitive, keep first occurrence)
-  5. Reports per-batch counts and dedup count
-  6. --dry-run: validate + report without writing
+  2. Detects format (flat array vs template object) and loads accordingly
+  3. Expands template-format batches into flat test case arrays
+  4. Merges all into one array
+  5. Deduplicates by testCaseName (case-insensitive, keep first occurrence)
+  6. Reports per-batch counts and dedup count
+  7. --dry-run: validate + report without writing
 
 Exit codes:
   0 — success
-  1 — error (file not a JSON array, no batches found, write error)
+  1 — error (file not valid, no batches found, write error)
 """
 
 import os
 import sys
 import json
 import glob
+import copy
 import argparse
 import io
 
@@ -37,8 +46,88 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 
+_REMOVE_SENTINEL = "__REMOVE__"
+
+
+def _expand_template_batch(data: dict, path: str) -> list:
+    """
+    Expand a template-format batch into a flat list of test case objects.
+
+    Template format:
+    {
+      "_template": {
+        "preConditions": "...",
+        "stepPrefix": "1. Nhập các tham số\n1.1. Authorization: ...\n1.2. Method: POST\n1.3. Param:\n",
+        "baseParams": { "field1": "val1", ... },
+        "importance": "Medium",
+        "result": "PENDING"
+      },
+      "testCases": [
+        {
+          "testCaseName": "field_case_desc",
+          "testSuiteName": "Type: field",
+          "paramOverride": { "field1": newValue },   // or "__REMOVE__" to omit key
+          "expectedResult": "..."
+        }, ...
+      ]
+    }
+
+    For cases that send a non-object body (e.g. raw string), use "rawBody" instead of "paramOverride".
+    """
+    tpl = data.get("_template", {})
+    cases = data.get("testCases", [])
+
+    if not cases:
+        print(f"  WARNING: {path} template has 0 testCases", file=sys.stderr)
+        return []
+
+    pre_conditions = tpl.get("preConditions", "")
+    step_prefix = tpl.get("stepPrefix", "")
+    base_params = tpl.get("baseParams", {})
+    importance = tpl.get("importance", "Medium")
+    result = tpl.get("result", "PENDING")
+
+    expanded = []
+    for tc in cases:
+        tc_name = tc.get("testCaseName", "")
+
+        # Build testSteps
+        if "rawBody" in tc:
+            # Non-object body (string, number, etc.)
+            steps = step_prefix + str(tc["rawBody"])
+        elif "paramOverride" in tc:
+            params = copy.deepcopy(base_params)
+            for k, v in tc["paramOverride"].items():
+                if v == _REMOVE_SENTINEL:
+                    params.pop(k, None)
+                else:
+                    params[k] = v
+            steps = step_prefix + json.dumps(params, ensure_ascii=False, indent=2)
+        else:
+            # No override — use baseParams as-is
+            steps = step_prefix + json.dumps(base_params, ensure_ascii=False, indent=2)
+
+        expanded.append({
+            "testCaseName": tc_name,
+            "testSuiteName": tc.get("testSuiteName", ""),
+            "preConditions": pre_conditions,
+            "step": steps,
+            "expectedResult": tc.get("expectedResult", ""),
+            "importance": tc.get("importance", importance),
+            "result": result,
+            "summary": tc_name,
+        })
+
+    return expanded
+
+
 def load_batch(path: str) -> list:
-    """Load a JSON file and validate it is a JSON array. Returns list or exits 1."""
+    """
+    Load a JSON batch file. Supports two formats:
+      A. Flat: JSON array of test case objects
+      B. Template: JSON object with _template + testCases (auto-expanded)
+    Returns flat list of test case objects, or exits 1 on error.
+    """
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -49,14 +138,20 @@ def load_batch(path: str) -> list:
         print(f"ERROR: cannot read {path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    if not isinstance(data, list):
-        print(
-            f"ERROR: {path} must be a JSON array (got {type(data).__name__})",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    # Template format: { "_template": {...}, "testCases": [...] }
+    if isinstance(data, dict) and "_template" in data:
+        print(f"  [template format] expanding {len(data.get('testCases', []))} cases...")
+        return _expand_template_batch(data, path)
 
-    return data
+    # Flat format: [...]
+    if isinstance(data, list):
+        return data
+
+    print(
+        f"ERROR: {path} must be a JSON array or template object (got {type(data).__name__})",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def collect_batch_files(output_dir: str) -> list:

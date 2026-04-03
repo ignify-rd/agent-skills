@@ -358,8 +358,9 @@ C. Không chia theo mode — chỉ test API đơn thuần
             <purpose>Get field list for batching — only name/type/required/maxLength, NOT full rsdConstraints</purpose>
         </action>
         <batch_strategy>
-            <batch_size>3 fields per batch</batch_size>
-            <example>Batch 1: [F1–F3]; Batch 2: [F4–F6]</example>
+            <batch_size>5 fields per batch</batch_size>
+            <example>Batch 1: [F1–F5]; Batch 2: [F6–F10]</example>
+            <note>Increased from 3 to 5 — reduces number of sub-agents and coordination overhead.</note>
         </batch_strategy>
     </preparation>
 
@@ -381,6 +382,21 @@ C. Không chia theo mode — chỉ test API đơn thuần
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
+
+        <compact_prompt_rule>
+            ⛔ CRITICAL: When constructing the sub-agent spawn prompt, pass ONLY:
+            1. The td-validate.md agent instructions (full content)
+            2. The context params listed above (paths + FIELD_BATCH as compact "fieldName:type:required:maxLength" format)
+            
+            DO NOT include in the prompt:
+            - Full rsdConstraints details per field (the sub-agent queries inventory.py itself)
+            - Pre-generated case descriptions or bullet lists
+            - Full errorCode tables or response schemas
+            - Any "here are the N cases to generate" listings
+            
+            The sub-agent has tools (Read, Bash, Edit, Write) to fetch its own data from inventory.
+            Passing verbose data in the prompt wastes ~2-3K tokens per batch.
+        </compact_prompt_rule>
     </per_batch_actions>
 
     <file_naming>
@@ -526,8 +542,9 @@ for f in fcf:
             <purpose>Get file content field list for batching — only key info, NOT full constraints</purpose>
         </action>
         <batch_strategy>
-            <batch_size>3 fields per batch</batch_size>
-            <example>Batch 1: [debitAccount, taxCode, taxPayerName]; Batch 2: [taxPayerAddress, substitutesTaxCode, substitutesName]</example>
+            <batch_size>5 fields per batch</batch_size>
+            <example>Batch 1: [debitAccount, taxCode, taxPayerName, taxPayerAddress, substitutesTaxCode]; Batch 2: [substitutesName, substitutesAddress, declarationNumber, declarationDate, treasuryCode]</example>
+            <note>Increased from 3 to 5 — reduces number of sub-agents for file content fields.</note>
         </batch_strategy>
     </preparation>
 
@@ -550,6 +567,12 @@ for f in fcf:
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
+
+        <compact_prompt_rule>
+            ⛔ Same rule as Step 5b: pass ONLY agent instructions + context params.
+            DO NOT include full fileContentField details (displayName, allowedChars, businessValidation, etc.) in prompt.
+            The sub-agent queries inventory.py to get field details itself.
+        </compact_prompt_rule>
     </per_batch_actions>
 
     <file_naming>

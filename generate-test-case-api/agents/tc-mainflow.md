@@ -120,7 +120,7 @@ print('BARRIER OK')
             <field name="importance">High</field>
             <field name="result">PENDING</field>
             <field name="step">Full request description with that mode</field>
-            <field name="expectedResult">Full response body + HTTP 200</field>
+            <field name="expectedResult">Full response body + HTTP 200 (format theo catalogStyle.responseJsonFormat)</field>
         </fields>
         <checkpoint format="stdout_only">
 ```
@@ -151,7 +151,7 @@ Missing: [list] → APPEND immediately
             <field name="testSuiteName">"Kiểm tra luồng chính" (or catalogStyle)</field>
             <field name="importance">Medium</field>
             <field name="result">PENDING</field>
-            <field name="expectedResult">Must contain exact error code and message from inventory</field>
+            <field name="expectedResult">Must contain exact error code and message from inventory (format theo catalogStyle.responseJsonFormat)</field>
         </fields>
         <checkpoint format="stdout_only">
 ```

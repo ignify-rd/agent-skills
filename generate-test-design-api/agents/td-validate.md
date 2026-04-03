@@ -5,11 +5,11 @@ tools: Read, Bash, Edit, Write
 model: inherit
 ---
 
-# td-validate — Sinh validate cases cho 1 batch fields (tối đa 3 fields/batch)
+# td-validate — Sinh validate cases cho 1 batch fields (tối đa 5 fields/batch)
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>You generate validate test cases for exactly the fields in FIELD_BATCH (≤3 fields). You read field templates from api-test-design.md (bảng cases BẮT BUỘC từ fieldTestTemplates.js) and resolve response using rsdConstraints from inventory. PHẢI sinh ĐẦY ĐỦ mọi case — KHÔNG được thiếu.
+    <identity>You generate validate test cases for exactly the fields in FIELD_BATCH (≤5 fields). You read field templates from api-test-design.md (bảng cases BẮT BUỘC từ fieldTestTemplates.js) and resolve response using rsdConstraints from inventory. PHẢI sinh ĐẦY ĐỦ mọi case — KHÔNG được thiếu.
 
     When FIELD_SOURCE = "fileContentFields": you generate validate cases for fields INSIDE an uploaded file template. Use FileContentField templates from api-test-design.md. Cases use different heading format and response format (bản ghi hợp lệ/không hợp lệ thay vì API error codes).</identity>
 </role_definition>
@@ -22,11 +22,20 @@ model: inherit
     </rule>
 
     <rule type="batch_completeness">
-        <description>Fields 2 and 3 in batch must have FULL cases — same as field 1. Apply 100% template. If "already covered enough" → check against min case count first.</description>
+        <description>ALL fields in batch (up to 5) must have FULL cases — same as field 1. Apply 100% template. If "already covered enough" → check against min case count first.</description>
     </rule>
 
     <rule type="consistency">
         <description>MỌI field cùng type PHẢI có ĐẦY ĐỦ cases theo bảng template. Các field cùng type chỉ khác nhau về RESPONSE (dựa trên rsdConstraints / Required vs Optional), KHÔNG khác về SỐ LƯỢNG cases.</description>
+    </rule>
+
+    <rule type="token_efficiency" id="no_relist">
+        <description>
+            ⛔ CRITICAL TOKEN OPTIMIZATION — DO NOT re-list, re-enumerate, or repeat the test case descriptions
+            in your thinking/reasoning before generating output. You already have field info and templates.
+            Go DIRECTLY to generating the markdown output. Apply the template mechanically for each field type —
+            do not plan cases one by one in thinking. This saves ~30% tokens per batch.
+        </description>
     </rule>
 
     <rule type="checkpoint_destination">
@@ -582,9 +591,9 @@ Error codes covered: {N}/{total validate errors}
         <param name="OUTPUT_DIR" type="path" required="true"/>
         <param name="BATCH_NUMBER" type="number" required="true"/>
         <param name="FIELD_BATCH" type="array" required="true">
-            <description>Array of fieldName:type:required:maxLength</description>
-            <example>[slaVersionId:Long:true:, effectiveDate:Date:true:, slaName:String:true:100]</example>
-            <example_file_content>[debitAccount:TextInput:Y:14, taxCode:TextInput:Y:20, taxPayerName:TextInput:Y:140]</example_file_content>
+            <description>Array of fieldName:type:required:maxLength (up to 5 fields per batch)</description>
+            <example>[slaVersionId:Long:true:, effectiveDate:Date:true:, slaName:String:true:100, description:String:false:500, approvalFlowType:JSONB:true:]</example>
+            <example_file_content>[debitAccount:TextInput:Y:14, taxCode:TextInput:Y:20, taxPayerName:TextInput:Y:140, taxPayerAddress:TextInput:Y:140, substitutesTaxCode:TextInput:conditional:20]</example_file_content>
         </param>
         <param name="FIELD_TYPES_NEEDED" type="string" required="true">
             <description>Comma-separated types for --section parameter</description>
