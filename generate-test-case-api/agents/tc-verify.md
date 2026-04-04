@@ -38,6 +38,33 @@ model: inherit
     <output>test-cases-merged.json</output>
 </step>
 
+<step id="1b" name="Normalize suite names (deterministic)">
+    <description>Fix testSuiteName values to match ## headings from test-design. Runs AFTER merge, BEFORE gap analysis.</description>
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py \
+  --test-design {TEST_DESIGN_FILE} \
+  --test-cases {OUTPUT_DIR}/test-cases-merged.json</script>
+        </action>
+    </actions>
+    <note>This script deterministically maps each test case to its correct ## section heading.
+    Sub-agents sometimes generate verbose/garbage testSuiteName — this script fixes them all.</note>
+</step>
+
+<step id="1c" name="Count bullets — expected vs actual (deterministic)">
+    <description>Compare expected test case count (from test-design bullets) with actual merged count. Exit code 2 = gaps detected.</description>
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/count_bullets.py \
+  --test-design {TEST_DESIGN_FILE} \
+  --test-cases {OUTPUT_DIR}/test-cases-merged.json</script>
+            <stores>bulletGapReport</stores>
+        </action>
+    </actions>
+    <note>This replaces manual gap checking for validate fields. The script counts every bullet in test-design
+    and compares with actual test cases per section. Use this report to drive Step 4 gap filling.</note>
+</step>
+
 <step id="2" name="Read merged file + inventory data for gap analysis">
     <actions>
         <action type="read">
@@ -62,9 +89,12 @@ model: inherit
 </step>
 
 <step id="3" name="Gap analysis">
-    <description>For each inventory item, check if test case coverage exists</description>
+    <description>Combine bulletGapReport (Step 1c) with inventory coverage checks</description>
 
     <coverage_checks>
+        <check category="bulletGapReport">
+            <method>Use Step 1c output — sections with MISSING count > 0 need gap filling</method>
+        </check>
         <check category="errorCodes">
             <method>Find code value in testCaseName / step / expectedResult</method>
         </check>
@@ -78,20 +108,21 @@ model: inherit
             <method>Find table name in step / expectedResult</method>
         </check>
         <check category="fieldConstraints">
-            <method>Count test cases where testSuiteName = "Kiểm tra trường {name}"</method>
+            <method>Count test cases where testSuiteName matches section heading</method>
         </check>
     </coverage_checks>
 
     <gap_report format="stdout">
 ```
-🔍 Gap Analysis:
-- ☐ errorCode "{code}" → chưa có test case trigger
-- ☐ mode "{name}" → chưa có happy path
-- ☐ businessRule {id} FALSE → chưa có test case
+Gap Analysis:
+- errorCode "{code}" -> missing test case
+- mode "{name}" -> missing happy path
+- businessRule {id} FALSE -> missing test case
+- field "{name}": expected {N}, actual {M}, missing {N-M}
 ```
     </gap_report>
 
-    <no_gap_result>✓ Gap Analysis: No gaps found</no_gap_result>
+    <no_gap_result>Gap Analysis: No gaps found</no_gap_result>
 </step>
 
 <step id="4" name="Auto-fill ALL gaps">
@@ -145,6 +176,7 @@ model: inherit
     <parameters>
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="TC_CONTEXT_FILE" type="path" required="true"/>
+        <param name="TEST_DESIGN_FILE" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_DIR" type="path" required="true"/>
         <param name="OUTPUT_FILE" type="path" required="true"/>

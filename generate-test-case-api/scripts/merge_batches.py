@@ -154,6 +154,33 @@ def load_batch(path: str) -> list:
     sys.exit(1)
 
 
+def _validate_batch_sort_key(path: str):
+    """Sort key for validate-batch files.
+
+    Supports patterns:
+      validate-batch-1.json       -> (0, "", 1)
+      validate-batch-10.json      -> (0, "", 10)
+      validate-batch-fc-1.json    -> (1, "fc", 1)
+      validate-batch-fc-10.json   -> (1, "fc", 10)
+
+    Order: numeric batches first, then named batches grouped by prefix alphabetically,
+    then by number within each prefix group.
+    """
+    name = os.path.basename(path).replace("validate-batch-", "").replace(".json", "")
+    try:
+        return (0, "", int(name))
+    except ValueError:
+        pass
+    parts = name.rsplit("-", 1)
+    if len(parts) == 2:
+        prefix, num_str = parts
+        try:
+            return (1, prefix, int(num_str))
+        except ValueError:
+            pass
+    return (2, name, 0)
+
+
 def collect_batch_files(output_dir: str) -> list:
     """Return batch file paths in correct merge order."""
     files = []
@@ -163,14 +190,9 @@ def collect_batch_files(output_dir: str) -> list:
     if os.path.exists(p):
         files.append(p)
 
-    # 2. validate-batch-N.json in numeric order
+    # 2. validate-batch-*.json — supports numeric and named patterns (e.g. fc-1)
     validate_pattern = os.path.join(output_dir, "validate-batch-*.json")
-    validate_files = sorted(
-        glob.glob(validate_pattern),
-        key=lambda x: int(
-            os.path.basename(x).replace("validate-batch-", "").replace(".json", "")
-        ),
-    )
+    validate_files = sorted(glob.glob(validate_pattern), key=_validate_batch_sort_key)
     files.extend(validate_files)
 
     # 3. batch-3.json (main flow)

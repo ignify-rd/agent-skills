@@ -64,6 +64,7 @@ def cmd_init(args):
         "statusTransitions": [],
         "decisionCombinations": [],
         "fieldConstraints": [],
+        "fileContentFields": [],
         "errorMessages": [],
         "enableDisableRules": [],
         "autoFillRules": [],
@@ -112,7 +113,7 @@ def cmd_summary(args):
     categories = [
         "errorCodes", "businessRules", "modes", "dbOperations",
         "externalServices", "statusTransitions", "decisionCombinations",
-        "fieldConstraints", "errorMessages", "enableDisableRules",
+        "fieldConstraints", "fileContentFields", "errorMessages", "enableDisableRules",
         "autoFillRules", "permissions",
     ]
     for cat in categories:
@@ -125,6 +126,44 @@ def cmd_summary(args):
                     labels.append(label)
             suffix = f" ({', '.join(labels)})" if labels else ""
             print(f"  {cat}: {len(items)}{suffix}")
+
+
+def cmd_allfields(args):
+    """Return unified list of fieldConstraints + fileContentFields for batch planning.
+
+    Each item gets a 'source' field: 'request' or 'fileContent'.
+    Output: JSON array of {name, type, required, source, ...} objects.
+    """
+    data = load(args.file)
+    result = []
+
+    for item in data.get("fieldConstraints", []):
+        entry = {
+            "name": item.get("name", ""),
+            "type": item.get("type", ""),
+            "required": item.get("required", False),
+            "source": "request",
+        }
+        if "maxLength" in item:
+            entry["maxLength"] = item["maxLength"]
+        if "rsdConstraints" in item:
+            entry["rsdConstraints"] = item["rsdConstraints"]
+        result.append(entry)
+
+    for item in data.get("fileContentFields", []):
+        entry = {
+            "name": item.get("name", "") or item.get("displayName", ""),
+            "type": item.get("inputType", item.get("type", "")),
+            "required": item.get("required", False),
+            "source": "fileContent",
+        }
+        if "maxLength" in item:
+            entry["maxLength"] = item["maxLength"]
+        if "displayName" in item:
+            entry["displayName"] = item["displayName"]
+        result.append(entry)
+
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 def main():
@@ -150,6 +189,9 @@ def main():
     p_sum = sub.add_parser("summary")
     p_sum.add_argument("--file", required=True)
 
+    p_all = sub.add_parser("allFields", help="Unified fieldConstraints + fileContentFields list")
+    p_all.add_argument("--file", required=True)
+
     args = parser.parse_args()
 
     if args.command == "init":
@@ -160,6 +202,8 @@ def main():
         cmd_get(args)
     elif args.command == "summary":
         cmd_summary(args)
+    elif args.command == "allFields":
+        cmd_allfields(args)
     else:
         parser.print_help()
         sys.exit(1)

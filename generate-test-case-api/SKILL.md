@@ -245,20 +245,27 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 </step>
 
 <step id="5a" name="Query inventory — batch fields for tc-validate">
-    <description>Count fields and group into batches of max 3 fields each</description>
+    <description>Get ALL fields (request + fileContent) and group into batches</description>
     <trigger>After Step 4</trigger>
 
     <actions>
         <action type="bash">
-            <script>python3 $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints</script>
-            <stores>fieldConstraints</stores>
+            <script>python3 -X utf8 $SKILL_SCRIPTS/inventory.py allFields --file {INVENTORY_FILE}</script>
+            <stores>allFields</stores>
         </action>
     </actions>
 
+    <field_source_handling>
+        <rule>allFields returns unified list with "source" field: "request" or "fileContent"</rule>
+        <rule>Request fields (source=request): use validate-batch-{N}.json naming</rule>
+        <rule>FileContent fields (source=fileContent): use validate-batch-fc-{N}.json naming</rule>
+        <rule>If allFields returns 0 items: skip Step 5b entirely, proceed to Step 5c</rule>
+    </field_source_handling>
+
     <batch_strategy>
         <batch_size>5 fields per batch</batch_size>
-        <example>Batch 1: [F1, F2, F3, F4, F5]; Batch 2: [F6, F7, F8, F9, F10]</example>
-        <note>Increased from 3 to 5 — tc-validate uses template format to reduce token overhead per batch, so more fields per batch is efficient.</note>
+        <example>Request: Batch 1: [F1..F5]; FileContent: Batch fc-1: [FC1..FC5], Batch fc-2: [FC6..FC10]</example>
+        <note>Request and fileContent fields are batched separately with distinct naming to prevent merge conflicts.</note>
     </batch_strategy>
 </step>
 
@@ -313,10 +320,12 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     </per_batch_actions>
 
     <file_naming>
-        <!-- Intermediate output of Phase A (expand_validate.py reads this) -->
-        <file pattern="{OUTPUT_DIR}/validate-cases-{BATCH_NUMBER}.json" />
-        <!-- Final output of Phase A (merge_batches.py reads this) -->
-        <file pattern="{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json" />
+        <!-- Request fields (source=request) -->
+        <file pattern="{OUTPUT_DIR}/validate-cases-{BATCH_NUMBER}.json" description="Intermediate (expand_validate.py input)" />
+        <file pattern="{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json" description="Final (merge_batches.py input)" />
+        <!-- FileContent fields (source=fileContent) -->
+        <file pattern="{OUTPUT_DIR}/validate-cases-fc-{BATCH_NUMBER}.json" description="Intermediate for fileContent fields" />
+        <file pattern="{OUTPUT_DIR}/validate-batch-fc-{BATCH_NUMBER}.json" description="Final for fileContent fields" />
     </file_naming>
 
     <completion_check>
@@ -406,6 +415,7 @@ print('READY')
             <context>
                 <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
                 <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
+                <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
                 <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
                 <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
@@ -452,7 +462,9 @@ print('READY')
         <pattern>tc-context.json</pattern>
         <pattern>batch-*.json</pattern>
         <pattern>validate-batch-*.json</pattern>
+        <pattern>validate-batch-fc-*.json</pattern>
         <pattern>validate-cases-*.json</pattern>
+        <pattern>validate-cases-fc-*.json</pattern>
         <pattern>test-cases-merged.json</pattern>
         <pattern>.tc-validate-done</pattern>
         <pattern>_*.py</pattern>
@@ -499,6 +511,8 @@ generate-test-case-api/
     ├── inventory.py
     ├── expand_validate.py       # Phase A: lightweight → template-format batch
     ├── merge_batches.py         # Expand templates → flat array + dedup
+    ├── normalize_suites.py      # Post-merge: fix testSuiteName using test-design headings
+    ├── count_bullets.py         # Pre-verify: count expected vs actual test cases per section
     ├── upload_gsheet.py         # Upload to Google Sheets (create new)
     ├── upload_to_sheet.py       # Upload to Google Sheets (existing sheet)
     └── ...
@@ -511,7 +525,8 @@ generate-test-case-api/
 | Batch | File | Content |
 |-------|------|---------|
 | BATCH 1 | `batch-1.json` | Common + permission test cases |
-| BATCH 2 | `validate-batch-N.json` | Validate cases per field batch |
+| BATCH 2 | `validate-batch-N.json` | Validate cases per request field batch |
+| BATCH 2 | `validate-batch-fc-N.json` | Validate cases per fileContent field batch |
 | BATCH 3 | `batch-3.json` | Main flow cases |
-| Merged | `test-cases-merged.json` | After merge_batches.py |
+| Merged | `test-cases-merged.json` | After merge_batches.py + normalize_suites.py |
 | Final | `test-cases.json` | After gap fill + project rules |
