@@ -9,20 +9,20 @@ model: inherit
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>Gap fill + cross-section checks. Do NOT read the entire OUTPUT_FILE into context — use Bash/Python to extract only the needed parts.</identity>
+    <identity>Gap fill + cross-section checks. Do NOT read the entire OUTPUT_FILE into context — use verify.py and targeted Bash/grep to extract only the needed parts.</identity>
 </role_definition>
 
 <workload_assignment>
     <agent name="td-validate">V1, V2, V3, V4 — already checkpointed per-field</agent>
     <agent name="td-mainflow">V6, V7, V8, V9 — already self-checked</agent>
-    <agent name="td-verify">Gap analysis, V5 duplicate, V9 global forbidden words, V10 format</agent>
+    <agent name="td-verify">Gap analysis, V5 duplicate, V9 global forbidden words, V10 format, V11-V14</agent>
 </workload_assignment>
 
 ---
 
 ## Workflow
 
-<step id="1" name="Load verify rules">
+<step id="1" name="Load verify rules (optional reference)">
     <actions>
         <action type="bash">
             <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "verify"</script>
@@ -30,300 +30,127 @@ model: inherit
     </actions>
 </step>
 
-<step id="2" name="Gap Analysis (inventory vs output)">
-    <description>For EACH item in inventory, use Bash grep (not full file read into LLM context)</description>
-
-    <checks>
-        <check description="Check if error code exists in output">
-            <script>grep -c "LDH_SLA_020" "{OUTPUT_FILE}"</script>
-        </check>
-        <check description="Check if DB field exists in SQL">
-            <script>grep -c "APPROVED_BY" "{OUTPUT_FILE}"</script>
-        </check>
-        <check description="Check if service rollback covered">
-            <script>grep -c "rollback" "{OUTPUT_FILE}"</script>
-        </check>
-    </checks>
-
-    <gap_report format="stdout">
-```
-🔍 Gap Analysis:
-☐ errorCode "LDH_SLA_025" [validate] → chưa có bullet
-☐ dbField "APPROVED_BY" → chưa có trong SQL SELECT
-☐ service "S3" rollback → chưa có bullet
-```
-    </gap_report>
-
-    <fill_action>
-        <description>Fill each gap IN-PLACE at the correct position within its section using Edit tool. Do NOT append to the end with ### [SỬA] prefix.</description>
-        <tool>Edit tool</tool>
-        <rules>
-            <rule>errorCode[section="validate"] gap → insert into the corresponding ### Trường {fieldName} section, right after the last existing bullet for that field</rule>
-            <rule>errorCode[section="main"] gap → insert into ## Kiểm tra chức năng, right before ## Kiểm tra ngoại lệ</rule>
-            <rule>dbField gap → add to the SQL SELECT within the relevant happy path test case</rule>
-            <rule>⛔ NEVER create ### [SỬA] headings. NEVER append to end of file. Always use Edit tool to insert at the CORRECT location within existing sections.</rule>
-        </rules>
-    </fill_action>
-</step>
-
-<step id="3" name="V5: Cross-section duplicate check">
-    <description>Extract headings only (not full content) — check for duplicates between validate and mainflow sections</description>
-
-    <script>
-```python
-import re
-
-with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
-    content = f.read()
-
-validate_match = re.search(r'## Kiểm tra Validate(.*?)(?=## Kiểm tra chức năng|## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
-mainflow_match = re.search(r'## Kiểm tra chức năng(.*?)(?=## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
-
-def get_headings(text):
-    return set(re.findall(r'^#{3,4}\s+(.+)$', text or '', re.MULTILINE))
-
-validate_h = get_headings(validate_match.group(1) if validate_match else '')
-mainflow_h = get_headings(mainflow_match.group(1) if mainflow_match else '')
-
-duplicates = validate_h & mainflow_h
-if duplicates:
-    print(f"❌ V5 DUPLICATE ({len(duplicates)}):")
-    for d in sorted(duplicates):
-        print(f"  - {d}")
-else:
-    print(f"✅ V5: No duplicates ({len(validate_h)} validate, {len(mainflow_h)} mainflow headings)")
-```
-    </script>
-
-    <on_duplicates>
-        <action>Use Edit tool to remove from "## Kiểm tra luồng chính"</action>
-        <note>Field-level checks belong in validate section</note>
-    </on_duplicates>
-</step>
-
-<step id="3b" name="V5b: Detect validate cases misplaced in mainflow">
-    <description>Find patterns indicating validate cases incorrectly in mainflow section</description>
-
-    <suspicious_patterns>
-        <pattern>### Kiểm tra .*(bỏ trống|để trống|thiếu trường|trường không bắt buộc)</pattern>
-        <pattern>### Kiểm tra .*(không hợp lệ|sai định dạng|sai kiểu).*(field|trường)</pattern>
-        <pattern>### Kiểm tra .*(null|empty|rỗng)</pattern>
-        <pattern>### Kiểm tra .*(bắt buộc nhập|bắt buộc khi).*(field condition)</pattern>
-    </suspicious_patterns>
-
-    <on_misplaced>
-        <action>Use Edit tool to remove from "## Kiểm tra chức năng"</action>
-    </on_misplaced>
-</step>
-
-<step id="3c" name="V5c: Verify ngoại lệ section ONLY has timeout + 500">
-    <description>Check that "Kiểm tra ngoại lệ" contains ONLY system-level cases (timeout, HTTP 500). Any business error code or business logic error in this section is INVALID.</description>
-
-    <script>
-```python
-import re
-
-with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
-    content = f.read()
-
-ngoaile_match = re.search(r'## Kiểm tra ngoại lệ(.*?)$', content, re.DOTALL)
-if not ngoaile_match:
-    print("⚠️ V5c: Kiểm tra ngoại lệ section not found")
-else:
-    section = ngoaile_match.group(1)
-    headings = re.findall(r'^###\s+(.+)$', section, re.MULTILINE)
-    invalid = []
-    for h in headings:
-        h_lower = h.lower()
-        if 'timeout' not in h_lower and '500' not in h_lower and 'server' not in h_lower:
-            invalid.append(h)
-    if invalid:
-        print(f"❌ V5c: {len(invalid)} business error(s) in ngoại lệ (MUST move to chức năng):")
-        for h in invalid:
-            print(f"  - {h}")
-    else:
-        print(f"✅ V5c: ngoại lệ section clean ({len(headings)} cases, all system-level)")
-```
-    </script>
-
-    <on_invalid>
-        <action>Use Edit tool to move business error cases from "Kiểm tra ngoại lệ" to end of "Kiểm tra chức năng"</action>
-    </on_invalid>
-</step>
-
-<step id="4" name="V9: Global forbidden words scan">
-    <actions>
-        <action type="bash">
-            <script>grep -n "hoặc\|và/hoặc\|có thể\|ví dụ:\|\[placeholder\]" "{OUTPUT_FILE}"</script>
-        </action>
-    </actions>
-    <on_find>
-        <action>Grep for context, use Edit tool to fix each occurrence</action>
-    </on_find>
-</step>
-
-<step id="5" name="V10: Structural check">
-    <actions>
-        <action type="bash">
-            <script># File must start with # API_NAME — no ---, no blockquote
-head -5 "{OUTPUT_FILE}"</script>
-        </action>
-        <action type="bash">
-            <script># No horizontal rules
-grep -cn "^---$" "{OUTPUT_FILE}"</script>
-        </action>
-    </actions>
-    <on_fail>
-        <action>Use Edit tool to fix header</action>
-    </on_fail>
-</step>
-
-<step id="5b" name="V11: Validate heading contains values instead of conditions">
-    <description>Scan all `- Kiểm tra truyền trường` headings in validate section. Flag if heading contains a literal test value (quoted string, long number, Vietnamese text) instead of describing the test condition.</description>
-
-    <allowed_values>= null, = "", = 0, = true, = false, = {maxLen} ký tự, = {maxLen+1} ký tự, = {maxLen-1} ký tự</allowed_values>
-    <forbidden_values>= " test ", = "ABC...", = "SLA xử lý...", = 99999, any quoted Vietnamese sentence</forbidden_values>
-
-    <on_invalid>
-        <action>Use Edit tool to rewrite the heading to describe the TEST CONDITION instead of the test value.</action>
-        <example_fix>
-            OLD: - Kiểm tra truyền trường slaName = " test "
-            NEW: - Kiểm tra truyền trường slaName có khoảng trắng đầu/cuối
-        </example_fix>
-    </on_invalid>
-</step>
-
-<step id="5c" name="V12: No ### [SỬA] headings in output">
-    <actions>
-        <action type="bash">
-            <script>grep -cn "\[SỬA\]" "{OUTPUT_FILE}"</script>
-        </action>
-    </actions>
-    <on_find>
-        <action>Each [SỬA] section must be moved to its correct position in the file using Edit tool, then the [SỬA] prefix removed.</action>
-    </on_find>
-</step>
-
-<step id="5c2" name="V14: Array field — verify new cases present">
-    <description>For each Array field in validate section, check that the 5 new cases are present: mảng 1 phần tử, mảng nhiều phần tử, phần tử trùng nhau, phần tử là String (sai kiểu), phần tử là Integer (sai kiểu).</description>
-
-    <script>
-```python
-import re
-
-with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
-    content = f.read()
-
-validate_match = re.search(r'## Kiểm tra Validate(.*?)(?=## Kiểm tra chức năng|## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
-if not validate_match:
-    print("⚠️ V14: Validate section not found")
-else:
-    validate_text = validate_match.group(1)
-    # Find all ### field sections
-    field_sections = re.split(r'(?=^### )', validate_text, flags=re.MULTILINE)
-    array_fields = []
-    for sec in field_sections:
-        # Detect array fields by presence of "mảng rỗng" or "String thay vì array" patterns (heuristic)
-        if re.search(r'(mảng rỗng|String thay vì array|thay vì array)', sec, re.IGNORECASE):
-            heading = re.match(r'^### (.+)', sec)
-            field_name = heading.group(1) if heading else "unknown"
-            required_patterns = [
-                (r'1 phần tử', 'Mảng 1 phần tử'),
-                (r'nhiều phần tử', 'Mảng nhiều phần tử'),
-                (r'trùng nhau|duplicate', 'Phần tử trùng nhau'),
-                (r'phần tử là String|phần tử.*String.*sai kiểu', 'Phần tử là String (sai kiểu)'),
-                (r'phần tử là Integer|phần tử.*Integer.*sai kiểu|phần tử.*Number.*sai kiểu', 'Phần tử là Integer (sai kiểu)'),
-            ]
-            missing = []
-            for pattern, label in required_patterns:
-                if not re.search(pattern, sec, re.IGNORECASE):
-                    missing.append(label)
-            if missing:
-                array_fields.append((field_name, missing))
-
-    if array_fields:
-        print(f"❌ V14: Array fields missing new cases:")
-        for fname, missing in array_fields:
-            print(f"  - {fname}: thiếu {missing}")
-    else:
-        print(f"✅ V14: All array fields have required new cases")
-```
-    </script>
-
-    <on_fail>
-        <action>Use Edit tool to add missing cases into the corresponding ### Trường {fieldName} section</action>
-    </on_fail>
-</step>
-
-<step id="5d" name="V13: No cases belonging to other API's processing flow">
+<step id="2" name="Run unified verification script">
     <description>
-        Check that "Kiểm tra chức năng" does NOT contain cases testing another API's processing flow.
-        IMPORTANT: Testing field VALUES (action="Đẩy duyệt") is ALLOWED — those are inputs to THIS API.
-        Only flag cases that test DOWNSTREAM PROCESSING by ANOTHER API.
+        Run ALL checks (gap analysis + V5/V5b/V5c + V9/V10/V11/V12/V13/V14) in a SINGLE script call.
+        The script reads the output file ONCE, runs all checks, and prints a structured report.
     </description>
 
-    <script>
-```python
-import re, json
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/verify.py --output "{OUTPUT_FILE}" --inventory "{INVENTORY_FILE}"</script>
+            <stores>verifyReport</stores>
+        </action>
+    </actions>
 
-with open(r"{OUTPUT_FILE}", encoding="utf-8") as f:
-    content = f.read()
+    <on_all_pass>
+        <action>Print the report as self-check output. Done.</action>
+    </on_all_pass>
 
-with open(r"{INVENTORY_FILE}", encoding="utf-8") as f:
-    inv = json.load(f)
-
-api_name = inv.get("_meta", {}).get("name", "")
-modes = [m.get("name", "") for m in inv.get("modes", [])]
-
-mainflow_match = re.search(r'## Kiểm tra chức năng(.*?)(?=## Kiểm tra ngoại lệ|$)', content, re.DOTALL)
-if not mainflow_match:
-    print("⚠️ V13: Kiểm tra chức năng section not found")
-else:
-    headings = re.findall(r'^###\s+(.+)$', mainflow_match.group(1), re.MULTILINE)
-    # Patterns indicating another API's processing flow
-    flow_patterns = [
-        r'sau khi.*(duyệt|tạo|xóa|chỉnh sửa)',
-        r'hiển thị.*trên.*(danh sách|màn hình)',
-        r'kết quả.*(tìm kiếm|danh sách).*sau',
-    ]
-    invalid = []
-    for h in headings:
-        h_lower = h.lower()
-        for pat in flow_patterns:
-            if re.search(pat, h_lower):
-                invalid.append(h)
-                break
-    if invalid:
-        print(f"❌ V13: {len(invalid)} cases may belong to another API's flow:")
-        for h in invalid:
-            print(f"  - {h}")
-    else:
-        print(f"✅ V13: All {len(headings)} mainflow cases within API scope")
-```
-    </script>
-
-    <on_invalid>
-        <action>Use Edit tool to remove cases that test another API's processing flow from "Kiểm tra chức năng"</action>
-    </on_invalid>
+    <on_failures>
+        <action>Parse the report to identify which checks failed and what needs fixing.</action>
+        <action>Proceed to Step 3 to fix each issue.</action>
+    </on_failures>
 </step>
 
-<step id="6" name="Self-check result (MANDATORY output)">
-    <output format="stdout">
-```
-=== SELF-CHECK (td-verify) ===
-[Gap]  Inventory items covered:         {filled}/{total} gaps fixed
-[V5]   No duplicate validate↔main:      ✅/❌ ({N} duplicates)
-[V5b]  No misplaced validate in main:   ✅/❌ ({N} cases removed)
-[V5c]  Ngoại lệ ONLY timeout+500:      ✅/❌ ({N} business errors moved)
-[V9]   No forbidden words:              ✅/❌ ({N} occurrences)
-[V10]  Format correct (# header):       ✅/❌
-[V11]  Validate headings = conditions:  ✅/❌ ({N} value-headings fixed)
-[V12]  No ### [SỬA] headings:          ✅/❌ ({N} moved in-place)
-[V13]  No other API's flow cases:       ✅/❌ ({N} cases removed)
-[V14]  Array fields — new cases present: ✅/❌ ({N} fields fixed)
-=== KẾT QUẢ: {N}/10 ===
-```
-    </output>
+<step id="3" name="Fix issues found by verify.py">
+    <description>For each ❌ in the verify report, use targeted grep + Edit tool to fix.</description>
+
+    <fix_rules>
+        <rule check="Gap — errorCode missing">
+            <description>Error code not found in output file</description>
+            <action>
+                - errorCode[section="validate"] gap → find the corresponding ### Trường {fieldName} section, insert bullet at correct position
+                - errorCode[section="main"] gap → insert into ## Kiểm tra chức năng, before ## Kiểm tra ngoại lệ
+                - Use `grep -n` to find insertion point, then Edit tool to insert
+            </action>
+        </rule>
+
+        <rule check="Gap — dbOperation missing">
+            <description>DB table not found in SQL SELECT</description>
+            <action>Add to the SQL SELECT within the relevant happy path test case in ## Kiểm tra chức năng</action>
+        </rule>
+
+        <rule check="Dup — duplicate ## headings">
+            <description>Same ## heading appears more than once</description>
+            <action>Use Edit tool to remove the duplicate heading (keep the first occurrence)</action>
+        </rule>
+
+        <rule check="V5 — duplicate validate↔main">
+            <description>Same ### heading in both validate and mainflow sections</description>
+            <action>Use Edit tool to remove from ## Kiểm tra chức năng (field-level checks belong in validate)</action>
+        </rule>
+
+        <rule check="V5b — misplaced validate in mainflow">
+            <description>Validate-style case (bỏ trống, không hợp lệ, null) in mainflow section</description>
+            <action>Use Edit tool to remove from ## Kiểm tra chức năng</action>
+        </rule>
+
+        <rule check="V5c — business error in ngoại lệ">
+            <description>Non-system error in ngoại lệ section (should only have timeout/5xx)</description>
+            <action>Use Edit tool to move business error cases from ## Kiểm tra ngoại lệ to end of ## Kiểm tra chức năng</action>
+        </rule>
+
+        <rule check="V9 — forbidden words">
+            <description>Words like hoặc, và/hoặc, có thể, ví dụ: found in content</description>
+            <action>Use grep -n to find context around each occurrence, then Edit to rewrite the sentence with a specific single value</action>
+        </rule>
+
+        <rule check="V10 — format issue">
+            <description>File doesn't start with # API_NAME, or has --- horizontal rules</description>
+            <action>Use Edit tool to fix header or remove horizontal rules</action>
+        </rule>
+
+        <rule check="V11 — value in heading">
+            <description>Validate heading contains literal test value instead of condition description</description>
+            <action>Use Edit tool to rewrite heading to describe the TEST CONDITION</action>
+            <example>
+                OLD: - Kiểm tra truyền trường slaName = " test "
+                NEW: - Kiểm tra truyền trường slaName có khoảng trắng đầu/cuối
+            </example>
+        </rule>
+
+        <rule check="V12 — [SỬA] headings">
+            <description>### [SỬA] headings must be moved to correct position</description>
+            <action>Each [SỬA] section must be moved to its correct position using Edit tool, then prefix removed</action>
+        </rule>
+
+        <rule check="V13 — other API flow">
+            <description>Cases testing another API's downstream processing flow</description>
+            <action>Use Edit tool to remove from ## Kiểm tra chức năng</action>
+            <note>Testing field VALUES (e.g. action="Đẩy duyệt") is ALLOWED — only flag DOWNSTREAM processing by another API</note>
+        </rule>
+
+        <rule check="V14 — array field missing cases">
+            <description>Array field missing required test patterns</description>
+            <action>Use Edit tool to add missing cases into the ### Trường {fieldName} section</action>
+        </rule>
+
+        <global_rules>
+            <rule>⛔ NEVER create ### [SỬA] headings. NEVER append to end of file. Always use Edit tool to insert at the CORRECT location within existing sections.</rule>
+            <rule>⛔ NEVER write temp/helper scripts to disk — use python3 -X utf8 -c "..." inline.</rule>
+        </global_rules>
+    </fix_rules>
+</step>
+
+<step id="4" name="Re-run verification (if fixes were applied)">
+    <description>After fixing issues, re-run verify.py to confirm all checks pass.</description>
+    <condition>Only if Step 3 applied any fixes</condition>
+
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/verify.py --output "{OUTPUT_FILE}" --inventory "{INVENTORY_FILE}"</script>
+        </action>
+    </actions>
+
+    <on_still_failing>
+        <action>Fix remaining issues. Max 2 re-runs — if still failing after 2 re-runs, report to user.</action>
+    </on_still_failing>
+</step>
+
+<step id="5" name="Self-check result (MANDATORY output)">
+    <description>Print the final verify.py output as the self-check report. The script already formats it correctly.</description>
+    <note>If all checks pass on first run (Step 2), skip Steps 3-4 and print the report directly.</note>
 </step>
 
 ---
