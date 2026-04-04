@@ -108,11 +108,33 @@ def parse_expected(path):
     return sections
 
 
-def count_actual(test_cases, sections):
+def _load_display_to_tech_map(inventory_path):
+    """Load inventory and build displayName -> [techName, ...] reverse map."""
+    if not inventory_path or not os.path.exists(inventory_path):
+        return {}
+    try:
+        with open(inventory_path, encoding="utf-8") as f:
+            inv = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+    result = {}
+    for category in ("fieldConstraints", "fileContentFields"):
+        for item in inv.get(category, []):
+            tech = item.get("name", "")
+            display = item.get("displayName", "")
+            if tech and display:
+                result.setdefault(display.lower(), []).append(tech.lower())
+    return result
+
+
+def count_actual(test_cases, sections, inventory_path=None):
     """Count actual test cases per section by matching testSuiteName and testCaseName.
 
     Returns sections with added 'actual' counts.
     """
+    display_to_tech = _load_display_to_tech_map(inventory_path)
+
     # Build lookup: section_heading -> section index
     section_lookup = {}
     for i, sec in enumerate(sections):
@@ -130,6 +152,7 @@ def count_actual(test_cases, sections):
     for tc in test_cases:
         suite = tc.get("testSuiteName", "").lower()
         case_name = tc.get("testCaseName", "")
+        case_lower = case_name.lower()
 
         # Find matching section
         sec_idx = section_lookup.get(suite)
@@ -140,7 +163,14 @@ def count_actual(test_cases, sections):
             # Try to match to a subsection (for validate: match by field name)
             sec = sections[sec_idx]
             for j, sub in enumerate(sec["subsections"]):
-                if sub["name"].lower() in case_name.lower():
+                sub_name_lower = sub["name"].lower()
+                # Direct match: displayName in testCaseName
+                if sub_name_lower in case_lower:
+                    sub_counts[(sec_idx, j)] += 1
+                    break
+                # Inventory match: techName in testCaseName
+                tech_names = display_to_tech.get(sub_name_lower, [])
+                if any(tn in case_lower for tn in tech_names):
                     sub_counts[(sec_idx, j)] += 1
                     break
 
@@ -158,6 +188,7 @@ def main():
     parser = argparse.ArgumentParser(description="Count expected test cases from test-design")
     parser.add_argument("--test-design", required=True, dest="test_design")
     parser.add_argument("--test-cases", default="", dest="test_cases")
+    parser.add_argument("--inventory", default="", help="Path to inventory.json for fieldName->displayName mapping")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     args = parser.parse_args()
 
@@ -181,7 +212,7 @@ def main():
             print(f"ERROR: cannot read test-cases: {e}", file=sys.stderr)
             sys.exit(1)
 
-        sections, matched = count_actual(test_cases, sections)
+        sections, matched = count_actual(test_cases, sections, args.inventory)
         total_actual = len(test_cases)
         has_gaps = any(s.get("missing", 0) > 0 for s in sections)
 

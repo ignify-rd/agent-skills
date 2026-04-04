@@ -7,7 +7,7 @@ instead of clean section headings from the test-design. This script deterministi
 fixes them by mapping each test case to the correct ## section from test-design-api.md.
 
 Usage:
-  python normalize_suites.py --test-design PATH --test-cases PATH [--dry-run]
+  python normalize_suites.py --test-design PATH --test-cases PATH [--inventory PATH] [--dry-run]
 
 What it does:
   1. Parse test-design-api.md to extract ## sections and ### field headings
@@ -75,7 +75,39 @@ def parse_test_design(path):
     return sections
 
 
-def build_suite_map(sections):
+def load_inventory_field_map(inventory_path, field_map):
+    """Load inventory and add fieldName -> heading mappings via displayName.
+
+    inventory.json may have:
+      - fieldConstraints[].name  (e.g. "slaVersionId")
+      - fileContentFields[].name (e.g. "debitAccount") + .displayName (e.g. "Tài khoản chuyển")
+
+    If displayName is in field_map, we also map the technical name to the same heading.
+    """
+    if not inventory_path or not os.path.exists(inventory_path):
+        return
+
+    try:
+        with open(inventory_path, encoding="utf-8") as f:
+            inv = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return
+
+    for category in ("fieldConstraints", "fileContentFields"):
+        for item in inv.get(category, []):
+            tech_name = item.get("name", "")
+            display_name = item.get("displayName", "")
+
+            if not tech_name:
+                continue
+
+            # If displayName matches a known field -> map tech_name to same heading
+            if display_name and display_name.lower() in field_map:
+                heading = field_map[display_name.lower()]
+                field_map[tech_name.lower()] = heading
+
+
+def build_suite_map(sections, inventory_path=None):
     """Build lookup structures for matching test cases to suite names."""
     field_map = {}        # field_name_lower -> heading
     subheading_map = {}   # subheading_lower -> heading
@@ -90,12 +122,15 @@ def build_suite_map(sections):
         for cn in section["case_names"]:
             case_name_map[cn.lower()] = heading
 
+    # Enrich field_map with inventory technical names
+    load_inventory_field_map(inventory_path, field_map)
+
     return field_map, subheading_map, case_name_map
 
 
-def normalize(test_cases, sections):
+def normalize(test_cases, sections, inventory_path=None):
     """Normalize testSuiteName for each test case. Returns (cases, changes_count, details)."""
-    field_map, subheading_map, case_name_map = build_suite_map(sections)
+    field_map, subheading_map, case_name_map = build_suite_map(sections, inventory_path)
     valid_suites = {s["heading"] for s in sections}
 
     changes = 0
@@ -151,7 +186,14 @@ def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_ma
         if case_lower.startswith(sub_lower) or sub_lower in case_lower:
             return heading
 
-    # 5. Check if old_suite contains a valid heading as substring
+    # 5. Extract field name from old_suite "Kiểm tra trường X" pattern
+    m_suite = re.match(r"kiểm tra trường\s+(\S+)", old_suite, re.IGNORECASE)
+    if m_suite:
+        suite_field = m_suite.group(1).strip().lower()
+        if suite_field in field_map:
+            return field_map[suite_field]
+
+    # 6. Check if old_suite contains a valid heading as substring
     old_lower = old_suite.lower()
     for heading in valid_suites:
         if heading.lower() in old_lower:
@@ -164,6 +206,7 @@ def main():
     parser = argparse.ArgumentParser(description="Normalize testSuiteName using test-design headings")
     parser.add_argument("--test-design", required=True, dest="test_design")
     parser.add_argument("--test-cases", required=True, dest="test_cases")
+    parser.add_argument("--inventory", default="", help="Path to inventory.json for fieldName->displayName mapping")
     parser.add_argument("--dry-run", action="store_true", dest="dry_run")
     args = parser.parse_args()
 
@@ -191,7 +234,7 @@ def main():
         print("ERROR: test-cases must be a JSON array", file=sys.stderr)
         sys.exit(1)
 
-    test_cases, changes, details = normalize(test_cases, sections)
+    test_cases, changes, details = normalize(test_cases, sections, args.inventory)
 
     print(f"\nTotal test cases: {len(test_cases)}")
     print(f"Suite names normalized: {changes}")

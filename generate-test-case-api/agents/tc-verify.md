@@ -44,11 +44,12 @@ model: inherit
         <action type="bash">
             <script>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py \
   --test-design {TEST_DESIGN_FILE} \
-  --test-cases {OUTPUT_DIR}/test-cases-merged.json</script>
+  --test-cases {OUTPUT_DIR}/test-cases-merged.json \
+  --inventory {INVENTORY_FILE}</script>
         </action>
     </actions>
     <note>This script deterministically maps each test case to its correct ## section heading.
-    Sub-agents sometimes generate verbose/garbage testSuiteName — this script fixes them all.</note>
+    Uses inventory.json to resolve fieldName (e.g. debitAccount) -> displayName (e.g. Tài khoản chuyển) -> heading.</note>
 </step>
 
 <step id="1c" name="Count bullets — expected vs actual (deterministic)">
@@ -57,7 +58,8 @@ model: inherit
         <action type="bash">
             <script>python3 -X utf8 {SKILL_SCRIPTS}/count_bullets.py \
   --test-design {TEST_DESIGN_FILE} \
-  --test-cases {OUTPUT_DIR}/test-cases-merged.json</script>
+  --test-cases {OUTPUT_DIR}/test-cases-merged.json \
+  --inventory {INVENTORY_FILE}</script>
             <stores>bulletGapReport</stores>
         </action>
     </actions>
