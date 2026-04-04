@@ -65,12 +65,12 @@ model: inherit
             <stores>inventorySummary</stores>
         </action>
         <action type="bash">
-            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category requestSchema</script>
-            <stores>requestSchema</stores>
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints</script>
+            <stores>fieldConstraints</stores>
         </action>
         <action type="bash">
-            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category responseSchema</script>
-            <stores>responseSchema</stores>
+            <script>python3 {SKILL_SCRIPTS}/inventory.py get --file {INVENTORY_FILE} --category fileContentFields</script>
+            <stores>fileContentFields</stores>
         </action>
     </actions>
 
@@ -82,6 +82,11 @@ model: inherit
             <field>method</field>
         </fields>
     </extract>
+
+    <separate_fields>
+        <rule>request_fields = fieldConstraints items (fields in API request body, NOT inside the uploaded file)</rule>
+        <rule>file_content_fields = fileContentFields items (fields that are columns in the uploaded .xlsx file)</rule>
+    </separate_fields>
 </step>
 
 <step id="3" name="Resolve testAccount">
@@ -93,24 +98,28 @@ model: inherit
 </step>
 
 <step id="4" name="Build preConditionsBase">
-    <description>Build base preConditions using inventory.requestSchema</description>
+    <description>Build base preConditions. API request body fields go BEFORE file content fields.</description>
 
-    <base_format>
+    <multipart_format>
 ```
 1. Send API login thành công với tài khoản {testAccount}
 2. Chuẩn bị request hợp lệ
    2.1 Endpoint: {METHOD} {BASE_URL}{endpoint}
    2.2 Header:
-   {
-     "Authorization": "Bearer {JWT_TOKEN}",
-     "Content-Type": "application/json"
-   }
-   2.3 Body:
-   {
-     {all required fields with sample values from inventory.testData or fieldConstraints}
-   }
+   {{
+     "Authorization": "Bearer {{JWT_TOKEN}}",
+     "Content-Type": "multipart/form-data"
+   }}
+   2.3 Body (API request fields — trước):
+   {{
+     {request_fields: field_name + sample_value, chỉ fieldConstraints}
+   }}
+   2.4 Body (file content fields — sau, trong file .xlsx upload):
+   {{
+     {file_content_fields: displayName + sample_value, từ fileContentFields}
+   }}
 ```
-    </base_format>
+    </multipart_format>
 
     <catalog_override>
         <condition>If catalog has its own preConditions format</condition>
@@ -162,7 +171,8 @@ model: inherit
   "apiName": "{from inventory._meta.name}",
   "apiEndpoint": "{METHOD} /path",
   "preConditionsBase": "{built in Step 4}",
-  "requestBody": {JSON with all required fields + sample values},
+  "requestBody": {JSON with ONLY request fields (fieldConstraints), no fileContentFields},
+  "fileContentFieldsBase": {JSON with fileContentFields only, used as file content template},
   "responseSuccess": {from inventory.responseSchema if available},
   "responseError": {from inventory.responseSchema if available},
   "catalogStyle": {
@@ -178,7 +188,8 @@ model: inherit
     </output_schema>
 
     <constraints>
-        <constraint>requestBody = JSON object with ALL required fields and sample values</constraint>
+        <constraint>requestBody = JSON object with ONLY fieldConstraints fields (API request body)</constraint>
+        <constraint>fileContentFieldsBase = JSON object with ONLY fileContentFields (fields inside uploaded .xlsx)</constraint>
         <constraint>responseSuccess and responseError = from inventory.responseSchema if available</constraint>
     </constraints>
 </step>

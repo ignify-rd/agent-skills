@@ -192,34 +192,41 @@ def _build_test_case_name(field: str, case: str, ctx: dict) -> str:
         return case
 
 
-def _build_param_override(field: str, case: str, value, fc: dict) -> dict:
+def _build_param_override(field: str, case: str, value, fc: dict, file_content_base: dict) -> dict:
     """
     Convert (field, case, value) into a paramOverride dict.
+
+    For fileContent fields (columns inside uploaded .xlsx), the override goes under
+    the "fileContent" key so merge_batches.py can handle it as a special structure.
 
     Rules:
       - "Không truyền" / "khong truyen" / "not provided"  → __REMOVE__
       - "Truyền null" / "null"                             → null
       - "Truyền chuỗi rỗng" / "empty string"               → ""
       - Any explicit value provided                        → use it
-      - Type-mismatch cases (string→number, etc.)         → use explicit value
+      - Type-mismatch cases (string→number, etc.)          → use explicit value
     """
+    is_file_content = bool(file_content_base) and field in file_content_base
     norm = _normalize_case(case).lower()
 
+    # Determine the actual value
     if norm in ("không truyền", "khong truyen", "not provided", "bo trong",
                 "khong gui", "bo qua"):
-        return {field: _REMOVE}
+        actual_value = _REMOVE
+    elif norm in ("truyền null", "truyen null", "null", "bằng null"):
+        actual_value = None
+    elif norm in ("truyền chuỗi rỗng", "truyen chuoi rong", "empty string",
+                 "chuỗi rỗng", "empty"):
+        actual_value = ""
+    elif value is not None:
+        actual_value = value
+    else:
+        actual_value = _REMOVE
 
-    if norm in ("truyền null", "truyen null", "null", "bằng null"):
-        return {field: None}
-
-    if norm in ("truyền chuỗi rỗng", "truyen chuoi rong", "empty string",
-                "chuỗi rỗng", "empty"):
-        return {field: ""}
-
-    if value is not None:
-        return {field: value}
-
-    return {field: _REMOVE}
+    # Wrap under "fileContent" key for fileContent fields
+    if is_file_content:
+        return {"fileContent": {field: actual_value}}
+    return {field: actual_value}
 
 
 def _build_step(field: str, case: str, value, inv: dict) -> str:
@@ -364,6 +371,8 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
         dict with "_template" + "testCases" (for merge_batches.py)
     """
     base_params = ctx.get("requestBody", {})
+    # Separate file content fields base — used when paramOverride targets a fileContent field
+    file_content_base = ctx.get("fileContentFieldsBase", {})
     pre_conditions = ctx.get("preConditionsBase", "")
     importance = "Medium"
     result = "PENDING"
@@ -398,7 +407,9 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
         fc = field_constraints.get(field, {})
 
         # Build components
-        param_override = _build_param_override(field, case, value, fc)
+        param_override = _build_param_override(
+            field, case, value, fc, file_content_base
+        )
         expected_result = _build_expected_result(case_norm, field, inv, ctx)
         test_suite = _build_test_suite_name(field, ctx)
         test_case_name = _build_test_case_name(field, case, ctx)

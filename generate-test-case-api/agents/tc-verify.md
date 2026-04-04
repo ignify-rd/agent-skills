@@ -28,7 +28,8 @@ model: inherit
         <action type="bash">
             <script>python3 {SKILL_SCRIPTS}/merge_batches.py \
   --output-dir {OUTPUT_DIR} \
-  --output-file {OUTPUT_DIR}/test-cases-merged.json</script>
+  --output-file {OUTPUT_DIR}/test-cases-merged.json \
+  --context {TC_CONTEXT_FILE}</script>
         </action>
     </actions>
     <on_script_fail>

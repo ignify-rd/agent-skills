@@ -49,7 +49,7 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
 _REMOVE_SENTINEL = "__REMOVE__"
 
 
-def _expand_template_batch(data: dict, path: str) -> list:
+def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> list:
     """
     Expand a template-format batch into a flat list of test case objects.
 
@@ -96,13 +96,31 @@ def _expand_template_batch(data: dict, path: str) -> list:
             # Non-object body (string, number, etc.)
             steps = step_prefix + str(tc["rawBody"])
         elif "paramOverride" in tc:
-            params = copy.deepcopy(base_params)
-            for k, v in tc["paramOverride"].items():
-                if v == _REMOVE_SENTINEL:
-                    params.pop(k, None)
-                else:
-                    params[k] = v
-            steps = step_prefix + json.dumps(params, ensure_ascii=False, indent=2)
+            po = tc["paramOverride"]
+            # Handle fileContent structure: {"fileContent": {"field": value}}
+            if isinstance(po, dict) and "fileContent" in po:
+                # Merge baseParams (API request fields) + fileContent fields
+                params = copy.deepcopy(base_params)
+                file_content = copy.deepcopy(file_content_base)
+                for k, v in po["fileContent"].items():
+                    if v == _REMOVE_SENTINEL:
+                        file_content.pop(k, None)
+                    else:
+                        file_content[k] = v
+                # Build step with both API fields and file content fields
+                step_body = json.dumps(params, ensure_ascii=False, indent=2)
+                step_body += "\n  // file content fields:\n"
+                step_body += json.dumps(file_content, ensure_ascii=False, indent=2)
+                steps = step_prefix + step_body
+            else:
+                # Standard flat override
+                params = copy.deepcopy(base_params)
+                for k, v in po.items():
+                    if v == _REMOVE_SENTINEL:
+                        params.pop(k, None)
+                    else:
+                        params[k] = v
+                steps = step_prefix + json.dumps(params, ensure_ascii=False, indent=2)
         else:
             # No override — use baseParams as-is
             steps = step_prefix + json.dumps(base_params, ensure_ascii=False, indent=2)
@@ -121,7 +139,7 @@ def _expand_template_batch(data: dict, path: str) -> list:
     return expanded
 
 
-def load_batch(path: str) -> list:
+def load_batch(path: str, file_content_base: dict = None) -> list:
     """
     Load a JSON batch file. Supports two formats:
       A. Flat: JSON array of test case objects
@@ -141,7 +159,7 @@ def load_batch(path: str) -> list:
     # Template format: { "_template": {...}, "testCases": [...] }
     if isinstance(data, dict) and "_template" in data:
         print(f"  [template format] expanding {len(data.get('testCases', []))} cases...")
-        return _expand_template_batch(data, path)
+        return _expand_template_batch(data, path, file_content_base or {})
 
     # Flat format: [...]
     if isinstance(data, list):
@@ -228,6 +246,8 @@ def main():
     )
     parser.add_argument("--output-dir", required=True, dest="output_dir")
     parser.add_argument("--output-file", required=True, dest="output_file")
+    parser.add_argument("--context", default=None, dest="context_file",
+                        help="tc-context.json — loads fileContentFieldsBase for fileContent field handling")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -239,6 +259,16 @@ def main():
     if not os.path.isdir(args.output_dir):
         print(f"ERROR: output-dir does not exist: {args.output_dir}", file=sys.stderr)
         sys.exit(1)
+
+    # Load fileContentFieldsBase from tc-context.json (for fileContent field handling)
+    file_content_base = {}
+    if args.context_file and os.path.exists(args.context_file):
+        try:
+            with open(args.context_file, encoding="utf-8") as f:
+                ctx = json.load(f)
+                file_content_base = ctx.get("fileContentFieldsBase", {})
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"  WARNING: could not read context file {args.context_file}: {e}", file=sys.stderr)
 
     # ── Step 1: Collect batch files ───────────────────────────────────────────
     batch_files = collect_batch_files(args.output_dir)
@@ -259,7 +289,7 @@ def main():
 
     for path in batch_files:
         label = os.path.basename(path)
-        items = load_batch(path)
+        items = load_batch(path, file_content_base)
         count = len(items)
         batch_counts.append((label, count))
         print(f"  {label}: {count} test case(s)")
