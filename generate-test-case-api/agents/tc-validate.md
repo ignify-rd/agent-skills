@@ -179,7 +179,8 @@ Use this approach when:
         </mapping>
         <mapping>
             <output_field>testCaseName</output_field>
-            <template>"{fieldName}_{mô tả case}"</template>
+            <note>Lấy TRỰC TIẾP từ mindmap — KHÔNG dùng "{fieldName}_{mô tả}" hay snake_case</note>
+            <example>Mindmap: "- Kiểm tra không truyền ngày quyết định" → testCaseName: "Kiểm tra không truyền ngày quyết định"</example>
         </mapping>
         <mapping>
             <output_field>summary</output_field>
@@ -260,19 +261,19 @@ Missing cases vs mindmap: [list nếu thiếu] → APPEND immediately
   },
   "testCases": [
     {
-      "testCaseName": "field1_Không_truyền",
+      "testCaseName": "Kiểm tra không truyền field1",
       "testSuiteName": "Kiểm tra trường field1",
       "paramOverride": {"field1": "__REMOVE__"},
       "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response:\n{\n    \"code\": \"ERR_001\",\n    \"message\": \"...\"\n}"
     },
     {
-      "testCaseName": "field1_null",
+      "testCaseName": "Kiểm tra truyền null cho field1",
       "testSuiteName": "Kiểm tra trường field1",
       "paramOverride": {"field1": null},
       "expectedResult": "..."
     },
     {
-      "testCaseName": "field1_empty_string",
+      "testCaseName": "Kiểm tra truyền chuỗi rỗng cho field1",
       "testSuiteName": "Kiểm tra trường field1",
       "paramOverride": {"field1": ""},
       "expectedResult": "..."
@@ -280,6 +281,11 @@ Missing cases vs mindmap: [list nếu thiếu] → APPEND immediately
   ]
 }
 ```
+
+<note>
+testCaseName: Lấy TRỰC TIẾP từ mindmap — KHÔNG dùng snake_case như "field1_Khong_truyen"
+Ví dụ đúng: "Kiểm tra không truyền field1", "Kiểm tra truyền null cho field1"
+</note>
     </template_format>
 
     <paramOverride_rules>

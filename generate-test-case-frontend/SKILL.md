@@ -335,6 +335,7 @@ Spawn sub-agent với prompt = nội dung tc-verify.md + context:
 === TASK CONTEXT ===
 SKILL_SCRIPTS: {path}
 TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
+TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
 INVENTORY_FILE: {INVENTORY_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
 OUTPUT_FILE: {OUTPUT_FILE}
@@ -400,6 +401,7 @@ generate-test-case-frontend/
 │   ├── search.py
 │   ├── inventory.py
 │   ├── merge_batches.py             ← Merge + dedup batch JSON files
+│   ├── normalize_suites.py           ← Normalize suite names + reorder to test-design order
 │   ├── extract_structure.py
 │   ├── upload_gsheet.py
 │   └── ...

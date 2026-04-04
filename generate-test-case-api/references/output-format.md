@@ -37,8 +37,8 @@
 ```json
 {
   "testSuiteName": "Kiểm tra các case common",
-  "testCaseName": "Method_Kiểm tra khi nhập sai method",
-  "summary": "Method_Kiểm tra khi nhập sai method",
+  "testCaseName": "Kiểm tra khi nhập sai method GET",
+  "summary": "Kiểm tra khi nhập sai method GET",
   "preConditions": "1. Send API login thành công\n2. Chuẩn bị request hợp lệ\n   2.1 Endpoint: POST {{BASE_URL}}/v1/fee/search\n   2.2 Header:\n   {\n     \"Authorization\": \"Bearer {JWT_TOKEN}\",\n     \"Content-Type\": \"application/json\"\n   }\n   2.3 Body:\n   {\n     \"regChannel\": \"WEB\",\n     \"pageSize\": 5,\n     \"pageIndex\": 1\n   }",
   "step": "1. Nhập invalid Method: GET\n2. Send API",
   "expectedResult": "1. Check api trả về:\n   1.1. Status: 107\n   1.2. Response:\n   {\n     \"message\": \"Error retrieving AuthorInfo for token from TokenLib: Token is invalid signature\"\n   }",
@@ -52,8 +52,8 @@
 ```json
 {
   "testSuiteName": "Kiểm tra validate",
-  "testCaseName": "regChannel_Bỏ trống field bắt buộc",
-  "summary": "regChannel_Bỏ trống field bắt buộc",
+  "testCaseName": "Kiểm tra bỏ trống field regChannel (bắt buộc)",
+  "summary": "Kiểm tra bỏ trống field regChannel (bắt buộc)",
   "preConditions": "1. Send API login thành công\n2. Chuẩn bị request hợp lệ\n   2.1 Endpoint: POST {{BASE_URL}}/v1/fee/search\n   2.2 Header:\n   {\n     \"Authorization\": \"Bearer {JWT_TOKEN}\",\n     \"Content-Type\": \"application/json\"\n   }\n   2.3 Body:\n   {\n     \"regChannel\": \"WEB\",\n     \"pageSize\": 5,\n     \"pageIndex\": 1\n   }",
   "step": "1. Bỏ trống regChannel (bắt buộc)\n2. Send API",
   "expectedResult": "1. Check api trả về:\n   1.1. Status: 200\n   1.2. Response:\n   {\n     \"message\": \"Dữ liệu không hợp lệ\"\n   }",

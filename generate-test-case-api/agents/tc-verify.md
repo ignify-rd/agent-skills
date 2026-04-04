@@ -49,6 +49,7 @@ model: inherit
         </action>
     </actions>
     <note>This script deterministically maps each test case to its correct ## section heading.
+    Also reorders test cases to match ## section + ### subheading order from test-design.
     Uses inventory.json to resolve fieldName (e.g. debitAccount) -> displayName (e.g. Tài khoản chuyển) -> heading.</note>
 </step>
 

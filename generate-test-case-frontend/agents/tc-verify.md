@@ -46,6 +46,12 @@ model: inherit
     <if_fail>DỪNG HOÀN TOÀN, báo lỗi cụ thể cho orchestrator</if_fail>
 </step>
 
+<step id="1b" name="Normalize suite names (deterministic)">
+    <description>Fix testSuiteName values to match ## headings from test-design. Runs AFTER merge, BEFORE gap analysis.</description>
+    <command>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py --test-design {TEST_DESIGN_FILE} --test-cases {OUTPUT_DIR}/test-cases-merged.json --inventory {INVENTORY_FILE}</command>
+    <note>This script deterministically maps each test case to its correct ## section heading. It also fixes suite header ordering so "Kiểm tra giao diện chung" / "Kiểm tra các case common" appears FIRST.</note>
+</step>
+
 <step id="2" name="Read merged file + inventory data">
     <read>
         <file>{OUTPUT_DIR}/test-cases-merged.json</file>
@@ -166,6 +172,7 @@ model: inherit
     <parameters>
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="TC_CONTEXT_FILE" type="path" required="true"/>
+        <param name="TEST_DESIGN_FILE" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_DIR" type="path" required="true"/>
         <param name="OUTPUT_FILE" type="path" required="true"/>

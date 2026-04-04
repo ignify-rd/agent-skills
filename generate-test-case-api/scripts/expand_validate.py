@@ -178,17 +178,18 @@ def _resolve_error(case_type_norm: str, field_name: str, inv: dict) -> tuple:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _build_test_case_name(field: str, case: str, ctx: dict) -> str:
-    """Build testCaseName following catalogStyle.testCaseNameFormat."""
-    case_fmt = ctx.get("catalogStyle", {}).get("testCaseNameFormat", "underscore")
-    case_slug = _slugify(case)
+    """Build testCaseName from original Vietnamese text (no slugify)."""
+    case_fmt = ctx.get("catalogStyle", {}).get("testCaseNameFormat", "no_underscore")
 
-    if case_fmt == "no_underscore":
-        return f"{field}_{case}"
-    else:  # default: underscore
-        # If case already starts with field name, don't duplicate
+    if case_fmt == "underscore":
+        # Only use slug when explicitly required; otherwise use original case text
+        case_slug = _slugify(case)
         if case_slug.startswith(field.lower()):
             return case_slug
         return f"{field}_{case_slug}"
+    else:
+        # Default: use original case text as-is (Vietnamese, with spaces)
+        return case
 
 
 def _build_param_override(field: str, case: str, value, fc: dict) -> dict:

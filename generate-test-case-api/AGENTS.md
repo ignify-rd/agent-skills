@@ -99,10 +99,11 @@ Each batch: "Chỉ sinh test cases cho section: {name}. KHÔNG sinh cases cho se
 
 ## Output Rules
 
-
 - `result` = always `"PENDING"`
 - `summary` = exactly same as `testCaseName`
-- testCaseName: with prefix `"{Field}_Mô tả"` using `_` underscore between category and description
+- **testCaseName: LẤY TRỰC TIẾP từ mindmap** — KHÔNG thêm prefix, KHÔNG dùng snake_case
+  - Mindmap: `- Kiểm tra khi nhập 101 ký tự` → testCaseName: `Kiểm tra khi nhập 101 ký tự`
+  - Mindmap: `### Kiểm tra trường ngày quyết định` → testCaseName: `Kiểm tra trường ngày quyết định`
 - Dedup: track testCaseNames case-insensitive, keep first occurrence
 
 ## Test Account
@@ -162,4 +163,4 @@ Phải load 2-3 catalog examples trước khi generate (xem Step 6a trong SKILL.
 | preConditions | Endpoint + headers + body JSON |
 | step | API method/params |
 | expectedResult | HTTP status + JSON response |
-| testCaseName | With prefix `"{Field}_Mô tả"` |
+| testCaseName | Lấy TRỰC TIẾP từ mindmap — KHÔNG thêm prefix, KHÔNG dùng snake_case |

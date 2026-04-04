@@ -86,8 +86,8 @@ model: inherit
         </mapping>
         <mapping>
             <output_field>testCaseName</output_field>
-            <source>CatalogStyle.testCaseNameFormat</source>
-            <template>"{Category}_{Mô tả}"</template>
+            <note>Lấy TRỰC TIẾP từ mindmap bullet text — KHÔNG thêm category prefix, KHÔNG dùng snake_case</note>
+            <example>Mindmap: "### Kiểm tra truyền file hợp lệ" → testCaseName: "Kiểm tra truyền file hợp lệ"</example>
         </mapping>
         <mapping>
             <output_field>summary</output_field>

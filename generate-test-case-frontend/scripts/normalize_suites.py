@@ -2,9 +2,11 @@
 """
 normalize_suites.py — Normalize testSuiteName in test-cases JSON using test-design headings.
 
-Problem: tc-validate sub-agents sometimes generate verbose/garbage testSuiteName values
-instead of clean section headings from the test-design. This script deterministically
-fixes them by mapping each test case to the correct ## section from test-design-api.md.
+Problem: sub-agents sometimes generate wrong testSuiteName values (e.g. garbage values,
+wrong naming convention) instead of clean section headings from the test-design. This script
+deterministically fixes them by mapping each test case to the correct ## section from
+test-design-frontend.md.
+
 Also reorders test cases to match ## section + ### subheading order from test-design.
 
 Usage:
@@ -29,12 +31,13 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
 
 
 def parse_test_design(path):
-    """Parse test-design-api.md -> list of sections with fields and bullet case names."""
+    """Parse test-design-frontend.md -> list of sections with fields and bullet case names."""
     with open(path, encoding="utf-8") as f:
         content = f.read()
 
     sections = []
     current_section = None
+    current_field = None
 
     for line in content.split("\n"):
         m2 = re.match(r"^##\s+(.+)$", line)
@@ -46,17 +49,26 @@ def parse_test_design(path):
                 "case_names": [],
             }
             sections.append(current_section)
+            current_field = None
             continue
 
         m3 = re.match(r"^###\s+(.+)$", line)
         if m3 and current_section is not None:
             sub = m3.group(1).strip()
             current_section["subheadings"].append(sub)
-            fm = re.match(r"^Trường\s+(.+)$", sub)
+            # Try to extract field name from heading like "### Tên cấu hình SLA" or "### Textbox: Tên"
+            fm = re.match(r"^(?:Textbox|DatePicker|Combobox|Dropdown|Toggle|Upload|Textarea|Number)\s*:\s*(.+)$", sub)
             if fm:
-                current_section["fields"].append(fm.group(1).strip())
+                current_field = fm.group(1).strip()
+            else:
+                fm2 = re.match(r"^(.+)$", sub)
+                if fm2:
+                    current_field = fm2.group(1).strip()
+            if current_field:
+                current_section["fields"].append(current_field)
             continue
 
+        # Top-level bullet = test case name (inside a ### field section)
         mb = re.match(r"^- (.+)$", line)
         if mb and current_section is not None:
             current_section["case_names"].append(mb.group(1).strip())
@@ -76,22 +88,24 @@ def load_inventory_field_map(inventory_path, field_map):
     except (json.JSONDecodeError, OSError):
         return
 
-    for category in ("fieldConstraints", "fileContentFields"):
-        for item in inv.get(category, []):
-            tech_name = item.get("name", "")
-            display_name = item.get("displayName", "")
-            if not tech_name:
-                continue
-            if display_name and display_name.lower() in field_map:
-                heading = field_map[display_name.lower()]
-                field_map[tech_name.lower()] = heading
+    for item in inv.get("fieldConstraints", []):
+        tech_name = item.get("name", "")
+        display_name = item.get("displayName", "")
+
+        if not tech_name:
+            continue
+
+        # If displayName matches a known field -> map tech_name to same heading
+        if display_name and display_name.lower() in field_map:
+            heading = field_map[display_name.lower()]
+            field_map[tech_name.lower()] = heading
 
 
 def build_suite_map(sections, inventory_path=None):
     """Build lookup structures for matching test cases to suite names."""
-    field_map = {}
-    subheading_map = {}
-    case_name_map = {}
+    field_map = {}        # field_name_lower -> heading
+    subheading_map = {}   # subheading_lower -> heading
+    case_name_map = {}    # case_name_lower -> heading
 
     for section in sections:
         heading = section["heading"]
@@ -102,7 +116,9 @@ def build_suite_map(sections, inventory_path=None):
         for cn in section["case_names"]:
             case_name_map[cn.lower()] = heading
 
+    # Enrich field_map with inventory technical names
     load_inventory_field_map(inventory_path, field_map)
+
     return field_map, subheading_map, case_name_map
 
 
@@ -137,35 +153,51 @@ def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_ma
     """Try multiple strategies to resolve the correct suite name."""
     case_lower = case_name.lower()
 
+    # 1. Exact match on case_name from test-design bullets
     if case_lower in case_name_map:
         return case_name_map[case_lower]
 
-    # Extract field name from patterns like "trường X" or "nội dung file ... trường X"
-    m = re.search(r"(?:truyền\s+)?trường\s+(.+?)(?:\s|$)", case_name, re.IGNORECASE)
-    if m:
-        field = m.group(1).strip()
-        if field.lower() in field_map:
-            return field_map[field.lower()]
+    # 2. Extract field name from testCaseName patterns
+    for pattern in [
+        r"(?:trường\s+)?(\S+)",
+        r"(?:nội dung file\s+)?trường\s+(.+?)(?:\s|$)",
+        r"^(\w+?)_",
+    ]:
+        m = re.search(pattern, case_name, re.IGNORECASE)
+        if m:
+            field = m.group(1).strip()
+            if field.lower() in field_map:
+                return field_map[field.lower()]
 
-    # Check if testCaseName contains any known display field name (longer names first)
+    # 3. Check if testCaseName contains any known display field name (longer names first)
     sorted_fields = sorted(field_map.keys(), key=len, reverse=True)
     for field_lower in sorted_fields:
         if field_lower in case_lower:
             return field_map[field_lower]
 
-    # Match against ### subheadings
+    # 4. Match against ### subheadings
     for sub_lower, heading in subheading_map.items():
         if case_lower.startswith(sub_lower) or sub_lower in case_lower:
             return heading
 
-    # Extract field name from old_suite "Kiểm tra trường X" pattern
-    m_suite = re.match(r"kiểm tra trường\s+(.+?)(?:\s|$)", old_suite, re.IGNORECASE)
-    if m_suite:
-        suite_field = m_suite.group(1).strip().lower()
-        if suite_field in field_map:
-            return field_map[suite_field]
+    # 5. Extract field name from old_suite patterns
+    for pattern in [
+        r"(?:textbox|datepicker|combobox|dropdown|toggle|upload|textarea|number)\s*:\s*(.+)",
+        r"kiểm tra trường\s+(\S+)",
+        r"kiểm tra validate",
+    ]:
+        m = re.match(pattern, old_suite, re.IGNORECASE)
+        if m:
+            field = m.group(1).strip()
+            if field.lower() in field_map:
+                return field_map[field.lower()]
+            # "Kiểm tra validate" -> find which section is validate
+            if pattern.endswith("validate"):
+                for s in valid_suites:
+                    if "validate" in s.lower():
+                        return s
 
-    # Check if old_suite contains a valid heading as substring
+    # 6. Check if old_suite contains a valid heading as substring
     old_lower = old_suite.lower()
     for heading in valid_suites:
         if heading.lower() in old_lower:
@@ -191,17 +223,15 @@ def _extract_field_from_case(case_name, sections):
         if sub.lower() in case_lower or case_lower.startswith(sub.lower()):
             return heading, sub, idx
 
-    # 2. Pattern: "Để trống Tài khoản chuyển" or "Nhập Tài khoản chuyển toàn ký tự"
-    #    Match after the leading "Để trống" / "Nhập" keywords
+    # 2. Pattern: "Để trống Tên trường" or "Nhập Tên trường toàn ký tự"
     m = re.search(
-        r"(?:để trống|nhập|nhập\s+file|bỏ trống)\s+(.+?)(?:\s|,|toàn|nội dung|$)",
+        r"(?:để trống|nhập|bỏ trống)\s+(.+?)(?:\s|,|toàn|nội dung|$)",
         case_lower,
     )
     if m:
         field_part = m.group(1).strip()
-        # Strip leading numbers like "2.1." or "2.1 " -> "Tài khoản chuyển"
+        # Strip leading numbers like "2.1." or "2.1 "
         field_part = re.sub(r"^\d+[\.\)]\s*", "", field_part)
-        # Now match against known field names
         for sub, heading, idx in all_subs:
             if field_part in sub.lower():
                 return heading, sub, idx
@@ -210,9 +240,7 @@ def _extract_field_from_case(case_name, sections):
                 return heading, sub, idx
 
     # 3. Pattern: "Kiểm tra truyền file có dung lượng..." -> belongs to "Trường File upload"
-    #    Also "Kiểm tra truyền file không có dữ liệu", "Kiểm tra truyền file có số lượng bản ghi..."
-    if re.search(r"truyền\s+file|upload\s+file|file\s+upload|truyền\s+file\s", case_lower):
-        # Look for "Trường File upload" subheading
+    if re.search(r"truyền\s+file|upload\s+file|file\s+upload", case_lower):
         for sub, heading, idx in all_subs:
             if "file upload" in sub.lower():
                 return heading, sub, idx
@@ -259,28 +287,28 @@ def main():
     parser = argparse.ArgumentParser(description="Normalize testSuiteName using test-design headings")
     parser.add_argument("--test-design", required=True, dest="test_design")
     parser.add_argument("--test-cases", required=True, dest="test_cases")
-    parser.add_argument("--inventory", default="", help="Path to inventory.json")
+    parser.add_argument("--inventory", default="", help="Path to inventory.json for fieldName->displayName mapping")
     parser.add_argument("--dry-run", action="store_true", dest="dry_run")
     args = parser.parse_args()
 
     if not os.path.exists(args.test_design):
-        print("ERROR: test-design not found: " + args.test_design, file=sys.stderr)
+        print(f"ERROR: test-design not found: {args.test_design}", file=sys.stderr)
         sys.exit(1)
     if not os.path.exists(args.test_cases):
-        print("ERROR: test-cases not found: " + args.test_cases, file=sys.stderr)
+        print(f"ERROR: test-cases not found: {args.test_cases}", file=sys.stderr)
         sys.exit(1)
 
     sections = parse_test_design(args.test_design)
-    print("Sections found: " + str(len(sections)))
+    print(f"Sections found: {len(sections)}")
     for s in sections:
-        fc = ", " + str(len(s["fields"])) + " fields" if s["fields"] else ""
-        print("  ## " + s["heading"] + " (" + str(len(s["subheadings"])) + " subheadings" + fc + ")")
+        fc = f", {len(s['fields'])} fields" if s["fields"] else ""
+        print(f"  ## {s['heading']} ({len(s['subheadings'])} subheadings{fc})")
 
     try:
         with open(args.test_cases, encoding="utf-8") as f:
             test_cases = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
-        print("ERROR: cannot read test-cases: " + str(e), file=sys.stderr)
+        print(f"ERROR: cannot read test-cases: {e}", file=sys.stderr)
         sys.exit(1)
 
     if not isinstance(test_cases, list):
@@ -289,34 +317,35 @@ def main():
 
     test_cases, changes, details = normalize(test_cases, sections, args.inventory or None)
 
-    print("\nTotal test cases: " + str(len(test_cases)))
-    print("Suite names normalized: " + str(changes))
+    print(f"\nTotal test cases: {len(test_cases)}")
+    print(f"Suite names normalized: {changes}")
 
     if details:
         print("\nSample changes:")
         for d in details:
             print(d)
 
+    # Reorder test cases to match ## section + ### subheading order from test-design
     test_cases, order_changed = reorder_by_test_design(test_cases, sections)
     if order_changed:
-        print("\nSuite + subheading order re-aligned to test-design")
+        print(f"\nSuite + subheading order re-aligned to test-design")
 
     if changes == 0 and not order_changed:
         print("\nNo changes needed.")
         return
 
     if args.dry_run:
-        print("\nDRY RUN — would normalize " + str(changes) + " suite names")
+        print(f"\nDRY RUN — would normalize {changes} suite names")
         return
 
     try:
         with open(args.test_cases, "w", encoding="utf-8") as f:
             json.dump(test_cases, f, ensure_ascii=False, indent=2)
     except OSError as e:
-        print("ERROR: cannot write test-cases: " + str(e), file=sys.stderr)
+        print(f"ERROR: cannot write test-cases: {e}", file=sys.stderr)
         sys.exit(1)
 
-    print("\n=> Normalized " + str(changes) + " suite names -> " + args.test_cases)
+    print(f"\n=> Normalized {changes} suite names -> {args.test_cases}")
 
 
 if __name__ == "__main__":

@@ -116,7 +116,7 @@ print('BARRIER OK')
         <description>≥1 test case per mode from inventory.modes</description>
         <fields>
             <field name="testSuiteName">"Kiểm tra chức năng" (or catalogStyle)</field>
-            <field name="testCaseName">"Luồng chính_{tên mode}"</field>
+            <field name="testCaseName">Lấy TRỰC TIẾP từ mindmap — KHÔNG dùng snake_case</field>
             <field name="importance">High</field>
             <field name="result">PENDING</field>
             <field name="step">Full request description with that mode</field>
