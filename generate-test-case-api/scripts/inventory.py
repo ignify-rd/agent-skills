@@ -33,6 +33,13 @@ import json
 import sys
 import os
 import argparse
+import io
+
+# ── UTF-8 guard for Windows ─────────────────────────────────────────────────
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 
 def load(path):
