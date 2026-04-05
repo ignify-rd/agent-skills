@@ -398,6 +398,10 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
         case = item.get("case", "")
         value = item.get("value", _REMOVE)  # default: remove field
 
+        # Phase A Extended: allow agent to override computed fields
+        expected_result_override = item.get("expectedResult")
+        test_case_name_override = item.get("testCaseName")
+
         # Skip entries without field or case
         if not field or not case:
             print(f"  WARNING: skipping item without field/case: {item}", file=sys.stderr)
@@ -410,9 +414,14 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
         param_override = _build_param_override(
             field, case, value, fc, file_content_base
         )
-        expected_result = _build_expected_result(case_norm, field, inv, ctx)
+        # Use agent-provided expectedResult if present (Phase A Extended)
+        if expected_result_override is not None:
+            expected_result = expected_result_override
+        else:
+            expected_result = _build_expected_result(case_norm, field, inv, ctx)
         test_suite = _build_test_suite_name(field, ctx)
-        test_case_name = _build_test_case_name(field, case, ctx)
+        # Use agent-provided testCaseName if present (Phase A Extended)
+        test_case_name = test_case_name_override or _build_test_case_name(field, case, ctx)
 
         test_cases.append({
             "testSuiteName": test_suite,

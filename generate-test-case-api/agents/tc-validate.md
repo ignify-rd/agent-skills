@@ -9,7 +9,7 @@ model: inherit
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>You generate validate test cases for fields in FIELD_BATCH (≤5 fields per batch). Choose the approach that fits your task: Phase A (script) is recommended for standard cases; Phase B (manual) for special/business-logic cases that need custom expectedResult.</identity>
+    <identity>You generate validate test cases for fields in FIELD_BATCH. Use Phase A Extended for fileContent fields (write lightweight JSON with expectedResult inline), Phase A for standard request fields, Phase B only as last resort. Always write a completion sentinel at the end.</identity>
 </role_definition>
 
 <guardrails>
@@ -56,6 +56,16 @@ model: inherit
 ---
 
 ## Workflow
+
+## Phase selection guide
+
+| Situation | Use |
+|-----------|-----|
+| Request fields, standard patterns (null/empty/type/maxLength) | Phase A |
+| FileContent fields with custom error text from test-design | **Phase A Extended** |
+| Cases needing cross-field logic or unusual step format | Phase B (fallback only) |
+
+---
 
 ### Phase A — Script expansion (RECOMMENDED for standard cases)
 
@@ -122,9 +132,64 @@ Use this approach when test cases follow standard validation patterns (null, emp
         - Script reads catalogStyle.responseJsonFormat from tc-context.json to decide multiline vs oneline.
         - Script looks up error codes from inventory.errorCodes (section="validate").
         - Script generates testSuiteName, testCaseName, paramOverride, expectedResult automatically.
+        - If item has "expectedResult" field → script uses it directly (Phase A Extended).
+        - If item has "testCaseName" field → script uses it as-is.
         - merge_batches.py handles the rest (template → full test case expansion).
     </notes>
 </step>
+
+<step id="A3" name="Write completion sentinel">
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 -c "
+import os
+s = r'{OUTPUT_DIR}/.validate-{BATCH_NUMBER}.done'
+open(s, 'w').write('done')
+print(f'Sentinel written: {s}')
+"</script>
+        </action>
+    </actions>
+    <note>This sentinel tells the orchestrator this batch is complete. MUST write even if 0 cases generated.</note>
+</step>
+
+---
+
+### Phase A Extended — Phase A with custom expectedResult (RECOMMENDED for fileContent fields)
+
+Use this when the test design has **specific expected result text** per case (e.g., fileContent fields with per-field error messages like "Trường X không được để trống").
+
+Same workflow as Phase A, but the lightweight cases JSON includes `"expectedResult"` (and optionally `"testCaseName"`) inline:
+
+```json
+[
+  {
+    "field": "debitAccount",
+    "case": "Kiểm tra truyền file hợp lệ, nội dung file Để trống Tài khoản chuyển",
+    "value": "__REMOVE__",
+    "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: Bản ghi không hợp lệ, mô tả lỗi: \"Trường Tài khoản chuyển không được để trống\""
+  },
+  {
+    "field": "debitAccount",
+    "case": "Kiểm tra truyền file hợp lệ, nội dung file Nhập Tài khoản chuyển 14 ký tự (maxLength)",
+    "value": "12345678901234",
+    "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: Bản ghi hợp lệ"
+  }
+]
+```
+
+**Workflow:**
+1. Read tc-context.json (for preConditionsBase)
+2. Read test-design-api.md — extract bullets for fields in FIELD_BATCH
+3. For each bullet under `### Trường {fieldName}`:
+   - `"field"`: field name (camelCase, from FIELD_BATCH)
+   - `"case"`: bullet text exactly as in test-design (this becomes testCaseName)
+   - `"value"`: derive from case description (e.g., "Để trống" → `"__REMOVE__"`, "14 ký tự" → `"12345678901234"`, etc.)
+   - `"expectedResult"`: copy EXACTLY from the response block under the bullet
+4. Write `validate-cases-{BATCH_NUMBER}.json`
+5. Run expand_validate.py (same as Phase A Step A2)
+6. Write sentinel (same as Phase A Step A3)
+
+<note>Token savings vs Phase B: agent writes ~100 chars/case instead of ~800 chars/case (no preConditions, stepPrefix, testSuiteName repetition). For 30 cases/batch → saves ~20K tokens.</note>
 
 ---
 
@@ -232,7 +297,7 @@ Missing cases vs mindmap: [list nếu thiếu] → APPEND immediately
     </action_on_missing>
 </step>
 
-<step id="B6" name="Write validate-batch-{BATCH_NUMBER}.json — TEMPLATE FORMAT">
+<step id="B6" name="Write validate-batch-{BATCH_NUMBER}.json — TEMPLATE FORMAT (then write sentinel in B7)">
     <output_file>{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json</output_file>
 
     <description>
@@ -300,6 +365,20 @@ Ví dụ đúng: "Kiểm tra không truyền field1", "Kiểm tra truyền null 
         This format saves ~750 tokens per test case by not repeating preConditions and the unchanged parts of testSteps.
         For a batch of 5 fields × ~20 cases each = 100 cases, this saves ~75,000 tokens per batch.
     </token_savings>
+</step>
+
+<step id="B7" name="Write completion sentinel">
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 -c "
+import os
+s = r'{OUTPUT_DIR}/.validate-{BATCH_NUMBER}.done'
+open(s, 'w').write('done')
+print(f'Sentinel written: {s}')
+"</script>
+        </action>
+    </actions>
+    <note>MUST write even if errors occurred in B6. Orchestrator will verify file size separately.</note>
 </step>
 
 ---

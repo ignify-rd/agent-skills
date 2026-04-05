@@ -263,28 +263,38 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     </field_source_handling>
 
     <batch_strategy>
-        <batch_size>5 fields per batch</batch_size>
-        <example>Request: Batch 1: [F1..F5]; FileContent: Batch fc-1: [FC1..FC5], Batch fc-2: [FC6..FC10]</example>
+        <batch_size_request>5 fields per batch (request fields)</batch_size_request>
+        <batch_size_filecontent>3 fields per batch (fileContent fields — smaller reduces per-agent load, improves stability)</batch_size_filecontent>
+        <example>Request: Batch 1: [F1..F5]; FileContent: Batch fc-1: [FC1..FC3], Batch fc-2: [FC4..FC6], Batch fc-3: [FC7..FC9], ...</example>
         <note>Request and fileContent fields are batched separately with distinct naming to prevent merge conflicts.</note>
     </batch_strategy>
 </step>
 
-<step id="5b" name="Spawn ALL tc-validate agents" type="parallel">
-    <description>Generate BATCH 2 — validate test cases per field batch</description>
+<step id="5b" name="Spawn ALL tc-validate agents" type="sequential">
+    <description>Generate BATCH 2 — validate test cases per field batch. ONE agent at a time.</description>
     <trigger>After Step 5a</trigger>
 
-    <spawn_mode>ALL batches simultaneously (parallel)</spawn_mode>
+    <spawn_mode>
+        SEQUENTIAL — spawn ONE batch agent at a time.
+        Wait for per-batch sentinel BEFORE spawning the next agent.
+        Do NOT spawn multiple tc-validate agents simultaneously.
+    </spawn_mode>
 
     <approach>
-        **RECOMMENDED: Phase A (script expansion)**
-        Agent writes lightweight JSON list of cases → runs expand_validate.py → gets template-format batch.
-        This saves ~80% tokens per batch vs manual generation.
+        **RECOMMENDED: Phase A Extended (for fileContent fields)**
+        Agent reads test-design → extracts (case, expectedResult) pairs → writes lightweight JSON with "expectedResult" inline.
+        expand_validate.py uses the provided expectedResult directly. Saves ~80% tokens vs Phase B.
+
+        **RECOMMENDED: Phase A (for request fields with standard patterns)**
+        Agent writes lightweight JSON (no expectedResult needed) → expand_validate.py computes from inventory.
 
         **Fallback: Phase B (manual template format)**
-        Use when cases have custom business-logic expectedResult not covered by standard patterns.
+        Only when cases require custom step format or cross-field logic not expressible in Phase A Extended.
     </approach>
 
     <per_batch_actions>
+        <!-- Repeat the following for EACH batch in order (request batches first, then fc batches) -->
+
         <action type="read_agent_instructions">
             <file>SKILL_AGENTS/tc-validate.md</file>
         </action>
@@ -297,10 +307,29 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                 <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
                 <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
-                <param name="BATCH_NUMBER">{N}</param>
-                <param name="FIELD_BATCH">[{fieldName}, ...]</param>
+                <param name="BATCH_NUMBER">{N} for request batch | "fc-{N}" for fileContent batch</param>
+                <param name="FIELD_BATCH">[{fieldName}, ...] — max 5 for request, max 3 for fileContent</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
+        </action>
+
+        <action type="wait_for_sentinel">
+            <description>
+                WAIT until the agent writes its sentinel before spawning the next agent.
+                The agent writes {OUTPUT_DIR}/.validate-{BATCH_NUMBER}.done at the end of Phase A (step A3) or Phase B (step B7).
+            </description>
+            <check>python3 -X utf8 -c "
+import sys, os
+s = r'{OUTPUT_DIR}/.validate-{BATCH_NUMBER}.done'
+if os.path.exists(s):
+    print(f'DONE: {s}')
+else:
+    print(f'WAITING: {s} not yet written')
+    sys.exit(1)
+"</check>
+            <on_not_ready>
+                <action>The agent is still running. Do NOT spawn the next agent yet.</action>
+            </on_not_ready>
         </action>
 
         <compact_prompt_rule>
@@ -309,28 +338,31 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
             2. The context params listed above (paths + FIELD_BATCH as compact "fieldName:type:required:maxLength" format)
 
             DO NOT include in the prompt:
-            - Full test case descriptions or bullet lists from test-design-api.md (the sub-agent will read this file itself)
+            - Full test case descriptions or bullet lists from test-design-api.md (the sub-agent reads this itself)
             - Full field constraint details from inventory.json (the sub-agent queries inventory.py itself)
             - Pre-generated test case names or expected results
             - Any "here are the N test cases to generate" listings
 
             The sub-agent has all the tools it needs (Read, Bash, Write) to fetch its own data.
-            Passing verbose data in the prompt wastes ~2-3K tokens per batch and the sub-agent ignores most of it.
         </compact_prompt_rule>
     </per_batch_actions>
 
     <file_naming>
-        <!-- Request fields (source=request) -->
+        <!-- Request fields (source=request): BATCH_NUMBER = "1", "2", ... -->
         <file pattern="{OUTPUT_DIR}/validate-cases-{BATCH_NUMBER}.json" description="Intermediate (expand_validate.py input)" />
         <file pattern="{OUTPUT_DIR}/validate-batch-{BATCH_NUMBER}.json" description="Final (merge_batches.py input)" />
-        <!-- FileContent fields (source=fileContent) -->
-        <file pattern="{OUTPUT_DIR}/validate-cases-fc-{BATCH_NUMBER}.json" description="Intermediate for fileContent fields" />
-        <file pattern="{OUTPUT_DIR}/validate-batch-fc-{BATCH_NUMBER}.json" description="Final for fileContent fields" />
+        <file pattern="{OUTPUT_DIR}/.validate-{BATCH_NUMBER}.done" description="Per-batch sentinel written by agent" />
+        <!-- FileContent fields (source=fileContent): BATCH_NUMBER = "fc-1", "fc-2", ... -->
+        <file pattern="{OUTPUT_DIR}/validate-cases-fc-{N}.json" description="Intermediate for fileContent fields" />
+        <file pattern="{OUTPUT_DIR}/validate-batch-fc-{N}.json" description="Final for fileContent fields" />
+        <file pattern="{OUTPUT_DIR}/.validate-fc-{N}.done" description="Per-batch sentinel for fileContent batches" />
     </file_naming>
 
-    <completion_check>
-        <action type="bash">
-            <script>python3 -X utf8 -c "
+    <after_all_batches>
+        <description>After ALL batch sentinels confirmed → verify files → create overall sentinel</description>
+        <verify>
+            <action type="bash">
+                <script>python3 -X utf8 -c "
 import sys, os, glob
 output_dir = '{OUTPUT_DIR}'
 batches = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-*.json')))
@@ -339,23 +371,25 @@ if not batches:
     sys.exit(1)
 print(f'Found {len(batches)} validate batch(es)')
 for b in batches:
-    print(f'  {os.path.basename(b)}: {os.path.getsize(b)} bytes')
+    size = os.path.getsize(b)
+    if size < 10:
+        print(f'  ERROR: {os.path.basename(b)} is too small ({size} bytes) — likely empty')
+        sys.exit(1)
+    print(f'  {os.path.basename(b)}: {size} bytes OK')
 "</script>
-        </action>
-
-        <on_result exit="1">
-            <action>Re-spawn missing batches</action>
-        </on_result>
-        <on_result exit="0">
-            <action type="create_sentinel">
-                <file>{OUTPUT_DIR}/.tc-validate-done</file>
-                <content>done</content>
             </action>
-        </on_result>
-    </completion_check>
+        </verify>
+        <create_sentinel>
+            <file>{OUTPUT_DIR}/.tc-validate-done</file>
+            <content>done</content>
+        </create_sentinel>
+        <on_verify_fail>
+            <action>Re-spawn the failed batch(es) before creating .tc-validate-done</action>
+        </on_verify_fail>
+    </after_all_batches>
 
     <barrier id="validate_barrier">
-        <description>SEQUENTIAL BARRIER — MUST check before proceeding to Step 5c</description>
+        <description>MUST check before proceeding to Step 5c</description>
         <script>python3 -X utf8 -c "
 import sys, os
 sentinel = '{OUTPUT_DIR}/.tc-validate-done'
