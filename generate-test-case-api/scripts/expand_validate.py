@@ -341,9 +341,19 @@ def _build_expected_result(case_type_norm: str, field_name: str,
 
 def _build_test_suite_name(field: str, ctx: dict) -> str:
     """Build testSuiteName following catalogStyle.testSuiteNameConvention."""
+    import re as _re
     convention = ctx.get("catalogStyle", {}).get("testSuiteNameConvention", "")
     if convention:
-        return convention.replace("{fieldName}", field).replace("{field}", field)
+        # Strip connector + unresolved placeholder groups from the raw convention
+        # e.g. " hoặc {FieldType}: {FieldName}" → removed before substitution
+        cleaned = _re.sub(r'\s*(hoặc|or)\s*(\{[^}]+\}[^{]*)+', '', convention).strip()
+        # Replace field name placeholders
+        result = cleaned
+        for placeholder in ("{fieldName}", "{field}", "{FieldName}", "{FieldType}"):
+            result = result.replace(placeholder, field)
+        # Final cleanup: remove any leftover {…} tokens
+        result = _re.sub(r'\{[^}]+\}', '', result).strip()
+        return result
     return f"Kiểm tra trường {field}"
 
 

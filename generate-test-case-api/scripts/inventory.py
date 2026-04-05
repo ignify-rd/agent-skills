@@ -62,6 +62,7 @@ def cmd_init(args):
             "name": args.name or "",
             "endpoint": args.endpoint or "",
             "screenType": args.screen_type or "",
+            "caseTitlePrefix": args.case_title_prefix or "",
         },
         "errorCodes": [],
         "businessRules": [],
@@ -182,6 +183,8 @@ def main():
     p_init.add_argument("--name", default="")
     p_init.add_argument("--endpoint", default="")
     p_init.add_argument("--screen-type", default="", dest="screen_type")
+    p_init.add_argument("--case-title-prefix", default="", dest="case_title_prefix",
+                        help="Prefix for supplement case titles (e.g. 'Kiểm tra truyền file hợp lệ, nội dung file')")
 
     p_add = sub.add_parser("add")
     p_add.add_argument("--file", required=True)
