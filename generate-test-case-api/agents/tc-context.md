@@ -98,32 +98,54 @@ model: inherit
 </step>
 
 <step id="4" name="Build preConditionsBase">
-    <description>Build base preConditions. API request body fields go BEFORE file content fields.</description>
+    <description>Build base preConditions. Keep it concise — do NOT list every file content field.</description>
 
-    <multipart_format>
+    <format_by_api_type>
+        <type name="multipart_with_file_content">
+            <!-- Used when fileContentFields exist (API accepts file with structured rows) -->
+            <!-- preConditions only describe login + general file validity conditions — NOT individual field values -->
 ```
 1. Send API login thành công với tài khoản {testAccount}
 2. Chuẩn bị request hợp lệ
-   2.1 Endpoint: {METHOD} {BASE_URL}{endpoint}
+   2.1 Endpoint: {METHOD} {{BASE_URL}}{endpoint}
    2.2 Header:
    {{
      "Authorization": "Bearer {{JWT_TOKEN}}",
      "Content-Type": "multipart/form-data"
    }}
-   2.3 Body (API request fields — trước):
+   2.3 Body:
    {{
-     {request_fields: field_name + sample_value, chỉ fieldConstraints}
+     "file": "<file .xlsx hợp lệ>"
    }}
-   2.4 Body (file content fields — sau, trong file .xlsx upload):
+   Đ/k file hợp lệ:
+   - Đúng định dạng (.xls/.xlsx)
+   - Đúng dung lượng
+   - Có ít nhất 1 dòng dữ liệu
+   - Các trường trong file có nội dung hợp lệ (trừ trường đang test)
+```
+        </type>
+        <type name="regular_json_body">
+            <!-- Used when no fileContentFields — normal JSON API -->
+```
+1. Send API login thành công với tài khoản {testAccount}
+2. Chuẩn bị request hợp lệ
+   2.1 Endpoint: {METHOD} {{BASE_URL}}{endpoint}
+   2.2 Header:
    {{
-     {file_content_fields: displayName + sample_value, từ fileContentFields}
+     "Authorization": "Bearer {{JWT_TOKEN}}",
+     "Content-Type": "application/json"
+   }}
+   2.3 Body (sample hợp lệ):
+   {{
+     {request_fields: field_name + sample_value}
    }}
 ```
-    </multipart_format>
+        </type>
+    </format_by_api_type>
 
     <catalog_override>
         <condition>If catalog has its own preConditions format</condition>
-        <action>Follow catalog format EXACTLY</action>
+        <action>Follow catalog format EXACTLY (but still do NOT expand all file content fields)</action>
     </catalog_override>
 </step>
 

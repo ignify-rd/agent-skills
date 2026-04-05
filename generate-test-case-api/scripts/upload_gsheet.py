@@ -266,21 +266,29 @@ def build_header_requests(structure, sheet_id):
 
 # ============ TEST CASE DATA (reused from upload_to_sheet.py) ============
 
-# 5 main suite names (any testSuiteName matching these → green header)
+# Main suite names — any testSuiteName matching these gets a green header row.
+# These correspond to ## section headings in test-design-api.md.
+# Field-level sub-suites ("Kiểm tra trường X") are handled separately and get gray headers.
 MAIN_SUITE_NAMES = {
+    # Common sections
+    'kiểm tra token',
+    'kiểm tra endpoint & method',
+    'kiểm tra validate',
+    'kiểm tra validate nội dung file',
+    'kiểm tra chức năng',
+    'kiểm tra ngoại lệ',
+    'kiểm tra luồng chính',
+    'kiểm tra timeout',
+    # Frontend / UI sections
     'kiểm tra các case common',
     'kiểm tra giao diện chung',
     'kiểm tra phân quyền',
-    'kiểm tra validate',
-    'kiểm tra luồng chính',
-    'kiểm tra timeout',
-    'kiểm tra chức năng',
     'kiểm tra lưới dữ liệu',
     'kiểm tra phân trang',
 }
 
 def _is_main_suite(suite_name: str) -> bool:
-    """Return True if suite_name is one of the 5 main suites (green header)."""
+    """Return True if suite_name is one of the main suites (green header)."""
     return suite_name.strip().lower() in MAIN_SUITE_NAMES
 
 # Suite header formatting: light green #DAEAD0 (for main suites)
@@ -357,8 +365,11 @@ VALIDATE_PARENT = 'Kiểm tra validate'
 
 
 def _is_field_subsuite(suite_name: str) -> bool:
-    """Return True if this is a per-field sub-suite inside 'Kiểm tra validate'."""
-    return not _is_main_suite(suite_name) and bool(suite_name.strip())
+    """Return True if this is a per-field sub-suite inside 'Kiểm tra validate'.
+    Only matches 'Kiểm tra trường X' pattern — not arbitrary non-main suites.
+    """
+    import re as _re
+    return bool(_re.match(r'kiểm tra trường\s+\S', suite_name.strip(), _re.IGNORECASE))
 
 
 def _append_suite_row(rows, suite_row_indices, suite_names_by_index, suite_name, total_columns):

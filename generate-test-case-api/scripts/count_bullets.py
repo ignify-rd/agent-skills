@@ -140,6 +140,17 @@ def count_actual(test_cases, sections, inventory_path=None):
     for i, sec in enumerate(sections):
         section_lookup[sec["section"].lower()] = i
 
+    # Also build lookup: validate subsection display name -> (section_idx, sub_idx)
+    # Supports per-field suiteName "Kiểm tra trường {fieldName}" that is NOT in section_lookup
+    field_sub_lookup = {}  # field_name_lower -> (sec_idx, sub_idx)
+    for i, sec in enumerate(sections):
+        for j, sub in enumerate(sec["subsections"]):
+            field_sub_lookup[sub["name"].lower()] = (i, j)
+            # Also add tech names from inventory
+            tech_names = display_to_tech.get(sub["name"].lower(), [])
+            for tn in tech_names:
+                field_sub_lookup[tn] = (i, j)
+
     # Count per section
     section_counts = [0] * len(sections)
     # Count per subsection (for validate fields)
@@ -173,6 +184,18 @@ def count_actual(test_cases, sections, inventory_path=None):
                 if any(tn in case_lower for tn in tech_names):
                     sub_counts[(sec_idx, j)] += 1
                     break
+        else:
+            # Per-field suiteName: "Kiểm tra trường {fieldName}" or "Kiểm tra trường {displayName}"
+            # Extract field name from suite pattern
+            m = re.match(r"kiểm tra trường\s+(.+)", suite, re.IGNORECASE)
+            if m:
+                field_part = m.group(1).strip()
+                hit = field_sub_lookup.get(field_part)
+                if hit:
+                    sec_idx2, sub_idx2 = hit
+                    section_counts[sec_idx2] += 1
+                    sub_counts[(sec_idx2, sub_idx2)] += 1
+                    matched += 1
 
     # Write actual counts back
     for i, sec in enumerate(sections):

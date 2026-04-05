@@ -121,6 +121,12 @@ def normalize(test_cases, sections, inventory_path=None):
         if old_suite in valid_suites:
             continue
 
+        # Preserve per-field validate sub-suites ("Kiểm tra trường X") — do NOT
+        # flatten them to the parent section heading. upload_gsheet.py uses them
+        # to render gray field-level sub-headers inside the validate section.
+        if re.match(r"kiểm tra trường\s+\S", old_suite, re.IGNORECASE):
+            continue
+
         new_suite = _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_map, valid_suites)
 
         if new_suite and new_suite != old_suite:

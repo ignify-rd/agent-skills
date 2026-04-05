@@ -208,10 +208,14 @@ def collect_batch_files(output_dir: str) -> list:
     if os.path.exists(p):
         files.append(p)
 
-    # 2. validate-batch-*.json — supports numeric and named patterns (e.g. fc-1)
-    validate_pattern = os.path.join(output_dir, "validate-batch-*.json")
-    validate_files = sorted(glob.glob(validate_pattern), key=_validate_batch_sort_key)
-    files.extend(validate_files)
+    # 2. validate-batch.json (single file from scripts) OR validate-batch-*.json (legacy numbered)
+    single = os.path.join(output_dir, "validate-batch.json")
+    if os.path.exists(single):
+        files.append(single)
+    else:
+        validate_pattern = os.path.join(output_dir, "validate-batch-*.json")
+        validate_files = sorted(glob.glob(validate_pattern), key=_validate_batch_sort_key)
+        files.extend(validate_files)
 
     # 3. batch-3.json (main flow)
     p = os.path.join(output_dir, "batch-3.json")

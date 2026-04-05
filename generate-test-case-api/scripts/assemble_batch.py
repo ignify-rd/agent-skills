@@ -90,6 +90,10 @@ def _render_step(template: dict, param_override: dict, display_map: dict[str, st
     paramOverride shape (from expand_validate.py):
       { "fileContent": { "<field>": <value> } }   — file content field override
       { "requestBody": { "<field>": <value> } }   — request body field override
+
+    For file-content overrides, the step is kept concise:
+      - Only the overridden field is mentioned (not the entire file content schema)
+      - Format: file: <file .xlsx hợp lệ, riêng trường "{displayName}": {value}>
     """
     step_prefix = template.get("stepPrefix", "")
 
@@ -99,6 +103,7 @@ def _render_step(template: dict, param_override: dict, display_map: dict[str, st
     param_lines = []
 
     if file_content_overrides:
+        # Concise: just say which field is being tested and what value
         for field, value in file_content_overrides.items():
             display = display_map.get(field, field)
             rendered = _render_value(value)
@@ -106,16 +111,14 @@ def _render_step(template: dict, param_override: dict, display_map: dict[str, st
                 f"  - file: <file .xlsx hợp lệ, riêng trường \"{display}\": {rendered}>"
             )
     elif request_body_overrides:
-        # Non-file-content fields (description, etc.)
         for field, value in request_body_overrides.items():
             display = display_map.get(field, field)
             rendered = _render_value(value)
             param_lines.append(f"  - {field}: {rendered}")
     else:
-        # No override — generic file reference
         param_lines.append("  - file: <file .xlsx hợp lệ>")
 
-    # Add any non-overridden base params from template
+    # Add any non-file base params (e.g. description field in request body)
     base_params = template.get("baseParams", {})
     overridden_keys = set(file_content_overrides) | set(request_body_overrides)
     for k, v in base_params.items():
