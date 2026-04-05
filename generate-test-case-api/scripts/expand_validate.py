@@ -339,9 +339,15 @@ def _build_expected_result(case_type_norm: str, field_name: str,
 #  Helpers: testSuiteName
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _build_test_suite_name(field: str, ctx: dict) -> str:
-    """Build testSuiteName following catalogStyle.testSuiteNameConvention."""
+def _build_test_suite_name(field: str, ctx: dict, display_name: str = "") -> str:
+    """Build testSuiteName following catalogStyle.testSuiteNameConvention.
+
+    Uses display_name (from inventory displayName) instead of technical field name
+    when available, so suite names match test-design headings (e.g. "File upload"
+    not "file").
+    """
     import re as _re
+    label = display_name if display_name else field
     convention = ctx.get("catalogStyle", {}).get("testSuiteNameConvention", "")
     if convention:
         # Strip connector + unresolved placeholder groups from the raw convention
@@ -350,11 +356,11 @@ def _build_test_suite_name(field: str, ctx: dict) -> str:
         # Replace field name placeholders
         result = cleaned
         for placeholder in ("{fieldName}", "{field}", "{FieldName}", "{FieldType}"):
-            result = result.replace(placeholder, field)
+            result = result.replace(placeholder, label)
         # Final cleanup: remove any leftover {…} tokens
         result = _re.sub(r'\{[^}]+\}', '', result).strip()
         return result
-    return f"Kiểm tra trường {field}"
+    return f"Kiểm tra trường {label}"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -401,6 +407,15 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
     for fc in inv.get("fieldConstraints", []):
         field_constraints[fc["name"]] = fc
 
+    # Build displayName lookup (fieldConstraints + fileContentFields)
+    display_names = {}
+    for fc in inv.get("fieldConstraints", []):
+        if fc.get("displayName"):
+            display_names[fc["name"]] = fc["displayName"]
+    for fc in inv.get("fileContentFields", []):
+        if fc.get("displayName"):
+            display_names[fc["name"]] = fc["displayName"]
+
     test_cases = []
 
     for item in cases:
@@ -419,6 +434,7 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
 
         case_norm = _slugify(_normalize_case(case))
         fc = field_constraints.get(field, {})
+        display_name = display_names.get(field, "")
 
         # Build components
         param_override = _build_param_override(
@@ -429,7 +445,7 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
             expected_result = expected_result_override
         else:
             expected_result = _build_expected_result(case_norm, field, inv, ctx)
-        test_suite = _build_test_suite_name(field, ctx)
+        test_suite = _build_test_suite_name(field, ctx, display_name)
         # Use agent-provided testCaseName if present (Phase A Extended)
         test_case_name = test_case_name_override or _build_test_case_name(field, case, ctx)
 

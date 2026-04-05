@@ -168,6 +168,20 @@ def normalize(test_cases, sections, inventory_path=None):
 def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_map, valid_suites):
     """Try multiple strategies to resolve the correct suite name."""
     case_lower = case_name.lower()
+    old_lower = old_suite.lower()
+
+    # Semantic exact-match first — known old_suite aliases for valid headings.
+    # Must run BEFORE field-name substring scans to avoid false positives
+    # (e.g. "Kiểm tra luồng chính" contains "file" in case names and would
+    # otherwise be misclassified as "Kiểm tra Validate nội dung file").
+    SEMANTIC_MAP = {
+        "kiểm tra luồng chính": "Kiểm tra chức năng",
+        "kiểm tra main flow":   "Kiểm tra chức năng",
+        "kiểm tra happy path":  "Kiểm tra chức năng",
+    }
+    fallback = SEMANTIC_MAP.get(old_lower.strip())
+    if fallback and fallback in valid_suites:
+        return fallback
 
     if case_lower in case_name_map:
         return case_name_map[case_lower]
@@ -179,10 +193,11 @@ def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_ma
         if field.lower() in field_map:
             return field_map[field.lower()]
 
-    # Check if testCaseName contains any known display field name (longer names first)
+    # Check if testCaseName contains any known display field name (longer names first,
+    # minimum length 5 to avoid false positives from short tech names like "file", "stt").
     sorted_fields = sorted(field_map.keys(), key=len, reverse=True)
     for field_lower in sorted_fields:
-        if field_lower in case_lower:
+        if len(field_lower) >= 5 and field_lower in case_lower:
             return field_map[field_lower]
 
     # Match against ### subheadings
@@ -198,22 +213,9 @@ def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_ma
             return field_map[suite_field]
 
     # Check if old_suite contains a valid heading as substring
-    old_lower = old_suite.lower()
     for heading in valid_suites:
         if heading.lower() in old_lower:
             return heading
-
-    # Semantic fallback: "Kiểm tra luồng chính" → "Kiểm tra chức năng" when
-    # "Kiểm tra chức năng" is a valid heading and "Kiểm tra luồng chính" is not.
-    # Both cover happy-path / main-flow scenarios; tc-mainflow sometimes uses either name.
-    SEMANTIC_MAP = {
-        "kiểm tra luồng chính": "Kiểm tra chức năng",
-        "kiểm tra main flow":   "Kiểm tra chức năng",
-        "kiểm tra happy path":  "Kiểm tra chức năng",
-    }
-    fallback = SEMANTIC_MAP.get(old_lower.strip())
-    if fallback and fallback in valid_suites:
-        return fallback
 
     return ""
 
@@ -268,6 +270,8 @@ def reorder_by_test_design(test_cases, sections):
     """
     Reorder test cases to match ## section order AND ### subheading order from test-design.
     Within each ## section, test cases are sorted by their ### subheading order.
+    Per-field sub-suites ("Kiểm tra trường X") that are not in suite_order are placed
+    within the section that contains their subheading, at sub_idx = last+1.
     Returns (reordered_cases, changed_order).
     """
     if not sections:
@@ -275,16 +279,34 @@ def reorder_by_test_design(test_cases, sections):
 
     suite_order = [s["heading"] for s in sections]
 
+    # Build: per-field sub-suite name → (parent_section_idx, sub_idx_within_section)
+    # e.g. "Kiểm tra trường File upload" → (2, 23) if it's the last subheading of section 2
+    field_suite_parent = {}
+    for sec_idx, section in enumerate(sections):
+        for sub_idx, sub in enumerate(section["subheadings"]):
+            # sub = "Trường File upload", "Trường Tài khoản chuyển", etc.
+            if sub.lower().startswith("trường "):
+                field_label = sub[len("Trường "):]
+                suite_name = f"Kiểm tra trường {field_label}"
+                field_suite_parent[suite_name.lower()] = (sec_idx, sub_idx)
+
     def sort_key(tc):
         suite = tc.get("testSuiteName", "")
         case_name = tc.get("testCaseName", "")
 
-        suite_idx = suite_order.index(suite) if suite in suite_order else 999
-        _, _, sub_idx = _extract_field_from_case(case_name, sections)
-        if sub_idx is None:
-            sub_idx = 999
+        if suite in suite_order:
+            suite_idx = suite_order.index(suite)
+            _, _, sub_idx = _extract_field_from_case(case_name, sections)
+            if sub_idx is None:
+                sub_idx = 999
+            return (suite_idx, sub_idx)
 
-        return (suite_idx, sub_idx)
+        # Per-field sub-suite: resolve to parent section
+        parent = field_suite_parent.get(suite.lower())
+        if parent:
+            return (parent[0], parent[1])
+
+        return (999, 999)
 
     original_order = [
         (tc.get("testSuiteName", ""), tc.get("testCaseName", ""))
