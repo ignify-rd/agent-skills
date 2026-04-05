@@ -121,6 +121,32 @@ def normalize(test_cases, sections, inventory_path=None):
         if old_suite in valid_suites:
             continue
 
+        # Handle slash-delimited convention artifacts like:
+        # "Kiểm tra token / Kiểm tra Validate / Kiểm tra trường {fieldName} / Kiểm tra chức năng"
+        # → extract the "Kiểm tra trường X" part and use that directly
+        if "/" in old_suite:
+            parts = [p.strip() for p in old_suite.split("/")]
+            # Prefer the "Kiểm tra trường X" segment if present
+            field_part = next(
+                (p for p in parts if re.match(r"kiểm tra trường\s+\S", p, re.IGNORECASE)),
+                None
+            )
+            if field_part:
+                tc["testSuiteName"] = field_part
+                changes += 1
+                if len(details) < 20:
+                    details.append(f"  '{old_suite[:60]}...' -> '{field_part}'")
+                continue
+            # Otherwise pick the part that matches a valid heading
+            for part in parts:
+                if part in valid_suites:
+                    tc["testSuiteName"] = part
+                    changes += 1
+                    if len(details) < 20:
+                        details.append(f"  '{old_suite[:60]}...' -> '{part}'")
+                    break
+            continue
+
         # Preserve per-field validate sub-suites ("Kiểm tra trường X") — do NOT
         # flatten them to the parent section heading. upload_gsheet.py uses them
         # to render gray field-level sub-headers inside the validate section.
@@ -176,6 +202,18 @@ def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_ma
     for heading in valid_suites:
         if heading.lower() in old_lower:
             return heading
+
+    # Semantic fallback: "Kiểm tra luồng chính" → "Kiểm tra chức năng" when
+    # "Kiểm tra chức năng" is a valid heading and "Kiểm tra luồng chính" is not.
+    # Both cover happy-path / main-flow scenarios; tc-mainflow sometimes uses either name.
+    SEMANTIC_MAP = {
+        "kiểm tra luồng chính": "Kiểm tra chức năng",
+        "kiểm tra main flow":   "Kiểm tra chức năng",
+        "kiểm tra happy path":  "Kiểm tra chức năng",
+    }
+    fallback = SEMANTIC_MAP.get(old_lower.strip())
+    if fallback and fallback in valid_suites:
+        return fallback
 
     return ""
 

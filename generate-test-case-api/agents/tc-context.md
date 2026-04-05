@@ -154,7 +154,12 @@ model: inherit
 
     <extract_patterns>
         <pattern name="testSuiteNameConvention">
-            <description>How catalog names test suites — e.g. "Kiểm tra trường {field}" vs "{FieldType}: {FieldName}"</description>
+            <description>Per-field validate suite name pattern ONLY — e.g. "Kiểm tra trường {fieldName}".
+            IMPORTANT: Must be a single-level name with ONE placeholder, NOT a slash-delimited hierarchy.
+            If catalog shows a full path like "A / B / Kiểm tra trường {field} / C / D", extract only
+            the per-field part: "Kiểm tra trường {fieldName}".
+            Default value when unclear: "Kiểm tra trường {fieldName}"
+            </description>
         </pattern>
         <pattern name="preConditionsExample">
             <description>First preConditions example from catalog</description>
