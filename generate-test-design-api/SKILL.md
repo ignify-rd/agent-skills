@@ -738,6 +738,7 @@ print('ALL_SECTIONS_PRESENT')
     <output_message>
 ```
 ✅ Test design hoàn thành: {OUTPUT_FILE}
+🧠 XMind: {OUTPUT_DIR}/test-design-api.xmind
 📋 Inventory: {INVENTORY_FILE}
 ```
     </output_message>
@@ -748,15 +749,21 @@ print('ALL_SECTIONS_PRESENT')
     </notification>
 </step>
 
-<step id="8" name="Cleanup — Delete intermediate files">
-    <description>Remove temporary batch files, keep only final outputs</description>
+<step id="8" name="Generate XMind + Cleanup">
+    <description>Convert final .md to .xmind mind map, then remove intermediate files</description>
     <trigger>After Step 7</trigger>
+
+    <action name="generate_xmind">
+        <script>python3 $SKILL_SCRIPTS/md_to_xmind.py --input {OUTPUT_FILE} --output {OUTPUT_DIR}/test-design-api.xmind</script>
+        <on_error>skip — xmind generation is optional, do not fail the workflow</on_error>
+    </action>
 
     <keep_files>
         <file>inventory.json</file>
         <file>patch.json</file>
         <file>patch-logic.json</file>
         <file>test-design-api.md</file>
+        <file>test-design-api.xmind</file>
     </keep_files>
 
     <delete_patterns>
