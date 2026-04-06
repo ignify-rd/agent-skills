@@ -124,7 +124,8 @@ Mỗi field type có danh sách cases BẮT BUỘC từ `fieldTestTemplates.js`.
 | Tình huống | Rule |
 |-----------|------|
 | 2 case khác giá trị nhưng cùng mục đích kiểm tra + cùng response | Giữ 1, bỏ case còn lại |
-| Constraint dạng "tối đa N chữ số" → max = 10^N - 1 | Chỉ generate: (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1) |
+| Constraint dạng "tối đa N chữ số" cho **INTEGER field** (giá trị số thực) | max = 10^N - 1. Chỉ generate: (N-1) chữ số, N chữ số (max), N+1 chữ số (max+1). Label: "(N-1 chữ số)", "(N chữ số, maxValue = 10^N-1)", "(N+1 chữ số, vượt maxValue)" |
+| Constraint dạng "tối đa N chữ số" cho **fileContent STRING field** (cột Excel/CSV đọc như text) | maxLength = N. Chỉ generate: (N-1) ký tự số (maxLength-1), N ký tự số (maxLength), N+1 ký tự số (maxLength+1). Label: "(N-1 ký tự số, maxLength-1)", "(N ký tự số, maxLength)", "(N+1 ký tự số, maxLength+1)". ⛔ KHÔNG dùng label "maxValue = 10^N-1" — đây là STRING, không phải integer |
 | Constraint dạng "min ≤ x ≤ max" (giá trị số) | Generate: min-1, min, max, max+1 |
 | "Space ở giữa" và "All space" và "Space đầu/cuối" | Đây là 3 case **khác nhau**, giữ cả 3 |
 

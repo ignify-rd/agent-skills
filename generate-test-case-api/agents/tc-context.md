@@ -184,7 +184,29 @@ model: inherit
 
     <fallback>
         <condition>If catalog is empty</condition>
-        <action>Set all pattern values to "" (sub-agents will use reference defaults)</action>
+        <action>Set all pattern values to "" (sub-agents will use reference defaults), EXCEPT:</action>
+        <exception name="multipart_upload_step">
+            <condition>API type = multipart_with_file_content (fileContentFields exist)</condition>
+            <action>Set stepExample to the multipart upload format below</action>
+            <stepExample>
+```
+1.Nhập token bên tab Authorization
+2. Nhập Valid Method: {METHOD}
+{
+  "header": {
+    "token": "{token}",
+    "Accept-Language": "vi-vn",
+    "channel": "WEB"
+  },
+  "body": {
+    "file": "file_hop_le.xlsx"
+  }
+}
+3. Send API
+```
+            </stepExample>
+            <note>For fileContent field cases, "body.file" description changes per case (VD: "file với Trường X = null", "file với Trường X = 16 ký tự"). Keep header identical across all cases.</note>
+        </exception>
     </fallback>
 </step>
 

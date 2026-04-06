@@ -92,6 +92,8 @@ print('BARRIER OK')
             - "Kiểm tra response khi phân trang — bấm trang giữa" → đây là hành vi UI
             - "Kiểm tra hiển thị popup khi..." → đây là hành vi UI
             - "Kiểm tra khi người dùng nhấn nút..." → đây là hành vi UI
+            - "Người dùng có quyền [ROLE] thực hiện ..." → đây là case phân quyền, đã có ở phần common (## Kiểm tra phân quyền), KHÔNG sinh lại vào chức năng
+            - "Người dùng không có quyền [ROLE] không thể ..." → tương tự, đã cover ở common
 
             **Đúng (API perspective):**
             - "Kiểm tra response khi page = 0, size = 20" → test param page
@@ -102,7 +104,7 @@ print('BARRIER OK')
             **Cho API Search/List — cases thuộc chức năng:**
             - Tìm kiếm chính xác theo từng field (VD: slaCode = "SLA001")
             - Tìm kiếm gần đúng LIKE (VD: slaName chứa "Test")
-            - Tìm kiếm kết hợp nhiều điều kiện
+            - Tìm kiếm kết hợp nhiều điều kiện (xem chi tiết ở Part-F)
             - Không tìm thấy kết quả → response data.list = []
             - Phân trang: page=0 (trang đầu), page=totalPage-1 (trang cuối), page > totalPage (vượt)
             - Sort order: kiểm tra ORDER BY đúng
@@ -349,7 +351,23 @@ print('BARRIER OK')
         </part>
 
         <part name="Part-D — External service calls">
-            <description>Each externalServices[] → test onSuccess + onFailure</description>
+            <description>
+                Each externalServices[] → test onSuccess + onFailure.
+
+                ⛔ PHÂN BIỆT: Application-level failure ≠ Infrastructure failure
+
+                **Application-level failure** (KEEP in chức năng):
+                - External service responds but with a business error, OR service unavailable → làm thay đổi trạng thái nghiệp vụ (VD: batch status → "Có lỗi khi kiểm tra")
+                - Pattern: "Kiểm tra trường hợp [tên service] không phản hồi / trả về lỗi" → response chứa business state change
+
+                **Infrastructure failure** (SKIP — đã cover bởi ngoại lệ 500/504):
+                - "Kiểm tra trường hợp lỗi kết nối cơ sở dữ liệu" → KHÔNG sinh, đây là 500
+                - "Kiểm tra trường hợp lỗi timeout khi truy vấn cơ sở dữ liệu" → KHÔNG sinh, đây là 504
+                - "Kiểm tra trường hợp lỗi timeout khi gọi dịch vụ X" (nếu chỉ trả về 500/504 mà không thay đổi business state) → KHÔNG sinh
+                - "Kiểm tra trường hợp lỗi không xác định" → KHÔNG sinh, đây là 500
+
+                Quy tắc quyết định: Nếu failure dẫn đến STATUS thay đổi trong DB (VD: "Có lỗi khi kiểm tra", "Thất bại") → sinh case. Nếu chỉ trả về generic 500/504 → SKIP.
+            </description>
         </part>
 
         <part name="Part-E — Remaining business error codes">
@@ -374,8 +392,22 @@ print('BARRIER OK')
                 1. Tìm kiếm theo field đó (giá trị hợp lệ) → response trả về đúng kết quả
                 2. Tìm kiếm theo field đó (giá trị không tồn tại) → response data.list = []
 
+                Ngoài ra — COMBINATION CASES (BẮTBUỘC):
+                Gọi tổng số filter fields (không tính page/size/sort) là N.
+                PHẢI sinh ĐỦ chuỗi sau (N ≥ 2):
+                - Kết hợp 2 điều kiện bất kỳ → response trả về đúng kết quả
+                - Kết hợp 3 điều kiện bất kỳ → response trả về đúng kết quả
+                - ... (tiếp tục tăng dần)
+                - Kết hợp tất cả N điều kiện → response trả về đúng kết quả
+                - Kết hợp tất cả N điều kiện → không tìm thấy kết quả (data.list = [])
+
+                Ví dụ N=4 filter fields [keyword, approvalFlowType, status, effectiveStatus]:
+                → Kết hợp 2 đk bất kỳ (VD: keyword + approvalFlowType)
+                → Kết hợp 3 đk bất kỳ (VD: keyword + approvalFlowType + status)
+                → Kết hợp tất cả 4 đk → có kết quả
+                → Kết hợp tất cả 4 đk → không có kết quả
+
                 Ngoài ra:
-                - Tìm kiếm kết hợp nhiều điều kiện (dùng TẤT CẢ filter cùng lúc)
                 - Không truyền bất kỳ filter nào → response trả về tất cả (có phân trang)
                 - page/size: page=0 (trang đầu), page vượt totalPage → data.list = []
                 - sort: kiểm tra sắp xếp đúng thứ tự
@@ -386,7 +418,10 @@ print('BARRIER OK')
             </description>
             <heading_rule>
                 Pattern cho từng field: "Kiểm tra response khi tìm kiếm theo {tên field}"
-                Pattern cho kết hợp: "Kiểm tra response khi tìm kiếm kết hợp nhiều điều kiện"
+                Pattern cho kết hợp 2 đk: "Kiểm tra response khi tìm kiếm kết hợp 2 điều kiện"
+                Pattern cho kết hợp N đk: "Kiểm tra response khi tìm kiếm kết hợp {N} điều kiện"
+                Pattern cho kết hợp tất cả: "Kiểm tra response khi tìm kiếm kết hợp tất cả điều kiện"
+                Pattern cho kết hợp tất cả không kết quả: "Kiểm tra response khi tìm kiếm kết hợp tất cả điều kiện không có kết quả"
                 Pattern cho không filter: "Kiểm tra response khi không truyền filter"
                 Pattern cho page: "Kiểm tra response khi page vượt totalPage"
             </heading_rule>
