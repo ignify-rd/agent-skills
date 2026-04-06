@@ -49,6 +49,40 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
 _REMOVE_SENTINEL = "__REMOVE__"
 
 
+def _format_field_change(field: str, value) -> str:
+    """Format a single field change description (Vietnamese)."""
+    if value == _REMOVE_SENTINEL:
+        return f"Bỏ trường {field} khỏi request body"
+    if value is None:
+        return f"Truyền {field} = null"
+    if value == "":
+        return f'Truyền {field} = ""'
+    if isinstance(value, bool):
+        return f"Truyền {field} = {'true' if value else 'false'}"
+    if isinstance(value, (int, float)):
+        return f"Truyền {field} = {value}"
+    if isinstance(value, str):
+        display = value if len(value) <= 40 else value[:40] + "..."
+        return f'Truyền {field} = "{display}"'
+    return f"Truyền {field} = {json.dumps(value, ensure_ascii=False)}"
+
+
+def _build_field_change_step(param_override: dict, step_num: int = 2) -> str:
+    """Build step N describing the specific field change for a validate test case."""
+    if not param_override or not isinstance(param_override, dict):
+        return f"{step_num}. Send API"
+    parts = []
+    for field, value in param_override.items():
+        if field == "fileContent" and isinstance(value, dict):
+            for fc_field, fc_value in value.items():
+                parts.append(_format_field_change(fc_field, fc_value))
+        else:
+            parts.append(_format_field_change(field, value))
+    if parts:
+        return f"{step_num}. " + "\n   ".join(parts)
+    return f"{step_num}. Send API"
+
+
 def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> list:
     """
     Expand a template-format batch into a flat list of test case objects.
@@ -91,39 +125,30 @@ def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> li
     for tc in cases:
         tc_name = tc.get("testCaseName", "")
 
-        # Build testSteps
+        # Build step — 3-step format for validate cases:
+        #   1. Nhập các trường khác hợp lệ
+        #   2. Truyền {field} = {value}  (or: Bỏ trường {field} khỏi request body)
+        #   3. Send API
         if "rawBody" in tc:
-            # Non-object body (string, number, etc.)
-            steps = step_prefix + str(tc["rawBody"])
+            raw = tc["rawBody"]
+            steps = f"{step_prefix}\n2. Gửi body: {raw}\n3. Send API"
         elif "paramOverride" in tc:
             po = tc["paramOverride"]
-            # Handle fileContent structure: {"fileContent": {"field": value}}
-            if isinstance(po, dict) and "fileContent" in po:
-                # Merge baseParams (API request fields) + fileContent fields
-                params = copy.deepcopy(base_params)
-                file_content = copy.deepcopy(file_content_base)
-                for k, v in po["fileContent"].items():
-                    if v == _REMOVE_SENTINEL:
-                        file_content.pop(k, None)
-                    else:
-                        file_content[k] = v
-                # Build step with both API fields and file content fields
-                step_body = json.dumps(params, ensure_ascii=False, indent=2)
-                step_body += "\n  // file content fields:\n"
-                step_body += json.dumps(file_content, ensure_ascii=False, indent=2)
-                steps = step_prefix + step_body
-            else:
-                # Standard flat override
-                params = copy.deepcopy(base_params)
-                for k, v in po.items():
-                    if v == _REMOVE_SENTINEL:
-                        params.pop(k, None)
-                    else:
-                        params[k] = v
-                steps = step_prefix + json.dumps(params, ensure_ascii=False, indent=2)
+            step2 = _build_field_change_step(po, step_num=2)
+            # Fallback: if step2 says "Bỏ trường X" but testCaseName implies a different
+            # action (file format, size, name, etc.), derive step2 from testCaseName instead
+            _remove_patterns = ("không truyền", "bo truong", "bỏ trường", "not provided")
+            if "Bỏ trường" in step2 and not any(p in tc_name.lower() for p in _remove_patterns):
+                desc = tc_name
+                for pfx in ("Kiểm tra ", "kiểm tra "):
+                    if desc.startswith(pfx):
+                        desc = desc[len(pfx):]
+                        break
+                step2 = f"2. {desc[0].upper() + desc[1:] if desc else desc}"
+            steps = f"{step_prefix}\n{step2}\n3. Send API"
         else:
-            # No override — use baseParams as-is
-            steps = step_prefix + json.dumps(base_params, ensure_ascii=False, indent=2)
+            # No override — just send a valid request
+            steps = f"{step_prefix}\n2. Send API"
 
         expanded.append({
             "testCaseName": tc_name,

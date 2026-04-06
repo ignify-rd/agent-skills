@@ -218,7 +218,14 @@ def _build_param_override(field: str, case: str, value, fc: dict, file_content_b
     elif norm in ("truyền chuỗi rỗng", "truyen chuoi rong", "empty string",
                  "chuỗi rỗng", "empty"):
         actual_value = ""
-    elif value is not None:
+    elif value is None:
+        # Explicit JSON null (key exists with null value) — check case text for intent
+        norm_lower = norm.lower()
+        if any(w in norm_lower for w in ["null", "= null", "bằng null"]):
+            actual_value = None
+        else:
+            actual_value = _REMOVE  # value=None but not a "null" case → remove field
+    elif value != _REMOVE:
         actual_value = value
     else:
         actual_value = _REMOVE
@@ -394,13 +401,7 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
     result = "PENDING"
 
     # Build step prefix from preConditions / context
-    method = ctx.get("apiEndpoint", "POST /").split(" ")[0]
-    step_prefix = (
-        f"1. Nhập các tham số\n"
-        f"1.1. Authorization: Bearer {{JWT_TOKEN}}\n"
-        f"1.2. Method: {method}\n"
-        f"1.3. Param:\n"
-    )
+    step_prefix = "1. Nhập các trường khác hợp lệ"
 
     # Build fieldConstraints lookup
     field_constraints = {}
