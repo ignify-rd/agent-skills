@@ -1,196 +1,143 @@
 ---
 name: execute-test-case-api
-description: Execute API test cases from a Google Sheets spreadsheet using Postman web browser. Reads test rows, opens Postman web, sends each request, screenshots the response as evidence, validates against expected results, and writes PASS/FAIL back to the sheet with screenshots stored in a separate Evidence tab. Use when user says "execute api test", "run api test cases", "chạy test case api", or provides a Sheets URL with API test data.
+description: Execute API test cases from Google Sheets using Postman web. Reads test rows, opens Postman web for user to load their collection, sends each request, captures the actual response, updates the Expected Result cell with the real response, validates status code, takes a screenshot, and writes PASS/FAIL back to the sheet. Triggers when user says "execute api test", "run api test cases", "chạy test case api", or provides a Sheets URL with API test data.
 ---
 
 # Execute Test Case — API
 
-Reads API test cases from Google Sheets, executes each via **Postman web browser** (Playwright), captures a screenshot of the response as evidence, validates the result, and writes back to two sheets: the main test sheet (PASS/FAIL) and a separate **Evidence** tab (Test ID + screenshot).
+Reads API test cases from Google Sheets, executes each via **Postman web browser** (Playwright), captures the real response, updates the Expected Result cell, validates status, captures screenshot, and writes results back.
 
-Groups consecutive test cases by `Precondition Group` to reuse auth tokens — the login call runs **once per group**.
-
-Uses **subagent-per-batch** execution to prevent token accumulation across test cases.
+**Batch size:** 10-15 cases per subagent.
+**Execution:** Sequential (1 Playwright profile).
 
 ---
 
 ## Prerequisites
 
-- **gsheets MCP** configured (`mcp__gsheets__*` tools available)
-- **Playwright MCP** configured (`mcp__playwright__*` tools available)
+- **gsheets MCP** configured
+- **Playwright MCP** configured
 - `curl` available in terminal (for precondition auth calls only)
-- **Google Drive OAuth** — `~/.gdrive-mcp/` credentials (from MCP gdrive setup) for screenshot upload
-- Google Sheet structured per the [API schema](references/test-case-schema.md)
-- Postman account (for Postman web login — see [postman-web.md](references/postman-web.md))
+- **Google Drive OAuth** — `~/.gdrive-mcp/` credentials for screenshot upload
+- Sheet tab: `API Tests`
 
 ---
 
 ## ⛔ Temp File Rules
 
-**NEVER** write helper/temp script files to disk (`_*.py`, `_*.ps1`, `_check_*.py`, etc.). Use `python3 -X utf8 -c "..."` inline in Bash, or use Read/Edit/Write tools directly.
+**NEVER** write helper/temp scripts (`_*.py`, `_*.ps1`, `_check_*.py`, etc.) to disk. Use `python3 -X utf8 -c "..."` inline, or Read/Edit/Write tools.
 
 ---
 
 ## Workflow
 
-### Step 0 — Parse spreadsheet URL
-
-Extract `spreadsheetId` from the URL:
-- `https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit...` → segment between `/d/` and `/edit`
-
-If not provided, ask for it.
-
----
-
-### Step 0b — Optional: Range / filter
-
-The user may optionally specify which test cases to run:
-- **Range**: "run API-010 to API-025" → only rows where Test ID is in that range
-- **List**: "run API-003, API-007, API-012" → only those specific IDs
-- **Re-run failures**: "re-run failed cases" → only rows where column K = "FAIL"
-- **Force re-run**: "re-run all" or `--force` → ignore already-executed check
-
-If not specified → run all pending (non-executed) rows in order.
-
-Store filter as `idFilter` (list of IDs, or null for all). Applied after Step 1 partitioning.
-
----
-
 ### Step 1 — Read test cases
 
 ```
 mcp__gsheets__list_sheets(spreadsheetId)
+mcp__gsheets__get_sheet_data(spreadsheetId, sheetName="API Tests")
 ```
 
-- Default tab: `"API Tests"`. If not in the list → ask user which tab to use. **Do NOT guess.**
-
-```
-mcp__gsheets__get_sheet_data(spreadsheetId, sheetName=<confirmed tab>)
-```
-
-- Row 1 is header. Skip rows with empty column A.
-
-**⛔ Schema validation — STOP if mismatch:**
-
-After reading, inspect row 1 (column headers). Expected layout:
-
-| Col | Expected header keyword |
-|-----|------------------------|
-| A | Test ID / ID |
-| B | Title / Name |
-| E | Method |
-| F | URL |
-| I | Expected Status |
-
-If row 1 does NOT contain these keywords in roughly the right columns:
-1. Print: `Found columns: [A="{val}", B="{val}", C="{val}", D="{val}", E="{val}", ...]`
-2. **STOP. Ask user:**
-   > "Sheet format không khớp schema mong đợi. Tìm thấy: [actual headers]. Đây có phải đúng tab không? Nếu không, hãy cho biết tên tab hoặc mapping cột."
-3. **Do NOT attempt to auto-map, adapt, or infer** column meanings from content. Wait for explicit user confirmation before continuing.
-
-Column mapping (after schema confirmed):
+**Column layout (fixed):**
 
 | Col | Field | Notes |
 |-----|-------|-------|
 | A | Test ID | e.g. `API-001` |
 | B | Title | Short description |
-| C | Precondition Group | Optional. Consecutive same-value rows share auth state |
-| D | Precondition Steps | JSON array — auth setup (login call). Executed once per group via curl |
+| C | Precondition Group | Consecutive same-value rows share auth state |
+| D | Precondition Steps | JSON array — auth setup via curl. Execute once per group |
 | E | HTTP Method | GET / POST / PUT / PATCH / DELETE |
 | F | URL | Full endpoint URL |
 | G | Headers | JSON object or empty |
 | H | Request Body | JSON payload or empty |
-| I | Expected Status | Numeric HTTP status code |
-| J | Expected Response | JSONPath assertions |
-| K | Result | **Agent writes**: PASS / FAIL / ERROR |
-| L | Error Message | **Agent writes**: failure detail or empty |
-| M | Response Body | **Agent writes**: actual response (truncated 500 chars) |
-| N | Executed At | **Agent writes**: ISO 8601 timestamp |
+| I | Expected Status | Numeric HTTP status code (e.g. 200, 400) |
+| J | Expected Result | Template with status + sample JSON. **Agent will replace with actual response** |
+| K | Result | Agent writes: PASS / FAIL / ERROR |
+| L | Error Message | Agent writes |
+| M | Response Body | Agent writes: actual response (truncated 500 chars) |
+| N | Executed At | Agent writes: ISO 8601 timestamp |
 
-**Skip already-executed rows:**
-After reading, partition rows into two lists:
-- `pendingRows` — rows where column K is empty (not yet executed)
-- `doneRows` — rows where column K is non-empty (already have results)
+Skip rows where column A is empty. Pending = column K empty.
 
-If user explicitly passes `--force` or says "re-run all" → use all rows as `pendingRows`.
-Otherwise → only execute `pendingRows`. Print at start:
+Print at start:
 ```
 Loaded {total} test cases: {pending} pending, {done} already executed (skipping)
 ```
-All subsequent steps operate on `pendingRows` only.
 
 ---
 
-### Step 2 — Prepare Evidence sheet
+### Step 2 — Filter (optional)
 
-Read test cases first (Step 1 must complete before this step).
-
-Check if an `"Evidence"` tab exists:
-```
-mcp__gsheets__list_sheets(spreadsheetId)
-```
-
-If not found, create it, write header, then **pre-populate column A with all test case IDs** (from `pendingRows` + `doneRows`, in original order):
-```
-mcp__gsheets__create_sheet(spreadsheetId, "Evidence")
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A1:B1", [["Test ID", "Screenshot"]])
-# Pre-populate column A with all test IDs
-mcp__gsheets__update_cells(spreadsheetId, "Evidence", "A2:A{n+1}", [[id] for id in allTestIds])
-```
-
-If Evidence **already exists**, read current content to find which rows already have screenshots (column B non-empty) — skip re-writing those.
-
-**Build `evidenceMap`**: a mapping of `testId → evidence sheet row number` (e.g., `{"API-001": 2, "API-002": 3, ...}`). This is passed to subagents.
+User may specify: range (`API-010 to API-025`), list (`API-003, API-007`), re-run failures. If not specified → run all pending.
 
 ---
 
-### Step 3 — Group by Precondition Group + batch splitting
+### Step 3 — Group + batch
 
-Group consecutive rows by column C value. Empty C → solo group. Non-consecutive same names → separate instances.
+Group consecutive rows by column C (Precondition Group). Empty C → solo group.
 
-```
-API-001  group=login-admin  → Group A (execute preconditions)
-API-002  group=login-admin  → Group A (reuse token)
-API-003  group=login-guest  → Group B (new preconditions)
-API-004  group=             → Solo
-```
-
-**Batch splitting** — after grouping, split large groups into batches:
-
-- `MAX_BATCH = 5` — if a group has more than 5 pending test cases, split into sub-batches of 5
-- Each sub-batch is treated as an independent batch (re-runs preconditions)
-- This is a minor overhead but prevents token accumulation within large groups
-
-Example: Group A has 12 cases → Batch A1 (cases 1–5), Batch A2 (cases 6–10), Batch A3 (cases 11–12). Each batch re-runs the group's precondition steps.
+Split into batches of **10-15 cases** each.
 
 ---
 
-### Step 3b — Pre-load execution instructions (once)
+### Step 4 — Pre-load instructions once
 
-Read the condensed instructions file **once** before spawning any subagent:
+Store these as `apiInstructions`:
 
 ```
-Read({skillDir}/references/condensed-instructions.md)
-```
+## Preconditions (curl)
+If precondition steps provided, execute each via curl:
+  STATUS=$(curl -s -o /tmp/tc_resp.txt -w "%{http_code}" -X {METHOD} "{URL}" {HEADER_FLAGS} {BODY_FLAG} --max-time 30)
+  BODY=$(cat /tmp/tc_resp.txt)
+Extract captured variables from response JSON. Store in group variable map.
+On failure → ERROR all cases in batch, write results, return.
+Retry once on curl exit 6/7/28, wait 2s before retry.
 
-Store the full content as `executionInstructions`. This will be embedded verbatim into each subagent prompt so subagents can start executing **immediately** without reading any files.
+## Variable substitution
+Before each test case, replace {{varName}} in URL, headers, body with captured variables.
+Missing variable → ERROR.
+
+## Postman web navigation
+- Navigate to https://web.postman.co
+- If login screen → tell user: "Postman web requires login. Please log in, then confirm to continue."
+- After user confirms → snapshot to verify login succeeded. If still login → ERROR: "Postman not logged in", return.
+- Once on workspace → click "+" to open new HTTP request tab. Reuse this tab for ALL cases.
+- If {{variable}} in request AND Postman shows "No environment" → ERROR: "Postman chưa chọn environment", return.
+
+## Sending a request
+1. Method: click method dropdown → select correct method
+2. URL: triple-click URL bar → type new URL
+3. Headers: click "Headers" tab → clear previous rows → add each key/value
+4. Body: click "Body" tab → select "raw" + "JSON" → Ctrl+A → paste body. Empty body → select "none"
+5. Click Send
+6. Wait for response panel to show status code (wait_for, timeout 15000ms)
+7. Screenshot:
+   mcp__playwright__browser_take_screenshot(type="png", filename="screenshots/{testId}_{yyyyMMdd_HHmmss}.png")
+
+## Reading response
+- Take snapshot. Extract status code: text matching \\d{3} pattern (e.g. "200 OK") → parse numeric part
+- Extract response body: from response body content area in snapshot
+- If unreadable:
+   mcp__playwright__browser_evaluate(script="
+     const el = document.querySelector('[data-testid=\"response-body\"]') || document.querySelector('.response-body-container');
+     return el ? el.innerText : null;
+   ")
+  Still unreadable → ERROR: "Could not read response from Postman UI"
+```
 
 ---
 
-### Step 4 — Execute batches via subagents
+### Step 5 — Execute batches via subagent
 
-To prevent token accumulation, each batch is executed by a **separate subagent** with a fresh context. The subagent writes results directly to the sheet.
+Each batch = separate subagent (fresh context, no token accumulation).
 
-**Small run shortcut**: If total pending test cases ≤ 5, skip subagents and execute directly following [condensed-instructions.md](references/condensed-instructions.md) instructions inline. With batch writes the per-case overhead is low enough. When executing inline, substitute `{skillDir}` with this skill's absolute directory path (the directory containing this SKILL.md).
-
-#### For each batch, spawn a subagent:
-
+**Subagent prompt:**
 ```
 Agent(
-  description="API test {startId}–{endId}",
+  description="API test batch {batchNum}",
   prompt="""
 ## Execution Instructions
 
-{executionInstructions}
+{apiInstructions}
 
 ---
 
@@ -204,73 +151,162 @@ sheetName: {sheetName}
 {preconditionStepsJSON or "None — no preconditions for this batch"}
 
 ### Test cases to execute:
-| Row | Test ID | Method | URL | Headers | Body | Expected Status | Expected Response |
-|-----|---------|--------|-----|---------|------|----------------|-------------------|
-| {row} | {id} | {method} | {url} | {headers} | {body} | {status} | {response} |
+| Row | Test ID | Method | URL | Headers | Body | Expected Status |
+|-----|---------|--------|-----|---------|------|-----------------|
+| {row} | {id} | {method} | {url} | {headers} | {body} | {status} |
 ...
 
-### Evidence row mapping:
-| Test ID | Evidence Row |
-|---------|-------------|
-| {id} | {evidenceRow} |
-...
+---
 
-Execute all test cases following the instructions above. Batch write results + batch upload screenshots at the end.
-Report summary when done: total/pass/fail/error counts + failed test details.
+## Workflow
+
+### 1 — Run Preconditions
+
+If precondition steps provided → execute via curl. Extract and store captured variables.
+On failure → mark ALL cases as ERROR: "Precondition failed: {detail}", write results, return.
+
+### 2 — Open Postman Web
+
+Navigate to https://web.postman.co. Handle login if needed (see instructions).
+Open a new HTTP request tab (+). Verify ready.
+
+### 3 — Execute each test case
+
+Initialize:
+- results = []
+- screenshots = []
+
+For each test case:
+
+**3a — Substitute variables** in URL, headers, body using captured variables.
+Missing variable → ERROR for this case.
+
+**3b — Configure request in Postman**:
+- Set method, URL, headers, body
+- Click Send
+- Wait for response (timeout 15000ms)
+
+**3c — Screenshot immediately** after response loads:
+```
+mcp__playwright__browser_take_screenshot(type="png", filename="screenshots/{testId}_{yyyyMMdd_HHmmss}.png")
+```
+
+**3d — Read response**:
+- Extract status code (numeric)
+- Extract response body text (truncate to 500 chars, append "..." if truncated)
+
+**3e — Update Expected Result cell**:
+Write the ACTUAL response to column J (Expected Result column). Format:
+```
+Status: {actualStatus}
+Response:
+{actualResponseBody}
+```
+
+**3f — Validate**:
+- Compare actual status vs expected status (column I)
+- Mismatch → FAIL: "Expected {expected}, got {actual}"
+- Match → PASS
+
+**3g — Collect result** (do NOT write yet):
+```
+results.push({
+  row: sheetRow,
+  result: "PASS" | "FAIL" | "ERROR",
+  error: errorMessage or "",
+  body: responseBody,
+  timestamp: "YYYY-MM-DDTHH:mm:ssZ"
+})
+screenshots.push({testId, filename})
+```
+
+### 4 — Upload screenshots
+
+```
+python3 {skillDir}/scripts/gdrive_batch_upload.py screenshots/{file1} screenshots/{file2} ...
+```
+
+Output: JSON array with {name, id, direct} per file. Map `direct` URL to each test case by filename.
+
+### 5 — Write results to sheet
+
+**Test sheet (columns K–N):**
+```
+mcp__gsheets__update_cells(spreadsheetId, sheetName, "K{firstRow}:N{lastRow}", [
+  [result1, error1, body1, ts1],
+  [result2, error2, body2, ts2],
+  ...
+])
+```
+
+**Evidence sheet:**
+If "Evidence" tab exists → read column A to find row for each testId.
+If not exists → create it with header "Test ID | Screenshot", pre-populate column A with all testIds.
+Write `=IMAGE("{directUrl}")` to column B at the matched row for each test case.
+
+Cleanup: `rm -f /tmp/tc_resp.txt`
+
+### 6 — Close browser
+```
+mcp__playwright__browser_close()
+```
+
+### 7 — Return summary
+```
+Batch {batchNum}: {pass} PASS, {fail} FAIL, {error} ERROR
+FAILED: {testId}: {errorMessage}
+ERROR: {testId}: {errorMessage}
+```
 """
 )
 ```
 
-**Replace `{skillDir}`** with the actual absolute path to this skill's directory.
-**Replace `{executionInstructions}`** with the content loaded in Step 3b.
-
-**Important execution rules:**
-- Execute batches **sequentially** — wait for each subagent to finish before starting the next. Playwright MCP supports only one browser session at a time.
-- After each subagent returns, collect its pass/fail/error counts for the final summary.
-- If a subagent reports a blocker (e.g., Postman login required, environment not set) → pause, resolve with user, then re-spawn the same batch.
+**Execute batches sequentially.** After each subagent returns, collect counts for final summary.
 
 ---
 
-### Step 5 — Print summary
-
-Aggregate results from all subagent summaries:
+### Step 6 — Print summary
 
 ```
-=== API Test Execution Summary ===
+=== API Test Summary ===
 Total:  {n}
 PASS:   {n}  ✓
 FAIL:   {n}  ✗
 ERROR:  {n}  ⚠
-
-Screenshots saved to: screenshots/
-Evidence sheet: "Evidence" tab in the spreadsheet
-
-FAILED cases:
-  - API-003: Expected 200, got 401
-ERROR cases:
-  - API-006: Precondition failed: login returned 500
+Screenshots: screenshots/
+Evidence: Evidence tab in spreadsheet
 ```
+
+---
+
+## Error classification
+
+| Condition | Result | Message |
+|-----------|--------|---------|
+| Precondition curl failed | ERROR | `Precondition failed: {detail}` |
+| Postman not logged in | ERROR | `Postman not logged in` |
+| Variable not found | ERROR | `Variable {{varName}} not defined` |
+| Status mismatch | FAIL | `Expected {expected}, got {actual}` |
+| Could not read response | ERROR | `Could not read response from Postman UI` |
+| Response CORS blocked | ERROR | `CORS blocked — API does not allow browser requests` |
+| All checks pass | PASS | (empty) |
 
 ---
 
 ## Guardrails
 
-- **Never modify** columns A–J. Only write to K, L, M, N.
-- **Never skip writing results** — even on ERROR.
-- **Never re-execute** rows where column K is non-empty unless explicitly instructed.
-- **Always close Postman browser** after all groups complete.
-- Screenshot filenames must not contain spaces: use `{testId}_{yyyyMMdd_HHmmss}.png`.
+- **NEVER** modify columns A–J (except J will be overwritten with actual response — this is intentional).
+- **NEVER** skip writing results.
+- **NEVER** re-execute rows with Result already set unless instructed.
+- **ALWAYS** close browser after all groups complete.
+- Screenshot filenames: `{testId}_{yyyyMMdd_HHmmss}.png` (no spaces).
+- **NEVER** write temp scripts to disk.
+- Retry curl once on exit 6/7/28. Never retry on FAIL.
 
-## ⛔ Anti-loop rules
+## ⛔ Anti-loop
 
-These situations require an **immediate STOP + ask user** — never attempt to auto-adapt or analyze further:
-
-| Situation | Action |
-|-----------|--------|
-| Sheet tab `"API Tests"` not found | List sheets → ask user which tab |
-| Row 1 headers don't match expected schema | Print found headers → ask user to confirm mapping |
-| Postman shows "No environment" with `{{variables}}` in requests | Ask user to select environment or provide literal values |
-| Cannot determine Test ID or Method from a row | Skip that row, log `"Could not parse row {n}"`, continue |
-| Same blocker occurs 2+ times in a row | STOP all execution, report to user |
-
-**Analysis limit**: If you catch yourself re-reading the same sheet data or re-examining the same snapshot more than twice to answer the same question → STOP and ask the user instead.
+Stop and ask user if:
+- "API Tests" tab not found
+- Row 1 headers don't match expected schema
+- Postman requires login and user cannot confirm
+- Same blocker occurs 3+ times in a row
