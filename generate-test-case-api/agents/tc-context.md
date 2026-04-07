@@ -180,6 +180,14 @@ model: inherit
         <pattern name="testCaseNameFormat">
             <description>testCaseName format — with/without prefix underscore?</description>
         </pattern>
+        <pattern name="validateStatusCode">
+            <description>HTTP status code used for validation error responses:
+                Check 2-3 validate expectedResult cells in catalog.
+                - If validate errors return Status: 200 (error in body) → "200"
+                - If validate errors return Status: 400/422 → "400" or "422"
+                Default: "200" (per AGENTS.md convention: error in body, not HTTP status)
+            </description>
+        </pattern>
     </extract_patterns>
 
     <fallback>
@@ -230,7 +238,8 @@ model: inherit
     "stepExample": "{from Step 5}",
     "expectedResultExample": "{from Step 5}",
     "responseJsonFormat": "multiline | oneline",
-    "testCaseNameFormat": "{from Step 5}"
+    "testCaseNameFormat": "{from Step 5}",
+    "validateStatusCode": "200 | 400 | 422"
   }
 }
 ```

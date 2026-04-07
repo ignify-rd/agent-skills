@@ -294,11 +294,61 @@ def _build_step(field: str, case: str, value, inv: dict) -> str:
 #  Helpers: expectedResult construction
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _fmt_json_multiline(code: str, message: str) -> str:
+def _fmt_from_response_template(template: dict, code: str, message: str,
+                                  json_fmt: str = "multiline",
+                                  status: str = "200") -> str:
+    """Build expectedResult using responseError template from tc-context.
+
+    Swaps code/message values in the template while preserving the structure
+    (extra keys like errors, traceId, etc. are kept from template).
+    Dynamic values (traceId, responseTime) are replaced with placeholders.
+    """
+    result = copy.deepcopy(template)
+
+    # Find and replace the code/message fields (may use different key names)
+    _code_keys = ("code", "poErrorCode", "errorCode", "error_code")
+    _msg_keys = ("message", "poErrorDesc", "errorDesc", "error_message", "msg")
+
+    code_replaced = False
+    for k in _code_keys:
+        if k in result:
+            result[k] = code
+            code_replaced = True
+            break
+    if not code_replaced and "code" not in result:
+        result["code"] = code
+
+    msg_replaced = False
+    for k in _msg_keys:
+        if k in result:
+            result[k] = message
+            msg_replaced = True
+            break
+    if not msg_replaced and "message" not in result:
+        result["message"] = message
+
+    # Replace dynamic fields with placeholders
+    for dyn_key in ("traceId", "responseTime"):
+        if dyn_key in result:
+            del result[dyn_key]
+
+    if json_fmt == "oneline":
+        body = json.dumps(result, ensure_ascii=False)
+    else:
+        body = json.dumps(result, ensure_ascii=False, indent=2)
+
     return (
         '1. Check api trả về:\n'
-        '   1.1. Status: 200\n'
-        '   1.2. Response:\n'
+        f'  1.1. Status: {status}\n'
+        f'  1.2. Response: {body}'
+    )
+
+
+def _fmt_json_multiline(code: str, message: str, status: str = "200") -> str:
+    return (
+        '1. Check api trả về:\n'
+        f'  1.1. Status: {status}\n'
+        '  1.2. Response:\n'
         '{\n'
         f'  "code": "{code}",\n'
         f'  "message": "{message}"\n'
@@ -306,12 +356,12 @@ def _fmt_json_multiline(code: str, message: str) -> str:
     )
 
 
-def _fmt_json_oneline(code: str, message: str) -> str:
+def _fmt_json_oneline(code: str, message: str, status: str = "200") -> str:
     msg_escaped = message.replace('"', '\\"')
     return (
         '1. Check api trả về:\n'
-        '   1.1. Status: 200\n'
-        '   1.2. Response: '
+        f'  1.1. Status: {status}\n'
+        '  1.2. Response: '
         f'{{"code":"{code}","message":"{msg_escaped}"}}'
     )
 
@@ -321,6 +371,7 @@ def _build_expected_result(case_type_norm: str, field_name: str,
     """
     Build expectedResult text.
     Uses inventory errorCodes to find code+message.
+    Uses responseError template from tc-context for response structure.
     Falls back to generic validate error.
     """
     code, message = _resolve_error(case_type_norm, field_name, inv)
@@ -337,9 +388,21 @@ def _build_expected_result(case_type_norm: str, field_name: str,
         code, message = generic.get("code", "LDH_SLA_020"), generic.get("desc", "Dữ liệu đầu vào không hợp lệ")
 
     json_fmt = ctx.get("catalogStyle", {}).get("responseJsonFormat", "multiline")
+    # Determine status code: use catalogStyle or default 200
+    validate_status = ctx.get("catalogStyle", {}).get("validateStatusCode", "200")
+
+    # Use responseError template from tc-context if available
+    response_error_tpl = ctx.get("responseError")
+    if response_error_tpl and isinstance(response_error_tpl, dict):
+        return _fmt_from_response_template(
+            response_error_tpl, code, message,
+            json_fmt=json_fmt, status=validate_status
+        )
+
+    # Fallback: simple code/message format
     if json_fmt == "oneline":
-        return _fmt_json_oneline(code, message)
-    return _fmt_json_multiline(code, message)
+        return _fmt_json_oneline(code, message, status=validate_status)
+    return _fmt_json_multiline(code, message, status=validate_status)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -400,8 +463,20 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
     importance = "Medium"
     result = "PENDING"
 
-    # Build step prefix from preConditions / context
-    step_prefix = "1. Nhập các trường khác hợp lệ"
+    # Build step prefix from catalogStyle if available, else default
+    catalog_step = ctx.get("catalogStyle", {}).get("stepExample", "")
+    if catalog_step:
+        # Extract the prefix part (everything before the field-specific action)
+        # e.g. "1. Nhập {field} = {value}\n2. Send API" → use "1. Nhập các trường khác hợp lệ"
+        # e.g. "1. Nhập các tham số\n1.1. Authorization..." → use as-is up to first placeholder
+        first_line = catalog_step.split("\n")[0] if "\n" in catalog_step else catalog_step
+        # If the catalog step has a generic first line (no field placeholder), use it
+        if "{field}" not in first_line and "{value}" not in first_line:
+            step_prefix = first_line
+        else:
+            step_prefix = "1. Nhập các trường khác hợp lệ"
+    else:
+        step_prefix = "1. Nhập các trường khác hợp lệ"
 
     # Build fieldConstraints lookup
     field_constraints = {}

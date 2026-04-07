@@ -49,6 +49,30 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
 _REMOVE_SENTINEL = "__REMOVE__"
 
 
+def _apply_override(base_params: dict, param_override: dict) -> dict:
+    """Apply paramOverride to a copy of baseParams. Returns modified body dict.
+
+    Rules:
+      - "__REMOVE__" → delete key from body
+      - null/other   → set key to that value
+      - "fileContent" key is skipped (handled separately for file-upload APIs)
+    """
+    result = copy.deepcopy(base_params)
+    for key, value in param_override.items():
+        if key == "fileContent":
+            continue
+        if value == _REMOVE_SENTINEL:
+            result.pop(key, None)
+        else:
+            result[key] = value
+    return result
+
+
+def _format_body_json(body: dict, indent: int = 4) -> str:
+    """Format body dict as indented JSON string for step display."""
+    return json.dumps(body, ensure_ascii=False, indent=indent)
+
+
 def _format_field_change(field: str, value) -> str:
     """Format a single field change description (Vietnamese)."""
     if value == _REMOVE_SENTINEL:
@@ -125,10 +149,12 @@ def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> li
     for tc in cases:
         tc_name = tc.get("testCaseName", "")
 
-        # Build step — 3-step format for validate cases:
+        # Build step — format for validate cases:
         #   1. Nhập các trường khác hợp lệ
         #   2. Truyền {field} = {value}  (or: Bỏ trường {field} khỏi request body)
         #   3. Send API
+        #   Param:
+        #   { ... modified body ... }
         if "rawBody" in tc:
             raw = tc["rawBody"]
             steps = f"{step_prefix}\n2. Gửi body: {raw}\n3. Send API"
@@ -146,6 +172,12 @@ def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> li
                         break
                 step2 = f"2. {desc[0].upper() + desc[1:] if desc else desc}"
             steps = f"{step_prefix}\n{step2}\n3. Send API"
+
+            # Append modified body so testers can copy-paste into Postman
+            if base_params:
+                modified_body = _apply_override(base_params, po)
+                body_json = _format_body_json(modified_body)
+                steps += f"\n   Param:\n{body_json}"
         else:
             # No override — just send a valid request
             steps = f"{step_prefix}\n2. Send API"

@@ -286,7 +286,7 @@ def search_cases(query, directory, max_results=MAX_RESULTS):
 
 # ============ LIST ============
 def list_catalog(catalog_dir):
-    """List all CSV files and test case counts."""
+    """List all catalog files (CSV and MD) and test case counts."""
     if not catalog_dir.exists():
         return f"Catalog not found: {catalog_dir}"
 
@@ -296,12 +296,16 @@ def list_catalog(catalog_dir):
         sub_path = catalog_dir / subdir
         if not sub_path.exists():
             continue
+
         csv_files = sorted(sub_path.glob("*.csv"))
-        if not csv_files:
+        md_files = sorted(sub_path.glob("*.md"))
+        all_files = csv_files + md_files
+
+        if not all_files:
             lines.append(f"  {subdir}/ (empty)")
             continue
 
-        lines.append(f"  {subdir}/ ({len(csv_files)} files)")
+        lines.append(f"  {subdir}/ ({len(all_files)} files)")
         total = 0
         for f in csv_files:
             try:
@@ -311,7 +315,16 @@ def list_catalog(catalog_dir):
                 lines.append(f"    {f.name} — {len(cases)} cases, suites: {', '.join(suites)}")
             except Exception:
                 lines.append(f"    {f.name} — (parse error)")
-        lines.append(f"    Total: {total} test cases")
+
+        for f in md_files:
+            try:
+                size = f.stat().st_size
+                lines.append(f"    {f.name} — (markdown catalog, {size} bytes)")
+            except Exception:
+                lines.append(f"    {f.name} — (read error)")
+
+        if total > 0:
+            lines.append(f"    Total CSV: {total} test cases")
         lines.append("")
 
     return "\n".join(lines)
