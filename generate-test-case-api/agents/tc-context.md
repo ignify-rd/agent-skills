@@ -188,6 +188,55 @@ model: inherit
                 Default: "200" (per AGENTS.md convention: error in body, not HTTP status)
             </description>
         </pattern>
+
+        <pattern name="expectedResultTemplate">
+            <description>
+                ⚠️ CRITICAL: Convert catalog expectedResult into a TEMPLATE with placeholders.
+                Look at 2-3 validate expectedResult cells and create a template that preserves
+                the EXACT formatting (spacing, newlines, indentation, key names) from catalog.
+
+                Placeholders:
+                  {STATUS}         — HTTP status code (e.g. 200, 400)
+                  {RESPONSE_JSON}  — Full response JSON body
+
+                Example: if catalog shows:
+                  "1. Check api trả về:\n 1.1.Status: 105\n 1.2.Response: \n{\n    \"poErrorCode\": \"105\",\n    \"poErrorDesc\": \"Validate Field Request Error\"\n}"
+
+                Then template should be:
+                  "1. Check api trả về:\n 1.1.Status: {STATUS}\n 1.2.Response: \n{RESPONSE_JSON}"
+
+                IMPORTANT:
+                - Keep EXACT spacing from catalog (e.g. " 1.1.Status:" not "   1.1. Status:")
+                - Keep EXACT line breaks and indentation
+                - Keep any additional text before/after the status/response lines
+                - Default (when catalog empty): "1. Check api trả về:\n  1.1. Status: {STATUS}\n  1.2. Response:\n{RESPONSE_JSON}"
+            </description>
+        </pattern>
+
+        <pattern name="stepTemplate">
+            <description>
+                ⚠️ CRITICAL: Convert catalog step format into a TEMPLATE with placeholders.
+                Look at 2-3 validate step cells and create a template preserving EXACT formatting.
+
+                Placeholders:
+                  {FIELD_ACTION}  — Field-specific action (e.g. "Truyền slaName = null")
+                  {BODY_JSON}     — Full request body JSON (with modification applied)
+
+                Example: if catalog validate step shows:
+                  "1.Truyền params:\n\"inputSegConfId\": 123456789\n2. Send API"
+
+                Then template:
+                  "1.Truyền params:\n{FIELD_ACTION}\n2. Send API"
+
+                Example: if catalog validate step shows:
+                  "1. Nhập các tham số\n1.1. Authorization: {Token}\n1.2. Method: POST\n1.3. Param:\n{body}\n2. Send API"
+
+                Then template:
+                  "1. Nhập các tham số\n1.1. Authorization: {Token}\n1.2. Method: {METHOD}\n1.3. Param:\n{BODY_JSON}\n2. Send API"
+
+                Default (when catalog empty): "1. Nhập các trường khác hợp lệ\n2. {FIELD_ACTION}\n3. Send API"
+            </description>
+        </pattern>
     </extract_patterns>
 
     <fallback>
@@ -239,7 +288,9 @@ model: inherit
     "expectedResultExample": "{from Step 5}",
     "responseJsonFormat": "multiline | oneline",
     "testCaseNameFormat": "{from Step 5}",
-    "validateStatusCode": "200 | 400 | 422"
+    "validateStatusCode": "200 | 400 | 422",
+    "expectedResultTemplate": "1. Check api trả về:\n 1.1.Status: {STATUS}\n 1.2.Response: \n{RESPONSE_JSON}",
+    "stepTemplate": "1. Nhập các trường khác hợp lệ\n2. {FIELD_ACTION}\n3. Send API"
   }
 }
 ```

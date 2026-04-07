@@ -294,14 +294,13 @@ def _build_step(field: str, case: str, value, inv: dict) -> str:
 #  Helpers: expectedResult construction
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _fmt_from_response_template(template: dict, code: str, message: str,
-                                  json_fmt: str = "multiline",
-                                  status: str = "200") -> str:
-    """Build expectedResult using responseError template from tc-context.
+def _build_response_json(template: dict, code: str, message: str,
+                          json_fmt: str = "multiline") -> str:
+    """Build response JSON body by swapping code/message in a template.
 
-    Swaps code/message values in the template while preserving the structure
-    (extra keys like errors, traceId, etc. are kept from template).
-    Dynamic values (traceId, responseTime) are replaced with placeholders.
+    Preserves the template's structure (extra keys like errors, traceId, etc.)
+    while replacing the code and message values. Dynamic fields (traceId,
+    responseTime) are removed.
     """
     result = copy.deepcopy(template)
 
@@ -327,52 +326,45 @@ def _fmt_from_response_template(template: dict, code: str, message: str,
     if not msg_replaced and "message" not in result:
         result["message"] = message
 
-    # Replace dynamic fields with placeholders
+    # Remove dynamic fields
     for dyn_key in ("traceId", "responseTime"):
         if dyn_key in result:
             del result[dyn_key]
 
     if json_fmt == "oneline":
-        body = json.dumps(result, ensure_ascii=False)
-    else:
-        body = json.dumps(result, ensure_ascii=False, indent=2)
-
-    return (
-        '1. Check api trả về:\n'
-        f'  1.1. Status: {status}\n'
-        f'  1.2. Response: {body}'
-    )
+        return json.dumps(result, ensure_ascii=False)
+    return json.dumps(result, ensure_ascii=False, indent=4)
 
 
-def _fmt_json_multiline(code: str, message: str, status: str = "200") -> str:
-    return (
-        '1. Check api trả về:\n'
-        f'  1.1. Status: {status}\n'
-        '  1.2. Response:\n'
-        '{\n'
-        f'  "code": "{code}",\n'
-        f'  "message": "{message}"\n'
-        '}'
-    )
+def _build_simple_response_json(code: str, message: str,
+                                 json_fmt: str = "multiline") -> str:
+    """Build simple {code, message} JSON when no template available."""
+    obj = {"code": code, "message": message}
+    if json_fmt == "oneline":
+        return json.dumps(obj, ensure_ascii=False)
+    return json.dumps(obj, ensure_ascii=False, indent=4)
 
 
-def _fmt_json_oneline(code: str, message: str, status: str = "200") -> str:
-    msg_escaped = message.replace('"', '\\"')
-    return (
-        '1. Check api trả về:\n'
-        f'  1.1. Status: {status}\n'
-        '  1.2. Response: '
-        f'{{"code":"{code}","message":"{msg_escaped}"}}'
-    )
+# Default expectedResult template (matches catalog sample format)
+_DEFAULT_EXPECTED_TEMPLATE = (
+    "1. Check api trả về:\n"
+    "  1.1. Status: {STATUS}\n"
+    "  1.2. Response:\n{RESPONSE_JSON}"
+)
 
 
 def _build_expected_result(case_type_norm: str, field_name: str,
                             inv: dict, ctx: dict) -> str:
     """
-    Build expectedResult text.
-    Uses inventory errorCodes to find code+message.
-    Uses responseError template from tc-context for response structure.
-    Falls back to generic validate error.
+    Build expectedResult text using catalog template.
+
+    Priority:
+      1. catalogStyle.expectedResultTemplate (with {STATUS} and {RESPONSE_JSON} placeholders)
+      2. Default template
+
+    Response JSON body:
+      1. responseError from tc-context (preserves actual API error structure)
+      2. Simple {code, message} fallback
     """
     code, message = _resolve_error(case_type_norm, field_name, inv)
 
@@ -388,21 +380,22 @@ def _build_expected_result(case_type_norm: str, field_name: str,
         code, message = generic.get("code", "LDH_SLA_020"), generic.get("desc", "Dữ liệu đầu vào không hợp lệ")
 
     json_fmt = ctx.get("catalogStyle", {}).get("responseJsonFormat", "multiline")
-    # Determine status code: use catalogStyle or default 200
     validate_status = ctx.get("catalogStyle", {}).get("validateStatusCode", "200")
 
-    # Use responseError template from tc-context if available
+    # Build response JSON body
     response_error_tpl = ctx.get("responseError")
     if response_error_tpl and isinstance(response_error_tpl, dict):
-        return _fmt_from_response_template(
-            response_error_tpl, code, message,
-            json_fmt=json_fmt, status=validate_status
-        )
+        response_json = _build_response_json(response_error_tpl, code, message, json_fmt)
+    else:
+        response_json = _build_simple_response_json(code, message, json_fmt)
 
-    # Fallback: simple code/message format
-    if json_fmt == "oneline":
-        return _fmt_json_oneline(code, message, status=validate_status)
-    return _fmt_json_multiline(code, message, status=validate_status)
+    # Use catalog expectedResult template if available
+    er_template = ctx.get("catalogStyle", {}).get("expectedResultTemplate", "")
+    if er_template and "{STATUS}" in er_template and "{RESPONSE_JSON}" in er_template:
+        return er_template.replace("{STATUS}", validate_status).replace("{RESPONSE_JSON}", response_json)
+
+    # Fallback: default template
+    return _DEFAULT_EXPECTED_TEMPLATE.replace("{STATUS}", validate_status).replace("{RESPONSE_JSON}", response_json)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -532,10 +525,16 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
             "expectedResult": expected_result,
         })
 
+    # Pass stepTemplate and apiEndpoint so merge_batches can build steps following catalog format
+    step_template = ctx.get("catalogStyle", {}).get("stepTemplate", "")
+    api_endpoint = ctx.get("apiEndpoint", "")
+
     return {
         "_template": {
             "preConditions": pre_conditions,
             "stepPrefix": step_prefix,
+            "stepTemplate": step_template,
+            "apiEndpoint": api_endpoint,
             "baseParams": base_params,
             "importance": importance,
             "result": result,

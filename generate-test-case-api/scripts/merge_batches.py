@@ -141,45 +141,86 @@ def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> li
 
     pre_conditions = tpl.get("preConditions", "")
     step_prefix = tpl.get("stepPrefix", "")
+    step_template = tpl.get("stepTemplate", "")
+    api_endpoint = tpl.get("apiEndpoint", "")
     base_params = tpl.get("baseParams", {})
     importance = tpl.get("importance", "Medium")
     result = tpl.get("result", "PENDING")
+
+    # Extract method from apiEndpoint (e.g. "POST /sla-service/v1/slas/update" → "POST")
+    api_method = api_endpoint.split()[0] if api_endpoint else ""
 
     expanded = []
     for tc in cases:
         tc_name = tc.get("testCaseName", "")
 
-        # Build step — format for validate cases:
-        #   1. Nhập các trường khác hợp lệ
-        #   2. Truyền {field} = {value}  (or: Bỏ trường {field} khỏi request body)
-        #   3. Send API
-        #   Param:
-        #   { ... modified body ... }
-        if "rawBody" in tc:
-            raw = tc["rawBody"]
-            steps = f"{step_prefix}\n2. Gửi body: {raw}\n3. Send API"
-        elif "paramOverride" in tc:
+        # Build field action description for the step
+        field_action = ""
+        if "paramOverride" in tc:
             po = tc["paramOverride"]
-            step2 = _build_field_change_step(po, step_num=2)
-            # Fallback: if step2 says "Bỏ trường X" but testCaseName implies a different
-            # action (file format, size, name, etc.), derive step2 from testCaseName instead
+            field_action = _build_field_change_step(po, step_num=2)
+            # Strip the step number prefix — template will add its own numbering
+            field_action_text = field_action.lstrip("0123456789. ")
+
+            # Fallback: if field_action says "Bỏ trường X" but testCaseName implies a different
+            # action, derive from testCaseName instead
             _remove_patterns = ("không truyền", "bo truong", "bỏ trường", "not provided")
-            if "Bỏ trường" in step2 and not any(p in tc_name.lower() for p in _remove_patterns):
+            if "Bỏ trường" in field_action and not any(p in tc_name.lower() for p in _remove_patterns):
                 desc = tc_name
                 for pfx in ("Kiểm tra ", "kiểm tra "):
                     if desc.startswith(pfx):
                         desc = desc[len(pfx):]
                         break
-                step2 = f"2. {desc[0].upper() + desc[1:] if desc else desc}"
-            steps = f"{step_prefix}\n{step2}\n3. Send API"
+                field_action_text = desc[0].upper() + desc[1:] if desc else desc
 
+        # Build modified body JSON
+        body_json = ""
+        if base_params and "paramOverride" in tc:
+            modified_body = _apply_override(base_params, tc["paramOverride"])
+            body_json = _format_body_json(modified_body)
+
+        # ── Use stepTemplate if available (catalog format) ──
+        _has_template = step_template and (
+            "{FIELD_ACTION}" in step_template or "{BODY_JSON}" in step_template
+        )
+        if _has_template:
+            steps = step_template
+
+            # Replace {FIELD_ACTION} placeholder
+            if "{FIELD_ACTION}" in steps:
+                if "rawBody" in tc:
+                    steps = steps.replace("{FIELD_ACTION}", f"Gửi body: {tc['rawBody']}")
+                elif "paramOverride" in tc:
+                    steps = steps.replace("{FIELD_ACTION}", field_action_text)
+                else:
+                    steps = steps.replace("{FIELD_ACTION}", "Send API")
+
+            # Replace {BODY_JSON} placeholder with actual modified body
+            if "{BODY_JSON}" in steps:
+                if body_json:
+                    steps = steps.replace("{BODY_JSON}", body_json)
+                elif base_params:
+                    steps = steps.replace("{BODY_JSON}", _format_body_json(base_params))
+                else:
+                    steps = steps.replace("{BODY_JSON}", "{}")
+            elif body_json:
+                # Template has no {BODY_JSON} placeholder — append body at end
+                steps += f"\n   Param:\n{body_json}"
+
+            # Replace {METHOD} placeholder
+            if "{METHOD}" in steps:
+                steps = steps.replace("{METHOD}", api_method)
+
+        # ── Fallback: stepPrefix-based format ──
+        elif "rawBody" in tc:
+            raw = tc["rawBody"]
+            steps = f"{step_prefix}\n2. Gửi body: {raw}\n3. Send API"
+        elif "paramOverride" in tc:
+            steps = f"{step_prefix}\n{field_action}\n3. Send API"
             # Append modified body so testers can copy-paste into Postman
-            if base_params:
-                modified_body = _apply_override(base_params, po)
-                body_json = _format_body_json(modified_body)
+            if body_json:
                 steps += f"\n   Param:\n{body_json}"
         else:
-            # No override — just send a valid request
             steps = f"{step_prefix}\n2. Send API"
 
         expanded.append({
