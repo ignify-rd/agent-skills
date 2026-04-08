@@ -143,8 +143,14 @@ model: inherit
     </format_by_api_type>
 
     <catalog_override>
-        <condition>If catalog has its own preConditions format</condition>
-        <action>Copy catalog preConditions format EXACTLY — do not add, remove, or restructure any section. If catalog preConditions does NOT include a request body section, do NOT add one.</action>
+        <condition>If catalogStyle.preConditionsExample is not empty (extracted in Step 5)</condition>
+        <action>
+            Use catalogStyle.preConditionsExample as preConditionsBase — copy it VERBATIM.
+            Do NOT restructure, reformat, or add sections that are not in the catalog.
+            Do NOT add "Body (sample hợp lệ)" if catalog preConditions does not have it.
+            Do NOT change "Đ/k 1:" to "1.", "Enpoint" to "Endpoint", etc. — preserve typos/formatting.
+        </action>
+        <priority>This overrides the default format above. Catalog format ALWAYS wins.</priority>
     </catalog_override>
 </step>
 
@@ -161,13 +167,18 @@ model: inherit
             </description>
         </pattern>
         <pattern name="preConditionsExample">
-            <description>First preConditions example from catalog</description>
+            <description>Copy the FULL, VERBATIM preConditions text from the first validate test case in catalog.
+                Do NOT summarize, paraphrase, or truncate. Include every line, every character.
+                This value will be used as-is for preConditionsBase if it exists.
+                Example from catalog: "Đ/k 1:\n  1.1. Enpoint: {{BASE_URL}}/path\n  1.2. Header:\n--header '...'\nĐ/k2: Người dùng đăng nhập..."
+                → copy ALL of that, not just "1. Send API login thành công..."
+            </description>
         </pattern>
         <pattern name="stepExample">
-            <description>First step example from catalog</description>
+            <description>Copy the FULL, VERBATIM step text from the first validate test case in catalog. Do NOT summarize.</description>
         </pattern>
         <pattern name="expectedResultExample">
-            <description>First expectedResult example from catalog</description>
+            <description>Copy the FULL, VERBATIM expectedResult text from the first validate test case in catalog. Do NOT summarize.</description>
         </pattern>
         <pattern name="responseJsonFormat">
             <description>How catalog formats Response JSON in expectedResult:
