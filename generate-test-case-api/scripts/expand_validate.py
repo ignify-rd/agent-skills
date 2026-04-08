@@ -263,10 +263,30 @@ def _infer_placeholder_value(case_original: str):
         return "<script>alert(1)</script>"
     if any(w in norm_lower for w in ["all space", "toàn space", "khoảng trắng"]):
         return "   "
-    if any(w in norm_lower for w in ["định dạng", "format", "sai định dạng"]):
+    if any(w in norm_lower for w in ["định dạng", "format", "sai định dạng", "sai syntax", "json sai"]):
         return "invalid-format"
-    if any(w in norm_lower for w in ["số nguyên", "integer", "number", "số"]):
+    if any(w in norm_lower for w in ["json hợp lệ", "json đúng", "object hợp lệ"]):
+        return {"code": "VALID_CODE", "name": "Valid Name"}
+    if any(w in norm_lower for w in ["json sai format", "sai format nghiệp vụ"]):
+        return {"invalid_key": "invalid_value"}
+    if any(w in norm_lower for w in ["ngày quá khứ", "past date", "quá khứ"]):
+        return "2020-01-01"
+    if any(w in norm_lower for w in ["ngày hiện tại", "today", "hôm nay"]):
+        return "2026-04-08"
+    if any(w in norm_lower for w in ["lớn hơn", "sau", "greater"]) and any(w in norm_lower for w in ["expired", "expireddate", "hết hạn"]):
+        return "2030-12-31"
+    if any(w in norm_lower for w in ["nhỏ hơn", "trước", "less"]) and any(w in norm_lower for w in ["expired", "expireddate", "hết hạn"]):
+        return "2020-01-01"
+    if any(w in norm_lower for w in ["bằng", "equal"]) and any(w in norm_lower for w in ["expired", "expireddate"]):
+        return "2026-01-01"
+    if any(w in norm_lower for w in ["string thuần", "chuỗi thuần", "plain string"]):
+        return "plain_string"
+    if any(w in norm_lower for w in ["chữ thường", "chữ hoa", "không dấu", "ascii"]):
+        return "ValidName"
+    if any(w in norm_lower for w in ["số nguyên", "integer", "number", "là số"]):
         return 123
+    if any(w in norm_lower for w in ["object rỗng", "empty object"]):
+        return {}
     # Generic fallback
     return "MISSING_VALUE"
 
@@ -587,6 +607,12 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
         # Skip entries without field or case
         if not field or not case:
             print(f"  WARNING: skipping item without field/case: {item}", file=sys.stderr)
+            continue
+
+        # Skip malformed entries where agent wrote expectedResult content into "case" field
+        _bad_case_markers = ("1. check api", "check api trả về", "body:", "precondition:", "sql:")
+        if any(case.lower().strip().startswith(m) for m in _bad_case_markers):
+            print(f"  WARNING: skipping malformed case (looks like expectedResult/step): field={field!r} case={case[:50]!r}", file=sys.stderr)
             continue
 
         case_norm = _slugify(_normalize_case(case))
