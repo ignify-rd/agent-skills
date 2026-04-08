@@ -192,6 +192,85 @@ def _build_test_case_name(field: str, case: str, ctx: dict) -> str:
         return case
 
 
+def _extract_value_from_case_name(case: str):
+    """Try to extract an explicit value from the case description string.
+
+    Handles patterns like:
+      - 'Body: `{ "field": -1 }`'  → -1
+      - '= "abc"'                   → "abc"
+      - '= 123'                     → 123
+      - '= []'                      → []
+      - '= {}'                      → {}
+      - '= ["SHORT"]'               → ["SHORT"]
+    Returns the parsed value, or None if not found.
+    """
+    import re as _re
+
+    # Pattern: backtick JSON body  `{ "field": VALUE }`
+    m = _re.search(r'`\s*\{[^`]*:\s*(.+?)\s*\}`', case)
+    if m:
+        val_str = m.group(1).rstrip(" }")
+        try:
+            return json.loads(val_str)
+        except Exception:
+            pass
+
+    # Pattern: = VALUE at end (with optional quotes/brackets)
+    m = _re.search(r'=\s*(`?)(.+?)\1\s*$', case.strip())
+    if m:
+        val_str = m.group(2).strip().strip('"\'')
+        try:
+            return json.loads(val_str)
+        except Exception:
+            try:
+                return json.loads(f'"{val_str}"') if val_str else None
+            except Exception:
+                return val_str if val_str else None
+
+    return None
+
+
+def _infer_placeholder_value(case_original: str):
+    """When agent wrote value=null but case is not a null/remove case, infer a representative value.
+
+    First tries to extract value from case name, then falls back to keyword inference.
+    """
+    # Try extracting from case name first
+    extracted = _extract_value_from_case_name(case_original)
+    if extracted is not None:
+        return extracted
+
+    norm_lower = case_original.lower()
+    if any(w in norm_lower for w in ["rỗng", "empty", "chuỗi rỗng"]):
+        return ""
+    if any(w in norm_lower for w in ["chuỗi", "string", "text", "ký tự", "chữ"]):
+        return "abc"
+    if any(w in norm_lower for w in ["số thập phân", "decimal", "float"]):
+        return 1.5
+    if any(w in norm_lower for w in ["số âm", "negative", "âm"]):
+        return -1
+    if any(w in norm_lower for w in ["số rất lớn", "vượt giới hạn", "overflow", "large"]):
+        return 99999999999999999999
+    if any(w in norm_lower for w in ["boolean", "bool"]):
+        return True
+    if any(w in norm_lower for w in ["array", "mảng", "danh sách"]):
+        return ["test"]
+    if any(w in norm_lower for w in ["object", "đối tượng"]):
+        return {"test": "value"}
+    if any(w in norm_lower for w in ["sql", "injection"]):
+        return "' OR '1'='1"
+    if any(w in norm_lower for w in ["xss", "script", "alert"]):
+        return "<script>alert(1)</script>"
+    if any(w in norm_lower for w in ["all space", "toàn space", "khoảng trắng"]):
+        return "   "
+    if any(w in norm_lower for w in ["định dạng", "format", "sai định dạng"]):
+        return "invalid-format"
+    if any(w in norm_lower for w in ["số nguyên", "integer", "number", "số"]):
+        return 123
+    # Generic fallback
+    return "MISSING_VALUE"
+
+
 def _build_param_override(field: str, case: str, value, fc: dict, file_content_base: dict) -> dict:
     """
     Convert (field, case, value) into a paramOverride dict.
@@ -223,8 +302,13 @@ def _build_param_override(field: str, case: str, value, fc: dict, file_content_b
         norm_lower = norm.lower()
         if any(w in norm_lower for w in ["null", "= null", "bằng null"]):
             actual_value = None
+        elif any(w in norm_lower for w in ["không truyền", "khong truyen", "bo qua", "bo trong"]):
+            actual_value = _REMOVE
         else:
-            actual_value = _REMOVE  # value=None but not a "null" case → remove field
+            # Agent wrote value=null but case is not a "null" or "remove" case
+            # (e.g. "chuỗi ký tự", "số rất lớn") — agent forgot to fill in the value.
+            # Use a type-inferred placeholder so field stays in body with a representative value.
+            actual_value = _infer_placeholder_value(case)
     elif value != _REMOVE:
         actual_value = value
     else:
