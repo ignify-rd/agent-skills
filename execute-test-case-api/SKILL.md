@@ -13,6 +13,17 @@ Reads API test cases from a local `.xlsx` file, executes each via **Postman web*
 
 ---
 
+## ⛔ Mandatory Execution Method
+
+**ALWAYS use Playwright MCP to execute tests via Postman web browser.**
+
+- **NEVER** use `curl`, `requests`, `httpx`, or any direct HTTP library to send test requests
+- **NEVER** call APIs directly from terminal/bash for the purpose of test execution
+- The only exception is `page.evaluate(fetch(...))` inside a `browser_run_code` call — this runs inside the browser context through Postman web, which counts as browser-based execution
+- Screenshots from Postman web UI are mandatory evidence — no browser = no evidence = invalid test
+
+---
+
 ## Prerequisites
 
 - **Playwright MCP** configured
@@ -159,7 +170,12 @@ async (page) => {
 > `.view-line` (Monaco editor) accumulates text from ALL tabs, not just the active one.
 > `fetch()` via `page.evaluate()` always returns the exact HTTP response — no DOM ambiguity.
 
-Generate screenshot paths: `screenshots/{testCaseName_spaces_replaced_with_underscores}_{yyyyMMdd_HHmmss}.png`
+**Screenshot path rules:**
+- Format: `{screenshotDir}/{testCaseName_sanitized}_{yyyyMMdd_HHmmss}.png`
+- `testCaseName_sanitized` = test case name with ALL spaces and special chars replaced by `_`
+- Timestamp must be generated at the START of the execution run and reused for all cases in that batch (same `ts` variable)
+- **NEVER** use pre-existing files from a previous run. Always use the `screenshot` path returned in the current batch result — this is the file that was just saved by `page.screenshot()` in this execution.
+- `screenshotDir` = the screenshots folder specified or default to `screenshots/` relative to the xlsx file location
 
 ### Step 5 — Execute batch (1 MCP call)
 
@@ -316,6 +332,9 @@ Evidence sheet: {'created' | 'updated'} with {n} screenshots
 - **NEVER** overwrite columns other than Q, Z, AA.
 - **NEVER** re-execute rows with Result already set unless instructed.
 - **ALWAYS** close browser after completion.
+- **NEVER** use pre-existing screenshot files from previous runs when embedding Evidence. Use ONLY files whose paths were returned by `page.screenshot()` in the current execution batch.
+- **ALWAYS** verify screenshot file exists (`os.path.exists(path)`) before embedding. If missing → write `"Screenshot not captured"` in cell, do not embed.
+- When the screenshots folder contains files from multiple runs, identify current-run files by matching the exact paths stored in the results object — not by scanning the folder.
 - Screenshot filenames: `{testCaseName}_{yyyyMMdd_HHmmss}.png` (no spaces, replace spaces with `_`).
 - **NEVER** write temp scripts to disk — use `python3 -c` inline only.
 - Save `.xlsx` only after ALL results collected (1 save operation).
