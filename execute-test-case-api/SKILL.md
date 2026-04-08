@@ -232,54 +232,51 @@ print('done')
 
 ### Step 9 — Embed screenshots into Evidence sheet
 
+2 columns only: **A = Test Case ID**, **B = Screenshot** (image fits cell size exactly).
+
 ```bash
 python3 -X utf8 -c "
-import openpyxl, json
+import openpyxl, os, json
 from openpyxl.drawing.image import Image as XLImage
-from openpyxl.utils import get_column_letter
 
 data = json.loads('''RESULTS_JSON''')
 wb = openpyxl.load_workbook('PATH_TO_FILE.xlsx')
 
-# Create Evidence sheet if not exists
-if 'Evidence' not in wb.sheetnames:
-    ws_ev = wb.create_sheet('Evidence')
-    ws_ev['A1'] = 'Test Case Name'
-    ws_ev['B1'] = 'Screenshot'
-    ws_ev['C1'] = 'Result'
-    ws_ev['D1'] = 'Executed At'
-    # Set column widths
-    ws_ev.column_dimensions['A'].width = 50
-    ws_ev.column_dimensions['B'].width = 80
-    ws_ev.column_dimensions['C'].width = 10
-    ws_ev.column_dimensions['D'].width = 20
-else:
-    ws_ev = wb['Evidence']
+# Create Evidence sheet if not exists, else clear and reuse
+if 'Evidence' in wb.sheetnames:
+    del wb['Evidence']
+ws_ev = wb.create_sheet('Evidence')
 
-# Find next empty row
-next_row = ws_ev.max_row + 1
-if next_row == 2 and ws_ev['A1'].value == 'Test Case Name':
-    next_row = 2
+# Column layout: A = Test Case ID, B = Screenshot
+ws_ev['A1'] = 'Test Case ID'
+ws_ev['B1'] = 'Screenshot'
 
-from datetime import datetime
-ts = datetime.now().isoformat(timespec='seconds')
+# Column widths (B wide enough for image)
+COL_A_WIDTH = 40       # chars
+IMG_WIDTH_PX = 600
+IMG_HEIGHT_PX = 350
+# Excel column width unit ≈ 7px; row height unit = 0.75pt ≈ 1px
+ws_ev.column_dimensions['A'].width = COL_A_WIDTH
+ws_ev.column_dimensions['B'].width = IMG_WIDTH_PX / 7  # ~85 units
 
-for item in data:
+for i, item in enumerate(data, start=2):
     if not item.get('screenshot'):
+        ws_ev.cell(row=i, column=1).value = item['name']
+        ws_ev.cell(row=i, column=2).value = 'Screenshot not captured'
         continue
-    r = next_row
-    ws_ev.cell(row=r, column=1).value = item['name']
-    ws_ev.cell(row=r, column=3).value = item['result']
-    ws_ev.cell(row=r, column=4).value = ts
-    try:
-        img = XLImage(item['screenshot'])
-        img.width = 600
-        img.height = 350
-        ws_ev.row_dimensions[r].height = 265
-        ws_ev.add_image(img, f'B{r}')
-    except Exception as e:
-        ws_ev.cell(row=r, column=2).value = f'Screenshot not found: {item[\"screenshot\"]}'
-    next_row += 1
+
+    ws_ev.cell(row=i, column=1).value = item['name']
+
+    if not os.path.exists(item['screenshot']):
+        ws_ev.cell(row=i, column=2).value = f'File not found: {item[\"screenshot\"]}'
+        continue
+
+    img = XLImage(item['screenshot'])
+    img.width = IMG_WIDTH_PX
+    img.height = IMG_HEIGHT_PX
+    # Set row height to fit image (Excel row height in points, 1pt ≈ 1.333px)
+    ws_ev.row_dimensions[i].height = IMG_HEIGHT_PX * 0.75
+    ws_ev.add_image(img, f'B{i}')
 
 wb.save('PATH_TO_FILE.xlsx')
 print('done')
