@@ -85,13 +85,33 @@ model: inherit
 <step id="5" name="Extract catalogStyle patterns">
     <extract_from_catalog>
         <pattern name="testSuiteNameConvention">Catalog dùng `"Textbox: {FieldName}"` hay `"Kiểm tra validate"` hay pattern khác?</pattern>
-        <pattern name="preConditionsExample">ví dụ preConditions đầu tiên từ catalog</pattern>
-        <pattern name="stepExample">ví dụ step đầu tiên từ catalog</pattern>
-        <pattern name="expectedResultExample">ví dụ expectedResult đầu tiên từ catalog</pattern>
+        <pattern name="preConditionsExample">ví dụ preConditions đầu tiên từ catalog — copy VERBATIM</pattern>
+        <pattern name="stepExample">ví dụ step đầu tiên từ catalog — copy VERBATIM (kể cả format, xuống dòng, số thứ tự)</pattern>
+        <pattern name="expectedResultExample">ví dụ expectedResult đầu tiên từ catalog — copy VERBATIM</pattern>
         <pattern name="testCaseNameFormat">`"direct-from-mindmap"` — testCaseName KHÔNG có prefix</pattern>
+        <pattern name="writingStyle">
+            Đọc 3–5 step examples từ catalog. Xác định:
+            - verbosity: "concise" (câu ngắn, chỉ action) | "detailed" (mô tả đầy đủ điều kiện, giá trị, trạng thái)
+            - sentenceStructure: "imperative-phrase" (VD: "Click button Lưu") | "numbered-steps" (VD: "1. Nhập ... 2. Click ...") | "prose"
+            - toneFormality: "formal" | "informal"
+            Ghi tóm tắt vào writingStyle (VD: "numbered-steps, detailed, formal")
+        </pattern>
+        <pattern name="stepVerbStyle">
+            Liệt kê 5–10 động từ/phrases THỰC SỰ DÙNG trong catalog step examples.
+            VD: "Nhập", "Click", "Chọn", "Quan sát", "Kiểm tra" — hoặc các động từ khác nếu catalog dùng.
+            KHÔNG tự thêm động từ không có trong catalog.
+        </pattern>
+        <pattern name="expectedResultVerbStyle">
+            Liệt kê 5–10 phrases THỰC SỰ DÙNG trong catalog expectedResult examples.
+            VD: "Hiển thị thông báo", "Field highlight đỏ", "Redirect đến" — hoặc phrases khác nếu catalog dùng.
+        </pattern>
     </extract_from_catalog>
 
-    <if_empty>Để các giá trị này là `""` — sub-agents sẽ dùng defaults từ references</if_empty>
+    <enforcement_note>
+        ⚠️ Tất cả sub-agents sẽ dùng các patterns này để viết step và expectedResult.
+        Nếu catalog trống → để `""` — sub-agents sẽ dùng defaults từ references.
+        KHÔNG điền giá trị tự suy đoán.
+    </enforcement_note>
 </step>
 
 <step id="6" name="Write tc-context.json">
@@ -111,7 +131,10 @@ model: inherit
     "preConditionsExample": "...",
     "stepExample": "...",
     "expectedResultExample": "...",
-    "testCaseNameFormat": "direct-from-mindmap"
+    "testCaseNameFormat": "direct-from-mindmap",
+    "writingStyle": "...",
+    "stepVerbStyle": "...",
+    "expectedResultVerbStyle": "..."
   }
 }
 ```

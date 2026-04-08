@@ -108,8 +108,19 @@ print(f'PROCEED: {len(inv.get(\"permissions\",[]))} roles, {len(inv.get(\"status
         <field name="testCaseName">Lấy TRỰC TIẾP từ mindmap bullet — hoặc tạo từ role/transition nếu không có trong mindmap</field>
         <field name="summary">Giống hệt `testCaseName`</field>
         <field name="preConditions">{preConditionsBase} (điều chỉnh role nếu cần)</field>
-        <field name="step">UI actions — Click, Quan sát, Đăng nhập với role X, etc. KHÔNG viết "Send API"</field>
-        <field name="expectedResult">UI state — Hiển thị, Ẩn, Enable, Disable, Redirect, Thông báo lỗi, etc. KHÔNG có HTTP status codes</field>
+        <field name="step">
+            ⚠️ PHẢI follow catalogStyle từ tc-context.json VERBATIM:
+            - Dùng catalogStyle.stepVerbStyle — KHÔNG tự dùng verbs khác không có trong catalog
+            - Dùng catalogStyle.writingStyle để xác định format (numbered-steps / imperative-phrase / prose) và độ chi tiết
+            - Nếu catalogStyle.stepExample có → copy cấu trúc câu, xuống dòng, format
+            - KHÔNG viết "Send API"
+        </field>
+        <field name="expectedResult">
+            ⚠️ PHẢI follow catalogStyle từ tc-context.json VERBATIM:
+            - Dùng catalogStyle.expectedResultVerbStyle — KHÔNG tự thêm phrases không có trong catalog
+            - Dùng catalogStyle.expectedResultExample để xác định độ chi tiết, cách diễn đạt
+            - KHÔNG có HTTP status codes
+        </field>
         <field name="importance">"High" cho security/permission tests; "Medium" cho transition tests</field>
         <field name="result">"PENDING"</field>
     </test_case_template>

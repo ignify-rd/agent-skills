@@ -132,16 +132,19 @@ Ví dụ SAI:
 
 ## R5: step
 
-> **⚠️ Catalog style ưu tiên:** Nếu catalog dùng cách viết steps khác ví dụ dưới đây → follow catalog.
+> **⚠️ CATALOG STYLE TUYỆT ĐỐI ƯU TIÊN — BẮT BUỘC:**
+> 1. Nếu catalog có step examples → **PHẢI** follow đúng cách viết (verbs, sentence structure, format, sentence length, numbered/prose style) của catalog. **KHÔNG áp dụng defaults bên dưới.**
+> 2. Lấy step format từ `catalogStyle.stepExample`, `catalogStyle.writingStyle`, `catalogStyle.stepVerbStyle` trong tc-context.json.
+> 3. Chỉ dùng defaults bên dưới khi catalogStyle hoàn toàn trống.
 
-Format: numbered steps, mô tả hành động UI
+**Format mặc định (fallback — chỉ dùng khi catalog KHÔNG có examples):**
 
 ```
 1. {UI action 1}
 2. {UI action 2}
 ```
 
-**Bộ động từ UI chuẩn:**
+**Bộ động từ UI mặc định (fallback — override bằng catalogStyle.stepVerbStyle nếu có):**
 - `Click` — nhấn button, icon, link
 - `Nhập` — gõ text vào textbox/combobox
 - `Chọn` — chọn giá trị từ dropdown/combobox
@@ -163,11 +166,14 @@ Ví dụ theo loại test:
 
 ## R6: expectedResult
 
-> **⚠️ Catalog style ưu tiên:** Nếu catalog dùng cách viết expectedResult khác ví dụ dưới đây → follow catalog.
+> **⚠️ CATALOG STYLE TUYỆT ĐỐI ƯU TIÊN — BẮT BUỘC:**
+> 1. Nếu catalog có expectedResult examples → **PHẢI** follow đúng cách viết (phrases, sentence length, detail level) của catalog. **KHÔNG áp dụng defaults bên dưới.**
+> 2. Lấy từ `catalogStyle.expectedResultExample`, `catalogStyle.expectedResultVerbStyle` trong tc-context.json.
+> 3. Chỉ dùng defaults bên dưới khi catalogStyle hoàn toàn trống.
 
 Mô tả trạng thái UI mong đợi. KHÔNG dùng HTTP status code.
 
-**Bộ trạng thái UI chuẩn:**
+**Bộ trạng thái UI mặc định (fallback — override bằng catalogStyle.expectedResultVerbStyle nếu có):**
 - `Hiển thị` — element xuất hiện trên màn hình
 - `Ẩn` — element không hiển thị
 - `Enable` — element có thể tương tác

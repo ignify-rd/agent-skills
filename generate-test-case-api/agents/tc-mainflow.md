@@ -112,6 +112,38 @@ print('BARRIER OK')
 <step id="4" name="Generate test cases by sub-batches">
     <description>Generate test cases organized by sub-batch type</description>
 
+    <step_template_usage>
+        ⚠️ CRITICAL — áp dụng cho MỌI sub-batch (3a → 3e):
+
+        1. Trường `step`: PHẢI dùng `catalogStyle.stepTemplate` từ tc-context.json.
+           - Thay {BODY_JSON} bằng full request body JSON (multiline, indent 4)
+           - Thay {METHOD} bằng HTTP method (GET/POST/PUT/DELETE)
+           - Thay {FIELD_ACTION} bằng mô tả điều kiện test cụ thể (hoặc "" nếu không có)
+           - KHÔNG tự tạo format step khác. KHÔNG dùng "Authorization: Bearer {{JWT_TOKEN}}", "Method: PUT", v.v.
+
+        2. Trường `preConditions`: PHẢI dùng `preConditionsBase` từ tc-context.json verbatim.
+
+        3. Trường `expectedResult`: PHẢI dùng `catalogStyle.expectedResultTemplate`.
+           - Thay {STATUS} bằng HTTP status code
+           - Thay {RESPONSE_JSON} bằng response JSON (multiline nếu responseJsonFormat="multiline")
+
+        4. Request body base: lấy từ `requestBody` trong tc-context.json, chỉnh sửa field cần test.
+
+        Ví dụ step đúng (catalog format):
+        ```
+        1. Nhập các tham số <br/>
+        1.1. Authorization: {Token}<br/><br/>
+        1.2. Method : POST<br/>
+        1.3. Param: <br/>
+        {
+            "slaVersionId": 101,
+            ...
+        }
+        Điều kiện: SLA versionId=101, trạng thái APPROVED
+        2. Nhấn send-->  Kiểm tra kết quả
+        ```
+    </step_template_usage>
+
     <sub_batch id="3a" name="Happy paths">
         <description>≥1 test case per mode from inventory.modes</description>
         <fields>
@@ -119,7 +151,7 @@ print('BARRIER OK')
             <field name="testCaseName">Lấy TRỰC TIẾP từ mindmap — KHÔNG dùng snake_case</field>
             <field name="importance">High</field>
             <field name="result">PENDING</field>
-            <field name="step">Full request description with that mode</field>
+            <field name="step">Dùng catalogStyle.stepTemplate — xem step_template_usage ở trên</field>
             <field name="expectedResult">Full response body + HTTP 200 (format theo catalogStyle.responseJsonFormat)</field>
         </fields>
         <checkpoint format="stdout_only">

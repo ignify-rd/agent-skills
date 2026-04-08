@@ -149,6 +149,9 @@ def normalize(test_cases, sections, inventory_path=None):
     return test_cases, changes, details
 
 
+_FIELD_TYPE_PATTERN = None  # set at startup from tc-context if available
+
+
 def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_map, valid_suites):
     """Try multiple strategies to resolve the correct suite name."""
     case_lower = case_name.lower()
@@ -181,8 +184,10 @@ def _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_ma
             return heading
 
     # 5. Extract field name from old_suite patterns
+    # Build field-type pattern: prefer catalog-driven (set from tc-context.json), fall back to hardcoded defaults
+    field_type_pat = _FIELD_TYPE_PATTERN or r"textbox|datepicker|combobox|dropdown|toggle|upload|textarea|number"
     for pattern in [
-        r"(?:textbox|datepicker|combobox|dropdown|toggle|upload|textarea|number)\s*:\s*(.+)",
+        rf"(?:{field_type_pat})\s*:\s*(.+)",
         r"kiểm tra trường\s+(\S+)",
         r"kiểm tra validate",
     ]:
@@ -283,11 +288,43 @@ def reorder_by_test_design(test_cases, sections):
     return reordered, original_order != new_order
 
 
+def load_field_type_prefixes_from_context(tc_context_path):
+    """Load fieldType prefixes from catalogStyle.testSuiteNameConvention in tc-context.json.
+
+    Returns a regex pattern string (e.g. "Textbox|DatePicker|Combobox") derived from
+    the catalog convention, or None if not determinable (falls back to hardcoded defaults).
+    """
+    if not tc_context_path or not os.path.exists(tc_context_path):
+        return None
+    try:
+        with open(tc_context_path, encoding="utf-8") as f:
+            ctx = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    convention = ctx.get("catalogStyle", {}).get("testSuiteNameConvention", "")
+    if not convention:
+        return None
+
+    # Detect pattern like "Textbox: FieldName" or "TextBox: FieldName"
+    # Extract the field-type prefix from the convention string
+    # Convention examples:
+    #   "Textbox: {FieldName}" → prefix = "Textbox"
+    #   "DatePicker: {FieldName}, Combobox: {FieldName}" → prefixes = ["DatePicker", "Combobox"]
+    #   "Kiểm tra validate" → no field type prefix (flat validate suite)
+    import re as _re
+    found = _re.findall(r"\b([A-Z][A-Za-z]+)\s*:", convention)
+    if found:
+        return "|".join(_re.escape(p) for p in found)
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Normalize testSuiteName using test-design headings")
     parser.add_argument("--test-design", required=True, dest="test_design")
     parser.add_argument("--test-cases", required=True, dest="test_cases")
     parser.add_argument("--inventory", default="", help="Path to inventory.json for fieldName->displayName mapping")
+    parser.add_argument("--tc-context", default="", dest="tc_context", help="Path to tc-context.json for catalog-driven field type patterns")
     parser.add_argument("--dry-run", action="store_true", dest="dry_run")
     args = parser.parse_args()
 
@@ -297,6 +334,14 @@ def main():
     if not os.path.exists(args.test_cases):
         print(f"ERROR: test-cases not found: {args.test_cases}", file=sys.stderr)
         sys.exit(1)
+
+    # Load catalog-driven field type pattern from tc-context.json (if provided)
+    global _FIELD_TYPE_PATTERN
+    _FIELD_TYPE_PATTERN = load_field_type_prefixes_from_context(args.tc_context or "")
+    if _FIELD_TYPE_PATTERN:
+        print(f"Catalog field-type pattern: {_FIELD_TYPE_PATTERN}")
+    else:
+        print("Using default field-type pattern (no tc-context provided or no convention found)")
 
     sections = parse_test_design(args.test_design)
     print(f"Sections found: {len(sections)}")

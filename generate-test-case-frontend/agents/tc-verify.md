@@ -48,7 +48,7 @@ model: inherit
 
 <step id="1b" name="Normalize suite names (deterministic)">
     <description>Fix testSuiteName values to match ## headings from test-design. Runs AFTER merge, BEFORE gap analysis.</description>
-    <command>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py --test-design {TEST_DESIGN_FILE} --test-cases {OUTPUT_DIR}/test-cases-merged.json --inventory {INVENTORY_FILE}</command>
+    <command>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py --test-design {TEST_DESIGN_FILE} --test-cases {OUTPUT_DIR}/test-cases-merged.json --inventory {INVENTORY_FILE} --tc-context {TC_CONTEXT_FILE}</command>
     <note>This script deterministically maps each test case to its correct ## section heading. It also fixes suite header ordering so "Kiểm tra giao diện chung" / "Kiểm tra các case common" appears FIRST.</note>
 </step>
 
@@ -122,8 +122,17 @@ model: inherit
         <rule name="summary">= giống hệt testCaseName</rule>
         <rule name="result">= "PENDING"</rule>
         <rule name="preConditions">= preConditionsBase từ {TC_CONTEXT_FILE}</rule>
-        <rule name="step">= UI actions (KHÔNG dùng "Send API")</rule>
-        <rule name="expectedResult">= UI state (KHÔNG dùng HTTP status codes)</rule>
+        <rule name="step">
+            ⚠️ PHẢI follow catalogStyle từ {TC_CONTEXT_FILE} VERBATIM — KHÔNG tự nghĩ format:
+            - Dùng catalogStyle.stepVerbStyle, catalogStyle.writingStyle
+            - Nếu catalogStyle.stepExample có → copy cấu trúc câu, format, xuống dòng
+            - KHÔNG viết "Send API"
+        </rule>
+        <rule name="expectedResult">
+            ⚠️ PHẢI follow catalogStyle từ {TC_CONTEXT_FILE} VERBATIM:
+            - Dùng catalogStyle.expectedResultVerbStyle, catalogStyle.expectedResultExample
+            - KHÔNG dùng HTTP status codes
+        </rule>
     </generate>
 </step>
 

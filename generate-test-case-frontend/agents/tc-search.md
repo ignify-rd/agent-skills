@@ -93,8 +93,18 @@ print('PROCEED: LIST screen detected')
         <field name="testCaseName">Lấy TRỰC TIẾP từ bullet text trong mindmap — KHÔNG thêm prefix</field>
         <field name="summary">Giống hệt `testCaseName`</field>
         <field name="preConditions">{preConditionsBase}</field>
-        <field name="step">Mô tả UI actions theo catalogStyle — dùng động từ: Click, Nhập, Chọn, Quan sát, etc.</field>
-        <field name="expectedResult">UI state — Hiển thị, Lọc, Cập nhật danh sách, etc. KHÔNG dùng HTTP status codes</field>
+        <field name="step">
+            ⚠️ PHẢI follow catalogStyle từ tc-context.json VERBATIM:
+            - Dùng catalogStyle.stepVerbStyle — KHÔNG tự dùng verbs khác không có trong catalog
+            - Dùng catalogStyle.writingStyle để xác định format (numbered-steps / imperative-phrase / prose) và độ chi tiết
+            - Nếu catalogStyle.stepExample có → copy cấu trúc câu, xuống dòng, format
+        </field>
+        <field name="expectedResult">
+            ⚠️ PHẢI follow catalogStyle từ tc-context.json VERBATIM:
+            - Dùng catalogStyle.expectedResultVerbStyle — KHÔNG tự thêm phrases không có trong catalog
+            - Dùng catalogStyle.expectedResultExample để xác định độ chi tiết, cách diễn đạt
+            - KHÔNG dùng HTTP status codes
+        </field>
         <field name="importance">"Medium"</field>
         <field name="result">"PENDING"</field>
     </test_case_template>

@@ -134,6 +134,7 @@ Spawn sub-agent với prompt = nội dung tc-context.md + context block:
 SKILL_SCRIPTS: {resolved SKILL_SCRIPTS path}
 INVENTORY_FILE: {INVENTORY_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
+CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
 PROJECT_RULES: {projectRules nếu có, hoặc "none"}
 ===================
 ```
@@ -155,6 +156,7 @@ SKILL_SCRIPTS: {path}
 TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
 TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
+CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
 PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
@@ -197,6 +199,7 @@ OUTPUT_DIR: {OUTPUT_DIR}
 BATCH_NUMBER: {N}
 FIELD_BATCH: [{fieldName}:{fieldType}, ...]
 FIELD_TYPES_NEEDED: "{comma-separated field types for --section}"
+CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
 PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
@@ -214,6 +217,7 @@ TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
 TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
 INVENTORY_FILE: {INVENTORY_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
+CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
 PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
@@ -280,6 +284,7 @@ TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
 INVENTORY_FILE: {INVENTORY_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
 OUTPUT_FILE: {OUTPUT_FILE}
+CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
 PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
@@ -316,6 +321,7 @@ TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
 TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
 INVENTORY_FILE: {INVENTORY_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
+CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
 PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```
@@ -339,6 +345,7 @@ TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
 INVENTORY_FILE: {INVENTORY_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
 OUTPUT_FILE: {OUTPUT_FILE}
+CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
 PROJECT_RULES: {projectRules hoặc "none"}
 ===================
 ```

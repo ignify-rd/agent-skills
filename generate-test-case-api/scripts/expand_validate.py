@@ -609,8 +609,11 @@ def expand(cases: list, ctx: dict, inv: dict) -> dict:
             print(f"  WARNING: skipping item without field/case: {item}", file=sys.stderr)
             continue
 
-        # Skip malformed entries where agent wrote expectedResult content into "case" field
-        _bad_case_markers = ("1. check api", "check api trả về", "body:", "precondition:", "sql:")
+        # Skip malformed entries where agent wrote expectedResult content into "case" field.
+        # NOTE: "body:" and "precondition:" are intentionally excluded here — they were
+        # previously mis-classified as malformed but are now correctly handled upstream
+        # by parse_test_design.py (two-bullet format: ### heading = case name, Body: = value hint).
+        _bad_case_markers = ("1. check api", "check api trả về", "sql:")
         if any(case.lower().strip().startswith(m) for m in _bad_case_markers):
             print(f"  WARNING: skipping malformed case (looks like expectedResult/step): field={field!r} case={case[:50]!r}", file=sys.stderr)
             continue

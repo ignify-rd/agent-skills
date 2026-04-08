@@ -414,22 +414,41 @@ print('READY')
     </completion_criteria>
 </step>
 
-<step id="7" name="Final Output">
-    <description>Report completion to user</description>
+<step id="7" name="Upload to Google Sheets">
+    <description>Auto-upload test-cases.json lên Google Sheets</description>
     <trigger>After Step 6</trigger>
 
-    <output_message>
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/upload_gsheet.py {OUTPUT_DIR_NAME} --project-root {PROJECT_ROOT}</script>
+            <note>
+                {OUTPUT_DIR_NAME} = tên thư mục chứa test-cases.json (ví dụ: "feature-3").
+                {PROJECT_ROOT} = thư mục gốc của project (chứa AGENTS.md, catalog/).
+                Nếu upload thất bại (lỗi auth, network...) → in cảnh báo và TIẾP TỤC sang Step 8 (không dừng).
+            </note>
+        </action>
+    </actions>
+
+    <on_success>
+        <output_message>
 ```
 ✅ Test cases hoàn thành: {OUTPUT_FILE}
 📋 Inventory: {INVENTORY_FILE}
 📝 Test design: {TEST_DESIGN_FILE}
+🔗 Google Sheets: {SHEET_URL}
 ```
-    </output_message>
+        </output_message>
+    </on_success>
 
-    <optional_action>
-        <description>Upload to Google Sheets</description>
-        <script>python $SKILL_SCRIPTS/upload_gsheet.py {test-case-name} --project-root .</script>
-    </optional_action>
+    <on_failure>
+        <output_message>
+```
+✅ Test cases hoàn thành: {OUTPUT_FILE}
+⚠️  Upload Google Sheets thất bại — hãy chạy thủ công:
+    python3 {SKILL_SCRIPTS}/upload_gsheet.py {OUTPUT_DIR_NAME} --project-root {PROJECT_ROOT}
+```
+        </output_message>
+    </on_failure>
 </step>
 
 <step id="8" name="Cleanup — Delete intermediate files">

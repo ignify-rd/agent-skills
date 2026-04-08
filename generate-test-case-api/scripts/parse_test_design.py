@@ -320,6 +320,111 @@ def _parse_test_design(md: str, section_header: str, display_map: dict,
         # ### heading → new field
         if stripped.startswith("### "):
             heading = stripped[4:].strip()
+
+            # ── Two-bullet format detection ───────────────────────────────────
+            # Pattern: ### heading
+            #           - Body: `{...}`     ← body hint (optional)
+            #           - Precondition: ... ← precondition hint (optional)
+            #           - 1. Check api trả về: ...
+            #
+            # In this format the ### heading IS the test case name.
+            # Detect by peeking ahead: if first non-blank bullet starts with
+            # "body:", "precondition:", or "- 1. check api", treat the whole
+            # ### block as ONE case whose name = heading text.
+            _two_bullet_prefixes = ("body:", "precondition:", "1. check api", "- 1.")
+            _first_bullet_idx = None
+            for _k in range(i + 1, min(i + 6, len(section_lines))):
+                _peek = section_lines[_k].strip()
+                if not _peek:
+                    continue
+                if _peek.startswith("### ") or _peek.startswith("## "):
+                    break
+                if _peek.startswith("- "):
+                    _first_bullet_idx = _k
+                    break
+
+            _is_two_bullet = False
+            if _first_bullet_idx is not None:
+                _first_bullet_text = section_lines[_first_bullet_idx].strip()[2:].strip().lower()
+                _is_two_bullet = any(_first_bullet_text.startswith(p) for p in _two_bullet_prefixes)
+
+            if _is_two_bullet:
+                # Use ### heading as case name; scan forward for Body: value + expected result
+                case_text = heading
+                field_cand = _resolve_field(heading, display_map)
+                if not field_cand:
+                    # Try to resolve from the field context set before this heading
+                    field_cand = current_field_name
+                if not field_cand:
+                    print(f"  WARNING: cannot map heading '{heading}' to a field",
+                          file=sys.stderr)
+                    i += 1
+                    continue
+
+                current_field_name = field_cand
+                current_field_info = fc_lookup.get(current_field_name, {})
+
+                # Collect body hint value and expected result lines
+                body_hint = None
+                expected_lines = []
+                j = i + 1
+                while j < len(section_lines):
+                    ahead = section_lines[j].strip()
+                    if not ahead:
+                        j += 1
+                        continue
+                    if ahead.startswith("### ") or ahead.startswith("## "):
+                        break
+                    if ahead.startswith("- "):
+                        bullet_content = ahead[2:].strip()
+                        bl = bullet_content.lower()
+                        if bl.startswith("body:"):
+                            # Extract JSON value from body hint: Body: `{...}`
+                            m_body = re.search(r"`(.+)`", bullet_content)
+                            if m_body:
+                                body_hint = m_body.group(1).strip()
+                            j += 1
+                            continue
+                        if bl.startswith("precondition:"):
+                            # Skip precondition lines (context only, not a separate case)
+                            j += 1
+                            continue
+                        if bl.startswith("1.") or bl.startswith("test case:"):
+                            # Expected result block starts here — collect it
+                            expected_lines.append(bullet_content)
+                            j += 1
+                            # Collect indented sub-lines
+                            while j < len(section_lines):
+                                sub = section_lines[j].strip()
+                                if not sub:
+                                    j += 1
+                                    continue
+                                if sub.startswith("- ") or sub.startswith("### ") or sub.startswith("## "):
+                                    break
+                                expected_lines.append(sub)
+                                j += 1
+                            continue
+                        # Any other bullet at same level = next case → stop
+                        break
+                    else:
+                        if expected_lines:
+                            expected_lines.append(ahead)
+                        j += 1
+
+                expected_result = _extract_expected_result(expected_lines, case_text)
+                value = body_hint if body_hint is not None else _derive_value(case_text, current_field_info)
+
+                results.append({
+                    "field": current_field_name,
+                    "case": case_text,
+                    "value": value,
+                    "expectedResult": expected_result,
+                    "_source": "test-design",
+                })
+                i = j
+                continue
+
+            # ── Normal format: ### heading sets current field ─────────────────
             current_field_name = _resolve_field(heading, display_map)
             current_field_info = fc_lookup.get(current_field_name, {})
             if not current_field_name:
