@@ -383,8 +383,12 @@ def _build_expected_result(case_type_norm: str, field_name: str,
     validate_status = ctx.get("catalogStyle", {}).get("validateStatusCode", "200")
 
     # Build response JSON body
+    # responseError may be flat {"code":...} or nested {"status":..., "body":{"code":...}}
     response_error_tpl = ctx.get("responseError")
     if response_error_tpl and isinstance(response_error_tpl, dict):
+        # Unwrap nested structure if agent wrote {"status": ..., "body": {...}}
+        if "body" in response_error_tpl and isinstance(response_error_tpl["body"], dict):
+            response_error_tpl = response_error_tpl["body"]
         response_json = _build_response_json(response_error_tpl, code, message, json_fmt)
     else:
         response_json = _build_simple_response_json(code, message, json_fmt)

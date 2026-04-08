@@ -73,6 +73,35 @@ def _format_body_json(body: dict, indent: int = 4) -> str:
     return json.dumps(body, ensure_ascii=False, indent=indent)
 
 
+def _extract_primary_field_value(param_override: dict) -> tuple:
+    """Extract the primary (first non-fileContent) field name and its display value from paramOverride."""
+    for key, value in param_override.items():
+        if key == "fileContent":
+            continue
+        if value == _REMOVE_SENTINEL:
+            return key, "(bỏ qua / không truyền)"
+        if value is None:
+            return key, "null"
+        if value == "":
+            return key, '""'
+        if isinstance(value, bool):
+            return key, "true" if value else "false"
+        if isinstance(value, (int, float)):
+            return key, str(value)
+        if isinstance(value, str):
+            return key, f'"{value}"' if len(value) <= 40 else f'"{value[:40]}..."'
+        return key, json.dumps(value, ensure_ascii=False)
+    return "", ""
+
+
+def _has_step_placeholders(template: str) -> bool:
+    """Return True if template has any recognized placeholder."""
+    return any(p in template for p in (
+        "{FIELD_ACTION}", "{BODY_JSON}", "{METHOD}",
+        "{fieldName}", "{value}", "{field_name}", "{field}", "{val}"
+    ))
+
+
 def _format_field_change(field: str, value) -> str:
     """Format a single field change description (Vietnamese)."""
     if value == _REMOVE_SENTINEL:
@@ -180,13 +209,10 @@ def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> li
             body_json = _format_body_json(modified_body)
 
         # ── Use stepTemplate if available (catalog format) ──
-        _has_template = step_template and (
-            "{FIELD_ACTION}" in step_template or "{BODY_JSON}" in step_template
-        )
-        if _has_template:
+        if step_template and _has_step_placeholders(step_template):
             steps = step_template
 
-            # Replace {FIELD_ACTION} placeholder
+            # {FIELD_ACTION} — full action sentence (e.g. "Bỏ trường X khỏi request body")
             if "{FIELD_ACTION}" in steps:
                 if "rawBody" in tc:
                     steps = steps.replace("{FIELD_ACTION}", f"Gửi body: {tc['rawBody']}")
@@ -195,7 +221,20 @@ def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> li
                 else:
                     steps = steps.replace("{FIELD_ACTION}", "Send API")
 
-            # Replace {BODY_JSON} placeholder with actual modified body
+            # {fieldName} / {field_name} / {field} — just the field name
+            primary_field, primary_value_str = "", ""
+            if "paramOverride" in tc:
+                primary_field, primary_value_str = _extract_primary_field_value(tc["paramOverride"])
+            for ph in ("{fieldName}", "{field_name}", "{field}"):
+                if ph in steps:
+                    steps = steps.replace(ph, primary_field)
+
+            # {value} / {val} — the test value
+            for ph in ("{value}", "{val}"):
+                if ph in steps:
+                    steps = steps.replace(ph, primary_value_str)
+
+            # {BODY_JSON} — full modified body JSON
             if "{BODY_JSON}" in steps:
                 if body_json:
                     steps = steps.replace("{BODY_JSON}", body_json)
@@ -203,11 +242,12 @@ def _expand_template_batch(data: dict, path: str, file_content_base: dict) -> li
                     steps = steps.replace("{BODY_JSON}", _format_body_json(base_params))
                 else:
                     steps = steps.replace("{BODY_JSON}", "{}")
-            elif body_json:
-                # Template has no {BODY_JSON} placeholder — append body at end
+            elif body_json and base_params:
+                # Template has no {BODY_JSON} but we have a full body — append for copy-paste
+                # This handles catalog-style templates that use {fieldName}/{value} without {BODY_JSON}
                 steps += f"\n   Param:\n{body_json}"
 
-            # Replace {METHOD} placeholder
+            # {METHOD} — HTTP method
             if "{METHOD}" in steps:
                 steps = steps.replace("{METHOD}", api_method)
 

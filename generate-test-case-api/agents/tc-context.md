@@ -241,11 +241,12 @@ model: inherit
 
     <fallback>
         <condition>If catalog is empty</condition>
-        <action>Set all pattern values to "" (sub-agents will use reference defaults), EXCEPT:</action>
+        <action>Set all pattern values to "" (sub-agents will use reference defaults), EXCEPT the stepTemplate — always set it based on API type:</action>
+
         <exception name="multipart_upload_step">
             <condition>API type = multipart_with_file_content (fileContentFields exist)</condition>
-            <action>Set stepExample to the multipart upload format below</action>
-            <stepExample>
+            <action>Set stepTemplate to the multipart upload format below</action>
+            <stepTemplate>
 ```
 1.Nhập token bên tab Authorization
 2. Nhập Valid Method: {METHOD}
@@ -261,8 +262,28 @@ model: inherit
 }
 3. Send API
 ```
-            </stepExample>
+            </stepTemplate>
             <note>For fileContent field cases, "body.file" description changes per case (VD: "file với Trường X = null", "file với Trường X = 16 ký tự"). Keep header identical across all cases.</note>
+        </exception>
+
+        <exception name="regular_json_body_step">
+            <condition>API type = regular_json_body (no fileContentFields) AND catalog is empty</condition>
+            <action>Set stepTemplate to the JSON body format below — uses {BODY_JSON} so scripts inject full modified request body per test case</action>
+            <stepTemplate>
+```
+1. Nhập các tham số
+1.1. Authorization: {Token}
+1.2. Method: {METHOD}
+1.3. Param:
+{BODY_JSON}
+2. Send API
+```
+            </stepTemplate>
+            <note>
+                - {BODY_JSON} will be replaced by the full request body with the test field modified.
+                - {METHOD} will be replaced by the HTTP method (GET/POST/PUT/DELETE).
+                - Do NOT use {fieldName} or {value} for this template type.
+            </note>
         </exception>
     </fallback>
 </step>
@@ -279,8 +300,8 @@ model: inherit
   "preConditionsBase": "{built in Step 4}",
   "requestBody": {JSON with ONLY request fields (fieldConstraints), no fileContentFields},
   "fileContentFieldsBase": {JSON with fileContentFields only, used as file content template},
-  "responseSuccess": {from inventory.responseSchema if available},
-  "responseError": {from inventory.responseSchema if available},
+  "responseSuccess": {FLAT response body object — NOT nested under "body" key. E.g. {"code":"00","message":"Thành công","data":{...}}},
+  "responseError": {FLAT response body object — NOT nested under "body" key. E.g. {"code":"LDH_SLA_003","message":"..."}},
   "catalogStyle": {
     "testSuiteNameConvention": "{from Step 5}",
     "preConditionsExample": "{from Step 5}",
@@ -290,7 +311,7 @@ model: inherit
     "testCaseNameFormat": "{from Step 5}",
     "validateStatusCode": "200 | 400 | 422",
     "expectedResultTemplate": "1. Check api trả về:\n 1.1.Status: {STATUS}\n 1.2.Response: \n{RESPONSE_JSON}",
-    "stepTemplate": "1. Nhập các trường khác hợp lệ\n2. {FIELD_ACTION}\n3. Send API"
+    "stepTemplate": "1. Nhập các tham số\n1.1. Authorization: {Token}\n1.2. Method: {METHOD}\n1.3. Param:\n{BODY_JSON}\n2. Send API"
   }
 }
 ```
@@ -299,7 +320,10 @@ model: inherit
     <constraints>
         <constraint>requestBody = JSON object with ONLY fieldConstraints fields (API request body)</constraint>
         <constraint>fileContentFieldsBase = JSON object with ONLY fileContentFields (fields inside uploaded .xlsx)</constraint>
-        <constraint>responseSuccess and responseError = from inventory.responseSchema if available</constraint>
+        <constraint>responseSuccess = FLAT response body dict (keys at root level, NOT nested under "body" key)</constraint>
+        <constraint>responseError = FLAT response body dict (keys at root level, NOT nested under "body" key). WRONG: {"status":200,"body":{"code":"..."}}. CORRECT: {"code":"...","message":"..."}</constraint>
+        <constraint>stepTemplate MUST use ONLY these placeholders: {BODY_JSON}, {FIELD_ACTION}, {METHOD}, {Token} — NEVER use {fieldName}, {value}, {action}, {field}, {val} etc.</constraint>
+        <constraint>When catalog is empty and API is regular JSON body: stepTemplate MUST contain {BODY_JSON} so the full request body is injected per test case. Default: "1. Nhập các tham số\n1.1. Authorization: {Token}\n1.2. Method: {METHOD}\n1.3. Param:\n{BODY_JSON}\n2. Send API"</constraint>
     </constraints>
 </step>
 
