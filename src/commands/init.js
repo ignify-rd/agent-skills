@@ -217,6 +217,7 @@ google-auth-httplib2==0.2.0
 google-api-python-client==1.12.5
 openpyxl==3.10.10
 pandas==2.0.3
+Pillow
 `;
     writeFileSync(requirementsPath, requirementsContent, 'utf8');
     logger.success('Created: requirements.txt');
