@@ -88,110 +88,95 @@ and confirm when ready.
 
 Wait for user confirmation.
 
-### Step 4 — Case 1: Step-by-step selector discovery
+### Step 4 — Case 1: Step-by-step (send all via sidebar, then read)
 
-Execute the **first pending test case** using individual MCP calls:
+**Phase A — Send all requests via sidebar clicks** (individual MCP calls):
 
-**4a — Snapshot to see current state:**
+For each test case:
 ```
-mcp__playwright__browser_snapshot()
-```
-
-**4b — Find and click the request in sidebar** matching the test case name:
-```
-mcp__playwright__browser_click(element="...", ref="...")
-```
-
-**4c — Click Send:**
-```
+mcp__playwright__browser_click(element="sidebar item matching {testCaseName}", ref="...")
 mcp__playwright__browser_click(element="Send button", ref="...")
-```
-
-**4d — Wait for response:**
-```
 mcp__playwright__browser_wait_for(state="networkidle", timeout=15000)
 ```
 
-**4e — Screenshot:**
-```
-mcp__playwright__browser_take_screenshot(filename="screenshots/{testCaseName}_{yyyyMMdd_HHmmss}.png")
-```
+This opens each request in its own tab and loads the response.
 
-**4f — Snapshot to read response:**
-```
-mcp__playwright__browser_snapshot()
-```
-Extract status code (3-digit number e.g. "200 OK") and response body text.
+**Phase B — Screenshot + read via batch script** (1 MCP call):
 
-If body unreadable, try:
-```
-mcp__playwright__browser_evaluate(script="
-  const el = document.querySelector('[data-testid=\"response-body\"]')
-    || document.querySelector('.response-body-container');
-  return el ? el.innerText : null;
-")
-```
-
-**4g — Record selectors** discovered: sidebar item pattern, Send button, status element, body element.
-
-### Step 5 — Build batch script
-
-Using verified selectors from Step 4, build the Playwright script:
+After all requests are sent, run `browser_run_code` to loop through each tab, screenshot, and call `fetch()` for reliable data:
 
 ```js
 async (page) => {
-  const cases = CASES_JSON; // injected array of {name, screenshotPath}
+  const cases = [
+    // { name, method, url, headers, body, screenshotPath, expectedStatus }
+  ];
   const results = [];
 
   for (const tc of cases) {
     try {
-      // Find request in sidebar
-      const item = page.locator('SIDEBAR_SELECTOR', { hasText: tc.name });
-      await item.click();
+      // 1. Click the TAB (top tab bar) to make it active for screenshot
+      //    Use getByRole('tab') — NOT [role="treeitem"] (that's sidebar)
+      const tab = page.getByRole('tab').filter({ hasText: tc.name.substring(0, 20) });
+      await tab.click();
       await page.waitForTimeout(500);
 
-      // Send
-      await page.locator('SEND_BUTTON_SELECTOR').click();
-      await page.waitForLoadState('networkidle', { timeout: 15000 });
-      await page.waitForTimeout(1000);
-
-      // Screenshot
+      // 2. Screenshot Postman UI as evidence
       await page.screenshot({ path: tc.screenshotPath });
 
-      // Read status
-      const statusText = await page.locator('STATUS_SELECTOR').textContent();
-      const statusCode = parseInt(statusText.match(/\d{3}/)?.[0] || '0');
+      // 3. Fetch directly for reliable status + body
+      //    DO NOT read from .response-meta-item__status or .view-line —
+      //    those selectors accumulate content from all open tabs in the DOM.
+      const data = await page.evaluate(async ({ method, url, headers, body }) => {
+        try {
+          const opts = { method, headers };
+          if (body) opts.body = body;
+          const r = await fetch(url, opts);
+          const text = await r.text();
+          return { statusCode: r.status, body: text.substring(0, 500) };
+        } catch (e) {
+          return { statusCode: 0, body: e.message };
+        }
+      }, { method: tc.method, url: tc.url, headers: tc.headers || {}, body: tc.body || null });
 
-      // Read body
-      let body = await page.locator('BODY_SELECTOR').textContent();
-      if (body && body.length > 500) body = body.substring(0, 500) + '...';
-
-      results.push({ name: tc.name, statusCode, body: body || '', screenshot: tc.screenshotPath, error: '' });
+      results.push({
+        name: tc.name,
+        statusCode: data.statusCode,
+        body: data.body,
+        screenshot: tc.screenshotPath,
+        error: ''
+      });
     } catch (err) {
-      results.push({ name: tc.name, statusCode: 0, body: '', screenshot: '', error: err.message });
+      results.push({ name: tc.name, statusCode: 0, body: '', screenshot: tc.screenshotPath, error: err.message });
     }
   }
   return JSON.stringify(results);
 }
 ```
 
-Replace `CASES_JSON`, `SIDEBAR_SELECTOR`, `SEND_BUTTON_SELECTOR`, `STATUS_SELECTOR`, `BODY_SELECTOR` with actual values.
+> **Why fetch() instead of DOM scraping:**
+> Postman web keeps all open tabs rendered in the DOM simultaneously.
+> `.response-meta-item__status` returns the first element found (may be a hidden tab).
+> `.view-line` (Monaco editor) accumulates text from ALL tabs, not just the active one.
+> `fetch()` via `page.evaluate()` always returns the exact HTTP response — no DOM ambiguity.
 
-Generate screenshot paths: `screenshots/{testCaseName}_{yyyyMMdd_HHmmss}.png`
+Generate screenshot paths: `screenshots/{testCaseName_spaces_replaced_with_underscores}_{yyyyMMdd_HHmmss}.png`
 
-### Step 6 — Execute remaining cases (1 MCP call)
+### Step 5 — Execute batch (1 MCP call)
 
 ```
-mcp__playwright__browser_run_code(code="<script from Step 5>")
+mcp__playwright__browser_run_code(code="<script from Step 4 Phase B>")
 ```
 
 Parse returned JSON.
 
-**If script fails:** Re-run case 2 step-by-step to re-verify selectors, fix script, retry once.
+**If script fails:** Check error message. Common fixes:
+- Tab selector not matching → use shorter prefix (first 10 chars of name) or index-based click
+- fetch() CORS blocked → fall back to reading from active tab DOM using `:visible` filter
+- Fix and retry once.
 
-### Step 7 — Validate results
+### Step 6 — Validate results
 
-Combine case 1 (Step 4) + batch results (Step 6).
+Combine all results from Step 5.
 
 For each result:
 - Parse expected status from Expected Result cell (column P) — look for pattern like `1.1. Status: 404` or `Status: 200`
@@ -307,9 +292,8 @@ Evidence sheet: {'created' | 'updated'} with {n} screenshots
 
 ## Batching (> 15 cases)
 
-- Case 1 always runs step-by-step (selector discovery)
-- Remaining cases split into batches of 15
-- Each batch = 1 `browser_run_code` call with same script, different `cases` array
+- Phase A (send via sidebar): send all requests first, up to 15 per batch
+- Phase B (read via batch script): 1 `browser_run_code` call per batch, click tabs + fetch()
 - Write all results in 1 Python call after all batches complete
 
 ---
