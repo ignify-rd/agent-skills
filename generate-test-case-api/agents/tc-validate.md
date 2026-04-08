@@ -76,7 +76,24 @@ Use this approach when test cases follow standard validation patterns (null, emp
         Write a JSON array with one object per case. Each object has:
         - "field": field name
         - "case": case description in Vietnamese (e.g. "Không truyền", "Truyền null", "Boolean thay vì string")
-        - "value" (optional): the test value to send. If omitted → field is removed from request body.
+        - "value": the test value to send.
+            ⛔ REQUIRED for ALL cases EXCEPT "Không truyền" (which removes the field).
+            Omit "value" ONLY when the case means the field should be absent from request body.
+            For ALL other cases, always provide an explicit "value" — even if null, "", 0, false, [], {}.
+
+        value rules by case type:
+        - "Không truyền" → omit "value" entirely (field removed from body)
+        - "Truyền null" → "value": null
+        - "Truyền chuỗi rỗng" → "value": ""
+        - "Số thập phân" / "float" → "value": 1.5 (a representative decimal number)
+        - "Boolean thay vì number/string" → "value": true
+        - "Array thay vì object/string/number" → "value": ["test"]
+        - "Object thay vì string/number" → "value": {"test": "test"}
+        - "String thay vì number" → "value": "abc"
+        - "Số âm" → "value": -1
+        - "SQL Injection" → "value": "' OR '1'='1"
+        - "XSS" → "value": "<script>alert(1)</script>"
+        - "All space" → "value": "   "
 
         ⛔ DO NOT write full test case objects here. Keep it lightweight (~3-4 tokens per case).
         expand_validate.py will fill in testSuiteName, testCaseName, step, expectedResult, preConditions.
@@ -90,9 +107,14 @@ Use this approach when test cases follow standard validation patterns (null, emp
           {"field": "slaName", "case": "Không truyền"},
           {"field": "slaName", "case": "Truyền null", "value": null},
           {"field": "slaName", "case": "Truyền chuỗi rỗng", "value": ""},
-          {"field": "slaName", "case": "Truyền 101 ký tự (vượt max)", "value": "AAA...101"},
+          {"field": "slaName", "case": "Truyền 101 ký tự (vượt max)", "value": "AAA...101chars"},
           {"field": "slaName", "case": "Boolean thay vì string", "value": true},
           {"field": "slaVersionId", "case": "String thay vì number", "value": "abc"},
+          {"field": "slaVersionId", "case": "Số thập phân", "value": 1.5},
+          {"field": "slaVersionId", "case": "Số âm", "value": -1},
+          {"field": "slaVersionId", "case": "Array thay vì number", "value": [373]},
+          {"field": "slaVersionId", "case": "SQL Injection", "value": "' OR '1'='1"},
+          {"field": "slaVersionId", "case": "XSS", "value": "<script>alert('XSS')</script>"},
           {"field": "effectiveDate", "case": "Sai định dạng", "value": "2025/01/01"},
           {"field": "effectiveDate", "case": "Ngày không tồn tại", "value": "30/02/2025"}
         ]

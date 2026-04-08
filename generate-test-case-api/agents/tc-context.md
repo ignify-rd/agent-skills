@@ -126,6 +126,8 @@ model: inherit
         </type>
         <type name="regular_json_body">
             <!-- Used when no fileContentFields — normal JSON API -->
+            <!-- PRIORITY: If catalog has preConditions, copy it EXACTLY (see catalog_override below) -->
+            <!-- Only use this default format when catalog has NO preConditions at all -->
 ```
 1. Send API login thành công với tài khoản {testAccount}
 2. Chuẩn bị request hợp lệ
@@ -135,17 +137,14 @@ model: inherit
      "Authorization": "Bearer {{JWT_TOKEN}}",
      "Content-Type": "application/json"
    }}
-   2.3 Body (sample hợp lệ):
-   {{
-     {request_fields: field_name + sample_value}
-   }}
 ```
+            <!-- Do NOT add "2.3 Body" section unless catalog explicitly includes request body in preConditions -->
         </type>
     </format_by_api_type>
 
     <catalog_override>
         <condition>If catalog has its own preConditions format</condition>
-        <action>Follow catalog format EXACTLY (but still do NOT expand all file content fields)</action>
+        <action>Copy catalog preConditions format EXACTLY — do not add, remove, or restructure any section. If catalog preConditions does NOT include a request body section, do NOT add one.</action>
     </catalog_override>
 </step>
 
