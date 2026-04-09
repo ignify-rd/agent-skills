@@ -493,37 +493,6 @@ print('READY')
 
 ---
 
-## Project Structure
-
-```
-generate-test-case-api/
-├── SKILL.md                      ← Orchestrator workflow (this file)
-├── AGENTS.md                     ← Skill-level default rules
-├── agents/
-│   ├── tc-context.md             ← Load catalog style, build preConditionsBase
-│   ├── tc-common.md              ← BATCH 1: common + permission cases
-│   ├── tc-validate.md            ← BATCH 2: validate cases (per field batch)
-│   ├── tc-mainflow.md            ← BATCH 3: main flow cases
-│   └── tc-verify.md              ← Gap analysis, dedup, final output
-├── references/
-│   ├── api-test-case.md
-│   ├── priority-rules.md
-│   ├── output-format.md
-│   └── quality-rules.md
-└── scripts/
-    ├── search.py
-    ├── inventory.py
-    ├── expand_validate.py       # Phase A: lightweight → template-format batch
-    ├── merge_batches.py         # Expand templates → flat array + dedup
-    ├── normalize_suites.py      # Post-merge: fix testSuiteName using test-design headings
-    ├── count_bullets.py         # Pre-verify: count expected vs actual test cases per section
-    ├── upload_gsheet.py         # Upload to Google Sheets (create new)
-    ├── upload_to_sheet.py       # Upload to Google Sheets (existing sheet)
-    └── ...
-```
-
----
-
 ## Quick Reference — Batch File Naming
 
 | Batch | File | Content |

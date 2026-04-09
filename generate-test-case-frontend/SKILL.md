@@ -5,78 +5,124 @@ description: Generate Frontend test cases from RSD/PTTK (or mindmap) and output 
 
 # Test Case Generator — Frontend Mode (Orchestrator)
 
-Generate test cases for UI screens from a test design file and inventory, by coordinating specialized sub-agents.
+<role_definition>
+    <task_type>orchestrator</task_type>
+    <identity>You coordinate specialized sub-agents to generate Frontend UI test cases. You orchestrate the workflow but do NOT read test-design or inventory files directly.</identity>
 
-> **Scope**: Frontend UI test cases only. Requires `test-design-frontend.md` and `inventory.json` produced by `generate-test-design-frontend`.
+    <boundary>
+        <permitted>
+            <action>Query inventory via inventory.py scripts</action>
+            <action>List catalog files via search.py scripts</action>
+            <action>Read catalog files (limited) for wording reference</action>
+            <action>Spawn sub-agents with context blocks</action>
+            <action>Check file existence (sentinel files, batch files)</action>
+        </permitted>
 
-## When to Apply
+        <forbidden>
+            <action>Read test-design-frontend.md directly</action>
+            <action>Read inventory.json directly (query only via inventory.py)</action>
+        </forbidden>
+    </boundary>
 
-- User says "sinh test case frontend", "sinh test case fe", "sinh test case giao diện", "tạo test case màn hình", "generate frontend test case"
-- User provides a test design file (`test-design-frontend.md`) for a UI screen
+    <priority_rules>
+        <rule id="override_priority" type="hierarchy">
+            <level id="1" name="chat_input" priority="highest">User chat input / user request</level>
+            <level id="2" name="project_rules" priority="medium">Project AGENTS.md — overrides skill defaults when explicitly defined</level>
+            <level id="3" name="skill_defaults" priority="lowest">Skill-level defaults — used when project rules undefined</level>
+        </rule>
+    </priority_rules>
+</role_definition>
 
-## Prerequisites
+<guardrails>
+    <hard_stop id="orchestrator_reads_design">
+        <condition>If orchestrator reads test-design-frontend.md or inventory.json directly</condition>
+        <consequence>VIOLATION: architecture breach, causes context pollution, distorts output</consequence>
+        <recovery>Use inventory.py script queries instead. Only sub-agents (tc-*) may read those files.</recovery>
+    </hard_stop>
 
-Python 3 installed. Check:
-```bash
-python3 --version || python --version
-```
+    <hard_stop id="missing_inputs">
+        <condition>Required inputs missing (test design path, inventory path, output folder)</condition>
+        <consequence>STOP — ask user to run generate-test-design-frontend first</consequence>
+        <recovery>"Skill này yêu cầu file test design và inventory.json. Vui lòng chạy skill generate-test-design-frontend trước — nó sẽ tạo cả hai file. Sau đó cung cấp đường dẫn."</recovery>
+    </hard_stop>
 
-## ⛔ Temp File Rules
+    <hard_stop id="catalog_missing">
+        <condition>catalog/ directory not found at project root</condition>
+        <consequence>STOP — prompt user to run test-genie init</consequence>
+    </hard_stop>
 
-**CẤM TUYỆT ĐỐI** tạo file script tạm trên đĩa (`_*.py`, `_*.ps1`, `_check_*.py`, v.v.). Dùng `python3 -X utf8 -c "..."` inline trong Bash, hoặc dùng Read/Edit/Write tools trực tiếp.
+    <soft_warning id="no_agents_md">
+        <condition>Project AGENTS.md not found</condition>
+        <consequence>Use skill defaults + notify user</consequence>
+        <message>Project chưa có AGENTS.md. Đang dùng rules mặc định.</message>
+    </soft_warning>
 
-## ⛔ ORCHESTRATOR KHÔNG ĐỌC test-design-frontend.md, inventory.json TRỰC TIẾP
-
-**Orchestrator TUYỆT ĐỐI KHÔNG đọc nội dung file `test-design-frontend.md` hay `inventory.json` trực tiếp.** Orchestrator chỉ dùng các lệnh query để lấy fieldConstraints cho việc batch, và truyền file paths cho sub-agents.
-
-> Nếu orchestrator tự đọc test-design-frontend.md hay inventory.json → vi phạm kiến trúc, gây context pollution, gây sai lệch output.
-
-**Orchestrator được phép:**
-- Chạy `python3 $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints` để đếm và batch fields
-- Chạy `python3 $SKILL_SCRIPTS/inventory.py summary --file {INVENTORY_FILE}` để lấy screenType và summary
-- Chạy `python3 $SKILL_SCRIPTS/search.py --list --domain frontend` để list catalog files
-- Đọc 2–3 catalog files (50 dòng đầu mỗi file) để lấy CATALOG_SAMPLE
-- Kiểm tra file existence (sentinel, batch files)
-
-**Orchestrator KHÔNG được phép:**
-- Read `test-design-frontend.md` trực tiếp
-- Read `inventory.json` trực tiếp (chỉ query qua inventory.py)
+    <hard_stop id="no_temp_files">
+        <condition>Any agent is about to write a helper/temp script file (e.g. _*.py, _*.ps1, _check_*.py, etc.)</condition>
+        <consequence>VIOLATION — do NOT create temp script files on disk under any circumstances</consequence>
+        <recovery>Use python3 -X utf8 -c "..." inline in Bash, or use the Read/Edit/Write tools directly. Never write a helper script to disk.</recovery>
+    </hard_stop>
+</guardrails>
 
 ---
 
-## Workflow — Orchestrator
+## Workflow
 
-### Step 0: Load AGENTS.md (Project Rules)
+<step id="0" name="Load Project Rules">
+    <trigger>Always — first step</trigger>
+    <actions>
+        <action type="check">
+            <target>catalog/ directory</target>
+            <at>project root</at>
+            <if_missing>Ask user to run test-genie init</if_missing>
+        </action>
+        <action type="read">
+            <target>AGENTS.md</target>
+            <at>project root</at>
+            <store_as>projectRules</store_as>
+            <fallback>Use skill-level defaults</fallback>
+        </action>
+    </actions>
 
-1. Check `catalog/` directory tại project root — nếu không có → hỏi user chạy `test-genie init`
-2. Check & READ `AGENTS.md` tại project root → store toàn bộ nội dung làm `projectRules`
-3. Nếu không có AGENTS.md → dùng skill-level defaults, thông báo user: "Project chưa có AGENTS.md. Đang dùng rules mặc định."
+    <output>
+        <var name="projectRules">Full AGENTS.md content or "none"</var>
+    </output>
+</step>
 
-**⚠️ projectRules override tất cả skill defaults khi được định nghĩa rõ ràng.**
+<step id="0b" name="Validate Required Inputs">
+    <trigger>Always — before any other step</trigger>
 
-### Step 0b: Validate Required Inputs
+    <required_inputs>
+        <input name="Test Design File" var="TEST_DESIGN_FILE" source="user" required="true">
+            <description>Path to test-design-frontend.md</description>
+            <example>feature-1/test-design-frontend.md</example>
+        </input>
+        <input name="Inventory File" var="INVENTORY_FILE" source="user" required="true">
+            <description>Path to inventory.json</description>
+            <example>feature-1/inventory.json</example>
+        </input>
+        <input name="Output Folder" var="OUTPUT_DIR" source="user" required="true">
+            <description>Output directory for generated files</description>
+            <example>feature-1/</example>
+        </input>
+    </required_inputs>
 
-**⚠️ STOP — Chờ user cung cấp đủ:**
-- **Test design file path** (`test-design-frontend.md`) — bắt buộc
-- **Inventory file path** (`inventory.json`) — bắt buộc
-- **Output folder** — bắt buộc (VD: `feature-1/`)
+    <derived_vars>
+        <var name="OUTPUT_FILE">{OUTPUT_DIR}/test-cases.json</var>
+    </derived_vars>
 
-NEVER scan folders hoặc đoán file paths. Nếu thiếu → hỏi:
-> "Skill này yêu cầu file test design và inventory.json. Vui lòng chạy skill `generate-test-design-frontend` trước — nó sẽ tạo cả hai file. Sau đó cung cấp đường dẫn."
+    <guardrails>
+        <rule type="hard_stop">
+            <condition>Any required input missing</condition>
+            <action>NEVER scan folders or guess paths</action>
+        </rule>
+    </guardrails>
+</step>
 
-Sau khi nhận được inputs, set:
-```
-INVENTORY_FILE = <inventory-file-path>
-TEST_DESIGN_FILE = <test-design-frontend.md path>
-OUTPUT_DIR = <output-folder>
-OUTPUT_FILE = <output-folder>/test-cases.json
-```
-
-### Step 1: Resolve SKILL_SCRIPTS và SKILL_AGENTS paths
-
-```bash
-# Resolve SKILL_SCRIPTS — dùng Python thay vì find (cross-platform)
-SKILL_SCRIPTS=$(python3 -X utf8 -c "
+<step id="1" name="Resolve SKILL_SCRIPTS and SKILL_AGENTS paths">
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -87,9 +133,11 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     if 'search.py' in files and 'scripts' in root:
         print(os.path.dirname(root))
         break
-" "$(pwd)/generate-test-case-frontend/scripts/search.py" 2>/dev/null || echo "generate-test-case-frontend/scripts")
-
-SKILL_AGENTS=$(python3 -X utf8 -c "
+" "$(pwd)/generate-test-case-frontend/scripts/search.py" 2>/dev/null || echo "generate-test-case-frontend/scripts"</script>
+            <stores>SKILL_SCRIPTS</stores>
+        </action>
+        <action type="bash">
+            <script>python3 -X utf8 -c "
 import os, sys
 skill_dir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else '$(pwd)')))
 for root, dirs, files in os.walk(skill_dir, topdown=True):
@@ -100,134 +148,174 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     if 'tc-context.md' in files and 'agents' in root:
         print(root)
         break
-" "$(pwd)/generate-test-case-frontend/agents/tc-context.md" 2>/dev/null || echo "generate-test-case-frontend/agents")
-```
+" "$(pwd)/generate-test-case-frontend/agents/tc-context.md" 2>/dev/null || echo "generate-test-case-frontend/agents"</script>
+            <stores>SKILL_AGENTS</stores>
+        </action>
+    </actions>
 
-Fallback: kiểm tra `.claude/skills/generate-test-case-frontend`, `.cursor/skills/generate-test-case-frontend`, `node_modules/generate-test-case-frontend`.
+    <fallback_paths>
+        <path>.claude/skills/generate-test-case-frontend</path>
+        <path>.cursor/skills/generate-test-case-frontend</path>
+        <path>node_modules/generate-test-case-frontend</path>
+    </fallback_paths>
 
-### Step 2: Catalog listing (CATALOG_SAMPLE)
+    <output>
+        <var name="SKILL_SCRIPTS">Path to skill scripts directory</var>
+        <var name="SKILL_AGENTS">Path to agents directory</var>
+    </output>
+</step>
 
-List tất cả catalog files:
-```bash
-python3 $SKILL_SCRIPTS/search.py --list --domain frontend
-```
+<step id="2" name="Catalog Listing (CATALOG_SAMPLE)">
+    <actions>
+        <action type="bash">
+            <script>python3 $SKILL_SCRIPTS/search.py --list --domain frontend</script>
+            <stores>catalogList</stores>
+        </action>
+    </actions>
 
-Đọc **2–3 file đầu tiên** trong danh sách (KHÔNG chọn theo tên — chỉ lấy 2–3 file đầu):
-```bash
-# Dùng Read tool — đọc 50 dòng đầu mỗi file
-# VD: Read("catalog/frontend/sample1.csv", limit=50)
-```
+    <catalog_reading_rules>
+        <rule condition="catalog_count <= 3">
+            <action>Read ALL catalog files completely (no line limit)</action>
+        </rule>
+        <rule condition="catalog_count > 3">
+            <action>Select 3 most relevant files (by name, screen type, same business group, similar UI structure)</action>
+            <action>Read complete content of all 3 files</action>
+        </rule>
+        <rule condition="no_relevant_files">
+            <action>Read first 2–3 files in the list (50 lines each)</action>
+        </rule>
+    </catalog_reading_rules>
 
-Lưu `CATALOG_SAMPLE` = nội dung đã đọc — truyền cho sub-agents làm wording reference.
+    <output>
+        <var name="CATALOG_SAMPLE">Concatenated catalog file contents for sub-agent reference</var>
+    </output>
 
-### Step 3: Spawn tc-context (sequential)
+    <note>Catalog = highest priority source for wording. Always pass CATALOG_SAMPLE to sub-agents. Do NOT use default templates as wording source.</note>
+</step>
 
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/tc-context.md
-```
+<step id="3" name="Spawn tc-context" type="sequential">
+    <description>Load catalog style and build preConditions base</description>
+    <trigger>After Step 2</trigger>
 
-Spawn sub-agent với prompt = nội dung tc-context.md + context block:
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/tc-context.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>tc-context</agent_type>
+            <prompt>{tc-context.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {resolved SKILL_SCRIPTS path}
-INVENTORY_FILE: {INVENTORY_FILE}
-OUTPUT_DIR: {OUTPUT_DIR}
-CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
-PROJECT_RULES: {projectRules nếu có, hoặc "none"}
-===================
-```
+    <completion_criteria>
+        <file_exists>{OUTPUT_DIR}/tc-context.json</file_exists>
+    </completion_criteria>
+</step>
 
-**Kết thúc Step 3 khi:** `{OUTPUT_DIR}/tc-context.json` tồn tại.
+<step id="4" name="Spawn tc-common" type="sequential">
+    <description>Generate BATCH 1 — UI + permission test cases</description>
+    <trigger>After Step 3</trigger>
 
-### Step 4: Spawn tc-common (sequential)
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/tc-common.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>tc-common</agent_type>
+            <prompt>{tc-common.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
+                <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/tc-common.md
-```
+    <completion_criteria>
+        <file_exists>{OUTPUT_DIR}/batch-1.json</file_exists>
+    </completion_criteria>
+</step>
 
-Spawn sub-agent với prompt = nội dung tc-common.md + context:
+<step id="5a" name="Query inventory — batch fields + detect screenType">
+    <description>Get fieldConstraints list and detect screen type for routing</description>
+    <trigger>After Step 4</trigger>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
-TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
-OUTPUT_DIR: {OUTPUT_DIR}
-CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
+    <actions>
+        <action type="bash">
+            <script>python3 $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints</script>
+            <stores>fieldConstraints</stores>
+        </action>
+        <action type="bash">
+            <script>python3 $SKILL_SCRIPTS/inventory.py summary --file {INVENTORY_FILE}</script>
+            <stores>inventorySummary</stores>
+        </action>
+    </actions>
 
-**Kết thúc Step 4 khi:** `{OUTPUT_DIR}/batch-1.json` tồn tại.
+    <batch_strategy>
+        <rule>Extract screenType from summary (LIST | FORM | POPUP | DETAIL)</rule>
+        <rule>Group fields into batches of max 3 fields each: Batch 1: [F1, F2, F3], Batch 2: [F4, F5, F6], ...</rule>
+        <rule>Detect FIELD_TYPES_NEEDED per batch: extract "type" values from fieldConstraints for each field in batch — used as FIELD_TYPES_NEEDED for tc-validate (comma-separated, e.g. "textbox,combobox")</rule>
+        <rule>If fieldConstraints returns 0 items: skip Step 5b, proceed to Step 5c</rule>
+    </batch_strategy>
+</step>
 
-### Step 5a: Query inventory — batch fields + detect screenType
+<step id="5b" name="Spawn ALL tc-validate agents + tc-search IN PARALLEL" type="parallel">
+    <description>
+        Spawn ALL tc-validate batches in parallel — one sub-agent per batch.
+        If screenType = LIST, also spawn tc-search in the same parallel wave.
+        Each sub-agent writes to its own output file — never share output files.
+    </description>
+    <trigger>After Step 5a</trigger>
 
-```bash
-python3 $SKILL_SCRIPTS/inventory.py get --file {INVENTORY_FILE} --category fieldConstraints
-python3 $SKILL_SCRIPTS/inventory.py summary --file {INVENTORY_FILE}
-```
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/tc-validate.md</file>
+        </action>
+        <action type="spawn_subagent" repeat="per_batch">
+            <agent_type>tc-validate</agent_type>
+            <prompt>{tc-validate.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
+                <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="BATCH_NUMBER">{N}</param>
+                <param name="FIELD_BATCH">[{fieldName}:{fieldType}, ...]</param>
+                <param name="FIELD_TYPES_NEEDED">"{comma-separated field types for --section}"</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
 
-Từ kết quả:
-1. **Lấy screenType** từ summary (LIST | FORM | POPUP | DETAIL)
-2. **Nhóm fields thành batches** tối đa **3 fields** mỗi batch:
-   - Batch 1: [F1, F2, F3]
-   - Batch 2: [F4, F5, F6]
-   - ...
-3. **Detect FIELD_TYPES_NEEDED per batch**: lấy `type` values từ fieldConstraints của từng field trong batch — dùng làm `FIELD_TYPES_NEEDED` cho tc-validate (comma-separated, VD: `"textbox,combobox"`)
+        <action type="spawn_subagent" condition="screenType == LIST">
+            <agent_type>tc-search</agent_type>
+            <prompt>{tc-search.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
+                <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-### Step 5b: Spawn ALL tc-validate agents + tc-search IN PARALLEL
-
-**Spawn TẤT CẢ batches tc-validate song song** — mỗi batch 1 sub-agent riêng biệt.
-
-Với mỗi batch, đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/tc-validate.md
-```
-
-Spawn sub-agent với prompt = nội dung tc-validate.md + context:
-
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
-TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
-INVENTORY_FILE: {INVENTORY_FILE}
-OUTPUT_DIR: {OUTPUT_DIR}
-BATCH_NUMBER: {N}
-FIELD_BATCH: [{fieldName}:{fieldType}, ...]
-FIELD_TYPES_NEEDED: "{comma-separated field types for --section}"
-CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
-
-**Đồng thời — nếu screenType = LIST:** Cũng spawn tc-search song song:
-
-```bash
-cat $SKILL_AGENTS/tc-search.md
-```
-
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
-TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
-INVENTORY_FILE: {INVENTORY_FILE}
-OUTPUT_DIR: {OUTPUT_DIR}
-CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
-
-Mỗi sub-agent ghi vào file riêng — KHÔNG ghi chung. Spawn TẤT CẢ song song.
-
-**Sau khi TẤT CẢ parallel agents hoàn thành — kiểm tra:**
-
-```bash
-python3 -X utf8 -c "
+    <completion_check>
+        <action type="bash">
+            <script>python3 -X utf8 -c "
 import sys, os, glob
 output_dir = '{OUTPUT_DIR}'
 batches = sorted(glob.glob(os.path.join(output_dir, 'validate-batch-*.json')))
@@ -237,145 +325,181 @@ if not batches:
 print(f'Found {len(batches)} validate batch(es)')
 for b in batches:
     print(f'  {os.path.basename(b)}: {os.path.getsize(b)} bytes')
-"
-```
+"</script>
+        </action>
+        <on_success>
+            <create_sentinel>
+                <file>{OUTPUT_DIR}/.tc-validate-done</file>
+                <content>done</content>
+            </create_sentinel>
+        </on_success>
+        <on_fail>
+            <action>Re-spawn missing batch. Check which validate-batch-*.json files are absent and re-run only those agents.</action>
+        </on_fail>
+    </completion_check>
 
-Nếu exit 1 → re-spawn batch bị thiếu.
+    <barrier id="validate_barrier">
+        <description>MUST check before proceeding to Step 5c</description>
+        <script>python3 -X utf8 -c "
+import sys, os
+sentinel = '{OUTPUT_DIR}/.tc-validate-done'
+if not os.path.exists(sentinel):
+    print('NOT READY: .tc-validate-done missing')
+    sys.exit(1)
+print('READY')
+"</script>
 
-Sau khi tất cả batch files tồn tại → tạo sentinel:
-```bash
-python3 -X utf8 -c "open('{OUTPUT_DIR}/.tc-validate-done','w').write('done')"
-```
+        <on_not_ready>
+            <action>STOP COMPLETELY. Do NOT spawn Step 5c. Debug Step 5b first.</action>
+        </on_not_ready>
 
----
+        <note>Do NOT skip this barrier check under any circumstances.</note>
+    </barrier>
+</step>
 
-> ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 5c:**
->
-> ```bash
-> python3 -X utf8 -c "
-> import sys, os
-> sentinel = '{OUTPUT_DIR}/.tc-validate-done'
-> if not os.path.exists(sentinel):
->     print('NOT READY: .tc-validate-done missing')
->     sys.exit(1)
-> print('READY')
-> "
-> ```
->
-> **Nếu in ra `NOT READY` → DỪNG HOÀN TOÀN. KHÔNG spawn Step 5c. Debug Step 5b trước.**
-> **KHÔNG được skip bước kiểm tra này dù bất kỳ lý do gì.**
+<step id="5c" name="Spawn tc-mainflow" type="sequential">
+    <description>Generate BATCH 3 — function + button test cases</description>
+    <trigger>After validate barrier passes</trigger>
 
----
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/tc-mainflow.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>tc-mainflow</agent_type>
+            <prompt>{tc-mainflow.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
+                <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-### Step 5c: Spawn tc-mainflow (sequential, after barrier)
+    <completion_criteria>
+        <file_exists>{OUTPUT_DIR}/batch-3.json</file_exists>
+    </completion_criteria>
+</step>
 
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/tc-mainflow.md
-```
+<step id="5d" name="Spawn tc-workflow" type="sequential-conditional">
+    <description>Generate BATCH workflow — Maker-Checker + role flows (optional)</description>
+    <trigger>After Step 5c</trigger>
 
-Spawn sub-agent với prompt = nội dung tc-mainflow.md + context:
-
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
-TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
-INVENTORY_FILE: {INVENTORY_FILE}
-OUTPUT_DIR: {OUTPUT_DIR}
-OUTPUT_FILE: {OUTPUT_FILE}
-CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
-
-**Kết thúc Step 5c khi:** `{OUTPUT_DIR}/batch-3.json` tồn tại.
-
-### Step 5d: Spawn tc-workflow (sequential, conditional)
-
-Kiểm tra xem inventory có permissions hoặc statusTransitions không:
-
-```bash
-python3 -X utf8 -c "
+    <condition_check>
+        <script>python3 -X utf8 -c "
 import json, sys
 inv = json.load(open('{INVENTORY_FILE}', encoding='utf-8'))
 if inv.get('permissions') or inv.get('statusTransitions'):
     print('SPAWN')
 else:
     print('SKIP')
-"
-```
+"</script>
+        <on_skip>Skip Step 5d entirely, proceed to Step 6.</on_skip>
+    </condition_check>
 
-**Nếu kết quả là `SKIP`** → bỏ qua Step 5d, chuyển sang Step 6.
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/tc-workflow.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>tc-workflow</agent_type>
+            <prompt>{tc-workflow.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
+                <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-**Nếu kết quả là `SPAWN`** → đọc agent instructions và spawn:
+    <completion_criteria>
+        <file_exists>{OUTPUT_DIR}/batch-workflow.json</file_exists>
+    </completion_criteria>
+</step>
 
-```bash
-cat $SKILL_AGENTS/tc-workflow.md
-```
+<step id="6" name="Spawn tc-verify" type="sequential">
+    <description>Gap analysis, dedup, and final output</description>
+    <trigger>After Step 5c (and Step 5d if spawned)</trigger>
 
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
-TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
-INVENTORY_FILE: {INVENTORY_FILE}
-OUTPUT_DIR: {OUTPUT_DIR}
-CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
+    <actions>
+        <action type="read_agent_instructions">
+            <file>SKILL_AGENTS/tc-verify.md</file>
+        </action>
+        <action type="spawn_subagent">
+            <agent_type>tc-verify</agent_type>
+            <prompt>{tc-verify.md content}</prompt>
+            <context>
+                <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
+                <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
+                <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
+                <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
+                <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
+                <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="PROJECT_RULES">{projectRules or "none"}</param>
+            </context>
+        </action>
+    </actions>
 
-**Kết thúc Step 5d khi:** `{OUTPUT_DIR}/batch-workflow.json` tồn tại (hoặc skipped).
+    <completion_criteria>
+        <file_exists>{OUTPUT_FILE}</file_exists>
+    </completion_criteria>
+</step>
 
-### Step 6: Spawn tc-verify (sequential)
+<step id="7" name="Upload to Google Sheets">
+    <description>Auto-upload test-cases.json lên Google Sheets</description>
+    <trigger>After Step 6</trigger>
 
-Đọc agent instructions:
-```bash
-cat $SKILL_AGENTS/tc-verify.md
-```
+    <actions>
+        <action type="bash">
+            <script>python $SKILL_SCRIPTS/upload_gsheet.py {OUTPUT_DIR_NAME} --project-root {PROJECT_ROOT}</script>
+            <note>
+                {OUTPUT_DIR_NAME} = tên thư mục chứa test-cases.json (ví dụ: "feature-1").
+                {PROJECT_ROOT} = thư mục gốc của project (chứa AGENTS.md, catalog/).
+                Nếu upload thất bại (lỗi auth, network...) → in cảnh báo và TIẾP TỤC (không dừng).
+            </note>
+        </action>
+    </actions>
 
-Spawn sub-agent với prompt = nội dung tc-verify.md + context:
-
-```
-=== TASK CONTEXT ===
-SKILL_SCRIPTS: {path}
-TC_CONTEXT_FILE: {OUTPUT_DIR}/tc-context.json
-TEST_DESIGN_FILE: {TEST_DESIGN_FILE}
-INVENTORY_FILE: {INVENTORY_FILE}
-OUTPUT_DIR: {OUTPUT_DIR}
-OUTPUT_FILE: {OUTPUT_FILE}
-CATALOG_SAMPLE: {CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}
-PROJECT_RULES: {projectRules hoặc "none"}
-===================
-```
-
-**Kết thúc Step 6 khi:** `{OUTPUT_DIR}/test-cases.json` tồn tại.
-
-### Step 7: Final Output
-
-Thông báo user:
+    <on_success>
+        <output_message>
 ```
 ✅ Test cases hoàn thành: {OUTPUT_FILE}
 📋 Inventory: {INVENTORY_FILE}
 📝 Test design: {TEST_DESIGN_FILE}
+🔗 Google Sheets: {SHEET_URL}
 ```
+        </output_message>
+    </on_success>
 
-Nếu cần upload lên Google Sheets:
-```bash
-python $SKILL_SCRIPTS/upload_gsheet.py <tên-test-case> --project-root .
+    <on_failure>
+        <output_message>
 ```
+✅ Test cases hoàn thành: {OUTPUT_FILE}
+⚠️  Upload Google Sheets thất bại — hãy chạy thủ công:
+    python $SKILL_SCRIPTS/upload_gsheet.py {OUTPUT_DIR_NAME} --project-root {PROJECT_ROOT}
+```
+        </output_message>
+    </on_failure>
+</step>
 
 ---
 
 ## Project AGENTS.md Override
 
-**Scope — what project `AGENTS.md` CAN override:**
-
-| Category | Can override? |
+| Category | Can Override? |
 |----------|--------------|
 | Chat input / user request | **Always — HIGHEST PRIORITY** |
-| `testAccount` | Yes |
+| testAccount | Yes |
 | testSuiteName convention | Yes |
 | Writing style (ngắn/dài, cách viết step) | Yes |
 | Section assignment (buttons vào section nào) | Yes |
@@ -384,42 +508,7 @@ python $SKILL_SCRIPTS/upload_gsheet.py <tên-test-case> --project-root .
 | Field type dispatch table | No |
 | Importance mapping | No |
 
-## Project Structure
-
-```
-generate-test-case-frontend/
-├── SKILL.md                         ← Orchestrator workflow (this file)
-├── AGENTS.md                        ← Skill-level default rules
-├── agents/
-│   ├── tc-context.md                ← Load catalog style, build preConditionsBase
-│   ├── tc-common.md                     ← BATCH 1: giao diện chung + phân quyền
-│   ├── tc-search.md                 ← Search/filter/pagination (LIST screens only)
-│   ├── tc-validate.md               ← BATCH 2: validate cases (per field batch)
-│   ├── tc-mainflow.md               ← BATCH 3: button/action/function cases
-│   ├── tc-workflow.md               ← Maker-Checker + role flows (conditional)
-│   └── tc-verify.md                 ← Gap analysis, dedup, final output
-├── references/
-│   ├── fe-test-case.md
-│   ├── field-templates.md
-│   ├── priority-rules.md
-│   ├── output-format.md
-│   └── quality-rules.md
-├── scripts/
-│   ├── search.py
-│   ├── inventory.py
-│   ├── merge_batches.py             ← Merge + dedup batch JSON files
-│   ├── normalize_suites.py           ← Normalize suite names + reorder to test-design order
-│   ├── extract_structure.py
-│   ├── upload_gsheet.py
-│   └── ...
-└── data/
-    ├── templates/template.xlsx
-    └── catalogs/
-        ├── default/frontend/        ← Frontend test case CSV examples
-        └── _template/
-            ├── frontend/            ← Template AGENTS.md
-            └── references/          ← Reserved
-```
+---
 
 ## Quick Reference — Batch File Naming
 
@@ -433,7 +522,9 @@ generate-test-case-frontend/
 | Merged | `test-cases-merged.json` | After merge_batches.py |
 | Final | `test-cases.json` | After gap fill + project rules |
 
-## Quick Reference — Frontend testCaseName format
+---
+
+## Quick Reference — Frontend testCaseName Format
 
 - **testCaseName = LẤY TRỰC TIẾP từ mindmap bullet** — KHÔNG thêm prefix, KHÔNG thêm screen name
 - **testSuiteName:** theo catalog convention — field sub-suites (`"Textbox: Tên cấu hình SLA"`) hoặc fallback `"Kiểm tra validate"`
