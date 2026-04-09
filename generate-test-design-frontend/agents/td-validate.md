@@ -100,14 +100,22 @@ model: inherit
     </field_heading>
 
     <template_usage>
-        <coverage>~80% cases from template — fill {fieldName}, {maxLength}, {placeholder}, {allowSpecialChars}</coverage>
-        <supplement>20% business-specific cases từ RSD/PTTK — chỉ thêm cases có căn cứ rõ ràng từ tài liệu, KHÔNG suy đoán</supplement>
+        <coverage>Copy NGUYÊN VĂN case names VÀ expected results từ template. Chỉ thay thế đúng các placeholder: {fieldName}, {maxLength}, {placeholder}, {allowSpecialChars}. TUYỆT ĐỐI không paraphrase, không diễn đạt lại.</coverage>
+        <supplement>Chỉ thêm business-specific cases CÓ CĂN CỨ RÕ RÀNG trong RSD/PTTK. KHÔNG suy đoán, KHÔNG thêm từ LLM knowledge.</supplement>
+        <example_wrong>Template: "Luôn hiển thị và enable" → Agent viết: "Luôn hiển thị, enable, cho phép nhập" ← SAI</example_wrong>
+        <example_wrong>Template: "Hệ thống chặn không cho phép Paste quá {maxLength} kí tự" → Agent viết: "Hệ thống tự động trim = 100 kí tự" ← SAI</example_wrong>
     </template_usage>
 
     <catalog_wording>
-        <rule>Khi CATALOG_SAMPLE được cung cấp, dùng đúng cách hành văn (wording) của case name từ catalog thay vì tự đặt tên.</rule>
-        <example>Catalog dùng "Kiểm tra hiển thị icon X khi nhập 1 ký tự" → dùng đúng cụm từ đó, không viết lại thành "Kiểm tra icon X"</example>
+        <rule>Khi CATALOG_SAMPLE được cung cấp, dùng đúng wording của case name VÀ expected result từ catalog/template — không viết lại.</rule>
+        <example>Template: "Kiểm tra hiển thị icon X khi nhập 1 ký tự" → không viết: "Kiểm tra hiển thị khi nhập 1 ký tự"</example>
+        <example>Template: "Kiểm tra hiển thị icon X khi chọn giá trị" → không viết: "Kiểm tra icon X hiển thị khi chọn giá trị"</example>
     </catalog_wording>
+
+    <number_field_rules>
+        <rule>minValue/maxValue boundary cases CHỈ sinh khi có trong inventory. KHÔNG tự bịa giới hạn.</rule>
+        <example_wrong>Inventory không có maxValue → KHÔNG sinh "Kiểm tra khi nhập giá trị = 100 → Hệ thống chặn (quá 2 chữ số)"</example_wrong>
+    </number_field_rules>
 
     <response_format>
         <rule type="frontend_only">KHÔNG dùng format API như `1\. Check api trả về:` hay status 4xx/5xx.</rule>

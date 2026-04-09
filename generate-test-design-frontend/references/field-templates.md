@@ -1283,7 +1283,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 - Kiểm tra hiển thị mặc định
 
-    - Luôn hiển thị và enable
+    - {isConditionallyDisabled ? "Mặc định ở trạng thái Readonly" : "Luôn hiển thị và enable"}
 
 - Kiểm tra giá trị mặc định
 
