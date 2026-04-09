@@ -1,0 +1,113 @@
+{
+  "skill_name": "generate-test-design-api / td-extract-fields",
+  "description": "Evals for the td-extract-fields sub-agent — verifies correct extraction of API request body fields (NOT UI screen fields), method from explicit label, and numeric constraint derivation.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "UI fields vs API body fields — must pick camelCase JSON keys",
+      "scenario": "PTTK document has TWO tables: a UI screen table (tiếng Việt display names) and an API Request Body table (camelCase). Agent must extract from the API body table only.",
+      "inline_input": {
+        "PTTK_section": "## 3.2 Màn hình Chỉnh sửa SLA\n\n**Bảng trường màn hình:**\n| STT | Tên trường | Kiểu input | Bắt buộc | Ghi chú |\n|-----|-----------|-----------|---------|--------|\n| 1 | Tên SLA | Text | Có | Tối đa 100 ký tự |\n| 2 | Loại luồng phê duyệt | Droplist | Có | |\n| 3 | Thời gian xử lý (giờ) | Number | Có | Tối đa 2 chữ số |\n\n## 4.1 API Chỉnh sửa SLA\nPhương thức: POST\nEndpoint: /sla-service/v1/slas/update\n\n**Request Body:**\n| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |\n|------------|-------------|---------|------|\n| slaVersionId | Long | M | ID phiên bản SLA |\n| slaName | String | M | Tên SLA, tối đa 100 ký tự |\n| approvalFlowType | Integer | M | Loại luồng phê duyệt |\n| totalSlaHours | Integer | M | Thời gian xử lý, tối đa 2 chữ số |"
+      },
+      "expected_output": "fieldConstraints có 4 fields: slaVersionId, slaName, approvalFlowType, totalSlaHours — KHÔNG có 'Tên SLA' hay 'Loại luồng phê duyệt'",
+      "files": [],
+      "expectations": [
+        "fieldConstraints[*].name chỉ chứa camelCase JSON keys (slaVersionId, slaName, approvalFlowType, totalSlaHours)",
+        "KHÔNG có field nào tên là 'Tên SLA', 'Loại luồng phê duyệt', 'Thời gian xử lý (giờ)'",
+        "Số lượng fieldConstraints = 4 (khớp với Request Body table, không phải UI screen table có 3 rows)",
+        "slaVersionId.type = 'Long'",
+        "approvalFlowType.type = 'Integer' (không phải String hay Long)",
+        "Checkpoint ui_vs_api_field_check phải PASS"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "maxDigits derivation — tối đa N chữ số → max = 10^N - 1",
+      "scenario": "PTTK có field Integer với constraint 'tối đa 2 chữ số'. Agent phải derive max=99, không phải max=999.99 hay max=2.",
+      "inline_input": {
+        "PTTK_section": "| totalSlaHours | Integer | M | Thời gian SLA, tối đa 2 chữ số, tối thiểu 0 |\n| maxWarningPct | Integer | M | % cảnh báo tối đa, tối đa 3 chữ số |"
+      },
+      "expected_output": "totalSlaHours.max = 99, maxWarningPct.max = 999",
+      "files": [],
+      "expectations": [
+        "totalSlaHours.maxDigits = 2",
+        "totalSlaHours.max = 99 (không phải 999.99, không phải 100, không phải 2)",
+        "maxWarningPct.maxDigits = 3",
+        "maxWarningPct.max = 999",
+        "totalSlaHours.min = 0 (từ 'tối thiểu 0')"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Method from explicit label — không infer từ URL",
+      "scenario": "API endpoint là /slas/update nhưng document ghi 'Phương thức: POST'. Agent PHẢI đọc label, không được infer PUT từ URL /update.",
+      "inline_input": {
+        "PTTK_section": "## API-Chỉnh sửa SLA\nPhương thức: POST\nEndpoint: /sla-service/v1/slas/update\n\n**Request Body:**\n| slaVersionId | Long | M | ... |"
+      },
+      "expected_output": "_meta.method = 'POST', không phải 'PUT'",
+      "files": [],
+      "expectations": [
+        "_meta.method = 'POST'",
+        "_meta.method KHÔNG phải 'PUT' (dù URL chứa /update)",
+        "_meta.endpoint = '/sla-service/v1/slas/update'",
+        "Nếu không tìm thấy label phương thức → để '' và warn, không được guess"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Multi-document role assignment — field names từ PTTK, constraints từ US doc",
+      "scenario": "User cung cấp 2 docs: PTTK (API fields) và US05.2 (validate rules). Agent phải lấy field NAMES từ PTTK, lấy rsdConstraints từ US05.2. Không được dùng tên trường tiếng Việt từ US05.2 làm field names.",
+      "inline_input": {
+        "PTTK_section": "**Request Body:**\n| slaName | String | M | Tên SLA |\n| effectiveDate | Date | M | Ngày hiệu lực |",
+        "US05_2_section": "## Kiểm tra Validate\n**Tên SLA (slaName):**\n- Bắt buộc nhập\n- Tối đa 100 ký tự\n- Không cho phép ký tự đặc biệt\n\n**Ngày hiệu lực (effectiveDate):**\n- Định dạng dd/MM/yyyy\n- Không được nhỏ hơn ngày hiện tại"
+      },
+      "expected_output": "fieldConstraints dùng tên từ PTTK (slaName, effectiveDate), rsdConstraints lấy từ US05.2",
+      "files": [],
+      "expectations": [
+        "fieldConstraints[0].name = 'slaName' (camelCase từ PTTK, không phải 'Tên SLA')",
+        "fieldConstraints[1].name = 'effectiveDate' (camelCase từ PTTK)",
+        "slaName.maxLength = 100 (từ US05.2 rsdConstraints)",
+        "slaName.rsdConstraints.allowSpecialChars = false",
+        "effectiveDate.rsdConstraints có crossFieldRule hoặc customRule về 'không nhỏ hơn ngày hiện tại'",
+        "KHÔNG có field nào tên là 'Tên SLA' hay 'Ngày hiệu lực' trong fieldConstraints"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Type mapping chính xác — Int → Integer, không phải Long",
+      "scenario": "PTTK dùng 'Int' cho một số field và 'Long' cho field khác. Agent phải map đúng: Int → Integer, Long → Long. Không được upgrade Int lên Long.",
+      "inline_input": {
+        "PTTK_section": "| slaVersionId | Long | M | ID phiên bản |\n| approvalFlowType | Int | M | Loại luồng |\n| warningYellowPct | Number | O | % vàng |\n| isActive | Boolean | M | Trạng thái |"
+      },
+      "expected_output": "slaVersionId.type='Long', approvalFlowType.type='Integer', warningYellowPct.type='Number', isActive.type='Boolean'",
+      "files": [],
+      "expectations": [
+        "slaVersionId.type = 'Long'",
+        "approvalFlowType.type = 'Integer' (PTTK ghi 'Int' → map thành 'Integer')",
+        "approvalFlowType.type KHÔNG phải 'Long' (không được upgrade Int lên Long)",
+        "warningYellowPct.type = 'Number'",
+        "isActive.type = 'Boolean'"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "rsdConstraints PHẢI có cho tất cả fields — không được bỏ sót",
+      "scenario": "API có 5 fields. Agent phải populate rsdConstraints cho TẤT CẢ 5 fields. Nếu spec không đề cập constraint → set null, không được bỏ qua field.",
+      "inline_input": {
+        "PTTK_section": "| slaVersionId | Long | M | ID |\n| slaName | String | M | Tên |\n| action | String | M | action |\n| effectiveDate | Date | M | Ngày |\n| note | String | O | Ghi chú |",
+        "RSD_validate_section": "**slaName:** Tối đa 100 ký tự, không ký tự đặc biệt\n**effectiveDate:** Định dạng yyyy-MM-dd"
+      },
+      "expected_output": "Cả 5 fields đều có rsdConstraints object, kể cả slaVersionId và action chưa được đề cập trong RSD",
+      "files": [],
+      "expectations": [
+        "fieldConstraints.length = 5",
+        "Mỗi field PHẢI có rsdConstraints object (không phải null, không phải absent)",
+        "slaVersionId.rsdConstraints tồn tại (dù RSD không đề cập → tất cả null/[])",
+        "action.rsdConstraints tồn tại",
+        "note.rsdConstraints tồn tại",
+        "Checkpoint 'Fields with rsdConstraints: 5/5' phải xuất hiện trong stdout",
+        "KHÔNG được output 'Fields missing rsdConstraints: [slaVersionId, action, note]'"
+      ]
+    }
+  ]
+}

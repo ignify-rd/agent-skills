@@ -37,18 +37,74 @@ model: inherit
 
 ## Workflow
 
-<step id="1" name="Read PTTK (if provided) — extract field definitions">
+<step id="1" name="Identify field source documents">
+    <description>
+        ⚠️ CRITICAL — Before reading any document, understand the document roles from user prompt:
+
+        The user may provide MULTIPLE documents with DIFFERENT purposes:
+        - PTTK: API technical spec → contains REQUEST BODY field definitions (camelCase JSON fields)
+        - RSD/US doc for validate rules: UI screen spec → contains validation constraints per field
+        - RSD/US doc for business logic: feature doc → contains error codes, flow, business rules
+
+        FIELD SOURCE RULE:
+        ┌─────────────────────────────────────────────────────────────────┐
+        │ fieldConstraints = API REQUEST BODY fields ONLY                 │
+        │   Source: PTTK "Request Body" / "Tham số đầu vào" table        │
+        │   Field names MUST be camelCase JSON keys (slaVersionId, not   │
+        │   "ID phiên bản SLA")                                           │
+        │                                                                 │
+        │ ❌ NEVER use UI screen field table as fieldConstraints source   │
+        │   UI tables have display names ("Tên SLA", "Loại luồng")       │
+        │   API body has camelCase keys (slaName, approvalFlowType)       │
+        └─────────────────────────────────────────────────────────────────┘
+
+        VALIDATION RULES SOURCE:
+        - rsdConstraints = read from whichever doc user says contains validate rules
+        - If user says "lấy validate từ US05.2" → read US05.2 for rsdConstraints ONLY
+        - Do NOT take field names from that document — only take constraint rules
+
+        IDENTIFY before reading:
+        1. Which document has the API Request Body definition? → use for fieldConstraints
+        2. Which document has validation rules? → use for rsdConstraints
+        3. Which document has business logic/error codes? → pass to td-extract-logic
+
+        If unclear, prioritize: PTTK > API-specific RSD > general RSD
+    </description>
+</step>
+
+<step id="2" name="Read PTTK (if provided) — extract field definitions">
     <condition>If PTTK_FILE is provided (not "none")</condition>
     <actions>
         <action type="read">
             <file>{PTTK_FILE}</file>
-            <purpose>Find correct API by endpoint, extract field definitions with ALL constraints</purpose>
+            <purpose>Find the section for API_NAME, extract REQUEST BODY fields with constraints</purpose>
         </action>
     </actions>
 
+    <field_source_identification>
+        When reading PTTK, locate the correct table by these markers (in priority order):
+        1. Section header matching API_NAME or endpoint
+        2. Table labeled "Request Body", "Tham số đầu vào", "Input", "Body"
+        3. Table with camelCase field names + type + required columns
+
+        ❌ SKIP these tables — they are NOT API field definitions:
+        - UI screen field tables (have "Loại input", "Display", "Readonly" columns)
+        - Response body tables
+        - Database column tables
+        - Tables from a DIFFERENT API section
+
+        ✅ CORRECT source: a table row like:
+          | slaVersionId | Long | M | ID phiên bản SLA |
+          | currentStatus | Integer | M | Trạng thái hiện tại |
+
+        ❌ WRONG source (UI screen table):
+          | Tên SLA | String | Display | Editable | Tối đa 100 ký tự |
+          | Loại luồng phê duyệt | String | Display | Editable | ... |
+    </field_source_identification>
+
     <extract>
         <section name="fieldConstraints">
-            <field name="name">Field name (camelCase)</field>
+            <field name="name">Field name (camelCase — from API request body, NOT UI display name)</field>
             <field name="type">
                 Map EXACTLY from PTTK label — do NOT upgrade types:
                 | PTTK says | inventory type |
@@ -102,11 +158,11 @@ model: inherit
 
     <fallback>
         <condition>If no PTTK provided</condition>
-        <action>Extract field definitions from RSD</action>
+        <action>Extract API request body field definitions from RSD — find the Request Body table, NOT the UI screen table</action>
     </fallback>
 </step>
 
-<step id="2" name="Read RSD — extract rsdConstraints per field">
+<step id="3" name="Read validation rules documents — extract rsdConstraints per field">
     <actions>
         <action type="read">
             <file>{RSD_FILE}</file>
@@ -417,6 +473,21 @@ testData: {N} fields
         </check>
         <check condition="requestSchema.bodyParams = 0">
             <message>Cảnh báo: Không tìm thấy request body params</message>
+        </check>
+        <check name="ui_vs_api_field_check" condition="ALWAYS">
+            <description>Verify extracted fields are API body fields, NOT UI screen fields</description>
+            <red_flags>
+                - Field names are Vietnamese display names ("Tên SLA", "Loại luồng") → WRONG SOURCE
+                - Field names match UI table columns (Display, Editable, Readonly) → WRONG SOURCE
+                - Field count matches UI screen row count but mismatches PTTK request body → WRONG SOURCE
+            </red_flags>
+            <action>If any red flag found → STOP, re-read PTTK to find the correct Request Body table</action>
+        </check>
+        <check name="field_name_format_check" condition="ALWAYS">
+            <description>All fieldConstraint names must be camelCase JSON keys</description>
+            <examples_correct>slaVersionId, currentStatus, approvalFlowType, warningYellowPct</examples_correct>
+            <examples_wrong>Tên SLA, Loại luồng phê duyệt, warningPercent (if API says warningYellowPct)</examples_wrong>
+            <action>If any field name contains spaces or Vietnamese characters → STOP, correct field names from API spec</action>
         </check>
     </validation_checks>
 </step>
