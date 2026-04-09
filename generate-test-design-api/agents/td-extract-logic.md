@@ -55,7 +55,13 @@ model: inherit
             <rule>Extract metadata from RSD for this API:</rule>
             <field name="name">API name as stated in RSD (e.g., "API-Chỉnh sửa SLA")</field>
             <field name="endpoint">Full URL path (e.g., "/sla-service/v1/slas/update")</field>
-            <field name="method">HTTP method from RSD (GET/POST/PUT/DELETE/PATCH)</field>
+            <field name="method">HTTP method — MUST be read from explicit label in document, NOT inferred from URL.
+                Search ALL provided documents for labels near the matching API section:
+                  "Phương thức: POST", "Method: POST", "HTTP Method: POST", "Kiểu: POST", v.v.
+                ⚠️ NEVER infer method from URL pattern (e.g. /update → NOT PUT, /create → NOT POST unless stated).
+                ⚠️ If multiple documents define the same API, prefer PTTK > RSD > other docs.
+                ⚠️ If method label not found → leave as "" and warn user, do NOT guess.
+            </field>
             <rule>If RSD contains multiple APIs, match by API_NAME to find the correct section</rule>
             <rule>Store all values — will be used in step 2a to update inventory metadata</rule>
         </section>

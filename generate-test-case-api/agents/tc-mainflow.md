@@ -139,8 +139,15 @@ print('BARRIER OK')
             "slaVersionId": 101,
             ...
         }
-        Điều kiện: SLA versionId=101, trạng thái APPROVED
         2. Nhấn send-->  Kiểm tra kết quả
+        ```
+
+        ⚠️ KHÔNG ghi "Điều kiện: ..." hay bất kỳ precondition nào vào trường `step`.
+        Mọi điều kiện tiên quyết đặc thù của test case (SLA ở trạng thái X, record Y tồn tại, v.v.)
+        phải ghi vào trường `preConditions`, append sau `preConditionsBase`:
+        ```
+        {preConditionsBase}
+        3. SLA versionId=101 đang ở trạng thái APPROVED
         ```
     </step_template_usage>
 

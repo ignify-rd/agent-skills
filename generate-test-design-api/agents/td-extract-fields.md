@@ -69,9 +69,16 @@ model: inherit
                 CRITICAL: MultipartFile type is for file upload fields (file input, multipart/form-data). ALWAYS map file upload fields to MultipartFile.
             </field>
             <field name="maxLength">For String fields — character length limit</field>
-            <field name="maxDigits">For Integer/Number — digit count limit (e.g. "tối đa 2 chữ số" → maxDigits: 2)</field>
-            <field name="min">Minimum numeric value (for range constraint)</field>
-            <field name="max">Maximum numeric value (for range constraint)</field>
+            <field name="maxDigits">For Integer/Number — digit count limit (e.g. "tối đa 2 chữ số" → maxDigits: 2).
+                ⚠️ maxDigits=N means max value = 10^N - 1: N=2 → max=99, N=3 → max=999, N=4 → max=9999.
+                Always also set max = 10^N - 1 when maxDigits is derived from "tối đa N chữ số".
+            </field>
+            <field name="min">Minimum numeric value (e.g. "lớn hơn hoặc bằng 0" → min: 0)</field>
+            <field name="max">Maximum numeric value — derive from PTTK constraint text, NOT from example values.
+                "tối đa 2 chữ số" (Integer) → max=99. "tối đa 3 chữ số" → max=999.
+                "tối đa 999.99" (Decimal, 2dp) → max=999.99.
+                ⚠️ Do NOT use boundary test values from RSD examples as the max constraint.
+            </field>
             <field name="required">Y/N</field>
             <field name="defaultValue">Default value if any</field>
             <field name="source">PTTK or RSD</field>
