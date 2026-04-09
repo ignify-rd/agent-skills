@@ -32,6 +32,22 @@ model: inherit
         <condition>Batch file contains H1, H2 headings, or checkpoint text</condition>
         <consequence>VIOLATION — strip all non-validate content before writing</consequence>
     </hard_stop>
+
+    <hard_stop id="prose_format">
+        <condition>Bất kỳ bullet nào không bắt đầu bằng "Kiểm tra " hoặc là sub-bullet kết quả</condition>
+        <consequence>VIOLATION — rewrite theo mandatory_format nested 2 cấp trước khi write</consequence>
+        <example_wrong>- Trường "Mô tả SLA" luôn hiển thị trên form và ở trạng thái enable</example_wrong>
+        <example_correct>
+            - Kiểm tra hiển thị mặc định
+
+                - Luôn hiển thị và enable
+        </example_correct>
+    </hard_stop>
+
+    <hard_stop id="uncertain_cases">
+        <condition>Test case dùng "Nếu", "Có thể", hoặc điều kiện không xác định từ RSD/PTTK</condition>
+        <consequence>VIOLATION — chỉ sinh cases đã xác nhận từ RSD/PTTK. Bỏ cases suy đoán.</consequence>
+    </hard_stop>
 </guardrails>
 
 ---
@@ -85,12 +101,29 @@ model: inherit
 
     <template_usage>
         <coverage>~80% cases from template — fill {fieldName}, {maxLength}, {placeholder}, {allowSpecialChars}</coverage>
-        <supplement>20% business-specific cases from LLM</supplement>
+        <supplement>20% business-specific cases từ RSD/PTTK — chỉ thêm cases có căn cứ rõ ràng từ tài liệu, KHÔNG suy đoán</supplement>
     </template_usage>
 
+    <catalog_wording>
+        <rule>Khi CATALOG_SAMPLE được cung cấp, dùng đúng cách hành văn (wording) của case name từ catalog thay vì tự đặt tên.</rule>
+        <example>Catalog dùng "Kiểm tra hiển thị icon X khi nhập 1 ký tự" → dùng đúng cụm từ đó, không viết lại thành "Kiểm tra icon X"</example>
+    </catalog_wording>
+
     <response_format>
-        <rule type="frontend_only">TẤT CẢ validate responses = bullet đơn giản. KHÔNG có `1\. Check api trả về:`</rule>
-        <format>- {kết quả mong đợi}</format>
+        <rule type="frontend_only">KHÔNG dùng format API như `1\. Check api trả về:` hay status 4xx/5xx.</rule>
+        <mandatory_format>
+            Mỗi test case PHẢI dùng format nested 2 cấp:
+            ```
+            - Kiểm tra {tên case}
+
+                - {kết quả mong đợi}
+            ```
+        </mandatory_format>
+        <forbidden_formats>
+            <item>TUYỆT ĐỐI KHÔNG viết prose/narrative bullet như: `- Trường "X" luôn hiển thị...`</item>
+            <item>TUYỆT ĐỐI KHÔNG dùng ngôn ngữ không chắc chắn: `Nếu dropdown có ô tìm kiếm:...`, `Có thể:...`</item>
+            <item>TUYỆT ĐỐI KHÔNG viết flat bullet một cấp mà bỏ qua tên case `Kiểm tra X`</item>
+        </forbidden_formats>
     </response_format>
 
     <display_behavior_rules>
@@ -123,8 +156,9 @@ model: inherit
 
     <output>
         <item>✓ Field {fieldName} ({type}): {generated} cases từ template</item>
-        <item>[V3] Không dùng "→ error" (format API) — chỉ dùng bullet: ✅/❌</item>
-        <item>[V4] Không có Status 4xx/5xx — format frontend là bullet đơn: ✅/❌</item>
+        <item>[V1] Mỗi case có đúng 2 cấp: "- Kiểm tra X" + "    - expected result": ✅/❌</item>
+        <item>[V2] Không có prose bullet hay flat single-level bullet: ✅/❌</item>
+        <item>[V3] Không có case dùng "Nếu"/"Có thể" / suy đoán ngoài RSD: ✅/❌</item>
         <item>Missing cases từ template: [list nếu có] → THÊM ngay</item>
     </output>
 

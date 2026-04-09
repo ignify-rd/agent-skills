@@ -47,7 +47,7 @@ field.type → template function:
 
     - Hiển thị placeholder "{placeholder}"
 
-- Kiểm tra hiển thị khi nhập 1 ký tự
+- Kiểm tra hiển thị icon X khi nhập 1 ký tự
 
     - Hiển thị icon X xóa nhanh ký tự nhập
 
@@ -425,7 +425,7 @@ field.type → template function:
 
     - Dropdown ở trạng thái Disabled, không thể chọn
 
-- Kiểm tra icon X hiển thị khi chọn giá trị
+- Kiểm tra hiển thị icon X khi chọn giá trị
 
     - Hiển thị icon X xóa nhanh ký tự nhập
 
@@ -454,7 +454,7 @@ field.type → template function:
 
     - Hiển thị placeholder "{placeholder}"
 
-- Kiểm tra icon X hiển thị khi nhập/chọn dữ liệu
+- Kiểm tra hiển thị icon X khi nhập/chọn dữ liệu
 
     - Hiển thị icon X xóa nhanh ký tự nhập
 
@@ -1025,6 +1025,14 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
     - Mặc định rỗng
 
+- Kiểm tra hiển thị icon X khi nhập 1 ký tự
+
+    - Hiển thị icon X xóa nhanh ký tự nhập
+
+- Kiểm tra hoạt động khi thực hiện thao tác xóa nhanh ký tự nhập
+
+    - Clear data đã nhập ở textarea
+
 - Kiểm tra placeholder
 
     - Hiển thị placeholder "{placeholder}"
@@ -1072,6 +1080,10 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 - Kiểm tra khi nhập kí tự chứa space đầu/cuối
 
     - {allowSpaces ? "Hệ thống cho phép nhập" : "Hệ thống chặn không cho phép nhập"}
+
+- Kiểm tra khi Paste kí tự chứa space đầu/cuối
+
+    - Hệ thống cho phép Paste
 
 - Kiểm tra khi nhập all space
 
