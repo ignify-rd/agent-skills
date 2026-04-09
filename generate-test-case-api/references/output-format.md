@@ -15,6 +15,21 @@
 }
 ```
 
+## testSuiteName Rules
+
+### Validate cases — per-field sub-suite names (CRITICAL)
+
+Validate cases MUST use **per-field sub-suite names**, NOT the parent section heading.
+
+| Case type | testSuiteName (correct) | testSuiteName (WRONG) |
+|-----------|------------------------|----------------------|
+| Validate field `slaName` | `"Kiểm tra trường slaName"` | ~~`"Kiểm tra Validate"`~~ |
+| Validate field `effectiveDate` | `"Kiểm tra trường effectiveDate"` | ~~`"Kiểm tra Validate"`~~ |
+| Validate field `steps` | `"Kiểm tra trường steps"` | ~~`"Kiểm tra Validate"`~~ |
+
+Rule: `testSuiteName = "Kiểm tra trường {fieldName}"` for ALL validate field cases.
+The parent heading `"Kiểm tra Validate"` is NEVER used as testSuiteName in individual test cases.
+
 ## Importance Mapping
 
 ### API Test Cases
@@ -23,6 +38,7 @@
 |------------------------|------------|
 | "case common" | "Low" |
 | "phân quyền" | "Medium" |
+| "trường" | "Medium" |
 | "validate" | "Medium" |
 | "luồng chính" | "High" |
 | "chức năng" | "High" |
@@ -49,9 +65,11 @@
 
 ## Ví dụ 2: API Test Case — Validate Section
 
+⚠️ testSuiteName = "Kiểm tra trường {fieldName}" — KHÔNG phải "Kiểm tra validate"
+
 ```json
 {
-  "testSuiteName": "Kiểm tra validate",
+  "testSuiteName": "Kiểm tra trường regChannel",
   "testCaseName": "Kiểm tra bỏ trống field regChannel (bắt buộc)",
   "summary": "Kiểm tra bỏ trống field regChannel (bắt buộc)",
   "preConditions": "1. Send API login thành công\n2. Chuẩn bị request hợp lệ\n   2.1 Endpoint: POST {{BASE_URL}}/v1/fee/search\n   2.2 Header:\n   {\n     \"Authorization\": \"Bearer {JWT_TOKEN}\",\n     \"Content-Type\": \"application/json\"\n   }\n   2.3 Body:\n   {\n     \"regChannel\": \"WEB\",\n     \"pageSize\": 5,\n     \"pageIndex\": 1\n   }",

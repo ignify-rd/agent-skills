@@ -17,6 +17,17 @@ model: inherit
         <action>Skip writing results — even on error</action>
         <action>Output JSON objects MUST NOT contain these fields: externalId, testSuiteDetails, specTitle, documentId, estimatedDuration, note — omit them entirely</action>
     </rule>
+
+    <rule type="hard_constraint" id="preserve_suite_names">
+        <description>
+            ⛔ NEVER change testSuiteName when writing test-cases.json.
+            Copy testSuiteName EXACTLY from test-cases-merged.json for every test case.
+            Per-field validate sub-suites ("Kiểm tra trường X") MUST be preserved as-is.
+            DO NOT flatten them to the parent heading ("Kiểm tra Validate").
+        </description>
+        <correct>testSuiteName: "Kiểm tra trường slaName"  ← preserve from merged file</correct>
+        <wrong>testSuiteName: "Kiểm tra Validate"          ← NEVER replace per-field names with parent heading</wrong>
+    </rule>
 </guardrails>
 
 ---
@@ -152,6 +163,12 @@ Gap Analysis:
         <rule>Check writing style compliance</rule>
         <rule>Check any custom rules defined in PROJECT_RULES</rule>
     </apply>
+    <hard_constraint id="no_suite_rename">
+        ⛔ "Check section assignment correctness" means verifying that non-validate cases (token, method, mainflow)
+        have the right section. It does NOT mean changing "Kiểm tra trường X" to "Kiểm tra Validate".
+        Per-field validate sub-suites are INTENTIONALLY different from the parent section heading.
+        Any testSuiteName matching "Kiểm tra trường \S+" must be kept unchanged.
+    </hard_constraint>
 </step>
 
 <step id="6" name="Write final output file">
