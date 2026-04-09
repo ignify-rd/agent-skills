@@ -243,6 +243,8 @@ def _infer_placeholder_value(case_original: str):
     norm_lower = case_original.lower()
     if any(w in norm_lower for w in ["rỗng", "empty", "chuỗi rỗng"]):
         return ""
+    if any(w in norm_lower for w in ["chữ lẫn số", "chữ và số", "alphanumeric", "chữ số"]):
+        return "abc123"
     if any(w in norm_lower for w in ["chuỗi", "string", "text", "ký tự", "chữ"]):
         return "abc"
     if any(w in norm_lower for w in ["số thập phân", "decimal", "float"]):
