@@ -15,11 +15,15 @@ Sinh một tài liệu RSD (Requirement Specification Document) cấp chức nă
 
 ## Nguyên tắc cốt lõi (đọc kỹ trước khi làm)
 
-RSD **không phải là sáng tác**. Nó là tài liệu có cấu trúc cố định, nội dung phải **truy nguồn** được từ input user cung cấp. Ba nguyên tắc:
+RSD **không phải là sáng tác**. Nó là tài liệu có cấu trúc cố định, nội dung phải **truy nguồn** được từ input user cung cấp. Bốn nguyên tắc:
 
 1. **Không bịa dữ liệu.** Nếu template yêu cầu 1 trường (vd: "Điều kiện trước", "Quy tắc nghiệp vụ") mà input không nói rõ, hãy viết `[Cần xác nhận: ...]` thay vì phịa. Cuối cùng tổng hợp lại các chỗ này thành một danh sách để user review.
 2. **Ưu tiên tham chiếu hơn copy-paste.** Khi có page Confluence đã mô tả sẵn (RSD cấp 1, bảng trạng thái, API spec...), link sang đó thay vì paste lại. Các RSD APP thường chỉ viết Section 4 (mô tả màn hình) còn lại tham chiếu sang RSD WEB.
 3. **Tuân thủ template Việt hoá.** Toàn bộ heading, label bảng, từ khoá (Tác nhân, Luồng chính, Điều kiện trước, ...) phải khớp chính xác template — vì người review và tooling đều dựa vào đó.
+4. **Tuyệt đối không dùng emoji/icon trong nội dung tài liệu.** Không được dùng bất kỳ emoji hay icon nào (✅ ❌ 🔘 🟡 🟢 🔴 ✏️ ▶ ✖ 📋 ⚠️ v.v.) trong nội dung bảng, mô tả màn hình, hay bất kỳ chỗ nào trong tài liệu RSD (trừ mục "Các điểm cần user xác nhận" ở cuối). Thay thế cụ thể:
+   - Ma trận phân quyền: dùng **"x"** cho có quyền, để **trống ô** cho không có quyền
+   - Trạng thái badge: viết text thuần (ví dụ: "Tạo nháp", "Chờ duyệt", "Hoạt động")
+   - Tên nút chức năng: viết text không có icon (ví dụ: "Chỉnh sửa", "Phê duyệt", "Từ chối")
 
 ## Workflow end-to-end
 
@@ -56,14 +60,30 @@ Trước khi viết, xác định:
 Viết tài liệu dưới dạng **Markdown** trước (dễ review, dễ convert). Các section:
 
 1. **Phiên bản tài liệu** — bảng 1 hàng với Version=1.0, Lý do="Thêm mới", Date=hôm nay, Người sửa=tác giả, Mô tả="Dự thảo"
-2. **Section 1** — 1.1 tham chiếu sơ đồ usecase cấp 1 (nếu có); 1.2 điền bảng đặc tả usecase từ URD. Các trường bắt buộc: Tên, Mã, Mô tả, Tác nhân, Mức độ ưu tiên, Điều kiện kích hoạt, Điều kiện trước, Kết quả mong muốn, Luồng chính, Luồng thay thế, Luồng ngoại lệ, Quy tắc nghiệp vụ, Yêu cầu phi chức năng.
-3. **Section 2** — 2.1 sơ đồ luồng (nếu user cung cấp ảnh/Mermaid thì nhúng; không có thì bỏ trống + note). 2.2 bảng kết nối API nếu xác định được từ URD; nếu không có thông tin kết nối cụ thể và đây là RSD APP, hãy tham chiếu sang RSD WEB. 2.3 danh mục trạng thái — thường tham chiếu sang bảng trạng thái chung.
-4. **Section 3** — ma trận phân quyền. Nếu URD không nêu chi tiết, tham chiếu sang RSD cấp 1 hoặc RSD WEB.
-5. **Section 4 — Mô tả màn hình** (quan trọng nhất, viết chi tiết):
-   - Chèn link Figma ở đầu
-   - **a. Mockup màn hình**: với mỗi state/screenshot Figma, viết 1 caption ngắn (ví dụ "Màn hình danh sách khi có dữ liệu") rồi chèn ảnh. Nếu ảnh từ Figma MCP, lưu tạm rồi sẽ attach lên page ở bước upload. Nếu ảnh đã có trên page Confluence khác, có thể dùng lại URL attachment.
+2. **Mục lục (TOC)** — Tạo TOC có anchor links để người đọc click nhảy đến từng section. Cú pháp Markdown:
+   ```
+   1. [Đặc tả/Tóm tắt usecase](#section-1)
+   2. [Sơ đồ luồng xử lý](#section-2)
+   3. [Ma trận phân quyền và phân bổ chức năng](#section-3)
+   4. [Mô tả màn hình](#section-4)
+   5. [Logic xử lý](#section-5)
+   ```
+   Trước mỗi heading section chính, đặt HTML anchor tương ứng:
+   ```
+   <a name="section-1"></a>
+   ## 1. Đặc tả/Tóm tắt usecase
+   ```
+3. **Section 1** — 1.1 tham chiếu sơ đồ usecase cấp 1 (nếu có); 1.2 điền bảng đặc tả usecase từ URD. Các trường bắt buộc: Tên, Mã, Mô tả, Tác nhân, Mức độ ưu tiên, Điều kiện kích hoạt, Điều kiện trước, Kết quả mong muốn, Luồng chính, Luồng thay thế, Luồng ngoại lệ, Quy tắc nghiệp vụ, Yêu cầu phi chức năng.
+4. **Section 2** — 2.1 sơ đồ luồng (nếu user cung cấp ảnh/Mermaid thì nhúng; không có thì bỏ trống + note). 2.2 bảng kết nối API nếu xác định được từ URD; nếu không có thông tin kết nối cụ thể và đây là RSD APP, hãy tham chiếu sang RSD WEB. 2.3 danh mục trạng thái — thường tham chiếu sang bảng trạng thái chung.
+5. **Section 3** — ma trận phân quyền. Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng emoji. Nếu URD không nêu chi tiết, tham chiếu sang RSD cấp 1 hoặc RSD WEB.
+6. **Section 4 — Mô tả màn hình** (quan trọng nhất, viết chi tiết):
+   - Chèn link Figma ở đầu (nếu có)
+   - **a. Mockup màn hình**: Với mỗi state cần mô tả, viết 1 caption ngắn bằng text thuần (không emoji), rồi chèn ảnh theo một trong 2 cách:
+     - **Nếu có Figma**: dùng `mcp__plugin_figma_figma__get_screenshot` tải ảnh về thư mục `./rsd-draft-<slug>/screenshots/`, chèn bằng `![caption](screenshots/ten-file.png)`. Sau khi tạo page Confluence, attach tất cả ảnh lên page.
+     - **Nếu không có Figma/ảnh**: thay bằng dòng chú thích `*(Ảnh: chưa có - cần bổ sung từ Figma)*`
+   - **KHÔNG** dùng blockquote (`>`) hay emoji để mô tả giao diện thay cho ảnh. Mô tả UI chỉ nằm trong bảng 4b, không phải trong phần mockup.
    - **b. Bảng mô tả màn hình**: mỗi row là một hạng mục UI với các cột **STT | Hạng mục | Kiểu hiển thị | Kiểu thao tác | Bắt buộc | Độ dài | Mô tả**. Phân nhóm bằng các row header in đậm (ví dụ "Cụm thông tin đầu trang", "Cụm tìm kiếm nâng cao", "Danh sách ...", "Phân trang"). Với mỗi element cần trả lời: placeholder, mặc định, validate, logic, ẩn/hiện, enable/disable. Xem `references/figma-to-mockup.md`.
-6. **Section 5 — Logic xử lý** — bảng 3 cột **Thao tác | Tác nhân | Mô tả**. Mô tả phải bao gồm các bước Client gọi gì → Server kiểm tra gì → xử lý các nhánh. Nếu là RSD APP và có WEB tương ứng, tham chiếu sang WEB.
+7. **Section 5 — Logic xử lý** — bảng 3 cột **Thao tác | Tác nhân | Mô tả**. Mô tả phải bao gồm các bước Client gọi gì → Server kiểm tra gì → xử lý các nhánh. Nếu là RSD APP và có WEB tương ứng, tham chiếu sang WEB.
 
 Trong suốt quá trình, khi gặp thông tin không chắc chắn → ghi `[Cần xác nhận: <câu hỏi cụ thể>]` inline.
 
