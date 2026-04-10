@@ -144,6 +144,21 @@ model: inherit
     </generate>
 </step>
 
+<step id="4b" name="Re-normalize after gap-fill (CRITICAL)">
+    <description>
+        Sau khi gap-fill append các cases mới, phải chạy lại normalize_suites.py
+        để: (1) chuẩn hóa testSuiteName của gap-fill cases, (2) SẮP XẾP LẠI
+        toàn bộ mảng theo thứ tự ## + ### headings từ test-design. KHÔNG BỎ QUA BƯỚC NÀY.
+        Nếu bỏ qua → gap-fill cases bị đẩy xuống cuối file, sai thứ tự.
+    </description>
+    <command>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py --test-design {TEST_DESIGN_FILE} --test-cases {OUTPUT_DIR}/test-cases-merged.json --inventory {INVENTORY_FILE} --tc-context {TC_CONTEXT_FILE}</command>
+
+    <note>
+        Script này overwrite trực tiếp test-cases-merged.json với thứ tự đúng.
+        Gap-fill cases sau bước này sẽ nằm đúng vị trí theo test-design (không còn ở cuối).
+    </note>
+</step>
+
 <step id="5" name="Apply project rules">
     <read>
         <file>{TC_CONTEXT_FILE}</file>
@@ -160,6 +175,10 @@ model: inherit
 </step>
 
 <step id="6" name="Write final output">
+    <description>
+        Đọc từ test-cases-merged.json (đã được re-normalize ở Step 4b),
+        ghi vào OUTPUT_FILE. KHÔNG append, ghi đè toàn bộ.
+    </description>
     <file>{OUTPUT_FILE}</file>
 
     <format_rules>
@@ -185,6 +204,7 @@ model: inherit
 ```
 ✅ tc-verify done: {total} test cases → {OUTPUT_FILE}
    Auto-filled gaps: {N} cases
+   Re-normalized order: Step 4b executed (gap cases placed correctly by test-design order)
    Final total: {total}
 ```
     </output>
