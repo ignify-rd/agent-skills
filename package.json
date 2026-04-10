@@ -16,7 +16,10 @@
     "generate-test-case-frontend/",
     "generate-postman-collection/",
     "execute-test-case-api/",
-    "execute-test-case-frontend/"
+    "execute-test-case-frontend/",
+    "confluence-assistant/",
+    "rsd-generator/",
+    "rsd-to-pttk/"
   ],
   "scripts": {
     "test": "node bin/test-genie.js --help && node bin/test-genie.js versions --help && node bin/test-genie.js init --help && node bin/test-genie.js update --help"
