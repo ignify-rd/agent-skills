@@ -306,12 +306,13 @@ This opens each request in its own tab and loads the response.
 
 **Phase B — Screenshot + read via batch script** (1 MCP call):
 
-After all requests are sent, run `browser_run_code` to loop through each tab, screenshot, and call `fetch()` for reliable data:
+After all requests are sent, run `browser_run_code` to loop through each tab, take 2 screenshots (request + response), and call `fetch()` for reliable data:
 
 ```js
 async (page) => {
   const cases = [
-    // { name, method, url, headers, body, screenshotPath, expectedStatus }
+    // { name, method, url, headers, body, requestScreenshotPath, responseScreenshotPath, expectedStatus }
+    // requestScreenshotPath suffix: _params.png (GET) or _body.png (POST/PUT/PATCH/DELETE)
   ];
   const results = [];
 
@@ -321,7 +322,23 @@ async (page) => {
       await tab.click();
       await page.waitForTimeout(500);
 
-      await page.screenshot({ path: tc.screenshotPath });
+      // Screenshot 1: Params tab (GET) or Body tab (other methods)
+      const isGet = tc.method.toUpperCase() === 'GET';
+      const requestTabSelector = isGet
+        ? 'button:has-text("Params"), [data-testid="params-tab"], [title="Params"]'
+        : 'button:has-text("Body"), [data-testid="body-tab"], [title="Body"]';
+      try {
+        await page.locator(requestTabSelector).first().click();
+        await page.waitForTimeout(300);
+      } catch (_) { /* tab may already be active */ }
+      await page.screenshot({ path: tc.requestScreenshotPath });
+
+      // Screenshot 2: Response tab
+      try {
+        await page.locator('button:has-text("Response"), [data-testid="response-tab"], [title="Response"]').first().click();
+        await page.waitForTimeout(300);
+      } catch (_) { /* tab may already be active */ }
+      await page.screenshot({ path: tc.responseScreenshotPath });
 
       const data = await page.evaluate(async ({ method, url, headers, body }) => {
         try {
@@ -339,11 +356,19 @@ async (page) => {
         name: tc.name,
         statusCode: data.statusCode,
         body: data.body,
-        screenshot: tc.screenshotPath,
+        requestScreenshot: tc.requestScreenshotPath,
+        responseScreenshot: tc.responseScreenshotPath,
         error: ''
       });
     } catch (err) {
-      results.push({ name: tc.name, statusCode: 0, body: '', screenshot: tc.screenshotPath, error: err.message });
+      results.push({
+        name: tc.name,
+        statusCode: 0,
+        body: '',
+        requestScreenshot: tc.requestScreenshotPath,
+        responseScreenshot: tc.responseScreenshotPath,
+        error: err.message
+      });
     }
   }
   return JSON.stringify(results);
@@ -357,7 +382,9 @@ async (page) => {
 > `fetch()` via `page.evaluate()` always returns the exact HTTP response — no DOM ambiguity.
 
 **Screenshot path rules:**
-- Format: `{screenshotDir}/{testCaseName_sanitized}_{yyyyMMdd_HHmmss}.png`
+- Each test case produces **2 screenshots**:
+  - Request: `{screenshotDir}/{testCaseName_sanitized}_{yyyyMMdd_HHmmss}_params.png` (GET) or `..._body.png` (POST/PUT/PATCH/DELETE)
+  - Response: `{screenshotDir}/{testCaseName_sanitized}_{yyyyMMdd_HHmmss}_response.png`
 - `testCaseName_sanitized` = test case name with ALL spaces and special chars replaced by `_`
 - Timestamp generated at START of execution run, reused for all cases in that batch
 - **NEVER** use pre-existing files from a previous run
@@ -420,7 +447,8 @@ print('done')
 
 ### Step 11 — Embed screenshots into Evidence sheet
 
-2 columns only: **A = Test Case ID**, **B = Screenshot** (image fits cell size exactly).
+3 columns: **A = Test Case ID**, **B = Params/Body Screenshot** (request), **C = Response Screenshot**.
+Each test case occupies 1 row with 2 embedded images side by side.
 
 ```bash
 python3 -X utf8 -c "
@@ -435,24 +463,39 @@ if 'Evidence' in wb.sheetnames:
 ws_ev = wb.create_sheet('Evidence')
 
 ws_ev['A1'] = 'Test Case ID'
-ws_ev['B1'] = 'Screenshot'
+ws_ev['B1'] = 'Params / Body'
+ws_ev['C1'] = 'Response'
 
 COL_A_WIDTH = 40
 IMG_WIDTH_PX = 600
 IMG_HEIGHT_PX = 350
 ws_ev.column_dimensions['A'].width = COL_A_WIDTH
 ws_ev.column_dimensions['B'].width = IMG_WIDTH_PX / 7
+ws_ev.column_dimensions['C'].width = IMG_WIDTH_PX / 7
 
 for i, item in enumerate(data, start=2):
     ws_ev.cell(row=i, column=1).value = item['name']
-    if not item.get('screenshot') or not os.path.exists(item['screenshot']):
-        ws_ev.cell(row=i, column=2).value = 'Screenshot not captured'
-        continue
-    img = XLImage(item['screenshot'])
-    img.width = IMG_WIDTH_PX
-    img.height = IMG_HEIGHT_PX
     ws_ev.row_dimensions[i].height = IMG_HEIGHT_PX * 0.75
-    ws_ev.add_image(img, f'B{i}')
+
+    # Column B — request screenshot (Params or Body)
+    req_path = item.get('requestScreenshot', '')
+    if req_path and os.path.exists(req_path):
+        img_req = XLImage(req_path)
+        img_req.width = IMG_WIDTH_PX
+        img_req.height = IMG_HEIGHT_PX
+        ws_ev.add_image(img_req, f'B{i}')
+    else:
+        ws_ev.cell(row=i, column=2).value = 'Screenshot not captured'
+
+    # Column C — response screenshot
+    res_path = item.get('responseScreenshot', '')
+    if res_path and os.path.exists(res_path):
+        img_res = XLImage(res_path)
+        img_res.width = IMG_WIDTH_PX
+        img_res.height = IMG_HEIGHT_PX
+        ws_ev.add_image(img_res, f'C{i}')
+    else:
+        ws_ev.cell(row=i, column=3).value = 'Screenshot not captured'
 
 wb.save('PATH_TO_FILE.xlsx')
 print('done')
@@ -511,7 +554,8 @@ Evidence sheet: {'created' | 'updated'} with {n} screenshots
 - **ALWAYS** close browser after completion.
 - **NEVER** use pre-existing screenshot files from previous runs when embedding Evidence.
 - **ALWAYS** verify screenshot file exists (`os.path.exists(path)`) before embedding.
-- Screenshot filenames: `{testCaseName}_{yyyyMMdd_HHmmss}.png` (no spaces, replace with `_`).
+- Each test case produces **2 screenshots**: `..._params.png` (GET) or `..._body.png` (POST/PUT/PATCH/DELETE), and `..._response.png`.
+- Screenshot filenames: `{testCaseName}_{yyyyMMdd_HHmmss}_{params|body|response}.png` (no spaces, replace with `_`).
 - **NEVER** write temp scripts to disk — use `python3 -c` inline only.
 - Save `.xlsx` only after ALL results collected (1 save operation).
 - All requests in Postman must use **"Inherit auth from parent"** — never set per-request Bearer tokens.
