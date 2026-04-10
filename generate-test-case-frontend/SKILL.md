@@ -1,6 +1,6 @@
 ---
 name: generate-test-case-frontend
-description: Generate Frontend test cases from RSD/PTTK (or mindmap) and output to test-cases.json. For UI screens only. Use when user says "sinh test case frontend", "sinh test case fe", "sinh test case giao diện", "generate frontend test case", "tạo test case màn hình", or provides RSD/PTTK/.pdf documents or a mindmap file for a UI screen.
+description: Generate Frontend test cases from RSD/PTTK (or mindmap) and output to test-cases.json. For UI screens only. Use when user says "sinh test case frontend", "sinh test case fe", "sinh test case giao diện", "generate frontend test case", "tạo test case màn hình", or provides Confluence links to RSD/PTTK or a mindmap file for a UI screen.
 ---
 
 # Test Case Generator — Frontend Mode (Orchestrator)

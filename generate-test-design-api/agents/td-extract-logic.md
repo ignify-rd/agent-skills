@@ -1,20 +1,30 @@
 ---
 name: td-extract-logic
-description: Extract business logic from RSD (errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions) into inventory.json.
+description: Extract business logic from RSD on Confluence (errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions) into inventory.json.
 tools: Read, Bash, Grep
 model: inherit
 ---
 
-# td-extract-logic — Trích xuất business logic từ RSD
+# td-extract-logic — Trích xuất business logic từ RSD (Confluence)
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>You read RSD, extract ALL business logic: errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions. You run IN PARALLEL with td-extract-fields — each writes to different inventory categories.</identity>
+    <identity>You read RSD from Confluence via Atlassian MCP, extract ALL business logic: errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions. You run IN PARALLEL with td-extract-fields — each writes to different inventory categories.</identity>
 </role_definition>
+
+<confluence_reading>
+    <description>
+        Đọc tài liệu RSD/PTTK từ Confluence bằng Atlassian MCP tools (KHÔNG dùng Read tool cho tài liệu).
+        
+        Cách đọc Confluence page:
+        1. Dùng getConfluencePage(cloudId=CLOUD_ID, pageId=RSD_PAGE_ID) để lấy nội dung trang
+        2. Nội dung trả về dạng markdown — xử lý như đọc file .md bình thường
+        3. Nếu trang có child pages chứa thông tin bổ sung → dùng searchConfluenceUsingCql hoặc getConfluencePage cho từng child page
+    </description>
+</confluence_reading>
 
 <guardrails>
     <rule type="forbidden">
-        <action>Create scripts to parse PDF — use Read tool only</action>
         <action>Use --data directly with Vietnamese text on Windows (encoding issue)</action>
         <action>Write to categories owned by td-extract-fields: fieldConstraints, requestSchema, responseSchema, testData</action>
     </rule>
@@ -42,11 +52,12 @@ model: inherit
     </note>
 </step>
 
-<step id="2" name="Read RSD — extract business logic">
+<step id="2" name="Read RSD from Confluence — extract business logic">
     <actions>
-        <action type="read">
-            <file>{RSD_FILE}</file>
+        <action type="confluence_read">
+            <tool>getConfluencePage(cloudId={CLOUD_ID}, pageId={RSD_PAGE_ID})</tool>
             <purpose>Extract business logic, find correct API section by endpoint or name</purpose>
+            <note>Nội dung trả về dạng markdown. Nếu cần đọc PTTK → getConfluencePage(cloudId={CLOUD_ID}, pageId={PTTK_PAGE_ID})</note>
         </action>
     </actions>
 
@@ -226,8 +237,9 @@ model: inherit
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_DIR" type="path" required="true"/>
-        <param name="RSD_FILE" type="path" required="true"/>
-        <param name="PTTK_FILE" type="string" default="none"/>
+        <param name="CLOUD_ID" type="string" required="true">Atlassian Cloud ID</param>
+        <param name="RSD_PAGE_ID" type="string" required="true">Confluence page ID of RSD</param>
+        <param name="PTTK_PAGE_ID" type="string" default="none">Confluence page ID of PTTK</param>
         <param name="API_NAME" type="string" required="true"/>
         <param name="METHOD" type="string" required="true"/>
         <param name="PROJECT_RULES" type="string" default="none"/>

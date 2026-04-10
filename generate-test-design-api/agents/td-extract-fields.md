@@ -1,20 +1,31 @@
 ---
 name: td-extract-fields
-description: Extract field definitions, constraints, and validate-related info from RSD/PTTK into inventory.json fieldConstraints with rsdConstraints.
+description: Extract field definitions, constraints, and validate-related info from RSD/PTTK on Confluence into inventory.json fieldConstraints with rsdConstraints.
 tools: Read, Bash, Grep
 model: inherit
 ---
 
-# td-extract-fields — Trích xuất field definitions + rsdConstraints
+# td-extract-fields — Trích xuất field definitions + rsdConstraints (Confluence)
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>You read RSD and PTTK, extract ALL field-related information including validate constraints. You write fieldConstraints (with rsdConstraints), requestSchema, responseSchema, and testData to inventory. You run IN PARALLEL with td-extract-logic — each writes to different inventory categories.</identity>
+    <identity>You read RSD and PTTK from Confluence via Atlassian MCP, extract ALL field-related information including validate constraints. You write fieldConstraints (with rsdConstraints), requestSchema, responseSchema, and testData to inventory. You run IN PARALLEL with td-extract-logic — each writes to different inventory categories.</identity>
 </role_definition>
+
+<confluence_reading>
+    <description>
+        Đọc tài liệu RSD/PTTK từ Confluence bằng Atlassian MCP tools (KHÔNG dùng Read tool cho tài liệu).
+        
+        Cách đọc Confluence page:
+        1. Dùng getConfluencePage(cloudId=CLOUD_ID, pageId=PTTK_PAGE_ID) để lấy nội dung PTTK
+        2. Dùng getConfluencePage(cloudId=CLOUD_ID, pageId=RSD_PAGE_ID) để lấy nội dung RSD
+        3. Nội dung trả về dạng markdown — xử lý như đọc file .md bình thường
+        4. Nếu trang có child pages chứa thông tin bổ sung → dùng searchConfluenceUsingCql hoặc getConfluencePage cho từng child page
+    </description>
+</confluence_reading>
 
 <guardrails>
     <rule type="forbidden">
-        <action>Create scripts to parse PDF — use Read tool only</action>
         <action>Use --data directly with Vietnamese text on Windows (encoding issue)</action>
         <action>Write to categories owned by td-extract-logic: errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions</action>
     </rule>
@@ -72,11 +83,11 @@ model: inherit
     </description>
 </step>
 
-<step id="2" name="Read PTTK (if provided) — extract field definitions">
-    <condition>If PTTK_FILE is provided (not "none")</condition>
+<step id="2" name="Read PTTK from Confluence (if provided) — extract field definitions">
+    <condition>If PTTK_PAGE_ID is provided (not "none")</condition>
     <actions>
-        <action type="read">
-            <file>{PTTK_FILE}</file>
+        <action type="confluence_read">
+            <tool>getConfluencePage(cloudId={CLOUD_ID}, pageId={PTTK_PAGE_ID})</tool>
             <purpose>Find the section for API_NAME, extract REQUEST BODY fields with constraints</purpose>
         </action>
     </actions>
@@ -157,15 +168,15 @@ model: inherit
     </extract>
 
     <fallback>
-        <condition>If no PTTK provided</condition>
-        <action>Extract API request body field definitions from RSD — find the Request Body table, NOT the UI screen table</action>
+        <condition>If no PTTK provided (PTTK_PAGE_ID = "none")</condition>
+        <action>Extract API request body field definitions from RSD on Confluence — find the Request Body table, NOT the UI screen table</action>
     </fallback>
 </step>
 
-<step id="3" name="Read validation rules documents — extract rsdConstraints per field">
+<step id="3" name="Read RSD from Confluence — extract rsdConstraints per field">
     <actions>
-        <action type="read">
-            <file>{RSD_FILE}</file>
+        <action type="confluence_read">
+            <tool>getConfluencePage(cloudId={CLOUD_ID}, pageId={RSD_PAGE_ID})</tool>
             <purpose>Find validate rules, constraints, allowed values for each field</purpose>
         </action>
     </actions>
@@ -501,8 +512,9 @@ testData: {N} fields
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_DIR" type="path" required="true"/>
-        <param name="RSD_FILE" type="path" required="true"/>
-        <param name="PTTK_FILE" type="string" default="none"/>
+        <param name="CLOUD_ID" type="string" required="true">Atlassian Cloud ID</param>
+        <param name="RSD_PAGE_ID" type="string" required="true">Confluence page ID of RSD</param>
+        <param name="PTTK_PAGE_ID" type="string" default="none">Confluence page ID of PTTK</param>
         <param name="API_NAME" type="string" required="true"/>
         <param name="METHOD" type="string" required="true"/>
         <param name="PROJECT_RULES" type="string" default="none"/>

@@ -1,6 +1,6 @@
 ---
 name: generate-test-case-api
-description: Generate API test cases from RSD/PTTK (or mindmap) and output to test-cases.json. For API endpoints only. Use when user says "sinh test case api", "sinh test cases api", "generate api test case", "tạo test case api", or provides RSD/PTTK/.pdf documents or a mindmap file for an API endpoint.
+description: Generate API test cases from RSD/PTTK (or mindmap) and output to test-cases.json. For API endpoints only. Use when user says "sinh test case api", "sinh test cases api", "generate api test case", "tạo test case api", or provides Confluence links to RSD/PTTK or a mindmap file for an API endpoint.
 ---
 
 # Test Case Generator — API Mode (Orchestrator)

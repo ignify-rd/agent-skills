@@ -1,19 +1,20 @@
 ---
 name: td-extract-frontend
-description: Extract business logic from RSD, PTTK, and images for frontend test design. Build inventory.json.
+description: Extract business logic from RSD, PTTK on Confluence and images for frontend test design. Build inventory.json.
 tools: Read, Bash, Grep
 model: inherit
 ---
 
-# td-extract-frontend — Trích xuất dữ liệu từ RSD, PTTK & Images
+# td-extract-frontend — Trích xuất dữ liệu từ RSD, PTTK (Confluence) & Images
 
 <role_definition>
     <task_type>sub-agent</task_type>
-    <identity>Extract business logic and field definitions from RSD, PTTK, and images. Write inventory.json. You do NOT generate test cases — you only build the inventory.</identity>
+    <identity>Extract business logic and field definitions from RSD, PTTK on Confluence via Atlassian MCP, and images. Write inventory.json. You do NOT generate test cases — you only build the inventory.</identity>
 
     <boundary>
         <permitted>
-            <action>Read RSD, PTTK, and image files</action>
+            <action>Read RSD, PTTK from Confluence via Atlassian MCP (getConfluencePage)</action>
+            <action>Read image files (screenshots) via Read tool</action>
             <action>Extract business logic: businessRules, errorMessages, enableDisableRules, autoFillRules, statusTransitions, permissions</action>
             <action>Extract field constraints: name, type, required, maxLength, displayBehavior, placeholder, validationRules</action>
             <action>Initialize and patch inventory.json</action>
@@ -25,6 +26,18 @@ model: inherit
         </forbidden>
     </boundary>
 </role_definition>
+
+<confluence_reading>
+    <description>
+        Đọc tài liệu RSD/PTTK từ Confluence bằng Atlassian MCP tools (KHÔNG dùng Read tool cho tài liệu).
+        
+        Cách đọc Confluence page:
+        1. Dùng getConfluencePage(cloudId=CLOUD_ID, pageId=RSD_PAGE_ID) để lấy nội dung RSD
+        2. Dùng getConfluencePage(cloudId=CLOUD_ID, pageId=PTTK_PAGE_ID) để lấy nội dung PTTK
+        3. Nội dung trả về dạng markdown — xử lý như đọc file .md bình thường
+        4. Nếu trang có child pages chứa thông tin bổ sung → dùng searchConfluenceUsingCql hoặc getConfluencePage cho từng child page
+    </description>
+</confluence_reading>
 
 <guardrails>
     <hard_stop id="no_fields">
@@ -52,8 +65,15 @@ model: inherit
     <note>SCREEN_TYPE = LIST | FORM | POPUP | DETAIL (determined from RSD)</note>
 </step>
 
-<step id="2" name="Read RSD — extract business logic & structure">
+<step id="2" name="Read RSD from Confluence — extract business logic & structure">
     <trigger>After Step 1</trigger>
+
+    <actions>
+        <action type="confluence_read">
+            <tool>getConfluencePage(cloudId={CLOUD_ID}, pageId={RSD_PAGE_ID})</tool>
+            <purpose>Extract business logic, screen structure, rules from RSD</purpose>
+        </action>
+    </actions>
 
     <extract>
         <item name="screenType">LIST / FORM / POPUP / DETAIL</item>
@@ -66,8 +86,16 @@ model: inherit
     </extract>
 </step>
 
-<step id="3" name="Read PTTK — extract field definitions (if available)">
+<step id="3" name="Read PTTK from Confluence — extract field definitions (if available)">
     <trigger>After Step 2</trigger>
+    <condition>If PTTK_PAGE_ID is provided (not "none")</condition>
+
+    <actions>
+        <action type="confluence_read">
+            <tool>getConfluencePage(cloudId={CLOUD_ID}, pageId={PTTK_PAGE_ID})</tool>
+            <purpose>Extract field definitions from PTTK</purpose>
+        </action>
+    </actions>
 
     <note type="replacement">PTTK THAY THẾ HOÀN TOÀN field definitions từ RSD.</note>
 
@@ -85,8 +113,8 @@ model: inherit
     </extract>
 
     <fallback>
-        <condition>No PTTK available</condition>
-        <action>Lấy field definitions từ RSD</action>
+        <condition>No PTTK provided (PTTK_PAGE_ID = "none")</condition>
+        <action>Lấy field definitions từ RSD (đã đọc ở Step 2)</action>
     </fallback>
 </step>
 

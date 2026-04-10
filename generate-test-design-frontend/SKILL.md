@@ -1,6 +1,6 @@
 ---
 name: generate-test-design-frontend
-description: Generate Frontend test design mindmap from RSD/PTTK. For UI screens only. Use when user says "sinh test design frontend", "sinh test design giao diện", "tao mindmap màn hình", or provides RSD/PTTK for a UI screen.
+description: Generate Frontend test design mindmap from RSD/PTTK on Confluence. For UI screens only. Use when user says "sinh test design frontend", "sinh test design giao diện", "tao mindmap màn hình", or provides Confluence links to RSD/PTTK for a UI screen.
 ---
 
 # Test Design Generator — Frontend Mode (Orchestrator)
@@ -18,9 +18,13 @@ Generate test design documents (.md) for Frontend UI screens bằng cách điề
 
 Python 3 installed. Check: `python3 --version || python --version`
 
-## Đọc file PDF — CHỈ dùng Read tool
+## Đọc tài liệu từ Confluence — dùng Atlassian MCP
 
-Dùng Read tool với `pages` parameter cho file lớn. **CẤM TUYỆT ĐỐI** tạo script parse PDF.
+Đọc nội dung RSD/PTTK từ Confluence bằng Atlassian MCP tools:
+1. Resolve `cloudId` bằng `getConfluenceSpaces()`
+2. Trích xuất `pageId` từ Confluence URL (pattern: `/pages/<pageId>/`)
+3. Gọi `getConfluencePage(cloudId, pageId)` để lấy nội dung trang (markdown)
+4. **CẤM TUYỆT ĐỐI** dùng WebFetch cho Confluence URL (yêu cầu authentication)
 
 ## ⛔ Temp File Rules
 
@@ -41,12 +45,12 @@ Dùng Read tool với `pages` parameter cho file lớn. **CẤM TUYỆT ĐỐI**
 ### Step 0b: Validate Required Inputs
 
 **⚠️ STOP — Chờ user cung cấp đủ:**
-- **RSD file path** — bắt buộc
-- **PTTK file path** — tuỳ chọn
+- **RSD Confluence URL** — bắt buộc (VD: `https://your-site.atlassian.net/wiki/spaces/SPACE/pages/123456/RSD`)
+- **PTTK Confluence URL** — tuỳ chọn
 - **Output folder** — bắt buộc (VD: `feature-1/`)
 - **Screen scope** — tuỳ chọn (VD: "chỉ generate US05.2")
 
-NEVER scan folders hoặc đoán file paths. Nếu thiếu → hỏi.
+NEVER guess URLs. Nếu thiếu → hỏi user cung cấp link Confluence.
 
 ### Step 1: Mode Detection (Frontend Mode Only)
 
@@ -134,13 +138,16 @@ Spawn sub-agent với prompt = nội dung td-extract.md + context block sau:
 SKILL_SCRIPTS: {resolved SKILL_SCRIPTS path}
 INVENTORY_FILE: {INVENTORY_FILE}
 OUTPUT_DIR: {OUTPUT_DIR}
-RSD_FILE: {rsd file path}
-PTTK_FILE: {pttk file path hoặc "none"}
+CLOUD_ID: {cloudId từ Atlassian MCP}
+RSD_PAGE_ID: {pageId trích từ RSD Confluence URL}
+PTTK_PAGE_ID: {pageId trích từ PTTK Confluence URL hoặc "none"}
 SCREEN_NAME: {tên màn hình từ RSD title}
 SCREEN_TYPE: {LIST|FORM|POPUP|DETAIL — xác định sơ bộ từ RSD}
 PROJECT_RULES: {projectRules nếu có, hoặc "none"}
 ===================
 ```
+
+**Trước Step 4:** Resolve cloudId bằng `getConfluenceSpaces()` và trích xuất pageId từ Confluence URLs (pattern: `/pages/<pageId>/`).
 
 **Kết thúc Step 4 khi:** `{INVENTORY_FILE}` được tạo và `fieldConstraints` không rỗng.
 

@@ -1,6 +1,6 @@
 ---
 name: generate-test-design-api
-description: Generate API test design mindmap from RSD/PTTK. For API endpoints only. Use when user says "sinh test design api", "tao mindmap api", "tạo test design api", or provides RSD/PTTK for an API endpoint.
+description: Generate API test design mindmap from RSD/PTTK on Confluence. For API endpoints only. Use when user says "sinh test design api", "tao mindmap api", "tạo test design api", or provides Confluence links to RSD/PTTK for an API endpoint.
 ---
 
 # Test Design Generator — API Mode (Orchestrator)
@@ -36,8 +36,8 @@ description: Generate API test design mindmap from RSD/PTTK. For API endpoints o
 <guardrails>
     <hard_stop id="orchestrator_reads_rsd">
         <condition>If orchestrator reads RSD or PTTK directly</condition>
-        <consequence>VIOLATION: architecture breach — td-extract sub-agent has sole responsibility for reading RSD/PTTK</consequence>
-        <recovery>Pass file paths to td-extract sub-agent only.</recovery>
+        <consequence>VIOLATION: architecture breach — td-extract sub-agent has sole responsibility for reading RSD/PTTK from Confluence</consequence>
+        <recovery>Pass Confluence URLs to td-extract sub-agent only.</recovery>
     </hard_stop>
 
     <hard_stop id="missing_inputs">
@@ -82,11 +82,13 @@ description: Generate API test design mindmap from RSD/PTTK. For API endpoints o
     <trigger>Always — before any other step</trigger>
 
     <required_inputs>
-        <input name="RSD File" var="RSD_FILE" source="user" required="true">
-            <description>Path to RSD file (PDF or document)</description>
+        <input name="RSD Confluence URL" var="RSD_URL" source="user" required="true">
+            <description>Confluence page URL of RSD document</description>
+            <example>https://your-site.atlassian.net/wiki/spaces/SPACE/pages/123456/RSD-Ten-API</example>
         </input>
-        <input name="PTTK File" var="PTTK_FILE" source="user" required="false">
-            <description>Path to PTTK file (optional)</description>
+        <input name="PTTK Confluence URL" var="PTTK_URL" source="user" required="false">
+            <description>Confluence page URL of PTTK document (optional)</description>
+            <example>https://your-site.atlassian.net/wiki/spaces/SPACE/pages/789012/PTTK-Ten-API</example>
         </input>
         <input name="Output Folder" var="OUTPUT_DIR" source="user" required="true">
             <description>Output directory</description>
@@ -101,10 +103,30 @@ description: Generate API test design mindmap from RSD/PTTK. For API endpoints o
 
     <guardrails>
         <rule type="hard_stop">
-            <condition>RSD file path missing</condition>
-            <action>NEVER scan folders or guess paths</action>
+            <condition>RSD Confluence URL missing</condition>
+            <action>NEVER guess URLs — ask user for the Confluence page link</action>
         </rule>
     </guardrails>
+</step>
+
+<step id="0c" name="Authenticate Atlassian MCP">
+    <trigger>Always — before reading any Confluence page</trigger>
+    <description>
+        Ensure Atlassian MCP is authenticated. If not yet authenticated, call authenticate tool.
+        Then resolve cloudId by calling getConfluenceSpaces().
+        Extract pageId from Confluence URLs using pattern: /pages/&lt;pageId&gt;/
+    </description>
+    <actions>
+        <action type="mcp">
+            <tool>getConfluenceSpaces</tool>
+            <purpose>Resolve cloudId for subsequent Confluence API calls</purpose>
+        </action>
+    </actions>
+    <output>
+        <var name="CLOUD_ID">Atlassian Cloud ID</var>
+        <var name="RSD_PAGE_ID">Page ID extracted from RSD_URL</var>
+        <var name="PTTK_PAGE_ID">Page ID extracted from PTTK_URL (or "none")</var>
+    </output>
 </step>
 
 <step id="1" name="Mode Detection">
@@ -215,8 +237,9 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                     <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
                     <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                     <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
-                    <param name="RSD_FILE">{RSD_FILE}</param>
-                    <param name="PTTK_FILE">{PTTK_FILE or "none"}</param>
+                    <param name="CLOUD_ID">{CLOUD_ID}</param>
+                    <param name="RSD_PAGE_ID">{RSD_PAGE_ID}</param>
+                    <param name="PTTK_PAGE_ID">{PTTK_PAGE_ID or "none"}</param>
                     <param name="API_NAME">{from RSD title}</param>
                     <param name="METHOD">{HTTP method}</param>
                     <param name="PROJECT_RULES">{projectRules or "none"}</param>
@@ -238,8 +261,9 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                     <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
                     <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                     <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
-                    <param name="RSD_FILE">{RSD_FILE}</param>
-                    <param name="PTTK_FILE">{PTTK_FILE or "none"}</param>
+                    <param name="CLOUD_ID">{CLOUD_ID}</param>
+                    <param name="RSD_PAGE_ID">{RSD_PAGE_ID}</param>
+                    <param name="PTTK_PAGE_ID">{PTTK_PAGE_ID or "none"}</param>
                     <param name="API_NAME">{from RSD title}</param>
                     <param name="METHOD">{HTTP method}</param>
                     <param name="PROJECT_RULES">{projectRules or "none"}</param>
