@@ -10,6 +10,7 @@ const __dirname = dirname(__filename);
 const PACKAGE_ROOT = join(__dirname, '..', '..'); // package root (node_modules/test-genie/)
 
 const SKILLS = [
+  'confluence-assistant',
   'generate-test-design-api',
   'generate-test-design-frontend',
   'generate-test-case-api',
@@ -17,6 +18,8 @@ const SKILLS = [
   'generate-postman-collection',
   'execute-test-case-api',
   'execute-test-case-frontend',
+  'rsd-generator',
+  'rsd-to-pttk'
 ];
 
 // Map AI name → subdirectory base (relative to cwd, or absolute for codex)
