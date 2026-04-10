@@ -104,7 +104,7 @@ print(f'PROCEED: {len(inv.get(\"permissions\",[]))} roles, {len(inv.get(\"status
 
 <step id="6" name="Write test cases">
     <test_case_template>
-        <field name="testSuiteName">Theo context — VD: `"Kiểm tra phân quyền"`, `"Kiểm tra quy trình duyệt"`</field>
+        <field name="testSuiteName">Sub-group name, VD: `"Phân quyền theo role"`, `"Quy trình duyệt Maker-Checker"`, `"Kiểm tra tự phê duyệt"` — KHÔNG dùng "Kiểm tra quy trình duyệt" làm LV1</field>
         <field name="testCaseName">Lấy TRỰC TIẾP từ mindmap bullet — hoặc tạo từ role/transition nếu không có trong mindmap</field>
         <field name="summary">Giống hệt `testCaseName`</field>
         <field name="preConditions">{preConditionsBase} (điều chỉnh role nếu cần)</field>
@@ -123,14 +123,14 @@ print(f'PROCEED: {len(inv.get(\"permissions\",[]))} roles, {len(inv.get(\"status
         </field>
         <field name="importance">"High" cho security/permission tests; "Medium" cho transition tests</field>
         <field name="result">"PENDING"</field>
-        <field name="testcaseLV1">= testSuiteName (## section heading, e.g., "Kiểm tra phân quyền")</field>
-        <field name="testcaseLV2">= testCaseName</field>
-        <field name="testcaseLV3">= "" (luôn để trống)</field>
+        <field name="testcaseLV1">= "Kiểm tra chức năng" — LUÔN gộp workflow/role/transition vào LV1 "Kiểm tra chức năng", KHÔNG tạo LV1 riêng "Kiểm tra quy trình duyệt"</field>
+        <field name="testcaseLV2">= testSuiteName (workflow sub-group name)</field>
+        <field name="testcaseLV3">= testCaseName</field>
     </test_case_template>
 
     <rules>
         <rule type="result">= "PENDING"</rule>
-        <rule type="summary">= testcaseLV2 (vì testcaseLV3 luôn rỗng ở batch này)</rule>
+        <rule type="summary">= testcaseLV3 (vì testcaseLV3 = testCaseName)</rule>
         <rule type="expectedResult">KHÔNG có HTTP status codes</rule>
         <rule type="step">= UI actions — KHÔNG viết "Send API"</rule>
     </rules>

@@ -27,6 +27,12 @@
 | ## Kiểm tra validate, không có field sub-suite | `"Kiểm tra validate"` | testCaseName | `""` | testcaseLV2 |
 | ## section có ### button sub-group (tc-mainflow, e.g., "Button Lưu") | parent ## heading | testSuiteName (button name) | testCaseName | testcaseLV3 |
 
+## LV1 Ordering Rules (fixed)
+
+- **"Kiểm tra timeout" LUÔN là LV1 cuối cùng** trong output, bất kể thứ tự trong test-design.
+- **Workflow / Maker-Checker / status transition cases** (từ tc-workflow) **LUÔN gộp vào LV1 "Kiểm tra chức năng"** — KHÔNG tạo LV1 riêng "Kiểm tra quy trình duyệt".
+- Thứ tự LV1 chuẩn: Giao diện chung → Phân quyền → Validate → Chức năng → Timeout (last).
+
 ## Importance Mapping
 
 | testSuiteName contains | importance |

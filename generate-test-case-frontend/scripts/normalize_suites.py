@@ -289,60 +289,61 @@ def _build_case_to_subheading_map(sections):
 
 def reorder_by_test_design(test_cases, sections):
     """
-    Reorder test cases to match ## section order AND ### subheading order from test-design.
-    Within each ## section, test cases are sorted by their ### subheading order.
-    Field sub-suite names (used as testSuiteName) also participate in ordering.
-    Returns (reordered_cases, changed_order).
+    Reorder by (testcaseLV1, testcaseLV2) with rules:
+      - "Kiểm tra timeout" LV1 always last
+      - "Kiểm tra quy trình duyệt" LV1 auto-rewritten to "Kiểm tra chức năng"
+      - LV1 order: from test-design ## headings, unknown LV1s inserted before timeout in first-appearance order
+      - LV2 order: from test-design ### subheadings, unknown LV2s in first-appearance order
+      - Stable within each (LV1, LV2) group
     """
     if not sections:
         return test_cases, False
 
-    # Build extended suite order: ## headings + ### subheadings (in order)
-    suite_order = []
-    subheading_order = {}  # subheading_name -> (section_idx, sub_idx)
-    for sec_idx, s in enumerate(sections):
-        suite_order.append(s["heading"])
-        for sub_idx, sub in enumerate(s["subheadings"]):
-            subheading_order[sub] = (sec_idx, sub_idx)
-            subheading_order[sub.lower()] = (sec_idx, sub_idx)
+    # Safety net: rewrite deprecated LV1
+    LV1_REWRITE = {"Kiểm tra quy trình duyệt": "Kiểm tra chức năng"}
+    for tc in test_cases:
+        lv1 = tc.get("testcaseLV1", "")
+        if lv1 in LV1_REWRITE:
+            tc["testcaseLV1"] = LV1_REWRITE[lv1]
 
-    def sort_key(tc):
-        suite = tc.get("testSuiteName", "")
-        case_name = tc.get("testCaseName", "")
+    # Build LV1 order from test-design, force "Kiểm tra timeout" last
+    TIMEOUT_LV1 = "Kiểm tra timeout"
+    lv1_order = [s["heading"] for s in sections if s["heading"] != TIMEOUT_LV1]
+    lv2_order_per_lv1 = {
+        s["heading"]: list(s["subheadings"]) for s in sections
+    }
 
-        # 1. If testSuiteName is a ## heading, use its index directly
-        if suite in suite_order:
-            suite_idx = suite_order.index(suite)
-        else:
-            # 2. If testSuiteName is a ### subheading (field sub-suite), use parent section idx
-            found = subheading_order.get(suite) or subheading_order.get(suite.lower())
-            if found:
-                suite_idx = found[0]
-            else:
-                suite_idx = 999
+    # Append unknown LV1s (first-appearance) BEFORE timeout
+    for tc in test_cases:
+        lv1 = tc.get("testcaseLV1", "")
+        if lv1 and lv1 != TIMEOUT_LV1 and lv1 not in lv1_order:
+            lv1_order.append(lv1)
+            lv2_order_per_lv1.setdefault(lv1, [])
 
-        # Sub-index: if testSuiteName is a field sub-suite, use its position within the section
-        found_sub = subheading_order.get(suite) or subheading_order.get(suite.lower())
-        if found_sub:
-            sub_idx = found_sub[1]
-        else:
-            _, _, sub_idx = _extract_field_from_case(case_name, sections)
-            if sub_idx is None:
-                sub_idx = 999
+    # Timeout always last
+    lv1_order.append(TIMEOUT_LV1)
+    lv2_order_per_lv1.setdefault(TIMEOUT_LV1, [s["subheadings"] for s in sections if s["heading"] == TIMEOUT_LV1][0] if any(s["heading"] == TIMEOUT_LV1 for s in sections) else [])
 
-        return (suite_idx, sub_idx)
+    # Append unknown LV2s per LV1 (first-appearance)
+    for tc in test_cases:
+        lv1 = tc.get("testcaseLV1", "")
+        lv2 = tc.get("testcaseLV2", "")
+        if lv1 in lv2_order_per_lv1 and lv2 and lv2 not in lv2_order_per_lv1[lv1]:
+            lv2_order_per_lv1[lv1].append(lv2)
 
-    original_order = [
-        (tc.get("testSuiteName", ""), tc.get("testCaseName", ""))
-        for tc in test_cases
-    ]
-    reordered = sorted(test_cases, key=sort_key)
-    new_order = [
-        (tc.get("testSuiteName", ""), tc.get("testCaseName", ""))
-        for tc in reordered
-    ]
+    def sort_key(indexed_tc):
+        i, tc = indexed_tc
+        lv1 = tc.get("testcaseLV1", "")
+        lv2 = tc.get("testcaseLV2", "")
+        lv1_idx = lv1_order.index(lv1) if lv1 in lv1_order else len(lv1_order) - 1
+        lv2_list = lv2_order_per_lv1.get(lv1, [])
+        lv2_idx = lv2_list.index(lv2) if lv2 in lv2_list else 9999
+        return (lv1_idx, lv2_idx, i)
 
-    return reordered, original_order != new_order
+    original = [(tc.get("testcaseLV1", ""), tc.get("testcaseLV2", ""), tc.get("testCaseName", "")) for tc in test_cases]
+    reordered = [tc for _, tc in sorted(enumerate(test_cases), key=sort_key)]
+    new_ord = [(tc.get("testcaseLV1", ""), tc.get("testcaseLV2", ""), tc.get("testCaseName", "")) for tc in reordered]
+    return reordered, original != new_ord
 
 
 def load_field_type_prefixes_from_context(tc_context_path):

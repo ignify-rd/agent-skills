@@ -39,6 +39,15 @@ model: inherit
             Step 4b is NOT optional — it is the ONLY mechanism that re-sorts gap-fill cases into the correct ## + ### heading order from test-design.
         </recovery>
     </hard_stop>
+    <hard_stop id="lv1_ordering_rules">
+        <condition>Final test-cases.json có LV1 "Kiểm tra quy trình duyệt" TẠI OUTPUT, hoặc "Kiểm tra timeout" KHÔNG phải LV1 cuối cùng</condition>
+        <consequence>VIOLATION: vi phạm ordering rules cố định của project</consequence>
+        <recovery>
+            - LV1 "Kiểm tra quy trình duyệt" (từ batch-workflow) PHẢI rewrite thành "Kiểm tra chức năng" — workflow/role/transition cases gộp vào "Kiểm tra chức năng".
+            - LV1 "Kiểm tra timeout" PHẢI là LV1 cuối cùng trong output, bất kể thứ tự trong test-design.
+            - normalize_suites.py đã xử lý tự động — đảm bảo Step 4b chạy thành công.
+        </recovery>
+    </hard_stop>
 </guardrails>
 
 ---
@@ -161,8 +170,9 @@ model: inherit
     <description>
         Sau khi gap-fill append các cases mới, phải chạy lại normalize_suites.py
         để: (1) chuẩn hóa testSuiteName của gap-fill cases, (2) SẮP XẾP LẠI
-        toàn bộ mảng theo thứ tự ## + ### headings từ test-design. KHÔNG BỎ QUA BƯỚC NÀY.
-        Nếu bỏ qua → gap-fill cases bị đẩy xuống cuối file, sai thứ tự.
+        toàn bộ mảng theo thứ tự ## + ### headings từ test-design, (3) REWRITE
+        LV1 "Kiểm tra quy trình duyệt" → "Kiểm tra chức năng", (4) FORCE LV1
+        "Kiểm tra timeout" xuống cuối cùng. KHÔNG BỎ QUA BƯỚC NÀY.
     </description>
     <command>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py --test-design {TEST_DESIGN_FILE} --test-cases {OUTPUT_DIR}/test-cases-merged.json --inventory {INVENTORY_FILE} --tc-context {TC_CONTEXT_FILE}</command>
 
