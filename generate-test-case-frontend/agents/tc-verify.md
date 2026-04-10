@@ -93,9 +93,31 @@ model: inherit
 <step id="3" name="Gap analysis">
     <for_each>inventory item</for_each>
 
+    <validate_field_check>
+        ⚠️ Với mỗi field trong fieldConstraints: đếm số bullets tương ứng trong test design, so với số cases được sinh.
+        <command>python3 -X utf8 -c "
+import re, json
+td = open('{TEST_DESIGN_FILE}', encoding='utf-8').read()
+in_validate = False; current_field = None; counts = {}
+for line in td.splitlines():
+    if re.match(r'^##\s+', line):
+        in_validate = 'validate' in line.lower(); current_field = None
+    elif re.match(r'^###\s+', line) and in_validate:
+        current_field = line.strip('# ').strip(); counts[current_field] = 0
+    elif re.match(r'^- ', line) and in_validate and current_field:
+        counts[current_field] += 1
+cases = json.load(open('{OUTPUT_DIR}/test-cases-merged.json', encoding='utf-8'))
+for field, expected in counts.items():
+    actual = sum(1 for tc in cases if field in tc.get('testSuiteName','') or field in tc.get('testcaseLV2',''))
+    if actual < expected:
+        print(f'GAP: {field!r} → {actual}/{expected} cases')
+"</command>
+        Với mỗi dòng GAP xuất hiện: tìm các bullets bị thiếu, auto-fill vào merged file.
+    </validate_field_check>
+
     <coverage_check>
         <category name="fieldConstraints">
-            <method>Đếm số test cases có testSuiteName chứa fieldName (hoặc trong validate suite)</method>
+            <method>Đếm số test cases có testSuiteName chứa fieldName (hoặc trong validate suite). So sánh với bullet count từ test design.</method>
         </category>
 
         <category name="businessRules">

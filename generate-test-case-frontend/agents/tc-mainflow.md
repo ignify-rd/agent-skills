@@ -66,15 +66,28 @@ print('READY: validate batches confirmed complete')
 <step id="2" name="Read test design — extract post-validate sections">
     <file>{TEST_DESIGN_FILE}</file>
 
-    <extract_rule>Tìm và trích xuất tất cả sections `##` SAU section `## Kiểm tra Validate`</extract_rule>
+    <extract_rule>
+        Tìm tất cả sections `##` xuất hiện SAU phần `## Kiểm tra Validate` (hoặc `## Kiểm tra validate`).
+        ⚠️ TUYỆT ĐỐI KHÔNG đọc hay lấy bất kỳ nội dung nào bên trong `## Kiểm tra Validate` (kể cả các `###` subsection của nó).
+        Chỉ xử lý các `##` section bắt đầu sau khi kết thúc toàn bộ `## Kiểm tra Validate`.
+    </extract_rule>
+
+    <boundary_rule>
+        ⚠️ QUAN TRỌNG: Ranh giới section `## Kiểm tra Validate` kết thúc khi xuất hiện dòng `##` tiếp theo (không phải `###`).
+        Mọi bullet `-` và `###` nằm trong `## Kiểm tra Validate` đều thuộc validate batch — KHÔNG được lấy vào đây.
+    </boundary_rule>
 
     <typical_sections>
         <section>## Kiểm tra chức năng</section>
         <section>### Button Lưu, ### Button Đẩy duyệt, ### Button Xóa, etc.</section>
+        <section>## Kiểm tra timeout</section>
     </typical_sections>
 
     <case_extraction>
-        <rule>Mỗi bullet = 1 test case cần sinh</rule>
+        <rule>Mỗi bullet bên dưới `###` heading = 1 test case cần sinh</rule>
+        <rule>Mỗi bullet PHẢI được lấy trực tiếp từ test design — KHÔNG tự thêm cases ngoài test design</rule>
+        <rule>Đọc TOÀN BỘ section, không bỏ qua bullet nào</rule>
+        <rule>Sau khi đọc xong, đối chiếu lại: số lượng cases sinh ra phải = số bullets trong test design</rule>
     </case_extraction>
 </step>
 
@@ -102,7 +115,7 @@ print('READY: validate batches confirmed complete')
     <note>KHÔNG duplicate validate cases từ BATCH 2 — cross-field validate (VD: expiredDate < effectiveDate) đã có trong BATCH 2, KHÔNG sinh lại ở đây</note>
 
     <test_case_template>
-        <field name="testSuiteName">Tên button/action (VD: `"Button Lưu"`, `"Button Đẩy duyệt"`) theo catalogStyle</field>
+        <field name="testSuiteName">= CHÍNH XÁC text của `###` heading trong test design (VD: nếu test design có `### Tạo mới SLA_Nút Lưu` → testSuiteName = `"Tạo mới SLA_Nút Lưu"`). KHÔNG tự đổi tên thành "Button Lưu" hay "Nút Lưu".</field>
         <field name="testCaseName">Lấy TRỰC TIẾP từ bullet text trong mindmap — KHÔNG thêm prefix</field>
         <field name="summary">Giống hệt `testCaseName`</field>
         <field name="preConditions">{preConditionsBase}</field>
@@ -144,6 +157,8 @@ print('READY: validate batches confirmed complete')
         <rule type="result">= "PENDING"</rule>
         <rule type="step">= UI actions — KHÔNG viết "Send API"</rule>
         <rule type="expectedResult">= UI state — KHÔNG có HTTP status codes</rule>
+        <rule type="source_fidelity">⚠️ testCaseName PHẢI lấy TRỰC TIẾP từ bullet trong test design — KHÔNG tự viết cases không có trong test design. Nếu test design có 5 bullets → sinh đúng 5 test cases, không hơn không kém.</rule>
+        <rule type="no_validate_cases">⚠️ KHÔNG được sinh test cases thuộc validate (kiểm tra nhập sai định dạng, nhập quá ký tự, bỏ trống field...) vào section này. Validate cases đã có trong BATCH 2.</rule>
     </rules>
 </step>
 

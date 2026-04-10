@@ -49,8 +49,34 @@ model: inherit
 
     <extract_rule>Tìm section `## Kiểm tra Validate` (hoặc `## Kiểm tra validate`). Trong đó, tìm các `### {fieldName}` tương ứng với fields trong FIELD_BATCH.</extract_rule>
 
+    <pre_count>
+        Trước khi sinh cases, đếm số bullets cho mỗi field:
+        <command>python3 -X utf8 -c "
+import re, sys
+td = open('{TEST_DESIGN_FILE}', encoding='utf-8').read()
+fields = {FIELD_BATCH}  # list of field names
+in_validate = False
+current_field = None
+counts = {}
+for line in td.splitlines():
+    if re.match(r'^##\s+', line):
+        in_validate = 'validate' in line.lower()
+        current_field = None
+    elif re.match(r'^###\s+', line) and in_validate:
+        current_field = line.strip('# ').strip()
+        counts[current_field] = 0
+    elif re.match(r'^- ', line) and in_validate and current_field:
+        counts[current_field] = counts.get(current_field, 0) + 1
+for f, n in counts.items():
+    print(f'{f}: {n} bullets')
+"</command>
+        Ghi nhớ số bullet cho từng field. Sau khi sinh: số cases phải = số bullets.
+    </pre_count>
+
     <case_extraction>
-        <rule>Mỗi bullet `- Kiểm tra ...` bên dưới = 1 test case cần sinh</rule>
+        <rule>Mỗi bullet `- Kiểm tra ...` (hoặc `- Kiểm tra ...`) bên dưới = 1 test case cần sinh</rule>
+        <rule>⚠️ Đọc TOÀN BỘ bullets của field — không bỏ qua bullet nào dù field 1 hay field 2</rule>
+        <rule>Nếu field có 24 bullets → phải sinh đúng 24 test cases</rule>
     </case_extraction>
 </step>
 
@@ -112,11 +138,15 @@ model: inherit
     <after>Sinh xong mỗi field</after>
 
     <output>
-        <line>✓ Field {fieldName}: {N} cases generated</line>
-        <line>Missing cases vs mindmap: [list nếu thiếu] → APPEND immediately</line>
+        <line>✓ Field {fieldName}: {N} cases generated / {M} bullets in test design</line>
+        <line>Missing cases: [liệt kê text bullet bị thiếu] → APPEND immediately nếu N &lt; M</line>
     </output>
 
-    <if_missing>APPEND ngay trước khi qua field tiếp theo</if_missing>
+    <if_missing>
+        So sánh cases đã sinh với danh sách bullets đã đếm ở Step 2.
+        Liệt kê TỪNG bullet bị thiếu → APPEND ngay vào batch accumulator trước khi qua field tiếp theo.
+        KHÔNG được bỏ qua dù chỉ 1 bullet.
+    </if_missing>
 
     <rule type="forbidden">TUYỆT ĐỐI KHÔNG ghi checkpoint text vào batch file</rule>
 </step>

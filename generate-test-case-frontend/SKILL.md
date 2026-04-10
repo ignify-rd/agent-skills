@@ -263,7 +263,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 
     <batch_strategy>
         <rule>Extract screenType from summary (LIST | FORM | POPUP | DETAIL)</rule>
-        <rule>Group fields into batches of max 3 fields each: Batch 1: [F1, F2, F3], Batch 2: [F4, F5, F6], ...</rule>
+        <rule>Group fields into batches of max 2 fields each: Batch 1: [F1, F2], Batch 2: [F3, F4], ... (⚠️ tối đa 2 fields/batch — KHÔNG dùng 3 để tránh mất cases ở field cuối)</rule>
         <rule>Detect FIELD_TYPES_NEEDED per batch: extract "type" values from fieldConstraints for each field in batch — used as FIELD_TYPES_NEEDED for tc-validate (comma-separated, e.g. "textbox,combobox")</rule>
         <rule>If fieldConstraints returns 0 items: skip Step 5b, proceed to Step 5c</rule>
     </batch_strategy>

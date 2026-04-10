@@ -136,14 +136,22 @@ def main():
 
     reordered = original_suites != regrouped_suites
 
-    # Step 3: Assign sequential IDs + recompute summary
+    # Step 3: Assign sequential IDs + recompute summary + compute name formula
     prefix = args.prefix
     for i, tc in enumerate(test_cases, start=1):
         tc['testcaseId'] = f'{prefix}_{i}'
 
+        lv1 = (tc.get('testcaseLV1') or '').strip()
         lv2 = (tc.get('testcaseLV2') or '').strip()
         lv3 = (tc.get('testcaseLV3') or '').strip()
         tc['summary'] = lv3 if lv3 else lv2
+
+        # Compute testCaseName as: {testcaseId}_{testcaseLV1}_{testcaseLV2}_{testcaseLV3}
+        # LV3 is omitted (no trailing _) when empty
+        parts = [tc['testcaseId'], lv1, lv2]
+        if lv3:
+            parts.append(lv3)
+        tc['testCaseName'] = '_'.join(parts)
 
     # Step 4: Write back
     with open(args.file, 'w', encoding='utf-8') as f:

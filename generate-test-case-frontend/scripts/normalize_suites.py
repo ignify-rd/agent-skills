@@ -122,15 +122,20 @@ def build_suite_map(sections, inventory_path=None):
     return field_map, subheading_map, case_name_map
 
 
-def get_validate_subheadings(sections):
-    """Return set of ### subheading names under ## Kiểm tra Validate section.
-    These are valid suite names for field sub-suites (should not be normalized away)."""
+def get_all_subheadings(sections):
+    """Return set of ALL ### subheading names from all sections.
+    Any exact match to a ### heading is a valid testSuiteName — must not be remapped.
+    This covers: field sub-suites under Validate AND button/action groups under Chức năng, etc."""
     result = set()
     for section in sections:
-        if "validate" in section["heading"].lower():
-            for sub in section["subheadings"]:
-                result.add(sub)
+        for sub in section["subheadings"]:
+            result.add(sub)
     return result
+
+
+# Keep old name as alias for backward compatibility
+def get_validate_subheadings(sections):
+    return get_all_subheadings(sections)
 
 
 def normalize(test_cases, sections, inventory_path=None):
@@ -138,9 +143,11 @@ def normalize(test_cases, sections, inventory_path=None):
     field_map, subheading_map, case_name_map = build_suite_map(sections, inventory_path)
     valid_suites = {s["heading"] for s in sections}
 
-    # Field sub-suite names (### headings under validate) are also valid — don't normalize them away
-    validate_subs = get_validate_subheadings(sections)
-    valid_suites_extended = valid_suites | validate_subs
+    # ALL ### headings (from any section) are valid testSuiteNames — don't normalize them away.
+    # This prevents remapping chức năng sub-group names (e.g. "Tạo mới SLA_Nút Lưu") to
+    # "Kiểm tra Validate" just because the case_name mentions a field name.
+    all_subs = get_all_subheadings(sections)
+    valid_suites_extended = valid_suites | all_subs
 
     changes = 0
     details = []

@@ -794,6 +794,18 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
     - Hiển thị thông báo lỗi validate "Ngày không hợp lệ"
 
+- Kiểm tra khi chọn ngày quá khứ
+
+    - {allowPastDates == false ? "Ngày quá khứ bị disable, không thể chọn" : "Hệ thống cho phép chọn ngày quá khứ"}
+
+- Kiểm tra khi chọn ngày hiện tại
+
+    - Hệ thống cho phép chọn ngày hiện tại
+
+- Kiểm tra khi chọn ngày tương lai
+
+    - {allowFutureDates == false ? "Ngày tương lai bị disable, không thể chọn" : "Hệ thống cho phép chọn ngày tương lai"}
+
 {Nếu có minDate:}
 - Kiểm tra khi chọn ngày trước {minDate}
 
@@ -811,16 +823,6 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 - Kiểm tra khi chọn ngày = {maxDate}
 
     - Hệ thống cho phép chọn
-
-{Nếu không cho chọn ngày quá khứ:}
-- Kiểm tra khi chọn ngày quá khứ
-
-    - Ngày quá khứ bị disable, không thể chọn
-
-{Nếu không cho chọn ngày tương lai:}
-- Kiểm tra khi chọn ngày tương lai
-
-    - Ngày tương lai bị disable, không thể chọn
 
 - Kiểm tra khi nhập ký tự chữ
 
@@ -865,8 +867,9 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 **Conditional sections:**
 - `minDate` / `maxDate` → sinh boundary tests
-- `allowPastDates` = false → sinh test ngày quá khứ bị disable
-- `allowFutureDates` = false → sinh test ngày tương lai bị disable
+- `allowPastDates` = false → expected result của case ngày quá khứ = "Ngày quá khứ bị disable, không thể chọn"; nếu không có constraint → expected = "Hệ thống cho phép chọn ngày quá khứ"
+- `allowFutureDates` = false → expected result của case ngày tương lai = "Ngày tương lai bị disable, không thể chọn"; nếu không có constraint → expected = "Hệ thống cho phép chọn ngày tương lai"
+- Cases ngày quá khứ / hiện tại / tương lai LUÔN được sinh (không điều kiện) — chỉ expected result thay đổi theo constraint
 - `isRequired` → sinh test bỏ trống
 - `isConditionallyDisabled` → sinh test disabled state
 
