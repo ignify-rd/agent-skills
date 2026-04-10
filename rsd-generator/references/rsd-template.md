@@ -1,135 +1,164 @@
-# RSD Template (skeleton) — copy & fill
+# RSD Template (skeleton) — Confluence Wiki Markup
 
-Đây là skeleton đầy đủ 7 phần của 1 page RSD. Copy toàn bộ, rồi điền dữ liệu từ URD/Figma. Giữ nguyên heading và các label trong bảng (tiếng Việt, có dấu) vì người review quen với wording này.
+Đây là skeleton đầy đủ của 1 page RSD viết bằng **Confluence Wiki Markup**. Copy toàn bộ, điền dữ liệu từ URD/Figma. Giữ nguyên heading và label bảng (tiếng Việt, có dấu).
 
----
-
-**Phiên bản tài liệu**
-
-|  |  |  |  |  |
-| --- | --- | --- | --- | --- |
-| **Version** | **Lý do** | **Date** | **Người sửa** | **Mô tả** |
-| 1.0 | Thêm mới | {{YYYY-MM-DD}} | {{Tác giả}} | Dự thảo |
-
-**Mục lục**
-
-1. [Đặc tả/Tóm tắt usecase](#section-1)
-2. [Sơ đồ luồng xử lý](#section-2)
-3. [Ma trận phân quyền và phân bổ chức năng](#section-3)
-4. [Mô tả màn hình](#section-4)
-5. [Logic xử lý](#section-5)
+Upload lên Confluence bằng MCP với `content_format="wiki"`.
 
 ---
 
-<a name="section-1"></a>
+## Template wiki (copy phần dưới đây vào content)
 
-1. Đặc tả/Tóm tắt usecase
----------------------------
+```wiki
+*Phiên bản tài liệu*
 
-### 1.1. Sơ đồ Usecase (nếu có)
+||Version||Lý do||Date||Người sửa||Mô tả||
+|1.0|Thêm mới|{{YYYY-MM-DD}}|{{Tác giả}}|Khởi tạo|
 
-Tham chiếu tại {{link RSD cấp 1 — section sơ đồ use case}}
+----
 
-### 1.2. Đặc tả/tóm tắt Usecase
+*Mục lục*
 
-|  |  |
-| --- | --- |
-| **Tên** | {{Tên usecase, ví dụ: Danh sách thẻ tín dụng nội địa}} |
-| **Mã** | {{để trống nếu chưa có}} |
-| **Mô tả** | {{1-2 câu mô tả ngắn gọn mục đích}} |
-| **Tác nhân** | Tác nhân chủ động: {{vai trò user}}  Tác nhân thụ động: {{các hệ thống backend liên quan}} |
-| **Mức độ ưu tiên** | High / **Medium** / Low |
-| **Điều kiện kích hoạt** | {{Khi nào user kích hoạt chức năng này}} |
-| **Điều kiện trước** | 1. User đăng nhập thành công 2. User được phân quyền ... |
-| **Kết quả mong muốn** | {{Hệ thống hiển thị / xử lý gì}} |
-| **Luồng chính** | {{Bước 1...2...3...}} |
-| **Luồng thay thế** | N/A hoặc mô tả |
-| **Luồng ngoại lệ** | 1. ... 2. ... |
-| **Quy tắc nghiệp vụ (nếu có)** | {{Rules business phải tuân — phân quyền dữ liệu, logic trạng thái...}} |
-| **Yêu cầu phi chức năng (nếu có)** | Theo yêu cầu phi chức năng chung tại RSD cấp 1 |
+{toc:maxLevel=2}
 
-<a name="section-2"></a>
+----
 
-2. Sơ đồ luồng xử lý
---------------------
+{anchor:section-1}
+h2. 1. Đặc tả/Tóm tắt usecase
 
-### 2.1. Sơ đồ luồng xử lý
+h3. 1.1. Sơ đồ Usecase (nếu có)
 
-{{Chèn sơ đồ nếu có; nếu không, để trống và note "Sẽ bổ sung"}}
+Tham chiếu tại [{{link RSD cấp 1 — section sơ đồ use case}}|{{URL}}]
 
-### 2.2. Yêu cầu với các kết nối phát sinh mới/ cần chỉnh sửa trong luồng
+h3. 1.2. Đặc tả/tóm tắt Usecase
 
-|  |  |  |  |  |  |  |
-| --- | --- | --- | --- | --- | --- | --- |
-| **Bước** | **Tên kết nối** | **Trạng thái sẵn sàng** | **Backend cung cấp kết nối** | **Phương thức tích hợp** | **Luồng gọi API** | **Mô tả kết nối** |
-| {{Mô tả bước}} | {{Tên API}} | Có sẵn / Phát sinh mới / Cần chỉnh sửa | {{Module backend}} | API / DBlink / Job | {{Client → Server → Core}} | {{Endpoint + chức năng}} |
+||Hạng mục||Nội dung||
+|*Tên*|{{Tên usecase, ví dụ: Danh sách thẻ tín dụng nội địa}}|
+|*Mã*|{{để trống nếu chưa có}}|
+|*Mô tả*|{{1-2 câu mô tả ngắn gọn mục đích}}|
+|*Tác nhân*|Tác nhân chủ động: {{vai trò user}} \\ Tác nhân thụ động: {{các hệ thống backend liên quan}}|
+|*Mức độ ưu tiên*|High / *Medium* / Low|
+|*Điều kiện kích hoạt*|{{Khi nào user kích hoạt chức năng này}}|
+|*Điều kiện trước*|# User đăng nhập thành công \\ # User được phân quyền ...|
+|*Kết quả mong muốn*|{{Hệ thống hiển thị / xử lý gì}}|
+|*Luồng chính*|# {{Bước 1}} \\ # {{Bước 2}} \\ # {{Bước 3}}|
+|*Luồng thay thế*|N/A hoặc mô tả|
+|*Luồng ngoại lệ*|# ... \\ # ...|
+|*Quy tắc nghiệp vụ (nếu có)*|{{Rules business phải tuân — phân quyền dữ liệu, logic trạng thái...}}|
+|*Yêu cầu phi chức năng (nếu có)*|Theo yêu cầu phi chức năng chung tại RSD cấp 1|
 
-### 2.3. Danh mục hoặc sơ đồ trạng thái
+----
 
-#### 2.3.1. {{Tên đối tượng, ví dụ: Trạng thái của thẻ}}
+{anchor:section-2}
+h2. 2. Sơ đồ luồng xử lý
 
-Theo mô tả tại: {{link bảng trạng thái chung}}
+h3. 2.1. Sơ đồ luồng xử lý
 
-<a name="section-3"></a>
+{{Chèn ảnh nếu có: !ten-anh-so-do.png! \\ Hoặc sơ đồ ASCII trong khối noformat:}}
 
-3. Ma trận phân quyền và phân bổ chức năng
-------------------------------------------
+{noformat}
+{{Sơ đồ luồng ASCII hoặc để trống + ghi chú "Sẽ bổ sung"}}
+{noformat}
+
+h3. 2.2. Yêu cầu với các kết nối phát sinh mới/ cần chỉnh sửa trong luồng
+
+# Hệ thống mới, chức năng mới: Liệt kê toàn bộ các kết nối được sử dụng tại chức năng này.
+# Với các kết nối mới/ cần chỉnh sửa: mô tả yêu cầu của nghiệp vụ với các kết nối này.
+
+||Bước||Tên kết nối||Trạng thái sẵn sàng||Backend cung cấp kết nối||Phương thức tích hợp||Luồng gọi API||Mô tả kết nối||
+|{{Mô tả bước}}|{{Tên API}}|Có sẵn / Phát sinh mới / Cần chỉnh sửa|{{Module backend}}|API / DBlink / Job|{{Client → Server → Core}}|{{Endpoint + chức năng}}|
+
+h3. 2.3. Danh mục hoặc sơ đồ trạng thái
+
+h4. 2.3.1. {{Tên đối tượng, ví dụ: Trạng thái của thẻ}}
+
+Theo mô tả tại: [{{tên tài liệu trạng thái}}|{{URL}}]
+
+----
+
+{anchor:section-3}
+h2. 3. Ma trận phân quyền và phân bổ chức năng
 
 Mô tả tính năng phân bổ ở các FO/BO/iconnect và phân quyền người dùng (khởi tạo, sửa, xác nhận, duyệt).
-*Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng emoji (✅ ❌).*
+_Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng emoji._
 
-| **STT** | **Usecase (chức năng cấp 3)** | **MB** | **IB** | **BO** | **ERP (web/app)** | **ERP (H2H)** | **Maker-KH** | **Checker-KH** | **Inquiry-KH** | **Admin-KH** | **GDV CN** | **KSV CN** | **GDV TSC** | **KSV TSC** | **Inquiry-BO** | **Nhóm quyền khác** | **Mô tả** |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | **{{Tên nhóm chức năng}}** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| 1.1 | {{Chức năng cấp 3}} | x | x |  |  |  | x | x | x | x |  |  |  |  |  |  | {{Ghi chú phân giao}} |
+_Chọn cấu trúc cột phù hợp với dự án:_
 
-*(Nếu là RSD APP có RSD WEB tương ứng, thay toàn bộ bảng bằng: "Tham chiếu tại {{link RSD WEB}}#3.-Ma-tr%E1%BA%ADn-ph%C3%A2n-quy%E1%BB%81n")*
+*Cho iBank / FO (nhiều kênh):*
 
-<a name="section-4"></a>
+||STT||Usecase (chức năng cấp 3)||MB||IB||BO||ERP (web/app)||ERP (H2H)||Maker-KH||Checker-KH||Inquiry-KH||Admin-KH||GDV CN||KSV CN||GDV TSC||KSV TSC||Inquiry-BO||Nhóm quyền khác||Mô tả||
+|1|*{{Tên nhóm chức năng}}*| | | | | | | | | | | | | | | | |
+|1.1|{{Chức năng cấp 3}}|x|x| | | |x|x|x|x| | | | | | |{{Ghi chú phân giao}}|
 
-4. Mô tả màn hình
----------------------
+*Cho BO nội bộ / BackOffice (KSV/GDV):*
 
-Figma: {{link figma hoặc "N/A"}}
+||STT||Chức năng||Nơi phân bổ||KSV||GDV||Mô tả||
+|1|*{{Tên nhóm chức năng}}*| | | | |
+|1.1|{{Chức năng cấp 3}}|BO|x|x|{{Ghi chú}}|
 
-**a. Mockup màn hình**
+_(Nếu là RSD APP có RSD WEB tương ứng, thay toàn bộ bảng bằng: "Tham chiếu tại [RSD WEB|{{URL}}]")_
+
+----
+
+{anchor:section-4}
+h2. 4. Mô tả màn hình
+
+Figma: [{{tên Figma file}}|{{https://figma.com/design/...}}]
+
+*a. Mockup màn hình*
 
 Đường dẫn: {{Cách truy cập chức năng, ví dụ: Menu Thẻ > Danh sách thẻ > tab ...}}
 
 {{Caption state 1 — text thuần, không emoji, ví dụ: Màn hình danh sách khi có dữ liệu}}
 
-![screenshot-1.png](screenshots/screenshot-1.png)
+!screenshot-01-default.png!
 
 {{Caption state 2 — ví dụ: Màn hình khi không có dữ liệu}}
 
-![screenshot-2.png](screenshots/screenshot-2.png)
+!screenshot-02-empty.png!
 
 {{... lặp lại cho từng state: default / advanced search mở / empty / error / loading / hover / các variant ...}}
 
-*Nếu chưa có ảnh Figma: thay dòng ảnh bằng `*(Ảnh: chưa có - cần bổ sung từ Figma)*`. KHÔNG dùng blockquote hay emoji để mô tả giao diện thay cho ảnh.*
+_Nếu chưa có ảnh Figma: thay dòng ảnh bằng \_(Ảnh: chưa có - cần bổ sung từ Figma)\__ 
+_KHÔNG dùng emoji hay mô tả UI thay cho ảnh. Mô tả UI chỉ nằm trong bảng 4b._
 
-**b. Mô tả màn hình**
+*b. Mô tả màn hình*
 
-|  | **Hạng mục** | **Kiểu hiển thị** | **Kiểu thao tác** | **Bắt buộc** | **Độ dài** | **Mô tả** |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | **Cụm thông tin đầu trang** |  |  |  |  |  |
-| 2 | {{Element}} | Label / Button / Textbox / Droplist / Image / Tab ... | Read-only / Click / Input / Select | Y / N / - | {{max length hoặc "-"}} | {{Placeholder + mặc định + validate + logic + ẩn/hiện + enable/disable}} |
-| 3 | **Cụm tìm kiếm / Cụm danh sách / ...** |  |  |  |  |  |
-| ... |  |  |  |  |  |  |
+|| ||*Hạng mục*||*Kiểu hiển thị*||*Kiểu thao tác*||*Bắt buộc*||*Độ dài*||*Mô tả*||
+|1|*Cụm thông tin đầu trang*| | | | | |
+|2|{{Element, ví dụ: Breadcrumb}}|Label / Button / Textbox / Droplist / Image / Tab ...|Read-only / Click / Input / Select|Y / N / -|{{max length hoặc "-"}}|{{Placeholder + mặc định + validate + logic + ẩn/hiện + enable/disable}}|
+|3|*Cụm tìm kiếm nâng cao*| | | | | |
+|4|...| | | | | |
+|5|*Danh sách ...*| | | | | |
+|6|...| | | | | |
+|7|*Phân trang*| | | | | |
+|8|...| | | | | |
 
-<a name="section-5"></a>
+----
 
-5. Logic xử lý {{tên action chính, ví dụ: khi truy cập menu Thẻ > Danh sách thẻ > tab Thẻ tín dụng nội địa}}
-------------------------------------------------------------------------------------------------------------
+{anchor:section-5}
+h2. 5. Logic xử lý {{tên action chính, ví dụ: khi truy cập menu Thẻ > Danh sách thẻ > tab Thẻ tín dụng nội địa}}
 
-| **Thao tác** | **Tác nhân** | **Mô tả** |
-| --- | --- | --- |
-| {{Trigger user, ví dụ: User chọn tab Thẻ tín dụng nội địa}} | Client web/app | **1/ Gửi yêu cầu lấy danh sách ... qua API ...** Endpoint: {{...}} Payload: {{...}} |
-|  | Server {{Module}} | **1/ Kiểm tra tính hợp lệ input** - Không hợp lệ: trả lỗi INPUT_01 - Hết phiên: SESSION_TIMEOUT_01 - Hợp lệ: chuyển bước 2  **2/ Kiểm tra phân quyền** ...  **3/ ...** |
-|  | Client web/app | **Nhận phản hồi** - Lỗi phân quyền CARD.003: hiển thị popup "Người dùng chưa được phân quyền..." - Thành công: hiển thị danh sách theo mô tả màn hình |
+||*Thao tác*||*Tác nhân*||*Mô tả*||
+|{{Trigger user, ví dụ: User chọn tab Thẻ tín dụng nội địa}}|Client web/app|*1/ Gửi yêu cầu lấy danh sách ... qua API ...* \\ Endpoint: {{...}} \\ Payload: {{...}}|
+| |Server {{Module}}|*1/ Kiểm tra tính hợp lệ input* \\ * Không hợp lệ: trả lỗi INPUT_01 \\ * Hết phiên: SESSION_TIMEOUT_01 \\ * Hợp lệ: chuyển bước 2 \\ \\ *2/ Kiểm tra phân quyền* \\ ... \\ \\ *3/ ...*|
+| |Client web/app|*Nhận phản hồi* \\ * Lỗi phân quyền CARD.003: hiển thị popup "Người dùng chưa được phân quyền..." \\ * Thành công: hiển thị danh sách theo mô tả màn hình|
+
+----
+
+h2. Các điểm cần user xác nhận trước khi chính thức hoá
+
+* {{Ghi rõ từng [Cần xác nhận] đã đánh dấu ở trên, kèm section reference}}
+```
 
 ---
 
-## ⚠️ Các điểm cần user xác nhận trước khi chính thức hoá
+## Quy tắc quan trọng khi điền template
 
-- [ ] {{Ghi rõ từng [Cần xác nhận] đã đánh dấu ở trên, kèm section reference}}
+1. **Không dùng emoji** trong bất kỳ cell bảng hay đoạn text nào
+2. **TOC tự động** từ `{toc:maxLevel=2}` — không cần tạo thủ công
+3. **Xuống dòng trong cell bảng** dùng `\\` (2 backslash), không dùng newline thật
+4. **List trong cell** dùng `\\` để xuống dòng + `*` ở đầu mỗi dòng: `* item1 \\ * item2`
+5. **Link ngoài** dùng `[Text|URL]`; **link nội bộ** dùng `[#section-id]`
+6. **Ảnh** attach lên page trước, rồi chèn bằng `!ten-file.png!` hoặc `!ten-file.png|width=800!`
+7. **Số thứ tự bảng section 4b**: để trống header cột đầu (`|| ||`)
+8. **Row group header** trong bảng 4b: cell đầu là `*Tên cụm*`, các cột còn lại để trống
