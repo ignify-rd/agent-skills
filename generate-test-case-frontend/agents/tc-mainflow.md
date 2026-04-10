@@ -139,7 +139,8 @@ print('READY: validate batches confirmed complete')
 
     <rules>
         <rule type="testCaseName">= lấy TRỰC TIẾP từ mindmap — KHÔNG thêm prefix</rule>
-        <rule type="summary">= testcaseLV3 nếu non-empty; else testcaseLV2</rule>
+        <rule type="testcaseLV3">= testCaseName (button sub-group); "" (no sub-group)</rule>
+        <rule type="summary">= testcaseLV3 (button sub-group); testcaseLV2 (no sub-group)</rule>
         <rule type="result">= "PENDING"</rule>
         <rule type="step">= UI actions — KHÔNG viết "Send API"</rule>
         <rule type="expectedResult">= UI state — KHÔNG có HTTP status codes</rule>

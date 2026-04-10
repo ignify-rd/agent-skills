@@ -91,6 +91,7 @@ model: inherit
 
     <rules>
         <rule type="testCaseName">= lấy TRỰC TIẾP từ mindmap — KHÔNG thêm prefix</rule>
+        <rule type="testcaseLV3">= "" — luôn trống cho BATCH 1 (không có ### sub-group)</rule>
         <rule type="summary">= testcaseLV2 (vì testcaseLV3 luôn rỗng ở batch này)</rule>
         <rule type="result">= "PENDING" — KHÔNG để ""</rule>
         <rule type="expectedResult">= UI state — KHÔNG có HTTP status codes</rule>

@@ -33,6 +33,26 @@
 - **Workflow / Maker-Checker / status transition cases** (từ tc-workflow) **LUÔN gộp vào LV1 "Kiểm tra chức năng"** — KHÔNG tạo LV1 riêng "Kiểm tra quy trình duyệt".
 - Thứ tự LV1 chuẩn: Giao diện chung → Phân quyền → Validate → Chức năng → Timeout (last).
 
+## Công thức Name (Google Sheets / Excel)
+
+Cột `name` trong sheet = công thức:
+```
+[testcaseId]_[testcaseLV1]_[testcaseLV2]_[testcaseLV3]
+```
+
+Ví dụ:
+
+| Loại | testcaseLV1 | testcaseLV2 | testcaseLV3 | name |
+|------|------------|------------|------------|------|
+| Button sub-group | Kiểm tra chức năng | Button Lưu | Kiểm tra lưu thành công | FE_42_Kiểm tra chức năng_Button Lưu_Kiểm tra lưu thành công |
+| Field sub-suite (validate) | Kiểm tra validate | Textbox: Tên cấu hình SLA | Kiểm tra khi nhập 101 ký tự | FE_87_Kiểm tra validate_Textbox: Tên cấu hình SLA_Kiểm tra khi nhập 101 ký tự |
+| Không có sub-group | Kiểm tra giao diện chung | Kiểm tra điều hướng đến màn hình | *(trống)* | FE_12_Kiểm tra giao diện chung_Kiểm tra điều hướng đến màn hình_ |
+| Workflow sub-group | Kiểm tra chức năng | Phân quyền theo role | Kiểm tra role Viewer không thấy màn hình | FE_56_Kiểm tra chức năng_Phân quyền theo role_Kiểm tra role Viewer không thấy màn hình |
+
+Quy tắc ghép:
+- **LV3 trống** → bỏ qua, không ghi `_` thừa (VD: `FE_12_Kiểm tra giao diện chung_Kiểm tra điều hướng_`)
+- **LV1/LV2** luôn non-empty trong output — nếu sub-agent emit rỗng, `normalize_suites.py` và `assign_lv_ids.py` sẽ tự động tính lại từ cấu trúc batch
+
 ## Importance Mapping
 
 | testSuiteName contains | importance |
