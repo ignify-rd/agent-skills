@@ -41,30 +41,37 @@ Thực hiện tuần tự:
 
 ### Bước 1 — Gather & đọc hết inputs ngay lập tức
 
-Xác định các input user đã cung cấp. Chỉ hỏi thêm những gì **bắt buộc và chưa có**:
+**Ưu tiên thực sự của skill này: Section 4 (Mô tả màn hình) là output quan trọng nhất, luôn phải sinh ra đầy đủ.** Ảnh/Figma là input chính. URD và các tài liệu khác là optional — có thì enrich thêm các section còn lại, không có thì vẫn phải ra được Section 4.
 
 | Input | Bắt buộc | Nếu thiếu |
 |-------|----------|-----------|
 | Tên chức năng + platform (WEB/APP/BO) | Có | Hỏi user |
 | Space Confluence + Parent page ID | Có | Hỏi user |
-| URD (link Confluence hoặc Jira issue) | Có | Hỏi user |
-| Figma link hoặc ảnh mockup | Không | Bỏ qua phần ảnh, ghi chú chờ bổ sung |
-| Page tham chiếu (RSD cấp 1, bảng trạng thái, RSD WEB...) | Không | Bỏ qua, tham chiếu khi có URL |
+| Ảnh mockup hoặc Figma link | Có | Hỏi user — đây là nguồn sinh Section 4 |
+| URD (link Confluence, Jira issue...) | Không | Để trống / `[Cần bổ sung]` ở các section liên quan |
+| Page tham chiếu (RSD cấp 1, bảng trạng thái, RSD WEB...) | Không | Bỏ qua, điền khi user cung cấp |
 | Tên tác giả | Không | Dùng tên user hiện tại hoặc để trống |
 
-**Đọc tất cả resource song song ngay sau khi có đủ input bắt buộc:**
-- Từng page Confluence: `mcp__mcp-atlassian__confluence_get_page`. Page quá lớn → đọc theo chunks, grep heading trước.
-- Jira issue: `mcp__mcp-atlassian__jira_get_issue` — đọc description + attachments + comments.
-- Figma: `mcp__plugin_figma_figma__get_design_context` (element-level) + `get_screenshot` cho từng state (default, empty, error...). Parse URL: `figma.com/design/{fileKey}/...?node-id={nodeId}` — convert `-` thành `:` trong nodeId.
-- Ảnh đính kèm trong Jira/Confluence: download về local nếu cần attach lên page mới.
+**Quy trình đọc resource:**
+- **Figma link**: `mcp__plugin_figma_figma__get_design_context` (lấy element-level) + `get_screenshot` cho từng state cần mô tả (default, empty, error, dropdown mở...). Parse URL: `figma.com/design/{fileKey}/...?node-id={nodeId}` — convert `-` thành `:` trong nodeId. Tải ảnh về local folder `./screenshots/`.
+- **Ảnh đính kèm trong conversation** — không giả định format. Kiểm tra thực tế và xử lý:
+  - **Local file path**: `cp "<path>" "./screenshots/screen-01-default.png"`
+  - **Base64 string**: `echo "<base64>" | base64 -d > "./screenshots/screen-01-default.png"`
+  - **URL** (attachment URL, CDN link...): `curl -L -o "./screenshots/screen-01-default.png" "<url>"`
+  - **Chỉ thấy ảnh inline, không có path/base64/url**: ghi placeholder `_(Ảnh: <mô tả nội dung> — cần attach file)_`
+  
+  Sau khi có file local → chèn `!screen-01-default.png!` vào wiki content đúng state → attach sau khi tạo page bằng `confluence_upload_attachments`
+- **Ảnh từ Jira issue** (nếu user cung cấp link Jira có ảnh đính kèm): dùng `mcp__mcp-atlassian__jira_download_attachments` → tải về local → upload lên page Confluence mới
+- **URD / Jira issue** (nếu có): `mcp__mcp-atlassian__confluence_get_page` hoặc `mcp__mcp-atlassian__jira_get_issue` — đọc description + comments + attachments.
+- **Page tham chiếu** (nếu có): đọc tương tự, extract thông tin liên quan cho từng section.
 
 ### Bước 2 — Quyết định chiến lược nội dung
 
 Trước khi viết, xác định:
 
-- **Đây là RSD WEB hay RSD APP?** Nếu APP và đã có RSD WEB tương ứng, hầu hết các section 1.2, 2.2, 3, 5 sẽ **tham chiếu** (link) sang RSD WEB thay vì viết lại. Chỉ Section 4 (Mô tả màn hình) là viết mới theo Figma APP.
-- **Đây là chức năng mới hay update?** Chức năng mới cần liệt kê đầy đủ các kết nối trong 2.2; update chỉ mô tả phần thay đổi.
-- **Các quy tắc nghiệp vụ tới từ đâu?** Thường từ URD; nếu URD thiếu, đánh dấu `[Cần xác nhận]`.
+- **Đây là RSD WEB hay RSD APP?** Nếu APP và đã có RSD WEB tương ứng, sections 1.2, 2.2, 3, 5 sẽ **tham chiếu** (link) sang RSD WEB. Chỉ Section 4 là viết mới theo Figma/ảnh APP.
+- **Có URD/tài liệu không?** Nếu có → đọc hết và extract thông tin cho sections 1, 2, 3, 5. Nếu không → các section đó dùng minimal template hoặc `[Cần bổ sung]`, nhưng **Section 4 vẫn phải đầy đủ**.
+- **Số lượng ảnh/state**: Xác định các state cần mô tả từ Figma hoặc ảnh user cung cấp. Mỗi state = 1 caption + 1 ảnh + rows tương ứng trong bảng 4b.
 
 ### Bước 3 — Sinh nội dung theo template
 
@@ -96,13 +103,24 @@ Các section trong wiki format:
 4. **Section 1.2** — bảng 2 cột với đầu tiên là tên trường in đậm `|*Tên*|giá trị|`
 5. **Section 2.2** — bảng API connections với header row 7 cột
 6. **Section 3** — ma trận phân quyền: dùng "x" cho có quyền, trống cho không có. Columns tùy theo loại dự án (xem template)
-7. **Section 4 — Mô tả màn hình** (quan trọng nhất, viết chi tiết):
-   - Link Figma: `Figma: [Link|https://figma.com/...]`
-   - **a. Mockup màn hình**: Caption (text thuần, không emoji) rồi ảnh:
-     - Có Figma: tải ảnh bằng Figma MCP → lưu local → sau khi tạo page, attach bằng `mcp__mcp-atlassian__confluence_upload_attachments` → chèn `!ten-file.png!`
-     - Không có Figma: chèn `_(Ảnh: chưa có - cần bổ sung từ Figma)_`
-   - **KHÔNG** dùng emoji hay mô tả blockquote thay cho ảnh
-   - **b. Bảng mô tả màn hình**: header row `|| ||*Hạng mục*||*Kiểu hiển thị*||*Kiểu thao tác*||*Bắt buộc*||*Độ dài*||*Mô tả*||` (cột đầu để trống). Row group header: `|*Cụm thông tin đầu trang*| | | | | |`
+7. **Section 4 — Mô tả màn hình** (quan trọng nhất — LUÔN sinh đầy đủ dù thiếu bất kỳ input nào khác):
+   - Link Figma: `Figma: [Link|https://figma.com/...]` hoặc `Figma: N/A`
+   - **a. Mockup màn hình** — quy tắc BẮT BUỘC:
+     - Với **mỗi state** (default, empty, error, dropdown, v.v.), viết theo pattern sau, **không bao giờ được bỏ trống dòng ảnh**:
+       ```
+       Caption mô tả state (text thuần, không emoji)
+
+       !ten-file.png!
+       ```
+     - Nếu **có Figma**: tải ảnh bằng `mcp__plugin_figma_figma__get_screenshot` → lưu vào `./screenshots/` → chèn `!ten-file.png!` → sau khi tạo page, attach bằng `mcp__mcp-atlassian__confluence_upload_attachments`
+     - Nếu **có ảnh user đính kèm**: lưu local → chèn `!ten-file.png!` → attach sau khi tạo page
+     - Nếu **không có ảnh nào**: chèn placeholder `_(Ảnh: chưa có - cần bổ sung)_` — **KHÔNG được để trống, KHÔNG được bỏ dòng này**
+     - **Tuyệt đối không** dùng emoji hay text mô tả UI thay cho ảnh/placeholder
+   - **b. Bảng mô tả màn hình** — sinh từ ảnh/Figma là chính:
+     - Header: `|| ||*Hạng mục*||*Kiểu hiển thị*||*Kiểu thao tác*||*Bắt buộc*||*Độ dài*||*Mô tả*||` (cột đầu để trống — không ghi STT)
+     - Row group header: `|*Tên cụm*| | | | | |`
+     - Mỗi element một row, điền đầy đủ: placeholder, mặc định, validate, logic tương tác, nguồn dữ liệu, ẩn/hiện, enable/disable
+     - Xem `references/figma-to-mockup.md` để biết cách map Figma → từng row
 8. **Section 5** — bảng 3 cột `||*Thao tác*||*Tác nhân*||*Mô tả*||`
 
 Trong suốt quá trình: nếu thông tin **có thể suy luận hợp lý từ context** → điền trực tiếp. Chỉ ghi `[Cần xác nhận: <câu hỏi cụ thể>]` khi thực sự không thể xác định từ bất kỳ resource nào đã đọc.
@@ -156,12 +174,14 @@ Trả về cho user:
 
 - **Figma MCP trả quá nhiều dữ liệu cho 1 node lớn**: thu hẹp bằng cách truyền đúng nodeId của từng màn con, không lấy node cha.
 - **Confluence page quá lớn khi đọc URD**: tool lưu ra file; đọc theo offset/limit, grep heading trước để tìm section cần thiết thay vì đọc toàn bộ.
-- **Upload fail do size**: markdown >10KB phải dùng `upload_confluence_v2.py`, không dùng MCP `confluence_create_page`.
-- **Ảnh không hiện sau upload**: kiểm tra đường dẫn ảnh trong markdown là relative tới file .md, không phải absolute.
+- **Upload fail do size**: nếu wiki content >100KB thì tạo page rỗng trước rồi update — xem `references/confluence-upload.md`.
+- **Ảnh không hiện sau upload**: kiểm tra tên file trong `!filename.png!` khớp chính xác tên file attach (case-sensitive).
+- **Dòng image placeholder bị bỏ**: KHÔNG được bỏ dòng `_(Ảnh: chưa có - cần bổ sung)_` — mỗi caption phải có dòng ảnh hoặc placeholder ngay bên dưới.
+- **Section 4 bị thiếu khi không có URD**: Section 4 không phụ thuộc URD — sinh từ ảnh/Figma. Không được skip Section 4 chỉ vì thiếu tài liệu nghiệp vụ.
 
 ## Reference files
 
-- `references/rsd-template.md` — Skeleton markdown đầy đủ 7 sections, copy & fill.
+- `references/rsd-template.md` — Skeleton wiki markup đầy đủ 5 sections, copy & fill.
 - `references/rsd-example-condensed.md` — Ví dụ rút gọn từ sample thực, dùng để học cách diễn đạt & mức độ chi tiết.
 - `references/figma-to-mockup.md` — Cách biến Figma output thành caption mockup + rows bảng Mô tả màn hình.
-- `references/confluence-upload.md` — Hai path upload (MCP cho page nhỏ, script cho page lớn), cách tạo page mới và attach ảnh.
+- `references/confluence-upload.md` — Upload wiki format qua MCP, cách attach ảnh, fallback khi page quá lớn.

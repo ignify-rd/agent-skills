@@ -108,18 +108,22 @@ Figma: [{{tên Figma file}}|{{https://figma.com/design/...}}]
 
 Đường dẫn: {{Cách truy cập chức năng, ví dụ: Menu Thẻ > Danh sách thẻ > tab ...}}
 
-{{Caption state 1 — text thuần, không emoji, ví dụ: Màn hình danh sách khi có dữ liệu}}
+_Lặp lại block sau cho mỗi state cần mô tả (default, empty, error, dropdown mở, v.v.):_
 
-!screenshot-01-default.png!
+----[ STATE 1 ]----
+{{Caption mô tả state — text thuần, không emoji}}
+{{FILL_IMAGE_1: nếu có ảnh → !tên-file-thực-tế.png! | nếu chưa có → _(Ảnh: chưa có - cần bổ sung)_}}
 
-{{Caption state 2 — ví dụ: Màn hình khi không có dữ liệu}}
+----[ STATE 2 ]----
+{{Caption mô tả state 2}}
+{{FILL_IMAGE_2: nếu có ảnh → !tên-file-thực-tế.png! | nếu chưa có → _(Ảnh: chưa có - cần bổ sung)_}}
 
-!screenshot-02-empty.png!
+----[ STATE 3 ]----
+{{Caption mô tả state 3}}
+{{FILL_IMAGE_3: nếu có ảnh → !tên-file-thực-tế.png! | nếu chưa có → _(Ảnh: chưa có - cần bổ sung)_}}
 
-{{... lặp lại cho từng state: default / advanced search mở / empty / error / loading / hover / các variant ...}}
-
-_Nếu chưa có ảnh Figma: thay dòng ảnh bằng \_(Ảnh: chưa có - cần bổ sung từ Figma)\__ 
-_KHÔNG dùng emoji hay mô tả UI thay cho ảnh. Mô tả UI chỉ nằm trong bảng 4b._
+_Xoá các dòng "----[ STATE N ]----" và "{{FILL_IMAGE_N: ...}}" sau khi đã điền vào._
+_Mỗi caption BẮT BUỘC phải có 1 dòng ảnh hoặc placeholder ngay bên dưới — không được bỏ trống._
 
 *b. Mô tả màn hình*
 

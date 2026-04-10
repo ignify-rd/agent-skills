@@ -32,20 +32,46 @@ mcp__mcp-atlassian__confluence_update_page(
 
 ### Attach ảnh sau khi tạo page
 
-Nếu có ảnh Figma đã download về local:
+Gom tất cả ảnh từ mọi nguồn (Figma, user paste, Jira download) vào 1 thư mục rồi upload 1 lần:
 
 ```
 mcp__mcp-atlassian__confluence_upload_attachments(
-    page_id="<PAGE_ID>",
-    files=[
-        "./rsd-draft-<slug>/screenshots/01-default.png",
-        "./rsd-draft-<slug>/screenshots/02-empty.png",
-        ...
-    ]
+    content_id="<PAGE_ID>",
+    file_paths="./screenshots/screen-01-default.png,./screenshots/screen-02-empty.png,..."
 )
 ```
 
-Sau khi attach thành công, ảnh được chèn trong wiki content bằng `!01-default.png!`.
+Sau khi attach thành công, ảnh được chèn trong wiki content bằng `!screen-01-default.png!`.
+
+### Lấy ảnh từ conversation
+
+Không giả định format — kiểm tra thực tế và xử lý theo những gì nhận được:
+
+```bash
+# Local file path:
+cp "<path>" "./screenshots/screen-01-default.png"
+
+# Base64 string:
+echo "<base64-string>" | base64 -d > "./screenshots/screen-01-default.png"
+
+# URL (attachment URL, CDN link):
+curl -L -o "./screenshots/screen-01-default.png" "<url>"
+```
+
+Sau khi có file local → upload như bình thường.
+
+Nếu chỉ thấy ảnh inline (không có path/base64/url): chèn `_(Ảnh: <mô tả nội dung> — cần attach file)_` trong wiki content.
+
+### Lấy ảnh từ Jira issue
+
+```
+mcp__mcp-atlassian__jira_download_attachments(
+    issue_key="<ISSUE-KEY>",
+    download_dir="./screenshots/"
+)
+```
+
+Upload kết quả download lên Confluence page mới.
 
 ---
 
