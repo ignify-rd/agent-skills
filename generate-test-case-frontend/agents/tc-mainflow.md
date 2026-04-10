@@ -121,10 +121,25 @@ print('READY: validate batches confirmed complete')
         </field>
         <field name="importance">"High" cho critical actions (Lưu, Đẩy duyệt); "Medium" cho actions khác</field>
         <field name="result">"PENDING"</field>
+        <field name="testcaseLV1">
+            Nếu testSuiteName là tên button/action (### sub-group, e.g., "Button Lưu"):
+                = tên ## section cha (e.g., "Kiểm tra chức năng") — xác định từ cấu trúc mindmap
+            Nếu testSuiteName là ## section trực tiếp (e.g., "Kiểm tra lưới dữ liệu", "Kiểm tra phân trang"):
+                = testSuiteName
+        </field>
+        <field name="testcaseLV2">
+            Nếu testSuiteName là tên button/action (### sub-group): = testSuiteName (e.g., "Button Lưu")
+            Nếu testSuiteName là ## section trực tiếp: = testCaseName
+        </field>
+        <field name="testcaseLV3">
+            Nếu testSuiteName là tên button/action (### sub-group): = testCaseName
+            Nếu testSuiteName là ## section trực tiếp: = "" (empty)
+        </field>
     </test_case_template>
 
     <rules>
         <rule type="testCaseName">= lấy TRỰC TIẾP từ mindmap — KHÔNG thêm prefix</rule>
+        <rule type="summary">= testcaseLV3 nếu non-empty; else testcaseLV2</rule>
         <rule type="result">= "PENDING"</rule>
         <rule type="step">= UI actions — KHÔNG viết "Send API"</rule>
         <rule type="expectedResult">= UI state — KHÔNG có HTTP status codes</rule>

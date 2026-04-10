@@ -84,11 +84,14 @@ model: inherit
         </field>
         <field name="importance">"Kiểm tra giao diện chung" → "Low" ; "Kiểm tra phân quyền" → "Medium"</field>
         <field name="result">"PENDING"</field>
+        <field name="testcaseLV1">= testSuiteName (## section heading, e.g., "Kiểm tra giao diện chung")</field>
+        <field name="testcaseLV2">= testCaseName (không có ### sub-heading ở section này)</field>
+        <field name="testcaseLV3">= "" (luôn để trống — không có ### sub-group)</field>
     </test_case_template>
 
     <rules>
         <rule type="testCaseName">= lấy TRỰC TIẾP từ mindmap — KHÔNG thêm prefix</rule>
-        <rule type="summary">= giống hệt testCaseName</rule>
+        <rule type="summary">= testcaseLV2 (vì testcaseLV3 luôn rỗng ở batch này)</rule>
         <rule type="result">= "PENDING" — KHÔNG để ""</rule>
         <rule type="expectedResult">= UI state — KHÔNG có HTTP status codes</rule>
         <rule type="completeness">Mỗi bullet trong mindmap phải có 1 test case tương ứng</rule>

@@ -123,10 +123,14 @@ print(f'PROCEED: {len(inv.get(\"permissions\",[]))} roles, {len(inv.get(\"status
         </field>
         <field name="importance">"High" cho security/permission tests; "Medium" cho transition tests</field>
         <field name="result">"PENDING"</field>
+        <field name="testcaseLV1">= testSuiteName (## section heading, e.g., "Kiểm tra phân quyền")</field>
+        <field name="testcaseLV2">= testCaseName</field>
+        <field name="testcaseLV3">= "" (luôn để trống)</field>
     </test_case_template>
 
     <rules>
         <rule type="result">= "PENDING"</rule>
+        <rule type="summary">= testcaseLV2 (vì testcaseLV3 luôn rỗng ở batch này)</rule>
         <rule type="expectedResult">KHÔNG có HTTP status codes</rule>
         <rule type="step">= UI actions — KHÔNG viết "Send API"</rule>
     </rules>

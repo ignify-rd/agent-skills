@@ -118,8 +118,16 @@ model: inherit
     <for_each>gap detected ở Step 3</for_each>
 
     <generate>
+        <rule name="testSuiteName">
+            ⚠️ Gap-fill validate cases PHẢI dùng field sub-suite name (### heading từ test design), KHÔNG dùng flat "Kiểm tra validate".
+            VD: nếu gap thuộc field "Tên cấu hình SLA" → testSuiteName = "Kiểm tra textbox \"Tên cấu hình SLA\"" (lấy từ ### heading trong test design).
+            Nếu gap KHÔNG thuộc validate section → dùng ## heading tương ứng.
+        </rule>
         <rule name="testCaseName">= mô tả rõ ràng gap được fill (từ mindmap nếu có, hoặc tạo dựa theo inventory item)</rule>
-        <rule name="summary">= giống hệt testCaseName</rule>
+        <rule name="summary">= testcaseLV3 nếu non-empty; else testcaseLV2</rule>
+        <rule name="testcaseLV1">= tên ## section heading (e.g., "Kiểm tra Validate", "Kiểm tra chức năng")</rule>
+        <rule name="testcaseLV2">= testSuiteName (field sub-suite khi validate; testCaseName khi không có sub-group)</rule>
+        <rule name="testcaseLV3">= testCaseName (khi có field sub-suite); "" (khi không có sub-group)</rule>
         <rule name="result">= "PENDING"</rule>
         <rule name="preConditions">= preConditionsBase từ {TC_CONTEXT_FILE}</rule>
         <rule name="step">
@@ -159,6 +167,17 @@ model: inherit
         <rule type="last_line">DÒNG CUỐI phải là `]`</rule>
         <rule type="note">File này là output CHÍNH THỨC — ghi đầy đủ, không rút gọn</rule>
     </format_rules>
+</step>
+
+<step id="6b" name="Assign sequential IDs + recompute summary">
+    <description>Sau khi ghi test-cases.json, chạy script assign_lv_ids.py để:
+    1. Gán testcaseId tuần tự: FE_1, FE_2, FE_3, ...
+    2. Tính lại summary = testcaseLV3 nếu non-empty; else testcaseLV2
+    3. Ghi đè lại {OUTPUT_FILE}
+    </description>
+    <command>python3 -X utf8 {SKILL_SCRIPTS}/assign_lv_ids.py --file {OUTPUT_FILE} --test-design {TEST_DESIGN_FILE}</command>
+
+    <note>Nếu script thất bại → in cảnh báo và TIẾP TỤC (không dừng toàn bộ flow)</note>
 </step>
 
 <step id="7" name="Completion report (STDOUT)">

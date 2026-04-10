@@ -6,7 +6,10 @@
 {
   "testSuiteName": string,       // Tên test suite = ## heading trong mindmap
   "testCaseName": string,        // Tên test case (xem rules trong fe-test-case.md)
-  "summary": string,             // = testCaseName (giống hệt)
+  "testcaseLV1": string,         // ## section heading (main suite group, e.g., "Kiểm tra giao diện chung")
+  "testcaseLV2": string,         // ### sub-heading OR testCaseName if no sub-heading
+  "testcaseLV3": string,         // testCaseName if ### sub-heading exists; "" otherwise
+  "summary": string,             // = testcaseLV3 if non-empty; else testcaseLV2
   "preConditions": string,       // Multi-line
   "step": string,                // Numbered steps: "1. ...\n2. ..."
   "expectedResult": string,      // Expected outcome
@@ -14,6 +17,15 @@
   "result": "PENDING"            // LUÔN để "PENDING"
 }
 ```
+
+## LV1 / LV2 / LV3 Rules
+
+| Trường hợp | testcaseLV1 | testcaseLV2 | testcaseLV3 | summary |
+|-----------|-------------|-------------|-------------|---------|
+| ## section, không có ### sub-group (giao diện, phân quyền, tìm kiếm...) | testSuiteName | testCaseName | `""` | testcaseLV2 |
+| ## Kiểm tra validate + field sub-suite (catalog dùng "Textbox: Tên X") | `"Kiểm tra validate"` | field sub-suite name | testCaseName | testcaseLV3 |
+| ## Kiểm tra validate, không có field sub-suite | `"Kiểm tra validate"` | testCaseName | `""` | testcaseLV2 |
+| ## section có ### button sub-group (tc-mainflow, e.g., "Button Lưu") | parent ## heading | testSuiteName (button name) | testCaseName | testcaseLV3 |
 
 ## Importance Mapping
 

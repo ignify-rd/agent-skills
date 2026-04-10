@@ -67,7 +67,14 @@ model: inherit
     <for_each>field trong FIELD_BATCH</for_each>
 
     <test_case_template>
-        <field name="testSuiteName">Theo catalogStyle.testSuiteNameConvention — VD: `"Textbox: {fieldName}"` nếu catalog dùng field sub-suites, hoặc `"Kiểm tra validate"` nếu không</field>
+        <field name="testSuiteName">
+            LUÔN sử dụng tên ### heading từ test design cho mỗi field làm testSuiteName.
+            VD: test design có `### Kiểm tra textbox "Tên cấu hình SLA"` → testSuiteName = `"Kiểm tra textbox \"Tên cấu hình SLA\""`
+            VD: test design có `### Kiểm tra Date Picker "Ngày hiệu lực"` → testSuiteName = `"Kiểm tra Date Picker \"Ngày hiệu lực\""`
+            ⚠️ KHÔNG dùng flat `"Kiểm tra validate"` cho tất cả — mỗi field PHẢI có testSuiteName riêng.
+            Nếu catalog có convention khác (e.g., `"Textbox: Tên cấu hình SLA"`) → follow catalog format.
+            Nhưng nếu catalog KHÔNG có convention → dùng tên ### heading nguyên bản từ test design.
+        </field>
         <field name="testCaseName">Lấy TRỰC TIẾP từ bullet text trong mindmap — KHÔNG thêm `{fieldName}_` prefix, KHÔNG thêm tên màn hình</field>
         <field name="summary">Giống hệt `testCaseName`</field>
         <field name="preConditions">{preConditionsBase}</field>
@@ -86,11 +93,14 @@ model: inherit
         </field>
         <field name="importance">"Medium"</field>
         <field name="result">"PENDING"</field>
+        <field name="testcaseLV1">= "Kiểm tra validate" (parent ## section)</field>
+        <field name="testcaseLV2">= testSuiteName (field sub-suite name, e.g., "Kiểm tra textbox \"Tên cấu hình SLA\"")</field>
+        <field name="testcaseLV3">= testCaseName</field>
     </test_case_template>
 
     <rules>
         <rule type="testCaseName">= lấy TRỰC TIẾP từ mindmap — KHÔNG thêm `{fieldName}_` prefix (KHÁC với API skill)</rule>
-        <rule type="summary">= giống hệt testCaseName</rule>
+        <rule type="summary">= testcaseLV3 nếu non-empty; else testcaseLV2</rule>
         <rule type="result">= "PENDING" — KHÔNG để ""</rule>
         <rule type="step">= UI actions — KHÔNG viết "Send API"</rule>
         <rule type="expectedResult">= UI state — KHÔNG có HTTP status codes</rule>

@@ -122,10 +122,25 @@ def build_suite_map(sections, inventory_path=None):
     return field_map, subheading_map, case_name_map
 
 
+def get_validate_subheadings(sections):
+    """Return set of ### subheading names under ## Kiểm tra Validate section.
+    These are valid suite names for field sub-suites (should not be normalized away)."""
+    result = set()
+    for section in sections:
+        if "validate" in section["heading"].lower():
+            for sub in section["subheadings"]:
+                result.add(sub)
+    return result
+
+
 def normalize(test_cases, sections, inventory_path=None):
     """Normalize testSuiteName for each test case. Returns (cases, changes_count, details)."""
     field_map, subheading_map, case_name_map = build_suite_map(sections, inventory_path)
     valid_suites = {s["heading"] for s in sections}
+
+    # Field sub-suite names (### headings under validate) are also valid — don't normalize them away
+    validate_subs = get_validate_subheadings(sections)
+    valid_suites_extended = valid_suites | validate_subs
 
     changes = 0
     details = []
@@ -134,7 +149,7 @@ def normalize(test_cases, sections, inventory_path=None):
         old_suite = tc.get("testSuiteName", "")
         case_name = tc.get("testCaseName", "")
 
-        if old_suite in valid_suites:
+        if old_suite in valid_suites_extended:
             continue
 
         new_suite = _resolve_suite(case_name, old_suite, field_map, subheading_map, case_name_map, valid_suites)
@@ -253,25 +268,67 @@ def _extract_field_from_case(case_name, sections):
     return None, None, None
 
 
+def _build_case_to_subheading_map(sections):
+    """Build a map from bullet case_name -> (section_heading, subheading, sub_index)
+    using the test design's ### structure. Each bullet under a ### heading maps to that subheading."""
+    case_map = {}  # case_name_lower -> (heading, subheading, sub_idx)
+    for section in sections:
+        heading = section["heading"]
+        # Track which subheading each bullet belongs to by re-parsing structure
+        current_sub = None
+        current_sub_idx = -1
+        for sub in section.get("subheadings", []):
+            current_sub_idx += 1
+            # All case_names that follow this subheading until the next subheading belong to it
+            # But parse_test_design doesn't track this association...
+            # Instead, use the subheading text in the case name to match
+            pass
+    # Fallback: not enough structure in parsed data to do bullet->subheading mapping
+    return case_map
+
+
 def reorder_by_test_design(test_cases, sections):
     """
     Reorder test cases to match ## section order AND ### subheading order from test-design.
     Within each ## section, test cases are sorted by their ### subheading order.
+    Field sub-suite names (used as testSuiteName) also participate in ordering.
     Returns (reordered_cases, changed_order).
     """
     if not sections:
         return test_cases, False
 
-    suite_order = [s["heading"] for s in sections]
+    # Build extended suite order: ## headings + ### subheadings (in order)
+    suite_order = []
+    subheading_order = {}  # subheading_name -> (section_idx, sub_idx)
+    for sec_idx, s in enumerate(sections):
+        suite_order.append(s["heading"])
+        for sub_idx, sub in enumerate(s["subheadings"]):
+            subheading_order[sub] = (sec_idx, sub_idx)
+            subheading_order[sub.lower()] = (sec_idx, sub_idx)
 
     def sort_key(tc):
         suite = tc.get("testSuiteName", "")
         case_name = tc.get("testCaseName", "")
 
-        suite_idx = suite_order.index(suite) if suite in suite_order else 999
-        _, _, sub_idx = _extract_field_from_case(case_name, sections)
-        if sub_idx is None:
-            sub_idx = 999
+        # 1. If testSuiteName is a ## heading, use its index directly
+        if suite in suite_order:
+            suite_idx = suite_order.index(suite)
+        else:
+            # 2. If testSuiteName is a ### subheading (field sub-suite), use parent section idx
+            found = subheading_order.get(suite) or subheading_order.get(suite.lower())
+            if found:
+                suite_idx = found[0]
+            else:
+                suite_idx = 999
+
+        # Sub-index: if testSuiteName is a field sub-suite, use its position within the section
+        found_sub = subheading_order.get(suite) or subheading_order.get(suite.lower())
+        if found_sub:
+            sub_idx = found_sub[1]
+        else:
+            _, _, sub_idx = _extract_field_from_case(case_name, sections)
+            if sub_idx is None:
+                sub_idx = 999
 
         return (suite_idx, sub_idx)
 
