@@ -54,6 +54,35 @@ print(f'PROCEED: {len(inv.get(\"permissions\",[]))} roles, {len(inv.get(\"status
     <action>DỪNG HOÀN TOÀN. Không phải lỗi — màn hình này không có workflow phức tạp.</action>
 </step>
 
+<step id="0b" name="Test design section check (MANDATORY)">
+    <description>
+        tc-workflow CHỈ ĐƯỢC xử lý các sections EXPLICITLY có trong test design.
+        Nếu test design KHÔNG có section workflow/quy trình/trạng thái riêng biệt → SKIP.
+        tc-common đã xử lý ## Kiểm tra phân quyền → tc-workflow KHÔNG được tạo thêm cases phân quyền.
+    </description>
+    <command>python3 -X utf8 -c "
+import re, sys
+td = open(r'{TEST_DESIGN_FILE}', encoding='utf-8').read()
+# Check for explicit workflow sections (beyond the standard phân quyền which is handled by tc-common)
+workflow_sections = re.findall(r'^## (?:Kiểm tra quy trình|Kiểm tra trạng thái|Kiểm tra workflow|Kiểm tra Maker.Checker)', td, re.MULTILINE | re.IGNORECASE)
+if not workflow_sections:
+    print('SKIP: no explicit workflow/quy trinh/trang thai sections found in test design')
+    print('Note: Kiem tra phan quyen is handled by tc-common, not tc-workflow')
+    sys.exit(0)
+print(f'PROCEED: found workflow sections: {workflow_sections}')
+"</command>
+
+    <if_output_contains>SKIP</if_output_contains>
+
+    <action>DỪNG HOÀN TOÀN. Test design không có section workflow riêng. tc-common đã xử lý ## Kiểm tra phân quyền.</action>
+
+    <hard_rules>
+        <rule>⚠️ TUYỆT ĐỐI KHÔNG xử lý ## Kiểm tra phân quyền — section này đã được tc-common xử lý trong BATCH 1</rule>
+        <rule>⚠️ TUYỆT ĐỐI KHÔNG tạo cases từ inventory data nếu KHÔNG có bullet tương ứng trong test design</rule>
+        <rule>⚠️ CHỈ sinh cases từ bullets có sẵn trong test design — KHÔNG tự nghĩ ra cases mới từ inventory</rule>
+    </hard_rules>
+</step>
+
 <step id="1" name="Read tc-context.json">
     <file>{TC_CONTEXT_FILE}</file>
 
@@ -63,16 +92,33 @@ print(f'PROCEED: {len(inv.get(\"permissions\",[]))} roles, {len(inv.get(\"status
     </extract>
 </step>
 
-<step id="2" name="Read test design — extract role/workflow sections">
+<step id="2" name="Read test design — extract ONLY explicit workflow sections">
     <file>{TEST_DESIGN_FILE}</file>
 
-    <extract_rule>Tìm và trích xuất các sections liên quan đến roles, quyền hạn, và workflow transitions</extract_rule>
+    <extract_rule>
+        Tìm và trích xuất CHỈ các sections workflow EXPLICIT trong test design.
+        KHÔNG xử lý ## Kiểm tra phân quyền — section này thuộc về tc-common (BATCH 1).
+        CHỈ đọc bullets từ các sections được tìm thấy ở Step 0b — KHÔNG đọc ngoài phạm vi đó.
+    </extract_rule>
 
-    <typical_sections>
-        <section>## Kiểm tra phân quyền (nếu chưa có trong BATCH 1)</section>
+    <explicit_workflow_sections>
         <section>## Kiểm tra quy trình duyệt</section>
         <section>## Kiểm tra trạng thái</section>
-    </typical_sections>
+        <section>## Kiểm tra Maker-Checker</section>
+    </explicit_workflow_sections>
+
+    <excluded_sections>
+        <section>## Kiểm tra phân quyền → SKIP, đã xử lý bởi tc-common</section>
+        <section>## Kiểm tra giao diện chung → SKIP</section>
+        <section>## Kiểm tra Validate → SKIP</section>
+        <section>## Kiểm tra chức năng → SKIP, đã xử lý bởi tc-mainflow</section>
+    </excluded_sections>
+
+    <case_extraction>
+        <rule>Mỗi bullet - trong section workflow = 1 test case cần sinh</rule>
+        <rule>⚠️ Nếu không có bullet nào → KHÔNG sinh cases — DỪNG</rule>
+        <rule>⚠️ KHÔNG tạo cases từ inventory data nếu không có bullet tương ứng</rule>
+    </case_extraction>
 </step>
 
 <step id="3" name="Load workflow data from inventory">

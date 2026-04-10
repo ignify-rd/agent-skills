@@ -396,17 +396,37 @@ def build_rows(test_cases, column_mapping, total_columns):
             suite_groups[suite_name] = []
         suite_groups[suite_name].append(tc)
 
-    # Step 2: re-order: if any field sub-suites exist, place 'Kiểm tra validate'
-    # parent header just before the first field sub-suite group.
+    # Build LV1 lookup: testSuiteName → testcaseLV1 (first tc wins)
+    suite_lv1_map: dict = {}
+    for tc in test_cases:
+        sn = tc.get('testSuiteName', '').strip()
+        lv1 = tc.get('testcaseLV1', '').strip()
+        if sn and lv1 and sn not in suite_lv1_map:
+            suite_lv1_map[sn] = lv1
+
+    # Step 2: For each non-main sub-suite, insert its LV1 parent header immediately
+    # before the first occurrence of that sub-suite (if not already present).
+    # This handles BOTH "Kiểm tra validate" and "Kiểm tra chức năng" parent headers.
     ordered_suites = list(suite_groups.keys())
-    has_field_subsuite = any(_is_field_subsuite(s) for s in ordered_suites)
-    if has_field_subsuite and VALIDATE_PARENT not in suite_groups:
-        # Find index of first field sub-suite and insert parent before it
-        insert_at = next(
-            i for i, s in enumerate(ordered_suites) if _is_field_subsuite(s)
-        )
-        ordered_suites.insert(insert_at, VALIDATE_PARENT)
-        suite_groups[VALIDATE_PARENT] = []  # empty group → header only, no test cases
+    already_inserted: set = set(ordered_suites)  # tracks what's already in the list
+    i = 0
+    while i < len(ordered_suites):
+        suite = ordered_suites[i]
+        if not _is_field_subsuite(suite):
+            i += 1
+            continue
+        # Determine parent LV1 for this sub-suite
+        lv1 = suite_lv1_map.get(suite, '')
+        # Fallback: if no LV1 info, assume it belongs to validate (legacy behavior)
+        if not lv1:
+            lv1 = VALIDATE_PARENT
+        if lv1 not in already_inserted:
+            ordered_suites.insert(i, lv1)
+            suite_groups[lv1] = []  # header-only row (no test cases)
+            already_inserted.add(lv1)
+            i += 2  # skip past the inserted parent AND the current sub-suite
+        else:
+            i += 1
 
     # Step 3: build rows from ordered groups
     rows = []

@@ -136,12 +136,22 @@ for field, expected in counts.items():
             <method>Tìm trigger/target trong testCaseName / step</method>
         </category>
 
-        <category name="permissions">
+        <category name="permissions" action="SKIP_AUTO_FILL">
             <method>Tìm role name trong testCaseName / preConditions / step</method>
+            <note>
+                ⚠️ KHÔNG auto-fill permissions gaps bằng cách tạo sub-groups mới (VD: "Phân quyền hiển thị nút hành động theo role").
+                ## Kiểm tra phân quyền đã được xử lý bởi tc-common.
+                Nếu phát hiện gap → CHỈ báo cáo trong gap_report, KHÔNG auto-fill.
+            </note>
         </category>
 
-        <category name="statusTransitions">
+        <category name="statusTransitions" action="SKIP_AUTO_FILL">
             <method>Tìm from/to status trong testCaseName / step / expectedResult</method>
+            <note>
+                ⚠️ KHÔNG auto-fill statusTransitions gaps bằng cách tạo sub-groups mới (VD: "Quy trình chuyển trạng thái SLA").
+                Workflow/transition cases chỉ được sinh bởi tc-workflow khi có section explicit trong test design.
+                Nếu phát hiện gap → CHỈ báo cáo trong gap_report, KHÔNG auto-fill.
+            </note>
         </category>
     </coverage_check>
 
@@ -160,6 +170,11 @@ for field, expected in counts.items():
 
 <step id="4" name="Auto-fill ALL gaps">
     <for_each>gap detected ở Step 3</for_each>
+
+    <skip_categories>
+        <category>permissions → KHÔNG auto-fill. Chỉ báo cáo. tc-common và tc-workflow đã xử lý.</category>
+        <category>statusTransitions → KHÔNG auto-fill. Chỉ báo cáo. tc-workflow đã xử lý.</category>
+    </skip_categories>
 
     <generate>
         <rule name="testSuiteName">

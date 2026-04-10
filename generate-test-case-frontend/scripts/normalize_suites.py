@@ -294,6 +294,23 @@ def _build_case_to_subheading_map(sections):
     return case_map
 
 
+def flatten_timeout_section(test_cases):
+    """Force all cases with testcaseLV1 == 'Kiểm tra timeout' to use flat testSuiteName.
+
+    The timeout section often has ### subheadings in the test design, causing sub-agents
+    to emit multiple sub-suite names (e.g. 'Kiểm tra khi server không phản hồi').
+    Users want all timeout cases under ONE green 'Kiểm tra timeout' header in the sheet.
+    This does NOT touch LV1/LV2/LV3, so testCaseName formula context is preserved.
+    """
+    TIMEOUT_LV1 = "Kiểm tra timeout"
+    changes = 0
+    for tc in test_cases:
+        if tc.get("testcaseLV1", "") == TIMEOUT_LV1 and tc.get("testSuiteName", "") != TIMEOUT_LV1:
+            tc["testSuiteName"] = TIMEOUT_LV1
+            changes += 1
+    return test_cases, changes
+
+
 def reorder_by_test_design(test_cases, sections):
     """
     Reorder by (testcaseLV1, testcaseLV2) with rules:
@@ -440,7 +457,12 @@ def main():
     if order_changed:
         print(f"\nSuite + subheading order re-aligned to test-design")
 
-    if changes == 0 and not order_changed:
+    # Flatten timeout section: all timeout cases → testSuiteName = "Kiểm tra timeout"
+    test_cases, timeout_flattened = flatten_timeout_section(test_cases)
+    if timeout_flattened:
+        print(f"\nTimeout section flattened: {timeout_flattened} cases → testSuiteName = 'Kiểm tra timeout'")
+
+    if changes == 0 and not order_changed and not timeout_flattened:
         print("\nNo changes needed.")
         return
 
