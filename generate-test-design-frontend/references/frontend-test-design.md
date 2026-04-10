@@ -5,7 +5,12 @@
 ## Pipeline tổng thể
 
 ```
-Phase 1:  Đọc RSD/PTTK TRƯỚC TIÊN → extract screen structure, business logic, field definitions
+Phase 0:  BC1 — Sao chép nội dung nguồn (BẮT BUỘC trước Phase 1)
+            → RSD → rsd-source.md
+            → PTTK → pttk-source.md (nếu có)
+            → Tạo marker .bc1-copy-done
+
+Phase 1:  Đọc rsd-source.md/pttk-source.md TRƯỚC TIÊN → extract screen structure, business logic, field definitions
 Phase 2:  Phân tích hình ảnh (nếu có) → consolidate → bổ sung SAU RSD/PTTK
 Phase 3:  Extract fields từ PTTK (if available) → REPLACE field definitions từ RSD (PTTK wins hoàn toàn)
 Phase 4:  Generate validate section (per-field templates + LLM extra business cases)
@@ -16,7 +21,9 @@ Phase 8:  Validate and fix markdown
 ```
 
 > **⚠️ THỨ TỰ BẮT BUỘC — KHÔNG ĐƯỢC ĐẢO:**
-> RSD/PTTK LUÔN phải đọc TRƯỚC TIÊN (Phase 1). Hình ảnh (Phase 2) CHỈ bổ sung SAU khi đã đọc và extract từ RSD/PTTK.
+> BC1 (Sao chép) LUÔN phải chạy ĐẦU TIÊN. Không được nhảy thẳng vào extract mà không qua bước sao chép.
+> RSD/PTTK (Phase 1) phải đọc TỪ rsd-source.md/pttk-source.md (không đọc lại từ Confluence).
+> Hình ảnh (Phase 2) CHỈ bổ sung SAU khi đã đọc và extract từ RSD/PTTK.
 > KHÔNG BAO GIỜ analyze ảnh trước khi đọc RSD/PTTK — ảnh không được override thông tin từ tài liệu.
 
 ## Base Template (8 placeholders)
@@ -513,6 +520,8 @@ Nội dung thay đổi tùy **screenType**:
 
 ### Cho FORM/POPUP screens
 
+> **⚠️ QUY TẮC GỘP BẮT BUỘC:** Nếu màn hình có cả button "Lưu" và "Đẩy duyệt" → phải viết trong cùng 1 nhóm `## Kiểm tra chức năng`, KHÔNG được tách thành 2 nhóm riêng biệt ở trên và dưới.
+
 ```markdown
 ## Kiểm tra chức năng
 
@@ -520,6 +529,11 @@ Nội dung thay đổi tùy **screenType**:
 - Test validate tổng hợp (bỏ trống required fields)
 - Test lưu thành công → toast thông báo
 - Test lưu thất bại → hiển thị lỗi
+
+### Kiểm tra khi click button "Đẩy duyệt"
+- Test validate tổng hợp trước khi đẩy
+- Test đẩy duyệt thành công → chuyển trạng thái
+- Test đẩy duyệt thất bại → hiển thị lỗi
 
 ### Kiểm tra kết hợp tương tác giữa các fields
 - Enable/disable fields dựa vào giá trị field khác
@@ -530,6 +544,10 @@ Nội dung thay đổi tùy **screenType**:
 ### Kiểm tra khi click button "Hủy"
 - Đóng popup / quay về màn hình trước
 ```
+
+**⚠️ SAI — KHÔNG ĐƯỢC LÀM:**
+- Không viết toàn bộ nhóm "Lưu" ở trên xong rồi xuống dưới viết lại toàn bộ nhóm "Đẩy duyệt" như 2 luồng độc lập
+- Không tạo 2 section `## Kiểm tra chức năng` trong cùng 1 file
 
 ### Cho DETAIL screens
 

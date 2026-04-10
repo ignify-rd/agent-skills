@@ -30,6 +30,19 @@ model: inherit
 
 ---
 
+<guardrails>
+    <hard_stop id="skip_rerun_normalize">
+        <condition>If agent writes final output (Step 6) WITHOUT first running Step 4b</condition>
+        <consequence>VIOLATION: gap-fill cases will be placed at end of file instead of correct test-design order. The final test-cases.json will have wrong ordering around the timeout section and all subsequent sections.</consequence>
+        <recovery>
+            MUST run Step 4b (re-normalize) BEFORE Step 5 and Step 6.
+            Step 4b is NOT optional — it is the ONLY mechanism that re-sorts gap-fill cases into the correct ## + ### heading order from test-design.
+        </recovery>
+    </hard_stop>
+</guardrails>
+
+---
+
 <workflow>
 
 <step id="1" name="Merge all batches">

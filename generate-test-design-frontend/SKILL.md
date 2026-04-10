@@ -120,9 +120,49 @@ Chọn catalog phù hợp nhất (cùng screen type LIST/FORM/DETAIL, cùng doma
 
 Catalog = nguồn WORDING cao nhất. Luôn dùng CATALOG_SAMPLE (từ Step 3) cho sub-agents, KHÔNG dùng template mặc định.
 
+### Step 3b: Sao chép nội dung RSD/PTTK (BC1 — BẮT BUỘC)
+
+> **⚠️ QUAN TRỌNG:** Bước này phải được thực hiện TRƯỚC Step 4. Không được bỏ qua hoặc gộp chung với bước khác.
+
+**Trước khi gọi bất kỳ sub-agent nào**, phải:
+1. **Sao chép nội dung RSD** vào `{OUTPUT_DIR}/rsd-source.md` — dùng nội dung đã lấy từ `getConfluencePage`
+2. **Nếu có PTTK** → sao chép nội dung PTTK vào `{OUTPUT_DIR}/pttk-source.md`
+3. **Tạo file marker** `{OUTPUT_DIR}/.bc1-copy-done` để đánh dấu BC1 hoàn thành
+
+```
+BC1: Sao chép nội dung nguồn
+  ✅ RSD → rsd-source.md
+  ✅ PTTK → pttk-source.md (nếu có)
+  ✅ Marker: .bc1-copy-done
+```
+
+**⚠️ SAI — KHÔNG ĐƯỢC LÀM:**
+- Không sao chép ngay vào inventory (phải extract trước)
+- Không bỏ qua bước này vì "sẽ đọc lại từ Confluence"
+- Không gộp BC1 chung với BC2
+
+> ⛔ **SEQUENTIAL BARRIER — BẮT BUỘC CHẠY LỆNH NÀY TRƯỚC KHI SPAWN Step 4:**
+>
+> ```bash
+> python3 -X utf8 -c "
+> import sys, os
+> sentinel = '{output-folder}/.bc1-copy-done'
+> rsd = '{OUTPUT_DIR}/rsd-source.md'
+> if not os.path.exists(sentinel):
+>     print('NOT READY: .bc1-copy-done missing — chua lam BC1')
+>     sys.exit(1)
+> if not os.path.exists(rsd):
+>     print('NOT READY: rsd-source.md missing')
+>     sys.exit(1)
+> print('READY')
+> "
+> ```
+>
+> **Nếu in ra `NOT READY` → DỪNG HOÀN TOÀN. KHÔNG spawn Step 4. Chạy lại Step 3b.**
+
 ---
 
-### Step 4: Sub-agent — td-extract (Trích xuất dữ liệu)
+### Step 4: Sub-agent — td-extract (Trích xuất dữ liệu từ BC1 đã sao chép)
 
 **Spawn sub-agent để extract RSD/PTTK/images và tạo inventory.**
 
@@ -246,6 +286,11 @@ Nếu exit 1 → đọc error, re-spawn batch bị lỗi.
 ---
 
 ### Step 5c: Sub-agent — td-mainflow (Sinh grid + function + timeout)
+
+**⚠️ QUY TẮC GỘP BẮT BUỘC — Lưu + Đẩy duyệt phải trong CÙNG 1 luồng:**
+- Nếu màn hình có cả button "Lưu" và "Đẩy duyệt" → phải viết trong cùng 1 section `### Kiểm tra khi click button "Lưu"` VÀ `### Kiểm tra khi click button "Đẩy duyệt"` bên dưới, KHÔNG được tách ra làm 2 luồng riêng
+- KHÔNG được viết "Lưu" ở trên rồi "Đẩy duyệt" ở dưới như 2 bước độc lập
+- Nếu RSD có 2 button này → gộp thành 1 nhóm chức năng chính
 
 Đọc agent instructions:
 ```bash

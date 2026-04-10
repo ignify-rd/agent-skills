@@ -6,6 +6,8 @@ Rules that override default behavior. Loaded automatically by AI agents.
 
 ## Override Scope
 
+BC1 = Bước sao chép (Sao chép nội dung RSD/PTTK vào file local trước khi extract). BC1 phải chạy ĐẦU TIÊN, không được bỏ qua hay gộp chung với bước khác.
+
 | Category | Project AGENTS.md can override? |
 |----------|-------------------------------|
 | Chat input / user request | **Always — HIGHEST PRIORITY** |

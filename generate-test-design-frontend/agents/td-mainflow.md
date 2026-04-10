@@ -129,6 +129,11 @@ print('BARRIER OK')
         </screen_context>
 
         <screen_context name="FORM / POPUP">
+            **⚠️ QUY TẮC GỘP BẮT BUỘC — Lưu + Đẩy duyệt:**
+            - Nếu inventory có cả button "Lưu" và "Đẩy duyệt" → phải viết trong cùng 1 nhóm luồng, KHÔNG tách ra 2 nhóm riêng biệt
+            - Cách đúng: viết `### Kiểm tra khi click button "Lưu"` rồi bên trong có "Lưu thành công" + "Lưu thất bại", sau đó viết tiếp `### Kiểm tra khi click button "Đẩy duyệt"` ngay bên dưới trong cùng nhóm
+            - Cách SAI: viết cả nhóm "Lưu" ở trên → xong → xuống dưới viết lại cả nhóm "Đẩy duyệt" như bước độc lập
+
             <case>Save/Submit: thành công + thất bại</case>
             <case>Cancel/Close: confirm dialog nếu có unsaved changes</case>
             <case>Mỗi businessRules[] → test TRUE branch + FALSE branch</case>
