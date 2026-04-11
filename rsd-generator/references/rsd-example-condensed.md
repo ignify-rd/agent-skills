@@ -2,7 +2,7 @@
 
 Đây là trích rút gọn từ 1 RSD thật đang prod. Mục đích: cho thấy mức độ chi tiết và phong cách viết mong muốn. Không copy nguyên văn — chỉ là mẫu tham chiếu.
 
-**Format**: tất cả ví dụ bên dưới viết bằng **Confluence Wiki Markup** — dùng `||` cho header bảng, `h2.`/`h3.` cho heading, `*bold*` cho in đậm.
+**Format**: các ví dụ Sections 1–3, 4b, 5 dùng wiki shorthand để dễ đọc — nội dung và mức độ chi tiết là chuẩn, nhưng khi generate thực tế phải dùng **Confluence Storage Format** (XHTML) theo hướng dẫn trong SKILL.md và rsd-template.md. Riêng **Section 4a** được viết đúng storage format `<ac:layout>` để làm mẫu copy.
 
 ---
 
@@ -54,43 +54,38 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 
 ---
 
-## Section 4a — Mockup màn hình (ví dụ — WEB dùng 3 cột width=33%)
+## Section 4a — Mockup màn hình (ví dụ — WEB dùng 3 cột, storage format)
 
-```wiki
-Figma: [Tên file|https://figma.com/design/...]
+```xml
+<p>Figma: <a href="https://figma.com/design/...">Tên file</a></p>
 
-*a. Mockup màn hình*
+<h4>a. Mockup màn hình</h4>
 
-Đường dẫn: Menu Thẻ > Danh sách thẻ > tab Thẻ tín dụng nội địa
+<p>Đường dẫn: Menu Thẻ &gt; Danh sách thẻ &gt; tab Thẻ tín dụng nội địa</p>
 
-{section}
-{column:width=33%}
-Màn hình danh sách khi có dữ liệu
-
-!screen-01-default.png|width=360!
-
-Màn hình danh sách khi không có dữ liệu (vào từ menu)
-
-!screen-02-empty.png|width=360!
-{column}
-{column:width=33%}
-Màn hình khi nhấn Tìm kiếm nâng cao
-
-!screen-03-search-expanded.png|width=360!
-
-Màn hình kết quả tìm kiếm nâng cao khi có dữ liệu
-
-!screen-04-search-result.png|width=360!
-{column}
-{column:width=33%}
-Màn hình kết quả tìm kiếm nâng cao khi không có dữ liệu
-
-_(Ảnh: chưa có - cần bổ sung)_
-{column}
-{section}
+<ac:layout>
+<ac:layout-section ac:breakout-mode="wide" ac:breakout-width="1174" ac:type="three_equal">
+<ac:layout-cell>
+<p>Màn hình danh sách khi có dữ liệu</p>
+<ac:image ac:width="360"><ri:attachment ri:filename="screen-01-default.png"/></ac:image>
+<p>Màn hình danh sách khi không có dữ liệu (vào từ menu)</p>
+<ac:image ac:width="360"><ri:attachment ri:filename="screen-02-empty.png"/></ac:image>
+</ac:layout-cell>
+<ac:layout-cell>
+<p>Màn hình khi nhấn Tìm kiếm nâng cao</p>
+<ac:image ac:width="360"><ri:attachment ri:filename="screen-03-search-expanded.png"/></ac:image>
+<p>Màn hình kết quả tìm kiếm nâng cao khi có dữ liệu</p>
+<ac:image ac:width="360"><ri:attachment ri:filename="screen-04-search-result.png"/></ac:image>
+</ac:layout-cell>
+<ac:layout-cell>
+<p>Màn hình kết quả tìm kiếm nâng cao khi không có dữ liệu</p>
+<p><em>(Ảnh: chưa có - cần bổ sung)</em></p>
+</ac:layout-cell>
+</ac:layout-section>
+</ac:layout>
 ```
 
-**Điểm học được:** Section 4a luôn dùng lưới cột `{section}/{column}` — WEB=3 cột (width=33%), APP=4 cột (width=25%), dialog/detail=2 cột (width=50%). Mỗi cột chứa 1-2 state (caption + ảnh hoặc placeholder). Không được bỏ layout này dù không có ảnh — vẫn phải sinh caption + placeholder cho từng state.
+**Điểm học được:** Section 4a bắt buộc dùng `<ac:layout><ac:layout-section ac:breakout-mode="wide">` — KHÔNG dùng wiki `{section}/{column}`. Platform-specific: WEB=`three_equal` (image width=360), APP=`four_equal` (image width=200), dialog/detail=`two_equal` (image width=500). Mỗi cell chứa 1-2 state (caption `<p>` + `<ac:image>`). Không được bỏ layout này dù không có ảnh — phải sinh caption + `<p><em>(Ảnh: chưa có - cần bổ sung)</em></p>` placeholder.
 
 ---
 
@@ -102,7 +97,7 @@ _(Ảnh: chưa có - cần bổ sung)_
 |2|Số thẻ|Textbox|Input|N|6|Khi chưa có dữ liệu, hiển thị placeholder: "Số thẻ (6 số đầu hoặc 4 số cuối thẻ)". Mặc định: Rỗng. *Validate*: chỉ cho phép số, tối đa 6 ký tự. *Logic*: tìm gần đúng theo 6 số đầu hoặc 4 số cuối; nút X xóa nhanh khi focus / khi có giá trị; outfocus/enter giữ nguyên kết quả không update; chặn nhập vượt 6 ký tự. *Giá trị hiển thị*: user tự nhập. *Ẩn/hiện*: luôn hiện. *Mặc định*: Enable.|
 ```
 
-**Điểm học được:** một row mô tả màn hình phải trả lời: placeholder, default, validate rules, logic tương tác (onBlur, onEnter, clear button), giá trị hiển thị từ đâu, ẩn/hiện, enable/disable. Viết dày đặc, dùng `\\` để xuống dòng giữa các mục trong cùng một cell.
+**Điểm học được:** một row mô tả màn hình phải trả lời: placeholder, default, validate rules, logic tương tác (onBlur, onEnter, clear button), giá trị hiển thị từ đâu, ẩn/hiện, enable/disable. Viết dày đặc, dùng `<br/>` để xuống dòng giữa các mục trong cùng một `<td>`.
 
 ---
 
@@ -123,12 +118,13 @@ _(Ảnh: chưa có - cần bổ sung)_
 
 ---
 
-## Điểm style quan trọng
+## Điểm style quan trọng (Storage Format)
 
-1. **Heading** dùng `h2.` / `h3.` — không dùng Markdown `##` / `###`
-2. **Bảng** dùng `||col||` cho header, `|cell|` cho data — không dùng Markdown `| --- |`
-3. **In đậm** dùng `*text*` — không dùng Markdown `**text**`
-4. **Xuống dòng trong cell** dùng `\\` (2 backslash)
-5. **Link chéo tới page khác** dùng `[Text|URL]` trong cell bảng
+1. **Heading** dùng `<h2>`, `<h3>`, `<h4>` — không dùng `h2.` wiki hay Markdown `##`
+2. **Bảng** dùng `<table><tbody><tr><th>` cho header, `<td><p>content</p></td>` cho data
+3. **In đậm** dùng `<strong>text</strong>` — không dùng `*text*` wiki
+4. **Xuống dòng trong cell** dùng `<br/>` — không dùng `\\` wiki
+5. **Link chéo tới page khác** dùng `<a href="URL">Text</a>` trong cell
 6. **Tiếng Việt có dấu** ở mọi label và nội dung
 7. **Ghi rõ error code** (INPUT_01, CARD.003, SESSION_TIMEOUT_01...) khi đã xác định được từ URD
+8. **Section 4a** bắt buộc dùng `<ac:layout><ac:layout-section ac:breakout-mode="wide">` — xem ví dụ trên

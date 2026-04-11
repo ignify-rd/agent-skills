@@ -1,18 +1,18 @@
-# Confluence Upload — Wiki Format (recommended)
+# Confluence Upload — Storage Format (XHTML)
 
-## Cách chính: MCP với content_format="wiki"
+## Cách chính: MCP với content_format="storage"
 
-Toàn bộ nội dung RSD viết bằng Confluence Wiki Markup, upload trực tiếp qua MCP — không cần script Python, không cần convert.
+Toàn bộ nội dung RSD viết bằng **Confluence Storage Format** (XHTML + ac: macros), upload qua MCP. Dùng storage format để có wide layout cho Section 4a (image grid).
 
 ### Tạo page mới
 
 ```
 mcp__mcp-atlassian__confluence_create_page(
-    space_key="<SPACE_KEY>",         # ví dụ: "CGAAA", "AIT"
-    title="<TITLE>",                  # ví dụ: "WEB 2.1. Danh sách thẻ tín dụng nội địa_Skymap"
-    content="<nội dung wiki markup>", # toàn bộ nội dung từ rsd-template.md
-    content_format="wiki",
-    parent_id="<PARENT_PAGE_ID>"      # ID của page cha (số nguyên dạng string)
+    space_key="<SPACE_KEY>",           # ví dụ: "CGAAA", "AIT"
+    title="<TITLE>",                    # ví dụ: "[WEB] 2.1. Danh sách thẻ tín dụng nội địa_Skymap"
+    content="<nội dung storage format>", # XHTML + Confluence macros
+    content_format="storage",
+    parent_id="<PARENT_PAGE_ID>"        # ID của page cha (số nguyên dạng string)
 )
 ```
 
@@ -24,8 +24,8 @@ Trả về: `page_id` và `url` của page vừa tạo.
 mcp__mcp-atlassian__confluence_update_page(
     page_id="<PAGE_ID>",
     title="<TITLE>",
-    content="<nội dung wiki markup mới>",
-    content_format="wiki",
+    content="<nội dung storage format mới>",
+    content_format="storage",
     version_comment="Cập nhật nội dung RSD"
 )
 ```
@@ -41,7 +41,7 @@ mcp__mcp-atlassian__confluence_upload_attachments(
 )
 ```
 
-Sau khi attach thành công, ảnh được chèn trong wiki content bằng `!screen-01-default.png!`.
+Sau khi attach thành công, ảnh được chèn trong storage content bằng `<ac:image ac:width="360"><ri:attachment ri:filename="screen-01-default.png"/></ac:image>`.
 
 ### Lấy ảnh từ conversation
 
