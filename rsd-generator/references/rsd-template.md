@@ -7,6 +7,16 @@
 ## Cấu trúc page (storage format)
 
 ```xml
+<!-- TOÀN BỘ PAGE PHẢI BỌC TRONG 1 <ac:layout> DUY NHẤT -->
+<!-- Cấu trúc: fixed-width → wide (image grid) → fixed-width -->
+<ac:layout>
+
+<!-- ============================================================ -->
+<!-- SECTION FIXED-WIDTH: version, TOC, sections 1–3, đầu section 4 -->
+<!-- ============================================================ -->
+<ac:layout-section ac:breakout-mode="default" ac:type="fixed-width">
+<ac:layout-cell>
+
 <!-- PHIÊN BẢN TÀI LIỆU -->
 <p><strong>Phiên bản tài liệu</strong></p>
 <table><tbody>
@@ -86,17 +96,21 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 </tbody></table>
 <p><em>(Nếu là RSD APP có RSD WEB tương ứng, thay toàn bộ bảng bằng: "Tham chiếu tại <a href="URL">RSD WEB</a>")</em></p>
 
-<!-- SECTION 4 -->
+<!-- SECTION 4 heading + Figma link + navigation + 4a title -->
 <h2>4<strong>. Mô tả màn hình</strong></h2>
-
 <p>Figma: <a href="https://figma.com/design/...">Tên Figma file</a></p>
-
 <p><strong>a. Mockup màn hình</strong></p>
 <p>Đường dẫn: Cách truy cập chức năng, ví dụ: Menu Thẻ &gt; Danh sách thẻ &gt; tab ...</p>
 
-<!-- WEB: three_equal | APP: four_equal | Dialog: two_equal -->
-<!-- WEB image width=360 | APP image width=200 | Dialog image width=500 -->
-<ac:layout>
+</ac:layout-cell>
+</ac:layout-section>
+
+<!-- ============================================================ -->
+<!-- SECTION WIDE: Section 4a — image grid                        -->
+<!-- WEB: three_equal width=360 | APP: four_equal width=200       -->
+<!-- Dialog/Detail: two_equal width=500                           -->
+<!-- Breakout-width=1174 cho WEB/Dialog; dùng cùng giá trị APP   -->
+<!-- ============================================================ -->
 <ac:layout-section ac:breakout-mode="wide" ac:breakout-width="1174" ac:type="three_equal">
 <ac:layout-cell>
 <p>Caption state 1 — text thuần, không emoji, ví dụ: Màn hình danh sách khi có dữ liệu</p>
@@ -115,7 +129,12 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 <p><em>(Ảnh: chưa có - cần bổ sung)</em></p>
 </ac:layout-cell>
 </ac:layout-section>
-</ac:layout>
+
+<!-- ============================================================ -->
+<!-- SECTION FIXED-WIDTH: Section 4b + Section 5                  -->
+<!-- ============================================================ -->
+<ac:layout-section ac:breakout-mode="default" ac:type="fixed-width">
+<ac:layout-cell>
 
 <p><strong>b. Mô tả màn hình</strong></p>
 <table><tbody>
@@ -140,6 +159,11 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 <tr><td><p> </p></td><td><p>Server Module</p></td><td><p><strong>1/ Kiểm tra tính hợp lệ input</strong><br/>- Không hợp lệ: trả lỗi INPUT_01<br/>- Hết phiên: SESSION_TIMEOUT_01<br/>- Hợp lệ: chuyển bước 2<br/><br/><strong>2/ Kiểm tra phân quyền</strong><br/>...<br/><br/><strong>3/ ...</strong></p></td></tr>
 <tr><td><p> </p></td><td><p>Client web/app</p></td><td><p><strong>Nhận phản hồi</strong><br/>- Lỗi phân quyền CARD.003: hiển thị popup "Người dùng chưa được phân quyền..."<br/>- Thành công: hiển thị danh sách theo mô tả màn hình</p></td></tr>
 </tbody></table>
+
+</ac:layout-cell>
+</ac:layout-section>
+
+</ac:layout>
 ```
 
 ---
@@ -153,7 +177,11 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 5. **Cell rỗng**: `<td><p> </p></td>` — có `<p> </p>` bên trong
 6. **Link**: `<a href="URL">Text</a>` (không dùng wiki `[Text|URL]`)
 7. **Ảnh attachment**: `<ac:image ac:width="360"><ri:attachment ri:filename="file.png"/></ac:image>`
-8. **Image grid Section 4a**: BẮT BUỘC dùng `<ac:layout><ac:layout-section ac:breakout-mode="wide" ac:breakout-width="1174" ac:type="three_equal">` — KHÔNG dùng `{section}/{column}` wiki macro
+8. **Outer layout wrapper BẮT BUỘC**: Toàn bộ page phải nằm trong 1 `<ac:layout>` duy nhất với 3 section con:
+   - `<ac:layout-section ac:breakout-mode="default" ac:type="fixed-width">` — chứa version table, TOC, sections 1–3, đầu section 4 (heading + Figma link + nav + "a. Mockup")
+   - `<ac:layout-section ac:breakout-mode="wide" ac:breakout-width="1174" ac:type="three_equal">` — chứa image grid section 4a
+   - `<ac:layout-section ac:breakout-mode="default" ac:type="fixed-width">` — chứa bảng 4b và section 5
+   - Tables nằm ngoài layout wrapper sẽ render hẹp — đây là lý do tables bị narrow nếu bỏ qua outer layout.
 9. **Section 4 heading**: `<h2>4<strong>. Mô tả màn hình</strong></h2>` — số `4` không bold
 10. **Row group header bảng 4b**: `<tr><td><p>STT</p></td><td><p><strong>Tên cụm</strong></p></td><td><p> </p></td>...(5 cells)</tr>`
 11. **KHÔNG ghi annotation trong document** — dùng `Chờ xác nhận từ BA` trong cell. Báo cáo trong chat reply sau upload.

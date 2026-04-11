@@ -116,9 +116,19 @@ Trước khi viết, xác định:
 <!-- Ảnh attachment -->
 <ac:image ac:width="360"><ri:attachment ri:filename="screen-01.png"/></ac:image>
 
-<!-- Wide image grid — BẮT BUỘC dùng ac:layout, KHÔNG dùng {section}/{column} -->
-<!-- WEB: three_equal, APP: four_equal, dialog: two_equal -->
+<!-- TOÀN BỘ PAGE BẮT BUỘC bọc trong 1 <ac:layout> duy nhất — cấu trúc 3 section -->
+<!-- Tables nằm ngoài layout wrapper sẽ render hẹp (không full-width như sample) -->
 <ac:layout>
+
+<!-- Section 1: fixed-width — chứa version table, TOC, sections 1–3, đầu section 4 -->
+<ac:layout-section ac:breakout-mode="default" ac:type="fixed-width">
+<ac:layout-cell>
+<p>...version table, TOC, sections 1–3, heading 4, Figma link, "a. Mockup màn hình"...</p>
+</ac:layout-cell>
+</ac:layout-section>
+
+<!-- Section 2: wide — chứa image grid Section 4a -->
+<!-- WEB: three_equal width=360 | APP: four_equal width=200 | Dialog: two_equal width=500 -->
 <ac:layout-section ac:breakout-mode="wide" ac:breakout-width="1174" ac:type="three_equal">
 <ac:layout-cell><p>Caption state 1</p>
 <ac:image ac:width="360"><ri:attachment ri:filename="screen-01.png"/></ac:image></ac:layout-cell>
@@ -127,6 +137,14 @@ Trước khi viết, xác định:
 <ac:layout-cell><p>Caption state 3</p>
 <p><em>(Ảnh: chưa có - cần bổ sung)</em></p></ac:layout-cell>
 </ac:layout-section>
+
+<!-- Section 3: fixed-width — chứa bảng 4b + section 5 -->
+<ac:layout-section ac:breakout-mode="default" ac:type="fixed-width">
+<ac:layout-cell>
+<p>...bảng mô tả màn hình 4b, section 5 logic xử lý...</p>
+</ac:layout-cell>
+</ac:layout-section>
+
 </ac:layout>
 ```
 
@@ -165,14 +183,13 @@ Các section trong storage format:
 6. **Section 3** — bắt đầu bằng `info` macro block. Ma trận phân quyền: "x" cho có quyền, cell rỗng `<td><p> </p></td>` cho không có. Cột cuối: `Nhóm quyền khác còn lại`. Columns tùy theo loại dự án (xem template)
 7. **Section 4 — Mô tả màn hình** (heading: `<h2>4<strong>. Mô tả màn hình</strong></h2>` — số `4` không bold, phần còn lại bold theo mẫu). LUÔN sinh đầy đủ dù thiếu bất kỳ input nào khác:
    - Link Figma: `<p>Figma: <a href="https://figma.com/...">Tên file</a></p>` hoặc `<p>Figma: N/A</p>`
-   - **a. Mockup màn hình** — BẮT BUỘC dùng `<ac:layout>` với `breakout-mode="wide"`:
+   - **a. Mockup màn hình** — heading + Figma link + nav text đặt trong `fixed-width` section (trước image grid). Image grid là `wide` section riêng trong outer layout. **KHÔNG** bọc image grid trong `<ac:layout>` riêng — nó là sibling section của outer layout:
      - Số cột theo platform:
        - **WEB**: `ac:type="three_equal"`, image `ac:width="360"`
        - **APP**: `ac:type="four_equal"`, image `ac:width="200"`
        - **Dialog/Detail**: `ac:type="two_equal"`, image `ac:width="500"`
-     - Ví dụ WEB (3 cột):
+     - Ví dụ image grid WEB (chỉ phần `<ac:layout-section>` — nằm trong outer layout):
        ```xml
-       <ac:layout>
        <ac:layout-section ac:breakout-mode="wide" ac:breakout-width="1174" ac:type="three_equal">
        <ac:layout-cell>
        <p>Caption state 1</p>
@@ -191,9 +208,8 @@ Các section trong storage format:
        <p><em>(Ảnh: chưa có - cần bổ sung)</em></p>
        </ac:layout-cell>
        </ac:layout-section>
-       </ac:layout>
        ```
-     - **Luôn sinh ra khối `<ac:layout>` dù không có ảnh nào** — dùng `<em>(Ảnh: chưa có - cần bổ sung)</em>` cho mỗi state
+     - **Luôn sinh ra section image grid dù không có ảnh nào** — dùng `<em>(Ảnh: chưa có - cần bổ sung)</em>` cho mỗi state
      - Nếu **có ảnh**: dùng `<ac:image ac:width="..."><ri:attachment ri:filename="filename"/></ac:image>`
      - **CẤM dùng `{section}/{column}` wiki macro** — không có `breakout-mode`, sẽ hẹp hơn mẫu
      - Mỗi state = 1 `<p>Caption</p>` + 1 `<ac:image>` hoặc `<p><em>(Ảnh: chưa có...)</em></p>`
@@ -289,6 +305,7 @@ Nếu không có điểm nào cần xác nhận thì bỏ phần đó đi — ch
 - **Upload ảnh fail "File not found"**: Tránh path có khoảng trắng. Copy ảnh vào `/tmp/rsd-screenshots/` trước khi upload. Trên Windows với Git Bash, nếu MCP vẫn không tìm thấy `/tmp/`, thử dùng path tuyệt đối Windows tương đương (ví dụ `d:/tmp/rsd-screenshots/`).
 - **Duplicate title khi create page**: Confluence từ chối tạo page trùng tên. Dùng `confluence_update_page` thay vì tạo mới — thông báo cho user rằng đã update page có sẵn.
 - **Page width nhỏ hơn sample**: Luôn thêm `page_width="full-width"` trong `create_page` và `update_page`. Nếu quên, page sẽ dùng fixed-width mặc định.
+- **Tables/text bị hẹp (chỉ section 4a ảnh rộng đúng)**: Nguyên nhân là content không được bọc trong outer `<ac:layout>`. Tables nằm ngoài layout wrapper render hẹp hơn. BẮT BUỘC dùng cấu trúc 3 section: `fixed-width → wide (image grid) → fixed-width` trong 1 `<ac:layout>` duy nhất bao toàn bộ page. Xem `references/rsd-template.md` để thấy cấu trúc đầy đủ.
 
 ## Reference files
 
