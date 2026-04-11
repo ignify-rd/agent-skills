@@ -53,7 +53,9 @@ h2. 2. Sơ đồ luồng xử lý
 
 h3. 2.1. Sơ đồ luồng xử lý
 
-{{Chèn ảnh nếu có: !ten-anh-so-do.png! \\ Hoặc sơ đồ ASCII trong khối noformat:}}
+Nếu có ảnh sơ đồ: !ten-anh-so-do.png!
+
+Nếu không có ảnh, dùng khối noformat bên dưới:
 
 {noformat}
 {{Sơ đồ luồng ASCII hoặc để trống + ghi chú "Sẽ bổ sung"}}
@@ -141,8 +143,8 @@ h2. 5. Logic xử lý {{tên action chính, ví dụ: khi truy cập menu Thẻ 
 
 ||*Thao tác*||*Tác nhân*||*Mô tả*||
 |{{Trigger user, ví dụ: User chọn tab Thẻ tín dụng nội địa}}|Client web/app|*1/ Gửi yêu cầu lấy danh sách ... qua API ...* \\ Endpoint: {{...}} \\ Payload: {{...}}|
-| |Server {{Module}}|*1/ Kiểm tra tính hợp lệ input* \\ * Không hợp lệ: trả lỗi INPUT_01 \\ * Hết phiên: SESSION_TIMEOUT_01 \\ * Hợp lệ: chuyển bước 2 \\ \\ *2/ Kiểm tra phân quyền* \\ ... \\ \\ *3/ ...*|
-| |Client web/app|*Nhận phản hồi* \\ * Lỗi phân quyền CARD.003: hiển thị popup "Người dùng chưa được phân quyền..." \\ * Thành công: hiển thị danh sách theo mô tả màn hình|
+| |Server {{Module}}|*1/ Kiểm tra tính hợp lệ input* \\ - Không hợp lệ: trả lỗi INPUT_01 \\ - Hết phiên: SESSION_TIMEOUT_01 \\ - Hợp lệ: chuyển bước 2 \\ \\ *2/ Kiểm tra phân quyền* \\ ... \\ \\ *3/ ...*|
+| |Client web/app|*Nhận phản hồi* \\ - Lỗi phân quyền CARD.003: hiển thị popup "Người dùng chưa được phân quyền..." \\ - Thành công: hiển thị danh sách theo mô tả màn hình|
 
 ----
 
@@ -163,5 +165,5 @@ h2. Các điểm cần user xác nhận trước khi chính thức hoá
 6. **Link ngoài** dùng `[Text|URL]`; **link nội bộ** dùng `[#section-id]`
 7. **Ảnh** attach lên page sau khi tạo, chèn bằng `!ten-file.png!` hoặc `!ten-file.png|width=800!`
 8. **Số thứ tự bảng section 4b**: để trống header cột đầu (`|| ||`)
-9. **Row group header** trong bảng 4b: cell đầu là `*Tên cụm*`, các cột còn lại để trống
+9. **Row group header** trong bảng 4b: `|STT|*Tên cụm*| | | | | |` — cột 1 là số thứ tự, cột 2 là tên cụm in đậm, 5 cột còn lại để trống (tổng 7 cells, khớp với 7 cột header)
 10. **Section 4a**: mỗi state = 1 dòng caption + 1 dòng `!file.png!` hoặc `_(Ảnh: chưa có - cần bổ sung)_`. KHÔNG thay bằng ghi chú chung.

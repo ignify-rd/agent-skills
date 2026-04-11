@@ -14,9 +14,9 @@
 |*Mô tả*|Cho phép người dùng tra cứu danh sách thẻ tín dụng nội địa|
 |*Tác nhân*|Tác nhân chủ động: Khách hàng BIDV \\ Tác nhân thụ động: BDR, Hệ thống core thẻ mới (way4)|
 |*Mức độ ưu tiên*|Medium|
-|*Điều kiện trước*|# User đăng nhập FO iBank thành công \\ # User được phân quyền 1 trong 2: (a) Dịch vụ chủ thẻ — MENU_CODE=M_CARD_LIST_DVCT_TT, Function=INQUIRY; hoặc (b) Dịch vụ quản trị thẻ doanh nghiệp — MENU_CODE=M_CARD_LIST_DVQT_TT \\ # Truy cập menu tương ứng|
-|*Luồng chính*|# User nhấn menu Thẻ > Danh sách thẻ > tab Thẻ tín dụng nội địa \\ # Client hiển thị màn hình danh sách thẻ, focus tab, gọi API danh sách thẻ \\ # Server trả kết quả \\ # Client hiển thị \\ # User thao tác tiếp|
-|*Luồng ngoại lệ*|# User chuyển menu / logout / mất mạng → usecase kết thúc \\ # API lấy dữ liệu fail → quay lại bước 1|
+|*Điều kiện trước*|1. User đăng nhập FO iBank thành công \\ 2. User được phân quyền 1 trong 2: (a) Dịch vụ chủ thẻ — MENU_CODE=M_CARD_LIST_DVCT_TT, Function=INQUIRY; hoặc (b) Dịch vụ quản trị thẻ doanh nghiệp — MENU_CODE=M_CARD_LIST_DVQT_TT \\ 3. Truy cập menu tương ứng|
+|*Luồng chính*|1. User nhấn menu Thẻ > Danh sách thẻ > tab Thẻ tín dụng nội địa \\ 2. Client hiển thị màn hình danh sách thẻ, focus tab, gọi API danh sách thẻ \\ 3. Server trả kết quả \\ 4. Client hiển thị \\ 5. User thao tác tiếp|
+|*Luồng ngoại lệ*|1. User chuyển menu / logout / mất mạng → usecase kết thúc \\ 2. API lấy dữ liệu fail → quay lại bước 1|
 |*Quy tắc nghiệp vụ*|Phân quyền dữ liệu: user được phân quyền tại CIM; BDR tuân theo chính sách core thẻ. \\ Nguyên tắc Chủ thẻ: combo chọn "Tất cả" → API theo CIF DN; chọn "Thẻ của tôi" → API theo CIF DN + CIF cá nhân. \\ Trạng thái "Chưa kích hoạt": productionStatus=Locked AND plasticStatus=PO.|
 ```
 
