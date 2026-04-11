@@ -57,15 +57,22 @@ Thực hiện tuần tự:
 | Tên tác giả | Không | Dùng tên user hiện tại hoặc để trống |
 
 **Quy trình đọc resource:**
-- **Figma link**: `mcp__plugin_figma_figma__get_design_context` (lấy element-level) + `get_screenshot` cho từng state cần mô tả (default, empty, error, dropdown mở...). Parse URL: `figma.com/design/{fileKey}/...?node-id={nodeId}` — convert `-` thành `:` trong nodeId. Tải ảnh về local folder `./screenshots/`.
+
+**0. Luôn scan `./screenshots/` trước tiên** — ngay khi bắt đầu, trước khi xử lý bất kỳ input nào khác:
+```bash
+ls ./screenshots/
+```
+Nếu thư mục tồn tại và có file ảnh → đây là nguồn ảnh chính cho Section 4a. Liệt kê tên các file, dùng trực tiếp trong wiki content (`!tên-file.png!`) và attach sau khi tạo page. Không cần user đính kèm lại hay cung cấp thêm nguồn nào khác.
+
+- **Figma link**: `mcp__plugin_figma_figma__get_design_context` (lấy element-level) + `get_screenshot` cho từng state cần mô tả (default, empty, error, dropdown mở...). Parse URL: `figma.com/design/{fileKey}/...?node-id={nodeId}` — convert `-` thành `:` trong nodeId. Tải ảnh về `./screenshots/`.
 - **Ảnh đính kèm trong conversation** — không giả định format. Kiểm tra thực tế và xử lý:
   - **Local file path**: `cp "<path>" "./screenshots/screen-01-default.png"`
   - **Base64 string**: `echo "<base64>" | base64 -d > "./screenshots/screen-01-default.png"`
   - **URL** (attachment URL, CDN link...): `curl -L -o "./screenshots/screen-01-default.png" "<url>"`
   - **Chỉ thấy ảnh inline, không có path/base64/url**: ghi placeholder `_(Ảnh: <mô tả nội dung> — cần attach file)_`
   
-  Sau khi có file local → chèn `!screen-01-default.png!` vào wiki content đúng state → attach sau khi tạo page bằng `confluence_upload_attachments`
-- **Ảnh từ Jira issue** (nếu user cung cấp link Jira có ảnh đính kèm): dùng `mcp__mcp-atlassian__jira_download_attachments` → tải về local → upload lên page Confluence mới
+  Sau khi có file local → chèn `!tên-file.png!` vào wiki content đúng state → attach sau khi tạo page bằng `confluence_upload_attachments`
+- **Ảnh từ Jira issue** (nếu user cung cấp link Jira có ảnh đính kèm): dùng `mcp__mcp-atlassian__jira_download_attachments` → tải về `./screenshots/` → dùng như bình thường
 - **URD / Jira issue** (nếu có): `mcp__mcp-atlassian__confluence_get_page` hoặc `mcp__mcp-atlassian__jira_get_issue` — đọc description + comments + attachments.
 - **Page tham chiếu** (nếu có): đọc tương tự, extract thông tin liên quan cho từng section.
 
@@ -75,7 +82,7 @@ Trước khi viết, xác định:
 
 - **Đây là RSD WEB hay RSD APP?** Nếu APP và đã có RSD WEB tương ứng, sections 1.2, 2.2, 3, 5 sẽ **tham chiếu** (link) sang RSD WEB. Chỉ Section 4 là viết mới theo Figma/ảnh APP.
 - **Có URD/tài liệu không?** Nếu có → đọc hết và extract thông tin cho sections 1, 2, 3, 5. Nếu không → các section đó dùng minimal template hoặc `[Cần bổ sung]`, nhưng **Section 4 vẫn phải đầy đủ**.
-- **Số lượng ảnh/state**: Xác định các state cần mô tả từ Figma hoặc ảnh user cung cấp. Mỗi state = 1 caption + 1 ảnh + rows tương ứng trong bảng 4b.
+- **Số lượng ảnh/state**: Xác định từ kết quả `ls ./screenshots/` (Bước 1), Figma, hoặc ảnh user cung cấp. Nếu `./screenshots/` có file → đó là danh sách state, mỗi file = 1 state trong Section 4a. Mỗi state = 1 caption + 1 ảnh (`!filename.png!`) + rows tương ứng trong bảng 4b.
 
 ### Bước 3 — Sinh nội dung theo template
 
@@ -99,6 +106,32 @@ h3. Tên         → heading level 3 (dùng cho 1.1, 1.2, 2.1...)
 {noformat}...{noformat} → khối text không format (dùng cho sơ đồ ASCII)
 ```
 
+**CRITICAL — Quy tắc tuyệt đối khi viết nội dung trong cell bảng (vi phạm = vỡ bảng):**
+
+1. **Toàn bộ nội dung 1 cell phải nằm trên 1 dòng duy nhất.** Không được xuống dòng thật (Enter) giữa chừng trong nội dung cell. Confluence parser thấy `\n` giữa cell = kết thúc row → vỡ bảng.
+2. **Dùng `\\` (2 backslash) để xuống dòng trong cell**, không dùng Enter.
+3. **Không dùng ký tự `|` (pipe) trong nội dung cell.** Parser hiểu `|` = ranh giới cột → tạo thêm cột thừa.
+4. **Không dùng `#` để tạo numbered list trong cell.** Dùng số thủ công với `\\`:
+
+   SAI — sẽ vỡ bảng:
+   ```
+   |*Điều kiện trước*|# User đăng nhập
+   # User được phân quyền|
+   ```
+   ĐÚNG:
+   ```
+   |*Điều kiện trước*|1. User đăng nhập \\ 2. User được phân quyền|
+   ```
+
+   SAI — extra columns vì dùng `|` trong Mô tả:
+   ```
+   |5|Textbox|Input|N|-|Placeholder: "..."|Logic: ...|Ẩn/hiện: ...|
+   ```
+   ĐÚNG:
+   ```
+   |5|Textbox|Input|N|-|Placeholder: "...". Logic: ... Ẩn/hiện: ...|
+   ```
+
 Các section trong wiki format:
 
 1. **Phiên bản tài liệu** — bảng với header row `||Version||Lý do||...||`, data row `|1.0|Thêm mới|<ngày hôm nay>|<tác giả>|Khởi tạo|` — **không ghi "Dự thảo"**
@@ -110,16 +143,20 @@ Các section trong wiki format:
 7. **Section 4 — Mô tả màn hình** (quan trọng nhất — LUÔN sinh đầy đủ dù thiếu bất kỳ input nào khác):
    - Link Figma: `Figma: [Link|https://figma.com/...]` hoặc `Figma: N/A`
    - **a. Mockup màn hình** — quy tắc BẮT BUỘC:
-     - Với **mỗi state** (default, empty, error, dropdown, v.v.), viết theo pattern sau, **không bao giờ được bỏ trống dòng ảnh**:
+     - Với **mỗi state** (default, empty, error, dropdown, v.v.), viết theo pattern:
        ```
        Caption mô tả state (text thuần, không emoji)
 
        !ten-file.png!
        ```
-     - Nếu **có Figma**: tải ảnh bằng `mcp__plugin_figma_figma__get_screenshot` → lưu vào `./screenshots/` → chèn `!ten-file.png!` → sau khi tạo page, attach bằng `mcp__mcp-atlassian__confluence_upload_attachments`
+     - Nếu **có Figma**: tải ảnh → lưu vào `./screenshots/` → chèn `!ten-file.png!` → attach sau khi tạo page
      - Nếu **có ảnh user đính kèm**: lưu local → chèn `!ten-file.png!` → attach sau khi tạo page
-     - Nếu **không có ảnh nào**: chèn placeholder `_(Ảnh: chưa có - cần bổ sung)_` — **KHÔNG được để trống, KHÔNG được bỏ dòng này**
-     - **Tuyệt đối không** dùng emoji hay text mô tả UI thay cho ảnh/placeholder
+     - Nếu **không có ảnh nào**: chèn placeholder `_(Ảnh: chưa có - cần bổ sung)_`
+     - **CẤM tuyệt đối các cách sau** — đây là output SAI:
+       - `*(15 screenshots được đính kèm tại page Confluence)*` — ghi chú chung thay cho ảnh
+       - `[Ảnh sơ đồ luồng — cần bổ sung nếu có tài liệu đính kèm]` — note mơ hồ
+       - Để trống section 4a, không có caption cũng không có ảnh/placeholder
+     - Mỗi state = 1 caption + 1 dòng ảnh hoặc placeholder — không có ngoại lệ
    - **b. Bảng mô tả màn hình** — sinh từ ảnh/Figma là chính:
      - Header: `|| ||*Hạng mục*||*Kiểu hiển thị*||*Kiểu thao tác*||*Bắt buộc*||*Độ dài*||*Mô tả*||` (cột đầu để trống — không ghi STT)
      - Row group header: `|*Tên cụm*| | | | | |`

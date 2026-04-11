@@ -38,11 +38,11 @@ h3. 1.2. Đặc tả/tóm tắt Usecase
 |*Tác nhân*|Tác nhân chủ động: {{vai trò user}} \\ Tác nhân thụ động: {{các hệ thống backend liên quan}}|
 |*Mức độ ưu tiên*|High / *Medium* / Low|
 |*Điều kiện kích hoạt*|{{Khi nào user kích hoạt chức năng này}}|
-|*Điều kiện trước*|# User đăng nhập thành công \\ # User được phân quyền ...|
+|*Điều kiện trước*|1. User đăng nhập thành công \\ 2. User được phân quyền ...|
 |*Kết quả mong muốn*|{{Hệ thống hiển thị / xử lý gì}}|
-|*Luồng chính*|# {{Bước 1}} \\ # {{Bước 2}} \\ # {{Bước 3}}|
+|*Luồng chính*|1. {{Bước 1}} \\ 2. {{Bước 2}} \\ 3. {{Bước 3}}|
 |*Luồng thay thế*|N/A hoặc mô tả|
-|*Luồng ngoại lệ*|# ... \\ # ...|
+|*Luồng ngoại lệ*|1. ... \\ 2. ...|
 |*Quy tắc nghiệp vụ (nếu có)*|{{Rules business phải tuân — phân quyền dữ liệu, logic trạng thái...}}|
 |*Yêu cầu phi chức năng (nếu có)*|Theo yêu cầu phi chức năng chung tại RSD cấp 1|
 
@@ -108,22 +108,19 @@ Figma: [{{tên Figma file}}|{{https://figma.com/design/...}}]
 
 Đường dẫn: {{Cách truy cập chức năng, ví dụ: Menu Thẻ > Danh sách thẻ > tab ...}}
 
-_Lặp lại block sau cho mỗi state cần mô tả (default, empty, error, dropdown mở, v.v.):_
+{{Caption state 1 — text thuần, không emoji, ví dụ: Màn hình danh sách khi có dữ liệu}}
 
-----[ STATE 1 ]----
-{{Caption mô tả state — text thuần, không emoji}}
-{{FILL_IMAGE_1: nếu có ảnh → !tên-file-thực-tế.png! | nếu chưa có → _(Ảnh: chưa có - cần bổ sung)_}}
+!screen-01-default.png!
 
-----[ STATE 2 ]----
-{{Caption mô tả state 2}}
-{{FILL_IMAGE_2: nếu có ảnh → !tên-file-thực-tế.png! | nếu chưa có → _(Ảnh: chưa có - cần bổ sung)_}}
+{{Caption state 2 — ví dụ: Màn hình khi không có dữ liệu}}
 
-----[ STATE 3 ]----
-{{Caption mô tả state 3}}
-{{FILL_IMAGE_3: nếu có ảnh → !tên-file-thực-tế.png! | nếu chưa có → _(Ảnh: chưa có - cần bổ sung)_}}
+_(Ảnh: chưa có - cần bổ sung)_
 
-_Xoá các dòng "----[ STATE N ]----" và "{{FILL_IMAGE_N: ...}}" sau khi đã điền vào._
-_Mỗi caption BẮT BUỘC phải có 1 dòng ảnh hoặc placeholder ngay bên dưới — không được bỏ trống._
+{{Caption state 3 — ví dụ: Màn hình khi mở Tìm kiếm nâng cao}}
+
+!screen-03-search.png!
+
+_Quy tắc: mỗi state = 1 dòng caption + 1 dòng ảnh (!file.png!) hoặc placeholder. Không được thay bằng ghi chú chung như "screenshots đính kèm". Enumerate từng state cụ thể dù không có ảnh._
 
 *b. Mô tả màn hình*
 
@@ -160,9 +157,11 @@ h2. Các điểm cần user xác nhận trước khi chính thức hoá
 
 1. **Không dùng emoji** trong bất kỳ cell bảng hay đoạn text nào
 2. **TOC tự động** từ `{toc:maxLevel=2}` — không cần tạo thủ công
-3. **Xuống dòng trong cell bảng** dùng `\\` (2 backslash), không dùng newline thật
-4. **List trong cell** dùng `\\` để xuống dòng + `*` ở đầu mỗi dòng: `* item1 \\ * item2`
-5. **Link ngoài** dùng `[Text|URL]`; **link nội bộ** dùng `[#section-id]`
-6. **Ảnh** attach lên page trước, rồi chèn bằng `!ten-file.png!` hoặc `!ten-file.png|width=800!`
-7. **Số thứ tự bảng section 4b**: để trống header cột đầu (`|| ||`)
-8. **Row group header** trong bảng 4b: cell đầu là `*Tên cụm*`, các cột còn lại để trống
+3. **Xuống dòng trong cell bảng** dùng `\\` (2 backslash), KHÔNG dùng Enter/newline thật — vi phạm = vỡ bảng
+4. **Numbered list trong cell** dùng số thủ công: `1. ... \\ 2. ... \\ 3. ...` — KHÔNG dùng `#` wiki list syntax
+5. **KHÔNG dùng ký tự `|` trong nội dung cell** — parser hiểu là ranh giới cột → tạo thêm cột thừa
+6. **Link ngoài** dùng `[Text|URL]`; **link nội bộ** dùng `[#section-id]`
+7. **Ảnh** attach lên page sau khi tạo, chèn bằng `!ten-file.png!` hoặc `!ten-file.png|width=800!`
+8. **Số thứ tự bảng section 4b**: để trống header cột đầu (`|| ||`)
+9. **Row group header** trong bảng 4b: cell đầu là `*Tên cụm*`, các cột còn lại để trống
+10. **Section 4a**: mỗi state = 1 dòng caption + 1 dòng `!file.png!` hoặc `_(Ảnh: chưa có - cần bổ sung)_`. KHÔNG thay bằng ghi chú chung.
