@@ -44,7 +44,7 @@ Thực hiện tuần tự:
 | Input | Bắt buộc | Nếu thiếu |
 |-------|----------|-----------|
 | Tên chức năng + platform (WEB/APP/BO) | Có | Hỏi user |
-| Space Confluence + Parent page ID | Có | Hỏi user |
+| Space Confluence + Parent page ID | Có | Tự tìm: nếu user cung cấp URL → trích từ URL; nếu user nói tên space → gọi `confluence_get_space_page_tree` lấy root page; chỉ hỏi nếu không suy ra được |
 | Ảnh mockup hoặc Figma link | Không | Sinh placeholder caption cho từng state phổ biến + `_(Ảnh: chưa có - cần bổ sung)_` — Section 4 vẫn phải đầy đủ |
 | URD (link Confluence, Jira issue...) | Không | Điền `Chờ xác nhận từ BA` cho các field thiếu thông tin |
 | Page tham chiếu (RSD cấp 1, bảng trạng thái, RSD WEB...) | Không | Bỏ qua, điền khi user cung cấp |
@@ -54,9 +54,9 @@ Thực hiện tuần tự:
 
 **0. Luôn scan `./screenshots/` trước tiên** — ngay khi bắt đầu, trước khi xử lý bất kỳ input nào khác:
 ```bash
-ls ./screenshots/
+ls ./screenshots/ 2>/dev/null || ls /tmp/rsd-screenshots/ 2>/dev/null
 ```
-Nếu thư mục tồn tại và có file ảnh → đây là nguồn ảnh chính cho Section 4a. Liệt kê tên các file, dùng trực tiếp trong wiki content (`!tên-file.png!`) và attach sau khi tạo page. Không cần user đính kèm lại hay cung cấp thêm nguồn nào khác.
+Nếu có file ảnh → đây là nguồn ảnh chính cho Section 4a. Nếu ảnh nằm trong thư mục có khoảng trắng hoặc ký tự đặc biệt, copy sang `/tmp/rsd-screenshots/` trước khi dùng. Không cần user đính kèm lại hay cung cấp thêm nguồn nào khác.
 
 - **Figma link**: `mcp__plugin_figma_figma__get_design_context` (lấy element-level) + `get_screenshot` cho từng state cần mô tả (default, empty, error, dropdown mở...). Parse URL: `figma.com/design/{fileKey}/...?node-id={nodeId}` — convert `-` thành `:` trong nodeId. Tải ảnh về `./screenshots/`.
 - **Ảnh đính kèm trong conversation** — không giả định format. Kiểm tra thực tế và xử lý:
@@ -65,7 +65,7 @@ Nếu thư mục tồn tại và có file ảnh → đây là nguồn ảnh chí
   - **URL** (attachment URL, CDN link...): `curl -L -o "./screenshots/screen-01-default.png" "<url>"`
   - **Chỉ thấy ảnh inline, không có path/base64/url**: ghi placeholder `_(Ảnh: <mô tả nội dung> — cần attach file)_`
   
-  Sau khi có file local → chèn `!tên-file.png!` vào wiki content đúng state → attach sau khi tạo page bằng `confluence_upload_attachments`
+  Sau khi có file local → copy vào `/tmp/rsd-screenshots/` → chèn `<ac:image ac:width="..."><ri:attachment ri:filename="tên-file.png"/></ac:image>` trong storage content đúng state → attach sau khi tạo page bằng `confluence_upload_attachments`
 - **Ảnh từ Jira issue** (nếu user cung cấp link Jira có ảnh đính kèm): dùng `mcp__mcp-atlassian__jira_download_attachments` → tải về `./screenshots/` → dùng như bình thường
 - **URD / Jira issue** (nếu có): `mcp__mcp-atlassian__confluence_get_page` hoặc `mcp__mcp-atlassian__jira_get_issue` — đọc description + comments + attachments.
 - **Page tham chiếu** (nếu có): đọc tương tự, extract thông tin liên quan cho từng section.
@@ -228,18 +228,36 @@ mcp__mcp-atlassian__confluence_create_page(
     title="<TITLE>",
     content="<nội dung storage format XHTML>",
     content_format="storage",
-    parent_id="<PARENT_PAGE_ID>"
+    parent_id="<PARENT_PAGE_ID>",
+    page_width="full-width"    # BẮT BUỘC — nếu thiếu page sẽ hẹp hơn sample
 )
 ```
 
-Sau khi tạo page, nếu có ảnh cần attach:
+Nếu đã có page cùng tên (duplicate), dùng `confluence_update_page` thay vì tạo mới:
+```
+mcp__mcp-atlassian__confluence_update_page(
+    page_id="<PAGE_ID>",
+    title="<TITLE>",
+    content="<nội dung storage format XHTML>",
+    content_format="storage",
+    page_width="full-width",
+    version_comment="Cập nhật nội dung RSD"
+)
+```
+
+Sau khi tạo/update page, nếu có ảnh cần attach:
+```bash
+# Staging: copy tất cả ảnh vào /tmp/rsd-screenshots/ (không có khoảng trắng)
+mkdir -p /tmp/rsd-screenshots
+cp <source_dir>/*.png /tmp/rsd-screenshots/
+```
 ```
 mcp__mcp-atlassian__confluence_upload_attachments(
     content_id="<page_id>",
-    file_paths="./screenshots/01-default.png,./screenshots/02-empty.png,..."
+    file_paths="/tmp/rsd-screenshots/screen-01-default.png,/tmp/rsd-screenshots/screen-02-empty.png,..."
 )
 ```
-`file_paths` là chuỗi các path ngăn cách bởi dấu phẩy — không phải array.
+`file_paths` là chuỗi path ngăn cách bởi dấu phẩy — không phải array. Tránh path có khoảng trắng.
 
 Xem `references/confluence-upload.md` để biết chi tiết và fallback khi cần update page đã có.
 
@@ -264,10 +282,13 @@ Nếu không có điểm nào cần xác nhận thì bỏ phần đó đi — ch
 
 - **Figma MCP trả quá nhiều dữ liệu cho 1 node lớn**: thu hẹp bằng cách truyền đúng nodeId của từng màn con, không lấy node cha.
 - **Confluence page quá lớn khi đọc URD**: tool lưu ra file; đọc theo offset/limit, grep heading trước để tìm section cần thiết thay vì đọc toàn bộ.
-- **Upload fail do size**: nếu wiki content >100KB thì tạo page rỗng trước rồi update — xem `references/confluence-upload.md`.
+- **Upload fail do size**: nếu content >100KB thì tạo page rỗng trước rồi update — xem `references/confluence-upload.md`.
 - **Ảnh không hiện sau upload**: kiểm tra `ri:filename` trong `<ac:image>` khớp chính xác tên file attach (case-sensitive).
 - **Dòng image placeholder bị bỏ**: KHÔNG được bỏ `<p><em>(Ảnh: chưa có - cần bổ sung)</em></p>` — mỗi caption phải có `<ac:image>` hoặc placeholder ngay bên dưới.
 - **Section 4 bị thiếu khi không có URD**: Section 4 không phụ thuộc URD — sinh từ ảnh/Figma. Không được skip Section 4 chỉ vì thiếu tài liệu nghiệp vụ.
+- **Upload ảnh fail "File not found"**: Tránh path có khoảng trắng. Copy ảnh vào `/tmp/rsd-screenshots/` trước khi upload. Trên Windows với Git Bash, nếu MCP vẫn không tìm thấy `/tmp/`, thử dùng path tuyệt đối Windows tương đương (ví dụ `d:/tmp/rsd-screenshots/`).
+- **Duplicate title khi create page**: Confluence từ chối tạo page trùng tên. Dùng `confluence_update_page` thay vì tạo mới — thông báo cho user rằng đã update page có sẵn.
+- **Page width nhỏ hơn sample**: Luôn thêm `page_width="full-width"` trong `create_page` và `update_page`. Nếu quên, page sẽ dùng fixed-width mặc định.
 
 ## Reference files
 

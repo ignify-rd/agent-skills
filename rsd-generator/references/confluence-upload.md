@@ -12,7 +12,8 @@ mcp__mcp-atlassian__confluence_create_page(
     title="<TITLE>",                    # ví dụ: "[WEB] 2.1. Danh sách thẻ tín dụng nội địa_Skymap"
     content="<nội dung storage format>", # XHTML + Confluence macros
     content_format="storage",
-    parent_id="<PARENT_PAGE_ID>"        # ID của page cha (số nguyên dạng string)
+    parent_id="<PARENT_PAGE_ID>",       # ID của page cha (số nguyên dạng string)
+    page_width="full-width"             # BẮT BUỘC — page rộng như sample, không để mặc định fixed-width
 )
 ```
 
@@ -26,20 +27,28 @@ mcp__mcp-atlassian__confluence_update_page(
     title="<TITLE>",
     content="<nội dung storage format mới>",
     content_format="storage",
+    page_width="full-width",            # BẮT BUỘC — giữ full-width mỗi lần update
     version_comment="Cập nhật nội dung RSD"
 )
 ```
 
 ### Attach ảnh sau khi tạo page
 
-Gom tất cả ảnh từ mọi nguồn (Figma, user paste, Jira download) vào 1 thư mục rồi upload 1 lần:
+Gom tất cả ảnh từ mọi nguồn (Figma, user paste, Jira download) vào `/tmp/rsd-screenshots/` rồi upload 1 lần:
+
+```bash
+mkdir -p /tmp/rsd-screenshots
+cp <source>/*.png /tmp/rsd-screenshots/
+```
 
 ```
 mcp__mcp-atlassian__confluence_upload_attachments(
     content_id="<PAGE_ID>",
-    file_paths="./screenshots/screen-01-default.png,./screenshots/screen-02-empty.png,..."
+    file_paths="/tmp/rsd-screenshots/screen-01-default.png,/tmp/rsd-screenshots/screen-02-empty.png,..."
 )
 ```
+
+**Lưu ý**: Tránh path có khoảng trắng — MCP sẽ không tìm thấy file. Trên Windows với Git Bash, nếu `/tmp/` không hoạt động với MCP, thử path tuyệt đối Windows (ví dụ `d:/tmp/rsd-screenshots/`).
 
 Sau khi attach thành công, ảnh được chèn trong storage content bằng `<ac:image ac:width="360"><ri:attachment ri:filename="screen-01-default.png"/></ac:image>`.
 
@@ -60,7 +69,7 @@ curl -L -o "./screenshots/screen-01-default.png" "<url>"
 
 Sau khi có file local → upload như bình thường.
 
-Nếu chỉ thấy ảnh inline (không có path/base64/url): chèn `_(Ảnh: <mô tả nội dung> — cần attach file)_` trong wiki content.
+Nếu chỉ thấy ảnh inline (không có path/base64/url): chèn `<p><em>(Ảnh: <mô tả nội dung> — cần attach file)</em></p>` trong storage content.
 
 ### Lấy ảnh từ Jira issue
 
@@ -77,18 +86,29 @@ Upload kết quả download lên Confluence page mới.
 
 ## Lấy space_key và parent_id
 
-Nếu chỉ có URL của page cha, trích `parent_id` từ URL:
-- URL: `https://ignify-co.atlassian.net/wiki/spaces/AIT/pages/90505238/...`
-- `space_key` = `AIT`
-- `parent_id` = `90505238`
+**Không hỏi user nếu có thể tự tìm.** Ưu tiên theo thứ tự:
 
-Nếu cần tìm space:
-```
-mcp__mcp-atlassian__confluence_search(
-    query="space = \"<SPACE_KEY>\" AND type = page",
-    limit=1
-)
-```
+1. **URL của page cha** → trích trực tiếp:
+   - URL: `https://ignify-co.atlassian.net/wiki/spaces/AIT/pages/90505238/...`
+   - `space_key` = `AIT`, `parent_id` = `90505238`
+
+2. **User nói tên space** (ví dụ: "space AIT", "board AIT", "root folder của AIT") → tự tìm:
+   ```
+   mcp__mcp-atlassian__confluence_get_space_page_tree(
+       space_key="AIT"
+   )
+   ```
+   → Tìm page có `parent_id = null` → đó là root page → dùng `id` của nó làm `parent_id`.
+
+3. **Chỉ biết tên dự án** → search:
+   ```
+   mcp__mcp-atlassian__confluence_search(
+       query="space = \"<SPACE_KEY>\" AND type = page",
+       limit=5
+   )
+   ```
+
+Chỉ hỏi user khi không có bất kỳ thông tin nào để suy ra.
 
 ---
 
