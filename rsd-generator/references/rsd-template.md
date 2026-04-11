@@ -19,7 +19,7 @@
 
 <!-- PHIÊN BẢN TÀI LIỆU -->
 <p><strong>Phiên bản tài liệu</strong></p>
-<table><tbody>
+<table data-layout="full-width"><tbody>
 <tr><th><p>Version</p></th><th><p>Lý do</p></th><th><p>Date</p></th><th><p>Người sửa</p></th><th><p>Mô tả</p></th></tr>
 <tr><td><p>1.0</p></td><td><p>Thêm mới</p></td><td><p>YYYY-MM-DD</p></td><td><p>Tác giả</p></td><td><p>Dự thảo</p></td></tr>
 </tbody></table>
@@ -35,7 +35,7 @@
 <p>Tham chiếu tại <a href="URL">link RSD cấp 1 — section sơ đồ use case</a></p>
 
 <h3>1.2. Đặc tả/tóm tắt Usecase</h3>
-<table><tbody>
+<table data-layout="full-width"><tbody>
 <tr><th><p>Hạng mục</p></th><th><p>Nội dung</p></th></tr>
 <tr><td><p><strong>Tên</strong></p></td><td><p>Tên usecase, ví dụ: Danh sách thẻ tín dụng nội địa</p></td></tr>
 <tr><td><p><strong>Mã</strong></p></td><td><p>để trống nếu chưa có</p></td></tr>
@@ -65,7 +65,7 @@ Sơ đồ luồng ASCII hoặc để trống + ghi chú "Sẽ bổ sung"
 <p>Hệ thống mới, chức năng mới: Liệt kê toàn bộ các kết nối được sử dụng tại chức năng này.<br/>
 Với các kết nối mới/ cần chỉnh sửa: mô tả yêu cầu của nghiệp vụ với các kết nối này.</p>
 </ac:rich-text-body></ac:structured-macro>
-<table><tbody>
+<table data-layout="full-width"><tbody>
 <tr><th><p>Bước</p></th><th><p>Tên kết nối</p></th><th><p>Trạng thái sẵn sàng</p></th><th><p>Backend cung cấp kết nối</p></th><th><p>Phương thức tích hợp</p></th><th><p>Luồng gọi API/ Luồng đi của kết nối</p></th><th><p>Mô tả kết nối</p></th></tr>
 <tr><td><p>Mô tả bước</p></td><td><p>Tên API</p></td><td><p>Có sẵn / Phát sinh mới / Cần chỉnh sửa</p></td><td><p>Module backend</p></td><td><p>API / DBlink / Job</p></td><td><p>Client → Server → Core</p></td><td><p>Endpoint + chức năng</p></td></tr>
 </tbody></table>
@@ -82,14 +82,14 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 </ac:rich-text-body></ac:structured-macro>
 
 <p><strong>Cho iBank / FO (nhiều kênh):</strong></p>
-<table><tbody>
+<table data-layout="full-width"><tbody>
 <tr><th><p>STT</p></th><th><p>Usecase (chức năng cấp 3)</p></th><th><p>MB</p></th><th><p>IB</p></th><th><p>BO</p></th><th><p>ERP (web/app)</p></th><th><p>ERP (H2H)</p></th><th><p>Maker-KH</p></th><th><p>Checker-KH</p></th><th><p>Inquiry-KH</p></th><th><p>Admin-KH</p></th><th><p>GDV CN</p></th><th><p>KSV CN</p></th><th><p>GDV TSC</p></th><th><p>KSV TSC</p></th><th><p>Inquiry-BO</p></th><th><p>Nhóm quyền khác còn lại</p></th><th><p>Mô tả</p></th></tr>
 <tr><td><p>1</p></td><td><p><strong>Tên nhóm chức năng</strong></p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td></tr>
 <tr><td><p>1.1</p></td><td><p>Chức năng cấp 3</p></td><td><p> </p></td><td><p>x</p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p>x</p></td><td><p>x</p></td><td><p>x</p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p>Ghi chú phân giao</p></td></tr>
 </tbody></table>
 
 <p><strong>Cho BO nội bộ / BackOffice (KSV/GDV):</strong></p>
-<table><tbody>
+<table data-layout="full-width"><tbody>
 <tr><th><p>STT</p></th><th><p>Chức năng</p></th><th><p>Nơi phân bổ</p></th><th><p>KSV</p></th><th><p>GDV</p></th><th><p>Mô tả</p></th></tr>
 <tr><td><p>1</p></td><td><p><strong>Tên nhóm chức năng</strong></p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td></tr>
 <tr><td><p>1.1</p></td><td><p>Chức năng cấp 3</p></td><td><p>BO</p></td><td><p>x</p></td><td><p>x</p></td><td><p>Ghi chú</p></td></tr>
@@ -137,7 +137,7 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 <ac:layout-cell>
 
 <p><strong>b. Mô tả màn hình</strong></p>
-<table><tbody>
+<table data-layout="full-width"><tbody>
 <tr><th><p> </p></th><th><p><strong>Hạng mục</strong></p></th><th><p><strong>Kiểu hiển thị</strong></p></th><th><p><strong>Kiểu thao tác</strong></p></th><th><p><strong>Bắt buộc</strong></p></th><th><p><strong>Độ dài</strong></p></th><th><p><strong>Mô tả</strong></p></th></tr>
 <tr><td><p>1</p></td><td><p><strong>Cụm thông tin đầu trang</strong></p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td><td><p> </p></td></tr>
 <tr><td><p>2</p></td><td><p>Element, ví dụ: Breadcrumb</p></td><td><p>Label / Button / Textbox / Droplist / Image / Tab ...</p></td><td><p>Read-only / Click / Input / Select</p></td><td><p>Y / N / -</p></td><td><p>max length hoặc -</p></td><td><p>Placeholder + mặc định + validate + logic + ẩn/hiện + enable/disable</p></td></tr>
@@ -153,7 +153,7 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 
 <!-- SECTION 5 -->
 <h2>5. Logic xử lý tên action chính, ví dụ: khi truy cập menu Thẻ &gt; Danh sách thẻ</h2>
-<table><tbody>
+<table data-layout="full-width"><tbody>
 <tr><th><p><strong>Thao tác</strong></p></th><th><p><strong>Tác nhân</strong></p></th><th><p><strong>Mô tả</strong></p></th></tr>
 <tr><td><p>Trigger user, ví dụ: User chọn tab Thẻ tín dụng nội địa</p></td><td><p>Client web/app</p></td><td><p><strong>1/ Gửi yêu cầu lấy danh sách qua API</strong><br/>Endpoint: ...<br/>Payload: ...</p></td></tr>
 <tr><td><p> </p></td><td><p>Server Module</p></td><td><p><strong>1/ Kiểm tra tính hợp lệ input</strong><br/>- Không hợp lệ: trả lỗi INPUT_01<br/>- Hết phiên: SESSION_TIMEOUT_01<br/>- Hợp lệ: chuyển bước 2<br/><br/><strong>2/ Kiểm tra phân quyền</strong><br/>...<br/><br/><strong>3/ ...</strong></p></td></tr>
@@ -186,3 +186,4 @@ Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng 
 10. **Row group header bảng 4b**: `<tr><td><p>STT</p></td><td><p><strong>Tên cụm</strong></p></td><td><p> </p></td>...(5 cells)</tr>`
 11. **KHÔNG ghi annotation trong document** — dùng `Chờ xác nhận từ BA` trong cell. Báo cáo trong chat reply sau upload.
 12. **Escape HTML chars trong nội dung**: `&amp;` cho `&`, `&lt;` cho `<`, `&gt;` cho `>`
+13. **LUÔN mở table bằng `<table data-layout="full-width">`** — thiếu attribute này table sẽ hẹp dù page có outer layout. Áp dụng cho mọi table trong toàn bộ document.

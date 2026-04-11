@@ -2,7 +2,10 @@
 
 ## Cách chính: MCP với content_format="storage"
 
-Toàn bộ nội dung RSD viết bằng **Confluence Storage Format** (XHTML + ac: macros), upload qua MCP. Dùng storage format để có wide layout cho Section 4a (image grid).
+Toàn bộ nội dung RSD viết bằng **Confluence Storage Format** (XHTML + ac: macros), upload qua MCP. Full-width được đảm bảo bằng **2 cơ chế trong content** — không phụ thuộc vào page_width setting:
+
+1. **`data-layout="full-width"` trên mọi `<table>`** — thiếu attribute này table sẽ hẹp
+2. **Outer `<ac:layout>` bao toàn bộ page** — tables ngoài layout wrapper render hẹp hơn
 
 ### Tạo page mới
 
@@ -13,7 +16,6 @@ mcp__mcp-atlassian__confluence_create_page(
     content="<nội dung storage format>", # XHTML + Confluence macros
     content_format="storage",
     parent_id="<PARENT_PAGE_ID>",       # ID của page cha (số nguyên dạng string)
-    page_width="full-width"             # BẮT BUỘC — page rộng như sample, không để mặc định fixed-width
 )
 ```
 
@@ -27,10 +29,11 @@ mcp__mcp-atlassian__confluence_update_page(
     title="<TITLE>",
     content="<nội dung storage format mới>",
     content_format="storage",
-    page_width="full-width",            # BẮT BUỘC — giữ full-width mỗi lần update
     version_comment="Cập nhật nội dung RSD"
 )
 ```
+
+**Lưu ý**: `confluence_update_page` không hỗ trợ tham số `page_width` — đừng truyền vào. Full-width đã được đảm bảo bằng `data-layout="full-width"` trong content.
 
 ### Attach ảnh sau khi tạo page
 
