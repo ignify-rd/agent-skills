@@ -20,21 +20,41 @@
 |*Quy tắc nghiệp vụ*|Phân quyền dữ liệu: user được phân quyền tại CIM; BDR tuân theo chính sách core thẻ. \\ Nguyên tắc Chủ thẻ: combo chọn "Tất cả" → API theo CIF DN; chọn "Thẻ của tôi" → API theo CIF DN + CIF cá nhân. \\ Trạng thái "Chưa kích hoạt": productionStatus=Locked AND plasticStatus=PO.|
 ```
 
-**Điểm học được:** "Điều kiện trước" và "Quy tắc nghiệp vụ" có thể rất dài và chứa code cụ thể (MENU_CODE, biến API). Nếu URD có → bắt buộc đưa vào chi tiết. Nếu URD không có → `[Cần xác nhận]`. Xuống dòng trong cell bảng dùng `\\` (2 backslash).
+**Điểm học được:** "Điều kiện trước" và "Quy tắc nghiệp vụ" có thể rất dài và chứa code cụ thể (MENU_CODE, biến API). Nếu URD có → bắt buộc đưa vào chi tiết. Nếu URD không có → điền placeholder text mô tả rõ ràng (ví dụ: `Chờ xác nhận từ BA`) — KHÔNG ghi `[Cần xác nhận]` trong document. Xuống dòng trong cell bảng dùng `\\` (2 backslash).
 
 ---
 
 ## Section 2.2 — Kết nối (ví dụ 1 row)
 
 ```wiki
-||Bước||Tên kết nối||Trạng thái sẵn sàng||Backend cung cấp kết nối||Phương thức tích hợp||Luồng gọi API||Mô tả kết nối||
+||Bước||Tên kết nối||Trạng thái sẵn sàng||Backend cung cấp kết nối||Phương thức tích hợp||Luồng gọi API/ Luồng đi của kết nối||Mô tả kết nối||
 |User nhấn tab Thẻ tín dụng nội địa hoặc Áp dụng tìm kiếm|API danh sách thẻ|Có sẵn|Backend Ibank|API|FO BDR > Server Card|Trả về danh sách thẻ theo điều kiện. Endpoint: /card/inq/list/1.0|
 | |API cardListBusiness|Có sẵn|ESB|API|Server Card > ESB|Endpoint: /libra/cardservice/v1.0/cardlistbusiness|
 ```
 
 ---
 
-## Section 4a — Mockup màn hình (ví dụ)
+## Section 3 — Ma trận phân quyền (ví dụ rút gọn cho iBank FO)
+
+```wiki
+{info}
+Mô tả tính năng phân bổ ở các FO/BO/iconnect và phân quyền người dùng.
+Dùng "x" cho ô có quyền, để trống ô không có quyền. Không dùng emoji.
+{info}
+
+*Cho iBank / FO (nhiều kênh):*
+
+||STT||Usecase (chức năng cấp 3)||MB||IB||BO||ERP (web/app)||ERP (H2H)||Maker-KH||Checker-KH||Inquiry-KH||Admin-KH||GDV CN||KSV CN||GDV TSC||KSV TSC||Inquiry-BO||Nhóm quyền khác còn lại||Mô tả||
+|1|*Danh sách thẻ tín dụng nội địa*| | | | | | | | | | | | | | | | |
+|1.1|Xem danh sách thẻ| |x| | | |x|x|x| | | | | | | |Hiển thị danh sách thẻ theo CIF|
+|1.2|Tìm kiếm thẻ| |x| | | |x|x|x| | | | | | | |Tìm theo số thẻ, trạng thái, chủ thẻ|
+```
+
+**Điểm học được:** Luôn dùng `{info}` block để wrap instruction text đầu section. Cột "Nhóm quyền khác còn lại" (không phải "Nhóm quyền khác"). Row group header không có giá trị ở cột quyền. Dùng text "x" — không dùng emoji hay ký tự đặc biệt.
+
+---
+
+## Section 4a — Mockup màn hình (ví dụ — WEB dùng 3 cột width=33%)
 
 ```wiki
 Figma: [Tên file|https://figma.com/design/...]
@@ -43,18 +63,34 @@ Figma: [Tên file|https://figma.com/design/...]
 
 Đường dẫn: Menu Thẻ > Danh sách thẻ > tab Thẻ tín dụng nội địa
 
+{section}
+{column:width=33%}
 Màn hình danh sách khi có dữ liệu
 
-!screen-01-default.png!
+!screen-01-default.png|width=360!
 
 Màn hình danh sách khi không có dữ liệu (vào từ menu)
 
-!screen-02-empty.png!
-
+!screen-02-empty.png|width=360!
+{column}
+{column:width=33%}
 Màn hình khi nhấn Tìm kiếm nâng cao
 
-!screen-03-search-expanded.png!
+!screen-03-search-expanded.png|width=360!
+
+Màn hình kết quả tìm kiếm nâng cao khi có dữ liệu
+
+!screen-04-search-result.png|width=360!
+{column}
+{column:width=33%}
+Màn hình kết quả tìm kiếm nâng cao khi không có dữ liệu
+
+_(Ảnh: chưa có - cần bổ sung)_
+{column}
+{section}
 ```
+
+**Điểm học được:** Section 4a luôn dùng lưới cột `{section}/{column}` — WEB=3 cột (width=33%), APP=4 cột (width=25%), dialog/detail=2 cột (width=50%). Mỗi cột chứa 1-2 state (caption + ảnh hoặc placeholder). Không được bỏ layout này dù không có ảnh — vẫn phải sinh caption + placeholder cho từng state.
 
 ---
 

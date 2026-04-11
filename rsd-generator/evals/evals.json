@@ -5,7 +5,7 @@
       "id": 1,
       "name": "web-list-card-from-urd-figma",
       "prompt": "Tôi cần tạo RSD cho màn hình 'Danh sách thẻ tín dụng nội địa' phiên bản WEB của dự án Skymap. URD ở page Confluence ID 89096348 (bạn có thể đọc để lấy yêu cầu nghiệp vụ). Figma: https://www.figma.com/design/7WhwQW6mpWz7FxqDtbBAAm/-W---IB2.0---AS--Th%E1%BA%BB--v1.5-?node-id=19307-19833. RSD cấp 1 module thẻ tham chiếu tại page 437158116. Tạo page mới trong space CGAAA, parent page ID là 89096320. Tác giả: NinhNT. Trả về link Confluence page vừa tạo và danh sách các điểm cần tôi xác nhận.",
-      "expected_output": "1 page Confluence mới trong space CGAAA với đầy đủ 7 sections template RSD, có bảng Phiên bản tài liệu, 1.1-1.2 đặc tả usecase, 2.1-2.3 sơ đồ luồng + bảng kết nối, 3 ma trận phân quyền, 4 mô tả màn hình (link figma + mockup + bảng mô tả dày đặc), 5 logic xử lý. Có checklist các [Cần xác nhận] ở cuối.",
+      "expected_output": "1 page Confluence mới trong space CGAAA với đầy đủ 7 sections template RSD, có bảng Phiên bản tài liệu, 1.1-1.2 đặc tả usecase, 2.1-2.3 sơ đồ luồng + bảng kết nối, 3 ma trận phân quyền, 4 mô tả màn hình (link figma + mockup dạng lưới cột {section}/{column} + bảng mô tả dày đặc), 5 logic xử lý. Các điểm chưa rõ được báo cáo trong chat reply (KHÔNG ghi vào document).",
       "files": []
     },
     {
@@ -19,7 +19,7 @@
       "id": 3,
       "name": "detail-screen-simple",
       "prompt": "Tạo RSD cho màn 'Xem chi tiết thẻ tín dụng nội địa' phiên bản WEB, dự án Skymap. URD: đọc từ RSD list tương ứng ở page 89096348 section 4 có ref tới chi tiết. Figma: https://www.figma.com/design/7WhwQW6mpWz7FxqDtbBAAm/?node-id=19307-20000 (giả lập). Không có RSD cấp 1 riêng, không có bảng trạng thái riêng. Parent 89096320, space CGAAA, tác giả TungNT. Lưu ý: đây là màn xem chi tiết read-only, không có nhiều validate input.",
-      "expected_output": "Page RSD đơn giản hơn case 1: section 4b chủ yếu là các Label read-only, không có nhiều textbox. Section 5 mô tả flow gọi API chi tiết thẻ. Các phần không đủ thông tin đều được đánh dấu [Cần xác nhận].",
+      "expected_output": "Page RSD đơn giản hơn case 1: section 4b chủ yếu là các Label read-only, không có nhiều textbox. Section 5 mô tả flow gọi API chi tiết thẻ. Các phần không đủ thông tin dùng placeholder text 'Chờ xác nhận từ BA' trực tiếp trong cell, được tổng hợp và báo cáo trong chat reply sau khi upload.",
       "files": []
     }
   ]

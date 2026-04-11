@@ -17,24 +17,22 @@ Sinh một tài liệu RSD (Requirement Specification Document) cấp chức nă
 
 RSD **không phải là sáng tác**. Nó là tài liệu có cấu trúc cố định, nội dung phải **truy nguồn** được từ input user cung cấp. Năm nguyên tắc:
 
-0. **Publish luôn — không draft.** Output phải là tài liệu hoàn chỉnh, publish trực tiếp lên Confluence. Không tạo file draft local. Không ghi "Dự thảo" trong bảng Phiên bản tài liệu — dùng "Khởi tạo". Khai thác tối đa mọi resource user cung cấp trước khi hỏi thêm hay đánh dấu `[Cần xác nhận]`.
+0. **Publish luôn — không draft.** Output phải là tài liệu hoàn chỉnh, publish trực tiếp lên Confluence. Không tạo file draft local. Khai thác tối đa mọi resource user cung cấp trước khi hỏi thêm. Bảng Phiên bản tài liệu dùng "Dự thảo" cho lần tạo đầu (theo convention thực tế của các dự án).
 
-1. **Không bịa dữ liệu — nhưng phải khai thác hết resource trước.** Đọc kỹ toàn bộ URD, tất cả page Confluence tham chiếu, và Figma trước khi kết luận "thiếu thông tin". Chỉ dùng `[Cần xác nhận: ...]` cho những gì thực sự không có trong bất kỳ resource nào user đã cung cấp. Cuối tài liệu tổng hợp lại danh sách để user review.
+1. **Không bịa dữ liệu — nhưng phải khai thác hết resource trước.** Đọc kỹ toàn bộ URD, tất cả page Confluence tham chiếu, và Figma trước khi kết luận "thiếu thông tin". Nếu thông tin nào thực sự chưa xác định được: điền placeholder text mô tả rõ ràng (ví dụ: `Chờ xác nhận từ BA`) vào đúng vị trí trong tài liệu — KHÔNG được ghi `[Cần xác nhận]` hay comment kiểu annotation trong document. Ghi lại danh sách nội bộ để báo cáo trong chat sau khi upload.
 2. **Ưu tiên tham chiếu hơn copy-paste.** Khi có page Confluence đã mô tả sẵn (RSD cấp 1, bảng trạng thái, API spec...), link sang đó thay vì paste lại. Các RSD APP thường chỉ viết Section 4 (mô tả màn hình) còn lại tham chiếu sang RSD WEB.
 3. **Tuân thủ template Việt hoá — dùng Confluence Wiki Markup, không dùng Markdown.** Toàn bộ heading, label bảng, từ khoá phải khớp chính xác template. Quy tắc heading và bảng:
-   - **Heading section 1–5**: đặt anchor trước rồi dùng `h2.`. Ví dụ đúng:
-     ```
-     {anchor:section-1}
-     h2. 1. Đặc tả/Tóm tắt usecase
-     ```
+   - **Heading section 1–5**: dùng `h2.` thẳng, không cần anchor. Ví dụ: `h2. 1. Đặc tả/Tóm tắt usecase`. Confluence tự tạo anchor từ heading text.
    - **Heading sub-section** (1.1, 1.2, 2.1, ...): dùng `h3.`. Ví dụ: `h3. 1.1. Sơ đồ Usecase`
+   - **Không dùng `----`** để ngăn cách section — chỉ dùng heading h2 để phân tách.
    - **Bảng** dùng `||col||` cho header row, `|cell|` cho data row. KHÔNG dùng Markdown `| --- |`
    - **Bảng Section 4b** (mô tả màn hình): header cột đầu phải rỗng `|| ||`. Ví dụ đúng:
      ```
      || ||*Hạng mục*||*Kiểu hiển thị*||*Kiểu thao tác*||*Bắt buộc*||*Độ dài*||*Mô tả*||
      ```
    - **Row group header** trong bảng 4b: `|STT|*Tên cụm*| | | | | |` — cột đầu là số thứ tự, cột 2 là tên cụm in đậm, 5 cột còn lại để trống (tổng 7 cells, khớp với 7 cột header)
-4. **Tuyệt đối không dùng emoji/icon trong nội dung tài liệu.** Không được dùng bất kỳ emoji hay icon nào (✅ ❌ 🔘 🟡 🟢 🔴 ✏️ ▶ ✖ 📋 ⚠️ v.v.) trong nội dung bảng, mô tả màn hình, hay bất kỳ chỗ nào trong tài liệu RSD (trừ mục "Các điểm cần user xác nhận" ở cuối). Thay thế cụ thể:
+   - **`{info}...{info}`** dùng cho instruction text đầu section 2.2 và section 3 (theo mẫu thực tế)
+4. **Tuyệt đối không dùng emoji/icon trong nội dung tài liệu.** Không được dùng bất kỳ emoji hay icon nào (✅ ❌ 🔘 🟡 🟢 🔴 ✏️ ▶ ✖ 📋 ⚠️ v.v.) trong nội dung bảng, mô tả màn hình, hay bất kỳ chỗ nào trong tài liệu RSD. Thay thế cụ thể:
    - Ma trận phân quyền: dùng **"x"** cho có quyền, để **trống ô** cho không có quyền
    - Trạng thái badge: viết text thuần (ví dụ: "Tạo nháp", "Chờ duyệt", "Hoạt động")
    - Tên nút chức năng: viết text không có icon (ví dụ: "Chỉnh sửa", "Phê duyệt", "Từ chối")
@@ -51,8 +49,8 @@ Thực hiện tuần tự:
 |-------|----------|-----------|
 | Tên chức năng + platform (WEB/APP/BO) | Có | Hỏi user |
 | Space Confluence + Parent page ID | Có | Hỏi user |
-| Ảnh mockup hoặc Figma link | Có | Hỏi user — đây là nguồn sinh Section 4 |
-| URD (link Confluence, Jira issue...) | Không | Để trống / `[Cần bổ sung]` ở các section liên quan |
+| Ảnh mockup hoặc Figma link | Không | Sinh placeholder caption cho từng state phổ biến + `_(Ảnh: chưa có - cần bổ sung)_` — Section 4 vẫn phải đầy đủ |
+| URD (link Confluence, Jira issue...) | Không | Điền `Chờ xác nhận từ BA` cho các field thiếu thông tin |
 | Page tham chiếu (RSD cấp 1, bảng trạng thái, RSD WEB...) | Không | Bỏ qua, điền khi user cung cấp |
 | Tên tác giả | Không | Dùng tên user hiện tại hoặc để trống |
 
@@ -81,7 +79,7 @@ Nếu thư mục tồn tại và có file ảnh → đây là nguồn ảnh chí
 Trước khi viết, xác định:
 
 - **Đây là RSD WEB hay RSD APP?** Nếu APP và đã có RSD WEB tương ứng, sections 1.2, 2.2, 3, 5 sẽ **tham chiếu** (link) sang RSD WEB. Chỉ Section 4 là viết mới theo Figma/ảnh APP.
-- **Có URD/tài liệu không?** Nếu có → đọc hết và extract thông tin cho sections 1, 2, 3, 5. Nếu không → các section đó dùng minimal template hoặc `[Cần bổ sung]`, nhưng **Section 4 vẫn phải đầy đủ**.
+- **Có URD/tài liệu không?** Nếu có → đọc hết và extract thông tin cho sections 1, 2, 3, 5. Nếu không → các section đó dùng minimal template với `Chờ xác nhận từ BA` ở các field thiếu thông tin, nhưng **Section 4 vẫn phải đầy đủ**.
 - **Số lượng ảnh/state**: Xác định từ kết quả `ls ./screenshots/` (Bước 1), Figma, hoặc ảnh user cung cấp. Nếu `./screenshots/` có file → đó là danh sách state, mỗi file = 1 state trong Section 4a. Mỗi state = 1 caption + 1 ảnh (`!filename.png!`) + rows tương ứng trong bảng 4b.
 
 ### Bước 3 — Sinh nội dung theo template
@@ -92,18 +90,20 @@ Trước khi viết, xác định:
 
 **Cú pháp wiki cơ bản cần nhớ:**
 ```
-*bold*          → in đậm
-_italic_        → in nghiêng
-h2. Tên         → heading level 2 (dùng cho section 1–5)
-h3. Tên         → heading level 3 (dùng cho 1.1, 1.2, 2.1...)
-||Col1||Col2||  → header row của bảng
-|Cell1|Cell2|   → data row của bảng
-[Text|URL]      → hyperlink
-[#anchor-id]    → link nội bộ đến anchor trong cùng page
-{anchor:id}     → đặt anchor tại vị trí hiện tại
-{toc:maxLevel=2} → macro TOC tự động, clickable
-!filename.png!  → nhúng ảnh attachment
+*bold*               → in đậm
+_italic_             → in nghiêng
+h2. Tên              → heading level 2 (dùng cho section 1–5)
+h3. Tên              → heading level 3 (dùng cho 1.1, 1.2, 2.1...)
+h4. Tên              → heading level 4 (dùng cho 2.3.1, ...)
+||Col1||Col2||       → header row của bảng
+|Cell1|Cell2|        → data row của bảng
+[Text|URL]           → hyperlink ngoài
+{toc:style=none}     → macro TOC tự động, clickable, không bullet, không giới hạn cấp
+!filename.png|width=200!  → nhúng ảnh attachment (APP: width=200, WEB: width=360)
+{section}{column:width=33%}...{column}{section} → layout nhiều cột
+{info}message{info}  → info callout box (dùng đầu Section 2.2 và 3)
 {noformat}...{noformat} → khối text không format (dùng cho sơ đồ ASCII)
+{code}...{code}      → code block (dùng cho payload/endpoint trong Section 5 nếu cần)
 ```
 
 **CRITICAL — Quy tắc tuyệt đối khi viết nội dung trong cell bảng (vi phạm = vỡ bảng):**
@@ -134,45 +134,79 @@ h3. Tên         → heading level 3 (dùng cho 1.1, 1.2, 2.1...)
 
 Các section trong wiki format:
 
-1. **Phiên bản tài liệu** — bảng với header row `||Version||Lý do||...||`, data row `|1.0|Thêm mới|<ngày hôm nay>|<tác giả>|Khởi tạo|` — **không ghi "Dự thảo"**
-2. **Mục lục** — dùng macro `{toc:maxLevel=2}`, Confluence tự sinh TOC clickable từ h2/h3 headings
-3. **Section 1–5** — mỗi section dùng `h2.` + `{anchor:section-N}` để TOC link đến đúng vị trí. Sub-section dùng `h3.`
+1. **Phiên bản tài liệu** — bảng `||Version||Lý do||Date||Người sửa||Mô tả||`, data row: `|1.0|Thêm mới|<ngày hôm nay>|<tác giả>|Dự thảo|`
+2. **Mục lục** — dùng macro `{toc:style=none}`, Confluence tự sinh TOC clickable từ heading text (không bullet, không giới hạn cấp). Không cần đặt `{anchor:...}` thủ công — Confluence tự generate.
+3. **Section 1–5** — dùng `h2.` cho section chính, `h3.` cho sub-section (1.1, 1.2...), `h4.` cho sub-sub (2.3.1...). Không dùng `----` separator, không dùng `{anchor:...}`.
 4. **Section 1.2** — bảng 2 cột với đầu tiên là tên trường in đậm `|*Tên*|giá trị|`
-5. **Section 2.2** — bảng API connections với header row 7 cột
-6. **Section 3** — ma trận phân quyền: dùng "x" cho có quyền, trống cho không có. Columns tùy theo loại dự án (xem template)
-7. **Section 4 — Mô tả màn hình** (quan trọng nhất — LUÔN sinh đầy đủ dù thiếu bất kỳ input nào khác):
+5. **Section 2.2** — bắt đầu bằng `{info}...{info}` block hướng dẫn, sau đó bảng 7 cột. Tên cột 6: `||Luồng gọi API/ Luồng đi của kết nối||`
+6. **Section 3** — bắt đầu bằng `{info}...{info}` block hướng dẫn. Ma trận phân quyền: "x" cho có quyền, trống cho không có. Cột cuối: `||Nhóm quyền khác còn lại||` (không phải "Nhóm quyền khác"). Columns tùy theo loại dự án (xem template)
+7. **Section 4 — Mô tả màn hình** (heading: `h2. 4*. Mô tả màn hình*` — chú ý phần số `4` không in đậm, phần `. Mô tả màn hình` in đậm theo mẫu). Quan trọng nhất — LUÔN sinh đầy đủ dù thiếu bất kỳ input nào khác:
    - Link Figma: `Figma: [Link|https://figma.com/...]` hoặc `Figma: N/A`
    - **a. Mockup màn hình** — quy tắc BẮT BUỘC:
-     - Với **mỗi state** (default, empty, error, dropdown, v.v.), viết theo pattern:
+     - Ảnh mockup hiển thị theo **lưới cột** dùng macro `{section}/{column}`. Số cột theo platform:
+       - **APP**: 4 cột — `{column:width=25%}`, image `width=200`
+       - **WEB**: 3 cột — `{column:width=33%}`, image `width=360`
+       - **Dialog/Detail**: 2 cột — `{column:width=50%}`, image `width=500`
+     - Ví dụ WEB (3 cột):
        ```
-       Caption mô tả state (text thuần, không emoji)
+       {section}
+       {column:width=33%}
+       Caption state 1
 
-       !ten-file.png!
+       !screen-01-default.png|width=360!
+
+       Caption state 2
+
+       !screen-02-empty.png|width=360!
+       {column}
+       {column:width=33%}
+       Caption state 3
+
+       !screen-03-search.png|width=360!
+
+       Caption state 4
+
+       _(Ảnh: chưa có - cần bổ sung)_
+       {column}
+       {column:width=33%}
+       Caption state 5
+
+       _(Ảnh: chưa có - cần bổ sung)_
+       {column}
+       {section}
        ```
-     - Nếu **có Figma**: tải ảnh → lưu vào `./screenshots/` → chèn `!ten-file.png!` → attach sau khi tạo page
-     - Nếu **có ảnh user đính kèm**: lưu local → chèn `!ten-file.png!` → attach sau khi tạo page
-     - Nếu **không có ảnh nào**: chèn placeholder `_(Ảnh: chưa có - cần bổ sung)_`
+     - Phân bổ state đều vào các cột (mỗi cột 1-2 state). Nếu cột trống thì để `{column:width=33%}{column}`.
+     - **Luôn luôn sinh ra khối `{section}...{section}` dù không có ảnh nào** — đây là layout bắt buộc.
+     - Nếu **có Figma**: tải ảnh → lưu vào `./screenshots/` → chèn `!ten-file.png|width=200!` trong cột tương ứng → attach sau khi tạo page
+     - Nếu **có ảnh user đính kèm**: lưu local → chèn `!ten-file.png|width=200!` → attach sau khi tạo page
+     - Nếu **không có ảnh nào**: vẫn phải sinh đủ caption cho từng state có thể dự đoán (default, empty, search...) và chèn `_(Ảnh: chưa có - cần bổ sung)_` cho từng cái
      - **CẤM tuyệt đối các cách sau** — đây là output SAI:
        - `*(15 screenshots được đính kèm tại page Confluence)*` — ghi chú chung thay cho ảnh
        - `[Ảnh sơ đồ luồng — cần bổ sung nếu có tài liệu đính kèm]` — note mơ hồ
-       - Để trống section 4a, không có caption cũng không có ảnh/placeholder
+       - Để trống section 4a, bỏ qua khối `{section}/{column}`, không có caption cũng không có placeholder
+       - Xếp tất cả ảnh thành danh sách dọc thay vì dùng `{section}/{column}`
      - Mỗi state = 1 caption + 1 dòng ảnh hoặc placeholder — không có ngoại lệ
-   - **b. Bảng mô tả màn hình** — sinh từ ảnh/Figma là chính:
+   - **b. Bảng mô tả màn hình** — **BẮT BUỘC sinh đầy đủ dù không có Figma hay ảnh**:
      - Header: `|| ||*Hạng mục*||*Kiểu hiển thị*||*Kiểu thao tác*||*Bắt buộc*||*Độ dài*||*Mô tả*||` (cột đầu để trống — không ghi STT)
      - Row group header: `|STT|*Tên cụm*| | | | | |` (STT = số thứ tự, 7 cells tổng)
+     - Các cụm phổ biến cần liệt kê: Thông tin đầu trang (breadcrumb, title, tab), Tìm kiếm nhanh (các filter nhanh), Tìm kiếm nâng cao (form mở rộng), Danh sách (các cột trong grid/table), Phân trang, Action buttons
      - Mỗi element một row, điền đầy đủ: placeholder, mặc định, validate, logic tương tác, nguồn dữ liệu, ẩn/hiện, enable/disable
+     - Nếu không có Figma: dùng tên element phổ biến cho loại màn hình đó, điền Mô tả là `Chờ xác nhận từ BA`
      - Xem `references/figma-to-mockup.md` để biết cách map Figma → từng row
 8. **Section 5** — bảng 3 cột `||*Thao tác*||*Tác nhân*||*Mô tả*||`
 
-Trong suốt quá trình: nếu thông tin **có thể suy luận hợp lý từ context** → điền trực tiếp. Chỉ ghi `[Cần xác nhận: <câu hỏi cụ thể>]` khi thực sự không thể xác định từ bất kỳ resource nào đã đọc.
+Trong suốt quá trình: nếu thông tin **có thể suy luận hợp lý từ context** → điền trực tiếp. Nếu thực sự không thể xác định → điền placeholder text mô tả (ví dụ: `Chờ xác nhận từ BA`, `Cần bổ sung API endpoint`) vào đúng cell, ghi nội bộ để báo cáo trong chat. KHÔNG ghi `[Cần xác nhận]` hoặc bất kỳ annotation dạng comment nào trong document Confluence.
 
-### Bước 4 — Tổng hợp checklist (nếu còn điểm chưa rõ)
+### Bước 4 — Tổng hợp checklist nội bộ
 
-Nếu có `[Cần xác nhận]` trong body, thêm section cuối:
+Nếu có thông tin chưa xác định được: ghi lại danh sách nội bộ (không upload vào document). Danh sách này sẽ được báo cáo trong chat reply ở Bước 6 sau khi upload xong. Format nội bộ:
+
 ```
-h2. Các điểm cần bổ sung
+- [Section X.Y] <câu hỏi cụ thể cần xác nhận>
+- [Section X.Y] <câu hỏi khác>
 ```
-Liệt kê dạng bullet `*` kèm section reference. Nếu không có điểm nào → bỏ qua section này hoàn toàn.
+
+Nếu không có điểm nào → bỏ qua hoàn toàn.
 
 ### Bước 5 — Upload lên Confluence
 
@@ -199,18 +233,22 @@ mcp__mcp-atlassian__confluence_upload_attachments(
 
 Xem `references/confluence-upload.md` để biết chi tiết và fallback khi cần update page đã có.
 
-**Title format**: `"<PLATFORM> <số thứ tự>. <Tên chức năng>_<Tên dự án>"` — ví dụ `"WEB 2.1. Danh sách thẻ tín dụng nội địa_Skymap"`. Hỏi user nếu chưa rõ.
+**Title format**: `"[<PLATFORM>] <số thứ tự>. <Tên chức năng>_<Tên dự án>"` — ví dụ `"[WEB] 2.1. Danh sách thẻ tín dụng nội địa_Skymap"` hoặc `"[APP] 2.1. Danh sách thẻ tín dụng nội địa_Skymap"`. Hỏi user nếu convention của dự án khác.
 
 ### Bước 6 — Trả kết quả
 
-Trả về cho user:
+Trả về cho user trong chat (không emoji — text thuần):
 
 ```
-✅ Đã tạo RSD: <title>
-🔗 Link: https://<domain>/wiki/spaces/<SPACE>/pages/<id>/<slug>
-⚠️ <N> điểm cần xác nhận (xem mục cuối page / list dưới đây):
-   - ...
+Đã tạo RSD: <title>
+Link: https://<domain>/wiki/spaces/<SPACE>/pages/<id>/<slug>
+
+Các điểm cần xác nhận thêm:
+- [Section X.Y] <câu hỏi 1>
+- [Section X.Y] <câu hỏi 2>
 ```
+
+Nếu không có điểm nào cần xác nhận thì bỏ phần đó đi — chỉ trả link.
 
 ## Xử lý lỗi thường gặp
 
