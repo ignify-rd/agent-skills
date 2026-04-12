@@ -401,7 +401,28 @@ C. Không chia theo mode — chỉ test API đơn thuần
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
                 <param name="BATCH_NUMBER">{N}</param>
                 <param name="FIELD_BATCH">[{fieldName}:{type}:{required}:{maxLength}, ...]</param>
-                <param name="FIELD_TYPES_NEEDED">"{comma-separated types for --section}"</param>
+                <param name="FIELD_TYPES_NEEDED">
+                    Comma-separated section names from api-test-design.md for the field types in this batch.
+                    Always include "validate-rules" first.
+                    Use EXACTLY these section names (td-validate also self-computes, this is a backup hint):
+
+                    | Type (case-insensitive)          | required=Y (no default) | required=N     |
+                    |-----------------------------------|-------------------------|----------------|
+                    | String / string / varchar         | String Required         | String Optional |
+                    | Integer / Int / int / integer     | Integer Required        | Integer Optional |
+                    | Long / long                       | Long                    | Long            |
+                    | Number / Decimal / Float / float  | Number Required         | Number Optional |
+                    | Date / date                       | Date Required           | Date Optional   |
+                    | DateTime / datetime               | DateTime Required       | DateTime Optional |
+                    | Boolean / boolean / bool          | Boolean Required        | Boolean Optional |
+                    | JSONB / JSON / jsonb              | JSONB Required          | JSONB Optional  |
+                    | Array / List / array              | Array Required          | Array Optional  |
+                    | MultipartFile / file              | MultipartFile Required  | MultipartFile Optional |
+                    | Integer/Long with defaultValue    | Integer Default         | Integer Optional |
+
+                    Example: batch [slaName:String:Y:100, effectiveDate:Date:Y:null, expiredDate:Date:N:null]
+                    → FIELD_TYPES_NEEDED = "validate-rules,String Required,Date Required,Date Optional"
+                </param>
                 <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE or "none"}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>

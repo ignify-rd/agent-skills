@@ -42,6 +42,24 @@ model: inherit
         <description>Checkpoint goes to STDOUT ONLY — NEVER to batch file</description>
     </rule>
 
+    <rule type="catalog_is_wording_only" priority="CRITICAL">
+        ⛔ CATALOG_SAMPLE = wording/naming style reference ONLY.
+        KHÔNG dùng catalog để xác định DANH SÁCH cases cần sinh.
+        Danh sách cases BẮT BUỘC phải lấy từ api-test-design.md (search.py output, Step 1).
+        Nếu catalog có ít cases hơn template (VD: catalog thiếu XSS, SQL, Object, Mảng cho Date field)
+        → THEO TEMPLATE, KHÔNG theo catalog. Vẫn phải sinh ĐỦ cases theo template.
+    </rule>
+
+    <rule type="no_extra_cases" priority="CRITICAL">
+        ⛔ KHÔNG sinh cases ngoài danh sách template.
+        FORBIDDEN extra cases (ví dụ):
+        - Emoji (VD: "SLA Test 🎉")
+        - URL injection / path traversal
+        - Base64 encoding
+        - Unicode đặc biệt ngoài tiếng Việt có dấu
+        CHỈ sinh ĐÚNG và ĐỦ cases trong bảng template. Không thêm, không bớt.
+    </rule>
+
     <rule type="dedup_overlap" id="R7">
         <description>
             ⛔ BASE TEMPLATE OVERLAPS VỚI BOUNDARY RULES — PHẢI MERGE trước khi sinh cases.
@@ -107,10 +125,57 @@ model: inherit
 ## Workflow
 
 <step id="1" name="Load field type templates">
-    <description>Load templates cần cho batch — mỗi type có bảng cases BẮT BUỘC từ fieldTestTemplates.js. Agent PHẢI sinh ĐẦY ĐỦ mọi case trong bảng, KHÔNG được bỏ sót.</description>
+    <description>
+        Load templates cần cho batch từ api-test-design.md.
+        Agent PHẢI tự tính section names từ FIELD_BATCH — KHÔNG phụ thuộc vào FIELD_TYPES_NEEDED từ orchestrator
+        (giá trị đó chỉ là gợi ý, có thể sai định dạng).
+    </description>
+
+    <section_name_computation type="MANDATORY">
+        <description>
+            Tính SECTION_LIST từ FIELD_BATCH (format: fieldName:type:required:maxLength).
+            Với mỗi field, map type + required → section name theo bảng dưới.
+            Deduplicate. Luôn prepend "validate-rules".
+        </description>
+
+        <mapping_table>
+            | Type (case-insensitive)         | required = Y (không có default) | required = N  |
+            |----------------------------------|----------------------------------|---------------|
+            | String / string / varchar        | String Required                  | String Optional |
+            | Integer / Int / int / integer    | Integer Required                 | Integer Optional |
+            | Long / long                      | Long                             | Long            |
+            | Number / Decimal / Float / float | Number Required                  | Number Optional |
+            | Date / date                      | Date Required                    | Date Optional   |
+            | DateTime / datetime              | DateTime Required                | DateTime Optional |
+            | Boolean / boolean / bool         | Boolean Required                 | Boolean Optional |
+            | JSONB / JSON / jsonb             | JSONB Required                   | JSONB Optional  |
+            | Array / List / array             | Array Required                   | Array Optional  |
+            | MultipartFile / file             | MultipartFile Required           | MultipartFile Optional |
+        </mapping_table>
+
+        <special_cases>
+            - Integer/Long với defaultValue trong inventory → dùng "Integer Default"
+              (kiểm tra trong step 2 inventory data; nếu defaultValue != null → đổi section)
+            - "Long" section chỉ là heading note — cases vẫn dùng Integer Required template
+        </special_cases>
+
+        <example>
+            FIELD_BATCH = "slaName:String:Y:100, effectiveDate:Date:Y:null, expiredDate:Date:N:null"
+            → types: String Required, Date Required, Date Optional
+            → SECTION_LIST = "validate-rules,String Required,Date Required,Date Optional"
+        </example>
+
+        <validation>
+            Nếu search.py output báo "Missing sections: [...]" → section name sai.
+            Kiểm tra lại bảng mapping và chạy lại với section name đúng.
+            Available section names sẽ được liệt kê trong output lỗi.
+        </validation>
+    </section_name_computation>
+
     <actions>
         <action type="bash">
-            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,{FIELD_TYPES_NEEDED}"</script>
+            <script>python3 {SKILL_SCRIPTS}/search.py --ref api-test-design --section "validate-rules,{SELF_COMPUTED_SECTION_LIST}"</script>
+            <note>Thay {SELF_COMPUTED_SECTION_LIST} bằng section names đã tính từ mapping_table ở trên.</note>
         </action>
     </actions>
 </step>
@@ -448,18 +513,35 @@ If allowedChars = null → default: khoảng trắng = error, dấu tiếng Vi�
         Để trống ✓ | Không truyền ✓ | Null ✓ | Đúng định dạng ✓ | Sai định dạng ngày ✓ | Sai định dạng giờ ✓ | Chỉ có ngày không có giờ ✓ | Chuỗi không phải ngày giờ ✓ | Ngày không tồn tại ✓ | Ngày giờ quá khứ ✓ | Ngày giờ hiện tại ✓ | Ngày giờ tương lai ✓ | Số nguyên ✓ | XSS ✓ | SQL injection ✓ | Object ✓ | Mảng ✓
     </checkpoint_categories>
 
+    <hard_case_count_check type="MANDATORY_HARD_STOP">
+        <description>
+            ⛔ TRƯỚC KHI chuyển sang field tiếp theo:
+            1. Đếm số dòng "- Kiểm tra" trong nội dung đã sinh cho field này
+            2. So sánh với min_case_counts
+            3. Nếu count &lt; min → STOP ngay, KHÔNG chuyển field tiếp theo
+            4. Đối chiếu với checkpoint_categories để xác định category nào bị thiếu
+            5. Sinh NGAY các cases còn thiếu
+            6. Đếm lại — chỉ tiếp tục khi count >= min
+        </description>
+        <count_method>
+            Đếm số dòng khớp với pattern: bắt đầu bằng "- Kiểm tra" trong phần vừa sinh.
+        </count_method>
+        <mandate>KHÔNG được bỏ qua bước này. KHÔNG được viết batch file khi bất kỳ field nào dưới min count.</mandate>
+    </hard_case_count_check>
+
     <output format="stdout">
 ```
 ✓ Field {fieldName} ({type}): {generated}/{min} cases.
   [V3] Error cases → error response, Success cases → success response: ✅/❌
   [V4] Status validate = 200: ✅/❌
   Missing categories: [list cụ thể nếu có] → THÊM ngay.
+  [HARD CHECK] Count {generated} >= min {min}: ✅/❌
 ```
     </output>
 
     <on_missing>
-        <action>THÊM ngay</action>
-        <rule>Do NOT move to next field until all cases are sufficient</rule>
+        <action>THÊM ngay — TRƯỚC KHI chuyển sang field tiếp theo</action>
+        <rule>Do NOT move to next field until all cases are sufficient AND hard_case_count_check passes</rule>
     </on_missing>
 </step>
 
