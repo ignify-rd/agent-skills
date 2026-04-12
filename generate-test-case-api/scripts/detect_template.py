@@ -111,6 +111,11 @@ LABEL_TO_KEY = {
     'expected result\n(kết quả mong muốn)': 'expectedResults',
     'priority':                     'priority',
     'bugid':                        'bugId',
+    # BIDV iBank2.0 format
+    'id':                           'externalId',
+    'name testcase':                'testCaseName',
+    'name testcase ':               'testCaseName',
+    'mã lỗi':                       'bugId',
 }
 
 # Labels that are group/section headers (row 1 of multi-row headers) — not column headers
@@ -266,10 +271,16 @@ def build_column_mapping(rows, header_row_1based):
         if not label:
             continue
 
-        # 'name' appears multiple times: first = testSuiteName, second = testCaseName
+        # 'name' appears multiple times: first = testSuiteName, second = testCaseName.
+        # Exception: if externalId is already mapped at a lower column index, this
+        # 'Name' is the test case name (BIDV frontend format: External ID | Name | ...)
         if label == 'name':
             name_count += 1
-            key = 'testSuiteName' if name_count == 1 else 'testCaseName'
+            ext_id_col = mapping.get('externalId')
+            if name_count == 1 and (ext_id_col is None or col_idx < ext_id_col):
+                key = 'testSuiteName'
+            else:
+                key = 'testCaseName'
             if key not in mapping:
                 mapping[key] = col_idx
             continue

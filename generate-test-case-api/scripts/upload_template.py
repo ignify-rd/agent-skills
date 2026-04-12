@@ -44,7 +44,7 @@ except ImportError:
     sys.exit(1)
 
 GOOGLE_SHEETS_MIME = 'application/vnd.google-apps.spreadsheet'
-DEFAULT_TEMPLATE = 'excel_template/template.xlsx'
+DEFAULT_TEMPLATE = 'excel_template/api/template.xlsx'
 
 
 if not _build_drive:

@@ -1,0 +1,1224 @@
+﻿Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Note,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,StepExecType,Spec Title,Document ID,Estimated exec. Duration,,,,,
+Kiểm tra Giao diện,,,,,,,,,,,,,,,,,,,,,,,,
+Kiểm tra Giao diện chung,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL1,Kiểm tra điều hướng đến màn hình Thỏa thuận MBNT chờ xử lý,Kiểm tra điều hướng đến màn hình Thỏa thuận MBNT chờ xử lý,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra màn hình điều hướng,Hệ thống điều hướng thành công đến màn hình Thỏa thuận MBNT chờ xử lý,,,,,,,,,,
+,,DSCXL2,Kiểm tra giao diện hiển thị đúng với RSD,Kiểm tra giao diện hiển thị đúng với RSD,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra giao diện hiển thị đúng với RSD,"- Màn hình hiển thị đầy đủ các thông tin:
+- Breadcrumb: Giao dich > Thỏa thuận giao dịch > Thỏa thuận MBNT chờ xử lý <br/>
+- Title: ""Thỏa thuận MBNT chờ xử lý"" (label, readonly) <br/>
+- Thông tin chung: <br/>
+Button: Tạo mới <br/>
++ CIF (Textbox) <br/>
++ Mã thỏa thuận (Textbox) <br/>
++ Phân hệ (Dropdownlist) <br/>
++ Trạng thái (Dropdownlist) <br/>
+- Lưới dữ liệu: <br/>
++ STT <br/>
++ Mã thỏa thuận <br/>
++ Trạng thái <br/>
++ CIF<br/>
++ Tên khách hàng (Read-only) <br/>
++ Loại sản phẩm <br/>
++ Ngoại tệ GD<br/>
++ Số tiền GD <br/>
++ Loại tiền thanh toán <br/>
++ Tỷ giá <br/>
++ Ngày thanh toán<br/>
++ Phân hệ<br/>
++ Hiệu lực<br/>
+- Nút chức năng: <br/>
++ Tìm kiếm <br/>
+- Icon tại mỗi giao dịch: <br/>
++ Đẩy duyệt <br/>
++ Xem chi tiết <br/>
++ Chỉnh sửa <br/>
++ Xóa <br/>
+- Phân trang <br/>",,,,,,,,,,
+,,DSCXL3,Kiểm tra bố cục layout cân đối,Kiểm tra bố cục layout cân đối,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra bố cục layout cân đối,"Hiển thị đúng cỡ chữ, màu chữ, bố cục cân đối, kích thước chính xác, đúng chính tả",,,,,,,,,,
+,,DSCXL4,Kiểm tra phóng to/ thu nhỏ,Kiểm tra phóng to/ thu nhỏ,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Nhấn Ctrl+ và Ctrl-,Màn hình không bị vỡ form,,,,,,,,,,
+,,DSCXL5,Kiểm tra khi nhấn Tab/ Shift + Tab,Kiểm tra khi nhấn Tab/ Shift + Tab,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Nhấn Tab và Shift + Tab,"Con trỏ di chuyển qua các field, button từ trái qua phải và ngược lại",,,,,,,,,,
+,,DSCXL6,Kiểm tra tổng quan bố cục giao diện với màn hình 1920 x 1080,Kiểm tra tổng quan bố cục giao diện với màn hình 1920 x 1080,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra bố cục các trường thông tin,"1. Các lable sử dụng cùng 1 loại form cỡ chữ, căn lề
+2. Các thông tin hiển thi đúng chính tả, đúng cú pháp
+3. Form được bố trí hợp lý dễ sử dụng
+4. Không bị lỗi màn hình",,,,,,,,,,
+,,DSCXL7,Kiểm tra tổng quan bố cục giao diện với màn hình 1366 x 768,Kiểm tra tổng quan bố cục giao diện với màn hình 1366 x 768,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra bố cục các trường thông tin,"1. Các lable sử dụng cùng 1 loại form cỡ chữ, căn lề
+2. Các thông tin hiển thi đúng chính tả, đúng cú pháp
+3. Form được bố trí hợp lý dễ sử dụng
+4. Không bị lỗi màn hình",,,,,,,,,,
+Kiểm tra Phân trang,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL8,Kiểm tra hiển thị Phân trang khi không có thông tin,Kiểm tra hiển thị Phân trang khi không có thông tin,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Bảng dữ liệu không tồn tại bản ghi nào",,,Low,,,,,1. Kiểm tra thông tin phân trang trên màn hình giao diện,"1. Ẩn số trang, nút phân trang",,,,,,,,,,
+,,DSCXL9,Kiểm tra hiển thị giá trị mặc định của Phân trang,Kiểm tra hiển thị giá trị mặc định của Phân trang,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra giá trị mặc định của Phân trang,1. Mặc định hiển thị giá trị 10,,,,,,,,,,
+,,DSCXL10,Kiểm tra hiển thị danh mục giá trị của phân trang,Kiểm tra hiển thị danh mục giá trị của phân trang,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra danh mục giá trị của Phân trang,"1. Cho phép chọn giá trị trong dropdown list các giá trị:
+
+10/Trang
+
+20/Trang
+
+50/Trang
+
+100/Trang",,,,,,,,,,
+,,DSCXL11,Kiểm tra khi chọn giá trị của phân trang là 10,Kiểm tra khi chọn giá trị của phân trang là 10,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Bảng dữ liệu có >= 10 bản ghi",,,Low,,,,,1. Chọn giá trị của phân trang là 10,1. Hiển thị đủ 10 bản ghi trên màn hình,,,,,,,,,,
+,,DSCXL12,Kiểm tra khi chọn giá trị của phân trang là 20,Kiểm tra khi chọn giá trị của phân trang là 20,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Bảng dữ liệu có >= 20 bản ghi",,,Low,,,,,1. Chọn giá trị của phân trang là 20,1. Hiển thị đủ 20 bản ghi trên màn hình,,,,,,,,,,
+,,DSCXL13,Kiểm tra khi chọn giá trị của phân trang là 50,Kiểm tra khi chọn giá trị của phân trang là 50,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Bảng dữ liệu có >= 50 bản ghi",,,Low,,,,,1. Chọn giá trị của phân trang là 50,1. Hiển thị đủ 50 bản ghi trên màn hình,,,,,,,,,,
+,,DSCXL14,Kiểm tra khi chọn giá trị của phân trang là 100,Kiểm tra khi chọn giá trị của phân trang là 100,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Bảng dữ liệu có >= 100 bản ghi",,,Low,,,,,1. Chọn giá trị của phân trang là 100,1. Hiển thị đủ 100 bản ghi trên màn hình,,,,,,,,,,
+,,DSCXL15,"Kiểm tra khi click button Next page, previous page","Kiểm tra khi click button Next page, previous page","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Bảng dữ liệu có >= 10 bản ghi, mặc định 10 bản ghi/ trang",,,Low,,,,,"1. Nhấn icon >, <","1. Hệ thống direct trang tiếp theo, redirect về trang trước theo số thứ tự đúng",,,,,,,,,,
+,,DSCXL16,Kiểm tra thay đổi lựa chọn đổi số lượng phân trang,Kiểm tra thay đổi lựa chọn đổi số lượng phân trang,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. thay đổi lựa chọn đổi số lượng phân trang,"1. Khi thay đổi lựa chọn, Client reload hiển thị grid giao dịch theo lựa chọn trang tương ứng",,,,,,,,,,
+Kiểm tra phân quyền,,,,,,,,,,,,,,,,,,,,,,,,
+Login với role CB_QLKH,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL17,"Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH có thể tra cứu mã thỏa thuận","Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH có thể tra cứu mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,High,,,,,"1. Nhập tiêu chí tìm kiếm
+2. Click button [Tìm kiếm]",Hệ thống cho phép người dùng có role CB_QLKH tra cứu mã thỏa thuận,,,,,,,,,,
+,,DSCXL18,"Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể xem chi tiết mã thỏa thuận","Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể xem chi tiết mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,High,,,,,1. Double click vào 1 bản ghi bất kỳ,Hệ thống cho phép người dùng có role CB_QLKH xem chi tiết mã thỏa thuận,,,,,,,,,,
+,,DSCXL19,"Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể Khởi tạo mã thỏa thuận bán","Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể Khởi tạo mã thỏa thuận bán","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,High,,,,,"1. Click button [Tạo mới]
+2. Nhấn [Tạo mã thoả thuận bán]",Hệ thống cho phép người dùng có role CB_QLKH Khởi tạo mã thỏa thuận bán,,,,,,,,,,
+,,DSCXL20,"Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể Khởi tạo mã thỏa thuận mua","Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể Khởi tạo mã thỏa thuận mua","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,High,,,,,"1. Click button [Tạo mới]
+2. Nhấn [Tạo mã thoả thuận mua]",Hệ thống cho phép người dùng có role CB_QLKH Khởi tạo mã thỏa thuận mua,,,,,,,,,,
+,,DSCXL21,"Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể chỉnh sửa mã thỏa thuận","Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể chỉnh sửa mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,High,,,,,"1. Hover chuột tại 1 bản ghi
+2. Click button [Chỉnh sửa]",Hệ thống cho phép người dùng có role CB_QLKH chỉnh sửa mã thỏa thuận,,,,,,,,,,
+,,DSCXL22,"Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể chỉnh sửa mã thỏa thuận","Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể chỉnh sửa mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,High,,,,,"1. Hover chuột tại 1 bản ghi
+2. Click button [Đẩy duyệt]",Hệ thống cho phép người dùng có role CB_QLKH đẩy duyệt mã thỏa thuận,,,,,,,,,,
+,,DSCXL23,"Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể xóa mã thỏa thuận","Kiểm tra đăng nhập bằng tài khoản 
+CB_QLKH
+có thể xóa mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,High,,,,,"1. Hover chuột tại 1 bản ghi
+2. Click button [Xoá]",Hệ thống cho phép người dùng có role CB_QLKH xóa mã thỏa thuận,,,,,,,,,,
+Login với role KSV QLKH,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL24,Kiểm tra hiển thị menu Thỏa thuận MBNT chờ xử lý khi đăng nhập bằng role KSV QLKH,Kiểm tra hiển thị menu Thỏa thuận MBNT chờ xử lý khi đăng nhập bằng role KSV QLKH,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: KSV QLKH
+3. User chọn Giao dịch",,,High,,,,,1. Kiểm tra menu chức năng MBNT chờ xử lý,Ẩn menu chức năng MBNT chờ xử lý với role KSV QLKH,,,,,,,,,,
+,,DSCXL25,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role KSV QLKH,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role KSV QLKH,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: KSV QLKH",,,High,,,,,1. Open link: http://bo.ibank2sit.ldapudtest.com/transaction/dealTrans/FXTransWaitList,Hệ thống direct về màn hình Dashboard,,,,,,,,,,
+Login với role GDV KDV,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL26,Kiểm tra hiển thị menu MBNT chờ xử lý khi đăng nhập bằng role GDV KDV,Kiểm tra hiển thị menu MBNT chờ xử lý khi đăng nhập bằng role GDV KDV,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH KDV
+3. User chọn Giao dịch",,,High,,,,,1. Kiểm tra menu chức năng MBNT chờ xử lý,Ẩn menu chức năng MBNT chờ xử lý với role GDV KDV,,,,,,,,,,
+,,DSCXL27,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role GDV KDV,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role GDV KDV,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH KDV
+3. User chọn Giao dịch",,,High,,,,,1. Open link: http://bo.ibank2sit.ldapudtest.com/transaction/dealTrans/FXTransWaitList,Hệ thống direct về màn hình Dashboard,,,,,,,,,,
+Login với role KSV KDV,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL28,Kiểm tra hiển thị menu MBNT chờ xử lý khi đăng nhập bằng role KSV KDV,Kiểm tra hiển thị menu MBNT chờ xử lý khi đăng nhập bằng role KSV KDV,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: KSV KDV
+3. User chọn Giao dịch",,,High,,,,,1. Kiểm tra menu chức năng MBNT chờ xử lý,Ẩn menu chức năng MBNT chờ xử lý với role KSV KDV,,,,,,,,,,
+,,DSCXL29,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role KSV KDV,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role KSV KDV,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: KSV KDV
+3. User chọn Giao dịch",,,High,,,,,1. Open link: http://bo.ibank2sit.ldapudtest.com/transaction/dealTrans/FXTransWaitList,Hệ thống direct về màn hình Dashboard,,,,,,,,,,
+Login với role Inquiry - BO,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL30,Kiểm tra hiển thị menu MBNT chờ xử lý khi đăng nhập bằng role Inquiry- BO,Kiểm tra hiển thị menu MBNT chờ xử lý khi đăng nhập bằng role Inquiry- BO,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: Inquiry- BO
+3. User chọn Giao dịch",,,High,,,,,1. Kiểm tra menu chức năng MBNT chờ xử lý,Ẩn menu chức năng MBNT chờ xử lý với role KSV KDV,,,,,,,,,,
+,,DSCXL31,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role Inquiry- BO,Kiểm tra open màn hình MBNT chờ xử lý bằng URL khi đăng nhập bằng role Inquiry- BO,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 29555/ Test@147258
+2. Người dùng NH được phân quyền: Inquiry- BO
+3. User chọn Giao dịch",,,High,,,,,1. Open link: http://bo.ibank2sit.ldapudtest.com/transaction/dealTrans/FXTransWaitList,Hệ thống direct về màn hình Dashboard,,,,,,,,,,
+Kiểm tra Validation,,,,,,,,,,,,,,,,,,,,,,,,
+Kiểm tra Điều kiện tìm kiếm,,,,,,,,,,,,,,,,,,,,,,,,
+Textbox số CIF,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL32,Kiểm tra hiển thị mặc định trường Số CIF,Kiểm tra hiển thị mặc định trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra placeholder khi chưa nhập dữ liệu ở textbox [Số CIF],"1. Mặc định hiển thị placeholder ""Số CIF"", cho phép người dùng nhập giá trị vào ô textbox",,,,,,,,,,
+,,DSCXL33,Kiểm tra hiển thị icon xóa nhanh của trường Số CIF,Kiểm tra hiển thị icon xóa nhanh của trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. nhập ký tự số bất kỳ = ""1"" vào textbox [Số CIF]
+2. Quan sát hiển thị icon X tại trường Số CIF",1. Hiển thị icon X cho phép người dùng xóa nhanh.,,,,,,,,,,
+,,DSCXL34,Kiểm tra thực hiện xóa nhanh khi đã nhập giá trị vào trường Số CIF,Kiểm tra thực hiện xóa nhanh khi đã nhập giá trị vào trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. nhập ký tự số bất kỳ = ""123"" vào textbox [Số CIF]
+2. Click icon X",1. Clear data đã nhập vào textbox,,,,,,,,,,
+,,DSCXL35,Kiểm tra nhập giá trị là ký tự chữ vào trường Số CIF,Kiểm tra nhập giá trị là ký tự chữ vào trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập ký tự chữ = ""aBc"" vào textbox [Số CIF]",1. Hệ thống chặn nhập ký tự khác số,,,,,,,,,,
+,,DSCXL36,Kiểm tra nhập giá trị là ký tự đặc biệt vào trường Số CIF,Kiểm tra nhập giá trị là ký tự đặc biệt vào trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập ký tự đặc biệt = ""@!#$%&./"" vào textbox [Số CIF]",1. Hệ thống chặn nhập ký tự khác số,,,,,,,,,,
+,,DSCXL37,Kiểm tra nhập giá trị quá độ dài cho phép >12 vào trường Số CIF,Kiểm tra nhập giá trị quá độ dài cho phép >12 vào trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập 13 ký tự số = ""1234567890120""","1. Trường số CIF hiển thị 12 ký tự, chặn nhập ký tự thứ 13",,,,,,,,,,
+,,DSCXL38,Kiểm tra tìm kiếm số CIF có độ dài tối đa = (12 ký tự số) vào trường Số CIF,Kiểm tra tìm kiếm số CIF có độ dài tối đa = (12 ký tự số) vào trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Nhập 12 ký tự số = ""123456123456""
+2. Click button [Tìm kiếm]","2. Grid hiển thị đúng data được lấy từ DB theo số CIF đã nhập
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+AND fta.CIF_NO = '123456123456'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL39,Kiểm tra paste kí tự số hợp lệ vào trường Số CIF ( <12 kí tự),Kiểm tra paste kí tự số hợp lệ vào trường Số CIF ( <12 kí tự),"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Copy/Paste < 12 ký tự số = ""134762""
+2. Click button [Tìm kiếm]","1. Tại điều kiện tìm kiếm Số CIF hiển thị đúng giá trị nhập vào ""134762""
+2. Grid hiển thị đúng data được lấy từ DB theo số CIF đã nhập
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+AND fta.CIF_NO = '134762'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL40,Kiểm tra paste kí tự cả số và chữ vào trường Số CIF,Kiểm tra paste kí tự cả số và chữ vào trường Số CIF,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Copy-paste ""9854AAAA21277777"" vào textbox [Số CIF]",1. Chỉ paste được giá trị số '985421277777',,,,,,,,,,
+,,DSCXL41,Kiểm tra khi không nhập giá trị vào trường Số CIF và nhấn Enter,Kiểm tra khi không nhập giá trị vào trường Số CIF và nhấn Enter,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Bỏ trống trường ""Số CIF""
+2. Nhấn Enter","1. Grid hiển thị all data được lấy từ DB
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL42,Kiểm tra khi nhập giá trị không tồn tại trong hệ thống vào trường Số CIF và nhấn Enter,Kiểm tra khi nhập giá trị không tồn tại trong hệ thống vào trường Số CIF và nhấn Enter,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập số CIF không tồn tại = ""99999999999"" trong DB 
+2. Click button [Tìm kiếm]","1. Bảng dữ liệu trống, hiển thị ""Không có kết quả tìm kiếm""
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+AND fta.CIF_NO = '99999999999'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Textbox ""Mã thỏa thuận",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL43,Kiểm tra hiển thị trường Mã thỏa thuận,Kiểm tra hiển thị trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra textbox [Mã thỏa thuận],"1. Hiển thị label Mã thỏa thuận ở đầu TextBox, cho phép người dùng nhập thông tin.",,,,,,,,,,
+,,DSCXL44,Kiểm tra hiển thị giá trị mặc định của trường Mã thỏa thuận,Kiểm tra hiển thị giá trị mặc định của trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra mặc định của textbox [Mã thỏa thuận],1. Mặc định bỏ trống.,,,,,,,,,,
+,,DSCXL45,Kiểm tra hiển thị placeholder của Mã thỏa thuận,Kiểm tra hiển thị placeholder của Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra Placeholder của textbox [Mã thỏa thuận],"1. Hiển thị Placeholder là ""Mã thỏa thuận""",,,,,,,,,,
+,,DSCXL46,Kiểm tra hiển thị icon xóa nhanh của trường Mã thỏa thuận,Kiểm tra hiển thị icon xóa nhanh của trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Nhập giá trị vào textbox [Mã thỏa thuận],1. Hiển thị icon X,,,,,,,,,,
+,,DSCXL47,Kiểm tra thực hiện xóa nhanh khi đã nhập giá trị vào trường Mã thỏa thuận,Kiểm tra thực hiện xóa nhanh khi đã nhập giá trị vào trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập ký tự số, chữ không dấu, chữ hoa/thường vào textbox [Mã thỏa thuận]
+2. Click icon button [X]",1. Clear data đã nhập vào textbox,,,,,,,,,,
+,,DSCXL48,Kiểm tra nhập giá trị là ký tự chữ thường,Kiểm tra nhập giá trị là ký tự chữ thường,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Nhập ký tự Mã thỏa thuận hợp lệ với ký tự chữ là chữ thường (VD: ttdfgfg),1. Hệ thống cho phép nhập ký tự chữ thường vào ô textbox,,,,,,,,,,
+,,DSCXL49,Kiểm tra nhập giá trị là ký tự chữ hoa,Kiểm tra nhập giá trị là ký tự chữ hoa,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Nhập ký tự Mã thỏa thuận hợp lệ với ký tự chữ là chữ hoa (VD: TTHFG),2. Hệ thống cho phép nhập ký tự chữ hoa vào ô textbox,,,,,,,,,,
+,,DSCXL50,Kiểm tra nhập giá trị là ký tự chữ có dấu vào trường Mã thỏa thuận,Kiểm tra nhập giá trị là ký tự chữ có dấu vào trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập ký tự chữ có dấu = ""Mã"" vào textbox [Mã thỏa thuận]",1. Chặn không cho phép nhập,,,,,,,,,,
+,,DSCXL51,Kiểm tra nhập giá trị là ký tự đặc biệt ( dấu chấm '.')vào trường Mã thỏa thuận,Kiểm tra nhập giá trị là ký tự đặc biệt ( dấu chấm '.')vào trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập ký tự đặc biệt = ""."" vào textbox [Mã thỏa thuận]","1. Cho phép nhập dấu "".""",,,,,,,,,,
+,,DSCXL52,Kiểm tra nhập giá trị là ký tự đặc biệt khác (dấu chấm '.')vào trường Mã thỏa thuận,Kiểm tra nhập giá trị là ký tự đặc biệt khác (dấu chấm '.')vào trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập ký tự đặc biệt = ""!@#$%^&*()_~+"" vào textbox [Mã thỏa thuận]","1. Chặn nhập ký tự đặc biệt ngoài dấu "".""",,,,,,,,,,
+,,DSCXL53,"Kiểm tra nhập giá trị quá độ dài cho phép >50 (ký tự số, chữ không dấu , không phân biệt chữ hoa/thường, các ký tự đặc biệt gồm: dấu chấm (.)) vào trường Mã thỏa thuận","Kiểm tra nhập giá trị quá độ dài cho phép >50 (ký tự số, chữ không dấu , không phân biệt chữ hoa/thường, các ký tự đặc biệt gồm: dấu chấm (.)) vào trường Mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Nhập 51 ký tự vào textbox [Mã thỏa thuận],1. Chỉ cho phép nhập tối đa 50 ký tự,,,,,,,,,,
+,,DSCXL54,"Kiểm tra nhập giá trị có độ dài tối đa =50 (ký tự số, chữ không dấu , không phân biệt chữ hoa/thường, các ký tự đặc biệt gồm: dấu chấm (.)) vào trường Mã thỏa thuận","Kiểm tra nhập giá trị có độ dài tối đa =50 (ký tự số, chữ không dấu , không phân biệt chữ hoa/thường, các ký tự đặc biệt gồm: dấu chấm (.)) vào trường Mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Nhập 50 ký tự vào textbox [Mã thỏa thuận] (vd: TT.123000.080525.133433323443245566356786788897885)
+2. Click button [Tìm kiếm]","1. Grid hiển thị data theo data của Mã thỏa thuận
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+AND fta.CODE = 'TT.123000.080525.133433323443245566356786788897885'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL55,"Kiểm tra nhập giá trị có độ dài 50 (ký tự số, chữ không dấu , không phân biệt chữ hoa/thường, các ký tự đặc biệt gồm: dấu chấm (.) vào trường Mã thỏa thuận","Kiểm tra nhập giá trị có độ dài 50 (ký tự số, chữ không dấu , không phân biệt chữ hoa/thường, các ký tự đặc biệt gồm: dấu chấm (.) vào trường Mã thỏa thuận","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Nhập <50 ký tự số vào trường ""Mã thỏa thuận"" (vd:TT.120000.080525.1)
+2. Click button [Tìm kiếm]","2. Grid hiển thị data theo data của Mã thỏa thuận
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+AND fta.CODE = 'TT.120000.080525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL56,Kiểm tra paste kí tự > 50 kí tự vào trường Mã thỏa thuận,Kiểm tra paste kí tự > 50 kí tự vào trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Copy/paste 51 ký tự vào textbox [TT.123000.080525.1334333234432455663567867888978850],1. Chỉ hiển thị đủ 50 ký tự 'TT.123000.080525.133433323443245566356786788897885',,,,,,,,,,
+,,DSCXL57,Kiểm tra nhập giá trị có khoảng trắng đầu cuối và tìm kiếm vào trường Mã thỏa thuận,Kiểm tra nhập giá trị có khoảng trắng đầu cuối và tìm kiếm vào trường Mã thỏa thuận,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Nhập Space vào textbox [Mã thỏa thuận],1. Không cho phép nhập Space,,,,,,,,,,
+,,DSCXL58,Kiểm tra khi không nhập giá trị vào trường Mã thỏa thuận và tìm kiếm,Kiểm tra khi không nhập giá trị vào trường Mã thỏa thuận và tìm kiếm,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Để trống textbox [Mã thỏa thuận] 
+2. Click button [Tìm kiếm]","1. Grid hiển thị all data của Mã thỏa thuận
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL59,Kiểm tra khi nhập trùng 1 phần,Kiểm tra khi nhập trùng 1 phần,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Nhập trùng 1 phần = ""TT.122000"" vào textbox [Mã thỏa thuận]
+2. Nhấn Enter","1. Grid hiển thị all data của Mã thỏa thuận
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+AND fta.CODE LIKE '%TT.122000%'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Dropdownlist ""Phân hệ""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL60,Kiểm tra hiển thị giá trị mặc định của dropdownlist Phân hệ,Kiểm tra hiển thị giá trị mặc định của dropdownlist Phân hệ,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Kiểm tra giá trị mặc định của droplist [Phân hệ]","1. Hiển thị mặc định là ""Tất cả phân hệ"".",,,,,,,,,,
+,,DSCXL61,Kiểm tra hiển thị danh sách của dropdownlist Phân hệ,Kiểm tra hiển thị danh sách của dropdownlist Phân hệ,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Check data của droplist [Phân hệ]","1. Hiển thị các giá trị:
+- Tất cả phân hệ
+- Mua bán ngoại tệ
+- Chuyển tiền quốc tế
+- Tín dụng",,,,,,,,,,
+,,DSCXL62,Kiểm tra khi chọn nhiều giá trị trên thanh dropdownlist Phân hệ,Kiểm tra khi chọn nhiều giá trị trên thanh dropdownlist Phân hệ,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Chọn nhiều data ở droplist [Phân hệ]",1. Chỉ chọn được 1 option,,,,,,,,,,
+,,DSCXL63,Kiểm tra khi chọn Tất cả phân hệ và search,Kiểm tra khi chọn Tất cả phân hệ và search,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Chọn [Tất cả phân hệ] ở droplist [Phân hệ]
+3. Click button [Tìm kiếm]","1. Grid hiển thị all data của tất cả phân hệ
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL64,Kiểm tra khi chọn phân hệ [Tín dụng] và search,Kiểm tra khi chọn phân hệ [Tín dụng] và search,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Chọn [Tín dụng] 
+3. Click button [Tìm kiếm]","1. Grid hiển thị all data của tất cả phân hệ [Tín dụng]
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO >TRUNC(sysdate)
+AND fta.IS_USED= '0'
+AND fta.USAGE_SUBSYSTEM = 'LOAN'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL65,Kiểm tra khi chọn phân hệ [Mua bán ngoại tệ] và search,Kiểm tra khi chọn phân hệ [Mua bán ngoại tệ] và search,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Chọn [Mua bán ngoại tệ] 
+3. Click button [Tìm kiếm]","1. Grid hiển thị all data của tất cả phân hệ [Mua bán ngoại tệ]
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO >TRUNC(sysdate)
+AND fta.IS_USED= '0'
+AND fta.USAGE_SUBSYSTEM = 'FX'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL66,Kiểm tra khi chọn phân hệ [Chuyển tiền quốc tế] và search,Kiểm tra khi chọn phân hệ [Chuyển tiền quốc tế] và search,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Chọn [Chuyển tiền quốc tế] 
+3. Click button [Tìm kiếm]","1. Grid hiển thị all data của tất cả phân hệ [Mua bán ngoại tệ]
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO >TRUNC(sysdate)
+AND fta.IS_USED= '0'
+AND fta.USAGE_SUBSYSTEM = 'PAYMENT'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL67,Kiểm tra Thay đổi lựa chọn của Dropdownlist Phân hệ,Kiểm tra Thay đổi lựa chọn của Dropdownlist Phân hệ,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdown Phân hệ
+2. Chọn [Mua bán ngoại tệ] 
+3. Chọn [Tín dụng]
+4. Click button [Tìm kiếm]","4. Grid hiển thị bản ghi theo data đã chọn ở step 2 là [Tín dụng]
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO >TRUNC(sysdate)
+AND fta.IS_USED= '0'
+AND fta.USAGE_SUBSYSTEM = 'LOAN'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Dropdownlist ""Trạng thái""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL68,Kiểm tra hiển thị giá trị mặc định của dropdownlist Trạng thái,Kiểm tra hiển thị giá trị mặc định của dropdownlist Trạng thái,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra hiển thị mặc định ở droplist [Trạng thái],"1. Hiển thị mặc định là ""Tất cả Trạng thái"".",,,,,,,,,,
+,,DSCXL69,Kiểm tra hiển thị danh sách của dropdownlist Trạng thái,Kiểm tra hiển thị danh sách của dropdownlist Trạng thái,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Tại điều kiện tìm kiếm, nhấn dropdownlist Trạng thái
+2. Check data tại droplist","2. Hiển thị các giá trị:
+- Đang soạn
+- Từ chối
+- Hiệu lực",,,,,,,,,,
+,,DSCXL70,Kiểm tra khi chọn giá trị 'Tất cả Trạng thái' của Dropdownlist Trạng thái,Kiểm tra khi chọn giá trị 'Tất cả Trạng thái' của Dropdownlist Trạng thái,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"Tại điều kiện tìm kiếm, nhấn dropdownlist Trạng thái
+1. Chọn [Tất cả trạng thái] ở droplist [Trạng thái]
+2. Click button [Tìm kiếm]","2. Grid hiển thị all data của các trạng thái (Đang soạn, Từ chối, Hiệu lực)
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO>sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL71,Kiểm tra khi chọn giá trị 'Đang soạn' của Dropdownlist Trạng thái,Kiểm tra khi chọn giá trị 'Đang soạn' của Dropdownlist Trạng thái,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"Tại điều kiện tìm kiếm, nhấn dropdownlist Trạng thái
+1. Chọn [Đang soạn] ở droplist [Trạng thái]
+2. Nhấn Enter","2. Grid hiển thị data của trạng thái ""Đang soạn""
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT')
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO > sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL72,Kiểm tra khi chọn giá trị 'Từ chối' của Dropdownlist Trạng thái,Kiểm tra khi chọn giá trị 'Từ chối' của Dropdownlist Trạng thái,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"Tại điều kiện tìm kiếm, nhấn dropdownlist Trạng thái
+1. Chọn [Từ chối] ở droplist [Trạng thái]
+2. Click button [Tìm kiếm]","2. Grid hiển thị data của trạng thái ""Từ chối""
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('REJECTED')
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO > sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL73,Kiểm tra khi chọn giá trị 'Hiệu lực' của Dropdownlist Trạng thái,Kiểm tra khi chọn giá trị 'Hiệu lực' của Dropdownlist Trạng thái,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"Tại điều kiện tìm kiếm, nhấn dropdownlist Trạng thái
+1. Chọn [Hiệu lực] ở droplist [Trạng thái]
+2. Click button [Tìm kiếm]","2. Grid hiển thị data của trạng thái ""Hiệu lực""
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('APPROVAL')
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO > sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL74,Kiểm tra Thay đổi lựa chọn của Dropdownlist Trạng thái,Kiểm tra Thay đổi lựa chọn của Dropdownlist Trạng thái,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"Tại điều kiện tìm kiếm, nhấn dropdownlist Trạng thái
+1. Chọn [Hiệu lực] ở droplist [Trạng thái]
+2. Chọn [Đang soạn] ở droplist [Trạng thái]
+3. Click button [Tìm kiếm]","3. Grid hiển thị data của trạng thái ""Đang soạn""
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT')
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO > sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+Kiểm tra Lưới dữ liệu,,,,,,,,,,,,,,,,,,,,,,,,
+Kiểm tra hiển thị lưới dữ liệu,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL75,Kiểm tra chỉ hiển thị mã thoả thuận của đúng user tạo mã,Kiểm tra chỉ hiển thị mã thoả thuận của đúng user tạo mã,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra danh sách bản ghi tại bảng dữ liệu,"1. Lấy data từ DB với giao dịch có CREATE_BY= 28980 trùng với usename của user_id
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.STATUS IN ('DRAFT','APPROVED','REJECTED')
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CREATED_BY = '28980'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL76,Kiểm tra chỉ hiện thị giao dịch ngày hiện tại (ngày T),Kiểm tra chỉ hiện thị giao dịch ngày hiện tại (ngày T),"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,1. Kiểm tra danh sách bản ghi tại bảng dữ liệu,"1. Lấy data từ DB và chỉ hiển thị data có giao dịch được tạo vào ngày hiện tại (ngày T)
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT','APPROVED','REJECTED')
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO > sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL77,Kiểm tra hiển thị sắp xếp các bản ghi trên lưới dữ liệu,Kiểm tra hiển thị sắp xếp các bản ghi trên lưới dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra data ở Grid,"1. Các bản ghi được sắp xếp theo thời gian tạo từ mới nhất đến cũ nhất.
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT','APPROVED','REJECTED')
+AND fta.TXN_DATE= TRUNC(sysdate)
+and fta.EFFECTIVE_DATE_TO > sysdate
+and fta.IS_USED= '0'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL78,Kiểm tra lưới dữ liệu khi thực hiện kéo thanh cuộn ngang,Kiểm tra lưới dữ liệu khi thực hiện kéo thanh cuộn ngang,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kéo thanh cuộn ngang ở Grid,"3. Hệ thống cố định các cột:
+STT
+Mã thỏa thuận
+Trạng thái
+Các cột còn lại được cuộn ngang.",,,,,,,,,,
+,,DSCXL79,Kiểm tra khi thực hiện Sort ASC các cột dữ liệu,Kiểm tra khi thực hiện Sort ASC các cột dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Click Sort ASC tại 1 cột bất kì ở Grid,1. Cột được thực hiện Sort ASC sẽ hiển thị theo thứ tự tăng dần,,,,,,,,,,
+,,DSCXL80,Kiểm tra khi thực hiện Sort DESC các cột dữ liệu,Kiểm tra khi thực hiện Sort DESC các cột dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Click Sort DESC tại một cột bất kì ở Grid,1. Cột được thực hiện Sort DESC sẽ hiển thị theo thứ tự giảm dần,,,,,,,,,,
+,,DSCXL81,"Kiểm tra khi hover chuột vào bản ghi có trạng thái là ""Đang soạn""","Kiểm tra khi hover chuột vào bản ghi có trạng thái là ""Đang soạn""","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover chuột vào 1 bản ghi có trạng thái là ""Đang soạn""","1. Hệ thống hiển thị iển thị các icon Thao tác (mặc định enable) ở cuối bản ghi gồm:
+- Đẩy duyệt
+- Chỉnh sửa
+- Xem chi tiết
+- Xóa",,,,,,,,,,
+,,DSCXL82,"Kiểm tra khi hover chuột vào bản ghi có trạng thái là ""Từ chối""","Kiểm tra khi hover chuột vào bản ghi có trạng thái là ""Từ chối""","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover chuột vào 1 bản ghi có trạng thái là ""Từ chối""","1. Hệ thống hiển thị iển thị các icon Thao tác (mặc định enable) ở cuối bản ghi gồm:
+- Đẩy duyệt
+- Chỉnh sửa
+- Xem chi tiết
+- Xóa",,,,,,,,,,
+,,DSCXL83,"Kiểm tra khi hover chuột vào bản ghi có trạng thái là ""Hiệu lực"" chưa được sử dụng","Kiểm tra khi hover chuột vào bản ghi có trạng thái là ""Hiệu lực"" chưa được sử dụng","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover chuột vào 1 bản ghi có trạng thái là ""Hiệu lực"" chưa được sử dụng","1. Hệ thống hiển thị iển thị các icon Thao tác (mặc định enable) ở cuối bản ghi gồm:
+- Xem chi tiết
+- Xóa",,,,,,,,,,
+,,DSCXL84,Kiểm tra khi hover icon button Đẩy Duyệt,Kiểm tra khi hover icon button Đẩy Duyệt,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover chuột vào 1 bản ghi có trạng thái là ""Đang soạn""
+2. Hover chuột vào icon button Đẩy duyệt",2. Hiển thị tên button là [Đẩy duyệt],,,,,,,,,,
+,,DSCXL85,Kiểm tra khi hover icon button Chỉnh sửa,Kiểm tra khi hover icon button Chỉnh sửa,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover chuột vào 1 bản ghi có trạng thái là ""Đang soạn""
+2. hover chuột vào icon button Chỉnh sửa",2. Hiển thị tên button là [Chỉnh sửa],,,,,,,,,,
+,,DSCXL86,Kiểm tra khi hover icon button Xem chi tiết,Kiểm tra khi hover icon button Xem chi tiết,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover chuột vào 1 bản ghi có trạng thái là ""Đang soạn""
+2. hover chuột vào icon button Xem chi tiết",2. Hiển thị tên button là [Xem chi tiết],,,,,,,,,,
+,,DSCXL87,Kiểm tra khi hover icon button Xóa,Kiểm tra khi hover icon button Xóa,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover chuột vào 1 bản ghi có trạng thái là ""Đang soạn""
+2. hover chuột vào icon button Xóa",2. Hiển thị tên button là [Xóa],,,,,,,,,,
+"Cột ""STT""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL88,Kiểm tra hiển thị dữ liệu cột STT ở lưới dữ liệu,Kiểm tra hiển thị dữ liệu cột STT ở lưới dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra cột STT,"1. STT hiển thị dạng số, tăng dần bắt đầu từ 1",,,,,,,,,,
+"Cột ""Mã thỏa thuận""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL89,Kiểm tra hiển thị mã thỏa thuận đúng dữ liệu ở lưới dữ liệu,Kiểm tra hiển thị mã thỏa thuận đúng dữ liệu ở lưới dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+
+Đ/k:
+1. Đã tạo MTT bán: TT.117000.130525.1",,,Medium,,,,,"1. Tại điều kiện tìm kiếm Mã thoả thuận, nhập mã ""TT.117000.130525.1""
+2. Click button [Tìm kiếm]
+3. Kiểm tra hiển thị tại cột ""Mã thoả thuận""","3. - Hiển thị giá trị: ""TT.117000.130525.1""
+
+
+Check DB:
+
+SELECT fta.CODE
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.130525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Cột ""Trạng thái""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL90,Kiểm tra hiển thị Trạng thái đúng dữ liệu ở bản ghi Đang soạn,Kiểm tra hiển thị Trạng thái đúng dữ liệu ở bản ghi Đang soạn,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra hiển thị 'Đang soạn' tại cột ""Trạng thái"" của mã TT.121000.090525.6'","1. Hiển thị giá trị: ""Đang soạn""
+
+SELECT fta.STATUS 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.121000.090525.6'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL91,Kiểm tra hiển thị Trạng thái đúng dữ liệu ở bản ghi Từ chối,Kiểm tra hiển thị Trạng thái đúng dữ liệu ở bản ghi Từ chối,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra hiển thị 'Từ chối' tại cột ""Trạng thái"" của mã 'TT.122000.090525.3'","1. Hiển thị giá trị: ""Từ chối""
+
+SELECT fta.STATUS 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.122000.090525.3'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL92,Kiểm tra hiển thị Trạng thái đúng dữ liệu ở bản ghi Hiệu lực,Kiểm tra hiển thị Trạng thái đúng dữ liệu ở bản ghi Hiệu lực,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra hiển thị 'Hiệu lực' tại cột ""Trạng thái"" của mã 'TT.122000.090525.1'","1. Hiển thị giá trị: ""Hiệu lực""
+
+SELECT fta.STATUS 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.118000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Cột ""CIF""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL93,Kiểm tra hiển thị số CIF đúng dữ liệu ở lưới dữ liệu,Kiểm tra hiển thị số CIF đúng dữ liệu ở lưới dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra số CIF tại ""Số CIF"" của mã 'TT.121000.090525.5'","1. Hiển thị giá trị: ""28""
+
+SELECT fta.CIF_NO 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.121000.090525.5'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Cột ""Tên KH""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL94,Kiểm tra hiển thị Tên KH đúng dữ liệu ở lưới dữ liệu,Kiểm tra hiển thị Tên KH đúng dữ liệu ở lưới dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+
+Đ/k2: 
+1. Tạo MTT có Tên KH < 100 ký tự",,,Medium,,,,,"1. Kiểm tra hiển thị tên khách hàng tại cột ""Tên khách hàng"" của mã 'TT.121000.090525.5'","1. Hiển thị giá trị: ""FWE FR GY KYR KI NYQJ""
+
+SELECT c.NAME
+FROM IBANKFX.FX_TXN_AGREEMENTS fta LEFT JOIN CIMBACK.CUSTOMERS c 
+ON fta.CIF_NO = c.CIF_NO 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.121000.090525.5'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL95,Kiểm tra hiển thị khi Tên KH = 100 ký tự,Kiểm tra hiển thị khi Tên KH = 100 ký tự,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+
+Đ/k2: 
+1. Tạo MTT có Tên KH = 100 ký tự",,,Low,,,,,"1. Kiểm tra hiển thị tại trường ""Tên khách hàng""","1.Hiển thị dấu 3 chấm tại trường ""Tên khách hàng""
+2. Hover vào thì hiển thị tooltip tên khách hàng",,,,,,,,,,
+"Cột ""Loại sản phẩm""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL96,Kiểm tra hiển thị Loại sản phẩm Bán ở lưới dữ liệu,Kiểm tra hiển thị Loại sản phẩm Bán ở lưới dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+
+Đ/k 2:
+1. Tạo MTT bán",,,Medium,,,,,"1. Kiểm tra hiển thị loại sản phẩm tại cột ""Loại sản phẩm"" của mã 'TT.121000.090525.5'","1. Hiển thị giá trị: ""Bán"" 
+
+SELECT fta.""TYPE"" 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.121000.090525.5'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL97,Kiểm tra hiển thị Loại sản phẩm Mua ở lưới dữ liệu,Kiểm tra hiển thị Loại sản phẩm Mua ở lưới dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+
+Đ/k 2:
+1. Tạo MTT mua",,,Medium,,,,,"1. Kiểm tra hiển thị loại sản phẩm tại cột ""Loại sản phẩm"" của mã 'TT.117000.090525.1'","1. Hiển thị giá trị: ""Mua"" 
+
+SELECT fta.""TYPE"" 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Cột ""Ngoại tệ GD""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL98,Kiểm tra hiển thị Ngoại tệ GD đúng dữ liệu,Kiểm tra hiển thị Ngoại tệ GD đúng dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+
+Đ/k 2: 
+1. Tạo mã thỏa thuận bán với [Loại ngoại tệ bán] = EUR",,,Medium,,,,,"1. Kiểm tra hiển thị Ngoại tệ gd tại cột ""Ngoại tệ GD"" của mã 'TT.117000.090525.1'","1. Hiển thị giá trị: ""EUR"" 
+
+SELECT fta.TRADE_CCY 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Cột ""Ngoại tệ GD""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL99,Kiểm tra hiển thị Số tiền GD đúng dữ liệu,Kiểm tra hiển thị Số tiền GD đúng dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra hiển thị Số tiền GD tại cột ""Số tiền GD"" của mã 'TT.117000.090525.1'","1. Hiển thị data được lấy từ DB 
+
+SELECT fta.TRADE_AMOUNT 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL100,"Kiểm tra hiển thị Số tiền GD với loại tiền là: VND, JPY, KRW, CLP","Kiểm tra hiển thị Số tiền GD với loại tiền là: VND, JPY, KRW, CLP","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Kiểm tra Số tiền GD với loại tiền là: VND, JPY, KRW, CLP","1. Giá trị hiển thị đúng dạng số, tự động phân tách hàng nghìn, chỉ hiển thị tối đa 16 ký tự (không bao gồm dấu phẩy)",,,,,,,,,,
+,,DSCXL101,"Kiểm tra hiển thị Số tiền GD với loại tiền khác VND, JPY, KRW, CLP","Kiểm tra hiển thị Số tiền GD với loại tiền khác VND, JPY, KRW, CLP","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Kiểm tra Số tiền GD với loại tiền khác VND, JPY, KRW, CLP","1. Giá trị hiển thị đúng dạng số, tự động phân tách hàng nghìn, chỉ hiển thị tối đa 19 ký tự ( trong đó tối đa 16 kí tự phần nguyên, 2 ký tự phần thập phân, không bao gồm dấu phẩy và dấu chấm)",,,,,,,,,,
+"Cột ""Loại tiền TT""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL102,Kiểm tra hiển thị Loại tiền TT đúng dữ liệu,Kiểm tra hiển thị Loại tiền TT đúng dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra hiển thị Loại tiền TT tại cột ""Loại tiền TT"" của mã 'TT.117000.090525.1'","1. Hiển thị giá trị: ""EUR"" 
+
+SELECT fta.TRADE_CCY 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+"Cột ""Tỷ giá""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL103,Kiểm tra hiển thị cột Tỷ giá đúng định dạng,Kiểm tra hiển thị cột Tỷ giá đúng định dạng,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra hiển thị Tỷ giá tại cột ""Tỷ giá"" của mã 'TT.117000.090525.1'","1. Hiển thị giá trị: ""0.9"" 
+
+SELECT fta.EXCHANGE_RATE 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL104,Kiểm tra hiển thị Tỷ giá đúng dữ liệu,Kiểm tra hiển thị Tỷ giá đúng dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Kiểm tra giá trị tại cột [Tỷ giá],"1. Giá trị hiển thị đúng dạng của Tỷ giá, hiển thị tối đa 6 chữ số thập phân,không hiển thị số 0 ở cuối( Dấu chấm để phân cách phần thập phân và không có dấu phẩy phân cách hàng nghìn)",,,,,,,,,,
+"Cột ""Ngày thanh toán",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL105,Kiểm tra hiển thị cột Ngày thanh toán đúng dữ liệu,Kiểm tra hiển thị cột Ngày thanh toán đúng dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Kiểm tra giá trị Ngày thanh toán tại cột ""Ngày thanh toán"" của mã 'TT.117000.090525.1'","1. Hiển thị giá trị: ""09/05/2025"" 
+
+SELECT fta.PAYMENT_DATE 
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL106,Kiểm tra hiển thị Ngày thanh toán đúng định dạng,Kiểm tra hiển thị Ngày thanh toán đúng định dạng,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,1. Kiểm tra định dạng [Ngày thanh toán],1. Giá trị hiển thị đúng dạng dd/mm/yyyy,,,,,,,,,,
+"Cột ""Phân hệ""",,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL107,Kiểm tra hiển thị Phân hệ đúng dữ liệu,Kiểm tra hiển thị Phân hệ đúng dữ liệu,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,1. Kiểm tra data tại cột [Phân hệ] của mã 'TT.117000.090525.1',"1. Hiển thị giá trị: ""Tín dụng"" 
+
+SELECT fta.USAGE_SUBSYSTEM
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CODE = 'TT.117000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+Kiểm tra function,,,,,,,,,,,,,,,,,,,,,,,,
+Kiểm tra chức năng tìm kiếm nâng cao,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL108,Kiểm tra tìm kiếm kết hợp 2 tiêu chí bất kì,Kiểm tra tìm kiếm kết hợp 2 tiêu chí bất kì,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Nhập số CIF = ""28""
+2. Nhập mã thỏa thuận = ""TT.118000.090525.1""
+3. Click button [Tìm kiếm]","3. Grid hiển thị data được lấy từ DB
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED' )
+AND TRUNC(fta.CREATED_DATE) = TRUNC(sysdate)
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CIF_NO = 28
+AND fta.CODE = 'TT.118000.090525.1'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL109,Kiểm tra tìm kiếm kết hợp 3 tiêu chí bất kì,Kiểm tra tìm kiếm kết hợp 3 tiêu chí bất kì,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Nhập số CIF = ""28""
+2. Nhập mã thỏa thuận = ""TT.119000.090525.1""
+3. Chọn phân hệ = ""Chuyển tiền quốc tế""
+4. Click button [Tìm kiếm]","4. Grid hiển thị data được lấy từ DB
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.STATUS IN ('DRAFT', 'REJECTED', 'APPROVED')
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CIF_NO = 28
+AND fta.CODE = 'TT.119000.090525.1'
+AND fta.USAGE_SUBSYSTEM = 'PAYMENT'
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL110,Kiểm tra tìm kiếm kết hợp 4 tiêu chí bất kì,Kiểm tra tìm kiếm kết hợp 4 tiêu chí bất kì,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Nhập số CIF = ""134762""
+2. Nhập mã thỏa thuận = ""TT.121000.090525.1""
+3. Chọn phân hệ = ""Tín dụng""
+4. Chọn status = ""Chờ duyệt""
+5. Click button [Tìm kiếm]","5. Grid hiển thị data được lấy từ DB
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CIF_NO = 28
+AND fta.CODE = 'TT.119000.090525.1'
+AND fta.USAGE_SUBSYSTEM = 'PAYMENT'
+AND fta.STATUS IN ('DRAFT')
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL111,Kiểm tra tìm kiếm kết hợp các tiêu chí nhưng không có kết quả,Kiểm tra tìm kiếm kết hợp các tiêu chí nhưng không có kết quả,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Medium,,,,,"1. Nhập số CIF = ""112233""
+2. Nhập mã thỏa thuận = ""TT.23435456""
+3. Chọn phân hệ = ""Tín dụng""
+4. Chọn status = ""Chờ duyệt""
+5. Click button [Tìm kiếm]","2. Bảng dữ liệu trống, hiển thị: ""Không có kết quả tìm kiếm""
+
+SELECT fta.*
+FROM IBANKFX.FX_TXN_AGREEMENTS fta 
+WHERE fta.CREATED_BY = '28980'
+AND fta.TXN_DATE= TRUNC(sysdate)
+AND fta.EFFECTIVE_DATE_TO > sysdate
+AND fta.IS_USED= '0'
+AND fta.CIF_NO = 112233
+AND fta.CODE = 'TT.23435456'
+AND fta.USAGE_SUBSYSTEM = 'LOAN'
+AND fta.STATUS IN ('DRAFT')
+ORDER BY fta.CREATED_DATE desc;",,,,,,,,,,
+,,DSCXL112,Kiểm tra khi xóa 1 bộ lọc bất kì,Kiểm tra khi xóa 1 bộ lọc bất kì,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Xóa 1 bộ lọc tiêu chí bất kì
+2. Click button [Tìm kiếm]","1. Xóa thành công tìm kiếm của bộ lọc đó
+2. Grid hiển thị data theo điều kiện tìm kiếm",,,,,,,,,,
+,,DSCXL113,Kiểm tra khi xóa bộ lọc của tất cả tiêu chí cùng lúc,Kiểm tra khi xóa bộ lọc của tất cả tiêu chí cùng lúc,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Xóa bộ lọc tất cả
+2. Click button [Tìm kiếm]",3. Hệ thống hiển thị tất cả bản ghi của user đang đăng nhập,,,,,,,,,,
+Kiểm tra button Tạo mới,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL114,Kiểm tra hiển thị khi click button tạo mới,Kiểm tra hiển thị khi click button tạo mới,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,1. Click buton [Tạo mới],"1. Hiển thị hai lựa chọn:
+Tạo mã thỏa thuận mua
+Tạo mã thỏa thuận bán",,,,,,,,,,
+,,DSCXL115,Kiểm tra khi chọn Khởi tạo mã thỏa thuận Bán trong button Tạo mới,Kiểm tra khi chọn Khởi tạo mã thỏa thuận Bán trong button Tạo mới,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Click button [Tạo mới]
+2. Click [Khởi tạo mã thỏa thuận Bán]",1. Di chuyển tới màn hình [Tạo mã thỏa thuận bán],,,,,,,,,,
+,,DSCXL116,Kiểm tra khi chọn Khởi tạo mã thỏa thuận Mua trong button Tạo mới,Kiểm tra khi chọn Khởi tạo mã thỏa thuận Mua trong button Tạo mới,"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Click button [Tạo mới]
+2. Click [Khởi tạo mã thỏa thuận Mua]",2. Di chuyển tới màn hình [Tạo mã thỏa thuận mua],,,,,,,,,,
+Kiểm tra button Tạo mới,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL117,"Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận bán, trạng thái Đang soạn","Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận bán, trạng thái Đang soạn","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Đang soạn",,,Low,,,,,"1. Tại bản ghi bán, Click buton [Xem chi tiết]",1. Hệ thống điều hướng đến màn hình Chi tiết thoả thuận bán,,,,,,,,,,
+,,DSCXL118,"Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận bán, trạng thái Từ chối","Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận bán, trạng thái Từ chối","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Từ chối",,,Low,,,,,"1. Tại bản ghi bán, Click buton [Xem chi tiết]",1. Hệ thống điều hướng đến màn hình Chi tiết thoả thuận bán,,,,,,,,,,
+,,DSCXL119,"Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận bán, trạng thái Hiệu lực","Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận bán, trạng thái Hiệu lực","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Hiệu lực",,,Low,,,,,"1. Tại bản ghi bán, Click buton [Xem chi tiết]",1. Hệ thống điều hướng đến màn hình Chi tiết thoả thuận bán,,,,,,,,,,
+,,DSCXL120,"Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Đang soạn","Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Đang soạn","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Đang soạn",,,Low,,,,,"1. Tại bản ghi Mua, Click buton [Xem chi tiết]",1. Hệ thống điều hướng đến màn hình Chi tiết thoả thuận mua,,,,,,,,,,
+,,DSCXL121,"Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Từ chối","Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Từ chối","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Từ chối",,,Low,,,,,"1. Tại bản ghi Mua, Click buton [Xem chi tiết]",1. Hệ thống điều hướng đến màn hình Chi tiết thoả thuận mua,,,,,,,,,,
+,,DSCXL122,"Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Hiệu lực","Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Hiệu lực","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Hiệu lực",,,Low,,,,,"1. Tại bản ghi Mua, Click buton [Xem chi tiết]",1. Hệ thống điều hướng đến màn hình Chi tiết thoả thuận mua,,,,,,,,,,
+Kiểm tra button Chỉnh sửa,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL123,"Kiểm tra hiển thị khi click button Chỉnh sửa tại Mã thoả thuận bán, trạng thái Đang soạn","Kiểm tra hiển thị khi click button Chỉnh sửa tại Mã thoả thuận bán, trạng thái Đang soạn","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Đang soạn",,,Low,,,,,1. Click buton [Chỉnh sửa],1. Hệ thống điều hướng đến màn hình Chỉnh sửa mã thoả thuận bán,,,,,,,,,,
+,,DSCXL124,"Kiểm tra hiển thị khi click button Chỉnh sửa tại Mã thoả thuận bán, trạng thái Từ chối","Kiểm tra hiển thị khi click button Chỉnh sửa tại Mã thoả thuận bán, trạng thái Từ chối","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Từ chối",,,Low,,,,,1. Click buton [Chỉnh sửa],1. Hệ thống điều hướng đến màn hình Chỉnh sửa mã thoả thuận bán,,,,,,,,,,
+,,DSCXL125,"Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Đang soạn","Kiểm tra hiển thị khi click button Xem chi tiết tại Mã thoả thuận mua, trạng thái Đang soạn","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Đang soạn",,,Low,,,,,1. Click buton [Chỉnh sửa],1. Hệ thống điều hướng đến màn hình Chỉnh sửa mã thoả thuận mua,,,,,,,,,,
+,,DSCXL126,"Kiểm tra hiển thị khi click button Chỉnh sửa tại Mã thoả thuận mua, trạng thái Từ chối","Kiểm tra hiển thị khi click button Chỉnh sửa tại Mã thoả thuận mua, trạng thái Từ chối","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi trạng thái Từ chối",,,Low,,,,,1. Click buton [Chỉnh sửa],1. Hệ thống điều hướng đến màn hình Chỉnh sửa mã thoả thuận mua,,,,,,,,,,
+Kiểm tra chức năng Xoá,,,,,,,,,,,,,,,,,,,,,,,,
+,,DSCXL127,Kiểm tra hiển thị popup khi click button [Xóa],Kiểm tra hiển thị popup khi click button [Xóa],"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover vào 1 record có trạng thái ""Đang soạn ""ở Grid
+2. Click button [Xóa]","2. Hiển thị popup confirm
+- Title: Xóa
+- Nội dung: Bạn có chắc chắn xóa bản ghi này
+- Button [Hủy bỏ], [Xác nhận]",,,,,,,,,,
+,,DSCXL128,Kiểm tra hiển thị popup khi click button [Xóa],Kiểm tra hiển thị popup khi click button [Xóa],"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover vào 1 record có trạng thái ""Từ chối"" ở Grid
+2. Click button [Xóa]","2. Hiển thị popup confirm
+- Title: Xóa
+- Nội dung: Bạn có chắc chắn xóa bản ghi này
+- Button [Hủy bỏ], [Xác nhận]",,,,,,,,,,
+,,DSCXL129,Click button [Hủy bỏ],Click button [Hủy bỏ],"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover vào 1 record có trạng thái ""Đang soạn ""ở Grid
+2. Click button [Xóa]
+3. Click button [Hủy bỏ]",3. Tắt popup confirm,,,,,,,,,,
+,,DSCXL130,Click button [Xác nhận],Click button [Xác nhận],"Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý",,,Low,,,,,"1. Hover vào 1 record có trạng thái ""Đang soạn ""ở Grid
+2. Click button [Xóa]
+3. Click button [Xác nhận]",4. Check tiếp luồng Xóa,,,,,,,,,,
+,,DSCXL131,"Xóa bản ghi có Status ""Đang soạn"" thành công","Xóa bản ghi có Status ""Đang soạn"" thành công","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi Bán, trạng thái Đang soạn",,,High,,,,,"1. Hover vào 1 record có trạng thái ""Đang soạn"" của MTT bán ở Grid
+2. Click button [Xóa]
+3. Click button [Xác nhận]","4. Xoá thành công. Hiển thị toast message ""Xóa thành công""
+- Bản ghi có trạng thái ""Đang soạn"" -> Chuyển thành trạng thái “Đã xóa”
+- Reload lại data và bàn ghi không hiển thị ở Danh sách chờ xử lý
+- Check BD: update status=delete ở  IBANKFX.FX_TXN_AGREEMENTS",,,,,,,,,,
+,,DSCXL132,"Xóa bản ghi có Status ""Từ chối"" thành công","Xóa bản ghi có Status ""Từ chối"" thành công","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi Bán, trạng thái Từ chối",,,Medium,,,,,"1. Hover vào 1 record có trạng thái ""Từ chối"" của MTT bán ở Grid
+2. Click button [Xóa]
+3. Click button [Xác nhận]","4. Xoá thành công. Hiển thị toast message ""Xóa thành công""
+- Bản ghi có trạng thái ""Từ chối"" -> Chuyển thành trạng thái “Đã xóa”
+- Reload lại data và bàn ghi không hiển thị ở Danh sách chờ xử lý,",,,,,,,,,,
+,,DSCXL133,"Xóa bản ghi có Status ""Hiệu lực"" thành công","Xóa bản ghi có Status ""Hiệu lực"" thành công","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi Bán, trạng thái Hiệu lực",,,High,,,,,"1. Hover vào 1 record có trạng thái ""Hiệu lực"" của MTT bán ở Grid
+2. Click button [Xóa]
+3. Click button [Xác nhận]","4. Xoá thành công. Hiển thị toast message ""Đẩy duyệt xóa thành công""
+- Bản ghi có trạng thái ""Hiệu lực"" -> Chuyển thành trạng thái “Chờ duyệt xóa”
+- Reload lại data và bàn ghi không hiển thị ở Danh sách chờ xử lý
+- Check BD: update status=delete ở  IBANKFX.FX_TXN_AGREEMENTS",,,,,,,,,,
+,,DSCXL134,"Xóa bản ghi có Status ""Đang soạn"" thành công","Xóa bản ghi có Status ""Đang soạn"" thành công","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi Mua, trạng thái Đang soạn",,,High,,,,,"1. Hover vào 1 record có trạng thái ""Đang soạn"" của MTT mua ở Grid
+2. Click button [Xóa]
+3. Click button [Xác nhận]","4. Xoá thành công. Hiển thị toast message ""Xóa thành công""
+- Bản ghi có trạng thái ""Đang soạn"" -> Chuyển thành trạng thái “Đã xóa”
+- Reload lại data và bàn ghi không hiển thị ở Danh sách chờ xử lý",,,,,,,,,,
+,,DSCXL135,"Xóa bản ghi có Status ""Từ chối"" thành công","Xóa bản ghi có Status ""Từ chối"" thành công","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi Mua, trạng thái Từ chối",,,High,,,,,"1. Hover vào 1 record có trạng thái ""Từ chối"" của MTT mua ở Grid
+2. Click button [Xóa]
+3. Click button [Xác nhận]","4. Xoá thành công. Hiển thị toast message ""Xóa thành công""
+- Bản ghi có trạng thái ""Từ chối"" -> Chuyển thành trạng thái “Đã xóa”
+- Reload lại data và bàn ghi không hiển thị ở Danh sách chờ xử lý
+- Check BD: update status=delete ở  IBANKFX.FX_TXN_AGREEMENTS",,,,,,,,,,
+,,DSCXL136,"Xóa bản ghi có Status ""Hiệu lực"" thành công","Xóa bản ghi có Status ""Hiệu lực"" thành công","Đ/k: Vào màn hình:
+1. Người dùng đăng nhập thành công BO iBank2.0 với account 28980/ Test@147258
+2. Người dùng NH được phân quyền: CB_QLKH
+3. User chọn Giao dịch > Thỏa thuận giao dịch > MBNT chờ xử lý
+4. Tồn tại bản ghi Mua, trạng thái Hiệu lực",,,High,,,,,"1. Hover vào 1 record có trạng thái ""Hiệu lực"" của MTT mua ở Grid
+2. Click button [Xóa]
+3. Click button [Xác nhận]","4. Xoá thành công. Hiển thị toast message ""Đẩy duyệt xóa thành công""
+- Bản ghi có trạng thái ""Hiệu lực"" -> Chuyển thành trạng thái “Chờ duyệt xóa”
+- Reload lại data và bàn ghi không hiển thị ở Danh sách chờ xử lý
+- Check BD: update status=delete ở  IBANKFX.FX_TXN_AGREEMENTS",,,,,,,,,,

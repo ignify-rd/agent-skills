@@ -1,0 +1,879 @@
+﻿Test Suite,,Test Case,,,,,,,,Attachments,Custom Fields,,Steps,,,Coverage,,Time Management,Result,Note,,,,MÃ
+Name,Details,External ID,Name,Summary,PreConditions,Status,ExecutionType,Importance,Keywords,Number of Attachments,,,Step,Expected Result,StepExecType,Spec Title,Document ID,Estimated exec. Duration,,,,,
+Kiểm tra validate,,,,,,,,,,,,,,,,,,,,,,,,
+Body,,,,,,,,,,,,,,,,,,,,,,,,
+Trường toDate,,,,,,,,,,,,,,,,,,,,,,,,
+,,NN1,"Kiểm tra trường hợp nhập ""toDate"" đúng format yyyy-MM-dd và là ngày hiện tại","Kiểm tra trường hợp nhập ""toDate"" đúng format yyyy-MM-dd và là ngày hiện tại","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,High,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-14"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""67ea50ccbac4178cde8c7fc6917e1363"",
+    ""data"": {
+        ""transactionType"": ""SPOT""
+    }
+}",,,,,,,,,,
+,,NN2,"Kiểm tra trường hợp nhập ""toDate"" sai format dd-MM-yyyy","Kiểm tra trường hợp nhập ""toDate"" sai format dd-MM-yyyy","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""07/05/2025"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String \""07/05/2025\"": Failed to deserialize java.time.LocalDate: (java.time.format.DateTimeParseException) Text '07/05/2025' could not be parsed at index 0"",
+    ""errors"": null,
+    ""traceId"": ""681afd36c99d9f5870db78be5802866c"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN3,"Kiểm tra trường hợp nhập ""toDate"" sai format yyyy/MM/dd","Kiểm tra trường hợp nhập ""toDate"" sai format yyyy/MM/dd","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025/05/07"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String \""2025/03/31\"": Failed to deserialize java.time.LocalDate: (java.time.format.DateTimeParseException) Text '2025/03/31' could not be parsed at index 4"",
+    ""errors"": null,
+    ""traceId"": ""67ea43659e09324bb353f66f9bd17858"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN4,"Kiểm tra trường hợp nhập ""toDate"" sai format yyyy-MM","Kiểm tra trường hợp nhập ""toDate"" sai format yyyy-MM","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-03"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String \""2025-03\"": Failed to deserialize java.time.LocalDate: (java.time.format.DateTimeParseException) Text '2025-03' could not be parsed at index 7"",
+    ""errors"": null,
+    ""traceId"": ""67ea537f1cb48d9e8955d70fc2f034bf"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN5,"Kiểm tra trường hợp nhập ""toDate"" sai format yyyy","Kiểm tra trường hợp nhập ""toDate"" sai format yyyy","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String \""2025\"": Failed to deserialize java.time.LocalDate: (java.time.format.DateTimeParseException) Text '2025' could not be parsed at index 4"",
+    ""errors"": null,
+    ""traceId"": ""67ea544a4c8759548bc90941ee0320ec"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN6,"Kiểm tra trường hợp nhập ""toDate"" đúng format nhưng ngày không tồn tại","Kiểm tra trường hợp nhập ""toDate"" đúng format nhưng ngày không tồn tại","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-04-32"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String \""2025-04-32\"": Failed to deserialize java.time.LocalDate: (java.time.format.DateTimeParseException) Text '2025-04-32' could not be parsed: Invalid value for DayOfMonth (valid values 1 - 28/31): 32"",
+    ""errors"": null,
+    ""traceId"": ""67ea5917a744ebd1110d30cad1e4fc96"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN7,"Kiểm tra trường hợp bỏ trống không nhập ""toDate""","Kiểm tra trường hợp bỏ trống không nhập ""toDate""","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": """",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""BAD_REQUEST"",
+    ""errors"": [
+        {
+            ""errorCode"": ""toDate"",
+            ""errorDesc"": ""must not be null"",
+            ""refVal"": null
+        }
+    ],
+    ""traceId"": ""67ea5882f26addac8d1126c283c02735"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN8,"Kiểm tra trường hợp nhập ""toDate"" là ngày quá khứ","Kiểm tra trường hợp nhập ""toDate"" là ngày quá khứ","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2024-03-15"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""BAD_REQUEST"",
+    ""errors"": [
+        {
+            ""errorCode"": ""toDate"",
+            ""errorDesc"": ""must be a date in the present or in the future"",
+            ""refVal"": null
+        }
+    ],
+    ""traceId"": ""67ea5e3e7d65e6bc9b3cb6cd26665bc7"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN9,"Kiểm tra trường hợp nhập ""toDate"" là ngày hiện tại (T)","Kiểm tra trường hợp nhập ""toDate"" là ngày hiện tại (T)","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-14"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""67ea6c5aedf5cddf4702a8c898422a6d"",
+    ""data"": {
+        ""transactionType"": ""SPOT""
+    }
+}
+SELECT * FROM PAR_PRODUCT_DAYOFF WHERE DAYOFF = ""2025-05-14"" AND STATUS= “Active” AND PRODUCT_CODE= 'F-MBNT’ AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF');",,,,,,,,,,
+,,NN10,"Kiểm tra trường hợp nhập ""toDate"" là ngày T+ 1( Trong đó T là ngày hiện tại)","Kiểm tra trường hợp nhập ""toDate"" là ngày T+ 1( Trong đó T là ngày hiện tại)","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-15"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""67ea6dfa76bb0d833948e211cb1d10c0"",
+    ""data"": {
+        ""transactionType"": ""SPOT""
+    }
+}
+SELECT * FROM PAR_PRODUCT_DAYOFF WHERE DAYOFF = ""2025-05-15"" AND STATUS= “Active” AND PRODUCT_CODE= 'F-MBNT’ AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF');",,,,,,,,,,
+,,NN11,"Kiểm tra trường hợp nhập ""toDate"" là ngày T+ 2( Trong đó T là ngày hiện tại)","Kiểm tra trường hợp nhập ""toDate"" là ngày T+ 2( Trong đó T là ngày hiện tại)","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-16"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""67ea6ea5d34db53be8737f56118394f9"",
+    ""data"": {
+        ""transactionType"": ""SPOT""
+    }
+}
+SELECT * FROM PAR_PRODUCT_DAYOFF WHERE DAYOFF = ""2025-05-16"" AND STATUS= “Active” AND PRODUCT_CODE= 'F-MBNT’ AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF');",,,,,,,,,,
+,,NN12,"Kiểm tra trường hợp nhập ""toDate"" là ngày tương lai >T+2 (T là ngày hiện tại)","Kiểm tra trường hợp nhập ""toDate"" là ngày tương lai >T+2 (T là ngày hiện tại)","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-20"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""67ea633defe578a7740e909808304646"",
+    ""data"": {
+        ""transactionType"": ""FORWARD""
+    }
+}
+2. Kiểm tra DB: 
+SELECT * FROM PAR_PRODUCT_DAYOFF WHERE DAYOFF = ""2025-05-20"" AND STATUS= “Active” AND PRODUCT_CODE= 'F-MBNT’ AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF');
+=> không tồn tại bản ghi ngày nghỉ là 2025-05-20 có status=Active",,,,,,,,,,
+,,NN13,"Kiểm tra trường hợp nhập ""toDate"" là ngày tương lai trùng với ngày nghỉ","Kiểm tra trường hợp nhập ""toDate"" là ngày tương lai trùng với ngày nghỉ","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-28"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 2,
+    ""code"": ""FX_BO_002"",
+    ""message"": ""Ngày thanh toán trùng với ngày nghỉ không được phép giao dịch"",
+    ""errors"": null,
+    ""traceId"": ""67ea71cc287ed44a7e380f9678d7c51e"",
+    ""data"": null
+}
+2. Kiểm tra DB: 
+  SELECT * FROM PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-05-28', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT', 'F-MBNT-BA') AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF')
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-05-28 có status=Active",,,,,,,,,,
+,,NN14,"Kiểm tra trường hợp nhập ""transType"" = BUY","Kiểm tra trường hợp nhập ""transType"" = BUY","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)
+Đ/k 2: Mặc định trường ""toDate"" nhập vào hợp lệ",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-15"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""67ea76808f87b3f65800a53e0a5d3f7f"",
+    ""data"": {
+        ""transactionType"": ""SPOT""
+    }
+}",,,,,,,,,,
+,,NN15,"Kiểm tra trường hợp nhập ""transType"" = SELL","Kiểm tra trường hợp nhập ""transType"" = SELL","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)
+Đ/k 3: Mặc định trường ""toDate"" nhập vào hợp lệ",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-07"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""67ea760fffc110cb7b5a1295cc97b0bb"",
+    ""data"": {
+        ""transactionType"": ""SPOT""
+    }
+}",,,,,,,,,,
+,,NN16,"Kiểm tra trường hợp nhập ""transType"" = buy","Kiểm tra trường hợp nhập ""transType"" = buy","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)
+Đ/k 3: Mặc định trường ""toDate"" nhập vào hợp lệ",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-07"",
+    ""transType"": ""buy""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `com.bidv.ibank.fx.model.entity.enums.FxTransactionAgreementType` from String \""buy\"": not one of the values accepted for Enum class: [SELL, BUY]"",
+    ""errors"": null,
+    ""traceId"": ""681b0814f3b56c917015b19e84a3a8cc"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN17,"Kiểm tra trường hợp nhập ""transType""= sell","Kiểm tra trường hợp nhập ""transType""= sell","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)
+Đ/k 2: Mặc định trường ""toDate"" nhập vào hợp lệ",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-07"",
+    ""transType"": ""sell""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `com.bidv.ibank.fx.model.entity.enums.FxTransactionAgreementType` from String \""buy\"": not one of the values accepted for Enum class: [SELL, BUY]"",
+    ""errors"": null,
+    ""traceId"": ""681b0814f3b56c917015b19e84a3a8cc"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN18,"Kiểm tra trường hợp nhập ""transType"" không tồn tại","Kiểm tra trường hợp nhập ""transType"" không tồn tại","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)
+Đ/k 2: Mặc định trường ""toDate"" nhập vào hợp lệ",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-07"",
+    ""transType"": ""FMBNT""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `com.bidv.ibank.fx.model.entity.enums.FxTransactionAgreementType` from String \""buy\"": not one of the values accepted for Enum class: [SELL, BUY]"",
+    ""errors"": null,
+    ""traceId"": ""681b0814f3b56c917015b19e84a3a8cc"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN19,"Kiểm tra trường hợp không nhập ""transType""","Kiểm tra trường hợp không nhập ""transType""","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)
+Đ/k 2: Mặc định trường ""toDate"" nhập vào hợp lệ",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-07"",
+    ""transType"": """"
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot coerce empty String (\""\"") to `com.bidv.ibank.fx.model.entity.enums.FxTransactionAgreementType` value (but could if coercion was enabled using `CoercionConfig`)"",
+    ""errors"": null,
+    ""traceId"": ""681b08b2acd3ca3acda076362fa53ec1"",
+    ""data"": null
+}",,,,,,,,,,
+Kiểm tra Logic,,,,,,,,,,,,,,,,,,,,,,,,
+,,NN20,Kiểm tra thành công phản hồi mã hóa,Kiểm tra thành công phản hồi mã hóa,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+
+{
+    ""toDate"": ""2025-06-14"",
+    ""transType"": ""BUY""
+}
+
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+  {
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""traceId"": ""12345abcxyz"",
+    ""errors"": null,
+    ""data"": {
+        ""transactionType"": ""SPOT""
+    }
+} 
+2. Kiểm tra DB: 
+    SELECT * FROM CIMBACK.PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-06-14', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT', 'F-MBNT-MA') AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF')
+
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-06-14 có status=Active",,,,,,,,,,
+,,NN21,Kiểm tra hệ thống lỗi phản hồi mã hóa,Kiểm tra hệ thống lỗi phản hồi mã hóa,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Low,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025/03/28"",
+    ""productCode"": ""FMBN-T""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 400,
+    ""code"": ""400"",
+    ""message"": ""JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String \""2025/03/31\"": Failed to deserialize java.time.LocalDate: (java.time.format.DateTimeParseException) Text '2025/03/31' could not be parsed at index 4"",
+    ""errors"": null,
+    ""traceId"": ""67ea7cfe1a7c4c3e358ca689b5520612"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN22,Kiểm tra mã phản hồi có quyền truy cập,Kiểm tra mã phản hồi có quyền truy cập,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+ 2.3. user không có quyền truy cập API (29555/Test@147258 - Role KSV_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-15"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""6824468ccd2026d6984ee95fd83f0d55"",
+    ""data"": {
+        ""transactionType"": ""FORWARD""
+    }
+}",,,,,,,,,,
+,,NN23,Kiểm tra mã phản hồi không có quyền truy cập,Kiểm tra mã phản hồi không có quyền truy cập,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+ 2.3. user không có quyền truy cập API (152565/Test@147258 - Role GDV_KDVTT)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-15"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 403
+1.2.Response:
+Response:
+{
+    ""status"": 403,
+    ""code"": ""403"",
+    ""message"": ""Access Denied"",
+    ""errors"": null,
+    ""traceId"": ""682444ced689132e0bcda58f20a9df12"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN24,Kiểm tra mã phản hồi không có quyền truy cập,Kiểm tra mã phản hồi không có quyền truy cập,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+ 2.3. user không có quyền truy cập API (150011/Test@147258 - Role KSV_KDVTT)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-15"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 403
+1.2.Response:
+Response:
+{
+    ""status"": 403,
+    ""code"": ""403"",
+    ""message"": ""Access Denied"",
+    ""errors"": null,
+    ""traceId"": ""6824455b063288c5544789c4a1497890"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN25,Kiểm tra mã phản hồi không có quyền truy cập,Kiểm tra mã phản hồi không có quyền truy cập,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+ 2.3. user không có quyền truy cập API (151413/Test@147258 - Role INQUIRY)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-15"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 403
+1.2.Response:
+Response:
+{
+    ""status"": 403,
+    ""code"": ""403"",
+    ""message"": ""Access Denied"",
+    ""errors"": null,
+    ""traceId"": ""682445b2f2bb52fb5b55bc1a7c5c5ef8"",
+    ""data"": null
+}",,,,,,,,,,
+,,NN26,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT' , status = Active, có type = PRODUCT_DAYOFF và truyền transType = SELL","Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT' , status = Active, có type = PRODUCT_DAYOFF và truyền transType = SELL","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-15"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 2,
+    ""code"": ""FX_BO_002"",
+    ""message"": ""Ngày thanh toán trùng với ngày nghỉ không được phép giao dịch"",
+    ""traceId"": ""685bbdc8bc803f36882a74f609f955bc"",
+    ""data"": null
+}
+2. Kiểm tra DB: 
+   SELECT * FROM PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-05-15', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT') AND TYPE IN ( 'PRODUCT_DAYOFF')
+
+
+
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-05-15 có status=Active",,,,,,,,,,
+,,NN27,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-BA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = SELL","Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-BA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = SELL","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-29"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 2,
+    ""code"": ""FX_BO_002"",
+    ""message"": ""Ngày thanh toán trùng với ngày nghỉ không được phép giao dịch"",
+    ""errors"": null,
+    ""traceId"": ""681b0f5798a86b62ddeae2a43aa7e23a"",
+    ""data"": null
+}
+2. Kiểm tra DB: 
+   SELECT * FROM PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-05-29', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ( 'F-MBNT-BA') AND TYPE IN ( 'PRODUCT_DAYOFF')
+
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-05-29 có status=Active",,,,,,,,,,
+,,NN28,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-MA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = SELL","Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-MA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = SELL","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-12"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""681b17736c91ad4979a366703520f0d3"",
+    ""data"": {
+        ""transactionType"": ""FORWARD""
+    }
+}
+2. Kiểm tra DB: 
+       SELECT * FROM CIMBACK.PAR_PRODUCT_DAYOFF WHERE 
+    TRUNC(DAYOFF) = TO_DATE('2025-06-12', 'YYYY-MM-DD') 
+    AND STATUS = 'ACTIVE' 
+    AND product_code IN ('F-MBNT-MA') AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF')
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-06-12 có status=Active nhưng không trả về khi truyền transType = SELL",,,,,,,,,,
+,,NN29,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT' , status = Active, có type = PRODUCT_DAYOFF và truyền transType = BUY","Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT' , status = Active, có type = PRODUCT_DAYOFF và truyền transType = BUY","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-15"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 2,
+    ""code"": ""FX_BO_002"",
+    ""message"": ""Ngày thanh toán trùng với ngày nghỉ không được phép giao dịch"",
+    ""errors"": null,
+    ""traceId"": ""681b0f5798a86b62ddeae2a43aa7e23a"",
+    ""data"": null
+}
+2. Kiểm tra DB: 
+   SELECT * FROM PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-05-15', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT') AND TYPE IN ( 'PRODUCT_DAYOFF')
+
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-05-15 có status=Active",,,,,,,,,,
+,,NN30,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-BA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = BUY","Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-BA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = BUY","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-05-29"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""681b18421b5eb76d7a424838a20d4a00"",
+    ""data"": {
+        ""transactionType"": ""FORWARD""
+    }
+}
+2. Kiểm tra DB: 
+    SELECT * FROM CIMBACK.PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-05-29', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT', 'F-MBNT-MA') AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF')
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-05-29 có status=Active nhưng không check ngày nghỉ khi truyền lên transType là BUY",,,,,,,,,,
+,,NN31,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-MA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = BUY","Kiểm tra trường hợp toDate trùng với ngày nghỉ có product_code = 'F-MBNT-MA'  status = Active, có type = PRODUCT_DAYOFF và truyền transType = BUY","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-12"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 2,
+    ""code"": ""FX_BO_002"",
+    ""message"": ""Ngày thanh toán trùng với ngày nghỉ không được phép giao dịch"",
+    ""errors"": null,
+    ""traceId"": ""681b0f5798a86b62ddeae2a43aa7e23a"",
+    ""data"": null
+}
+2. Kiểm tra DB: 
+    SELECT * FROM CIMBACK.PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-06-12', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT', 'F-MBNT-MA') AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF')
+
+=> Tồn tại bản ghi ngày nghỉ là 2025-06-12 có status=Active",,,,,,,,,,
+,,NN32,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có status = Active, type = SYSTEM_DAYOFF và truyền transType = BUY","Kiểm tra trường hợp toDate trùng với ngày nghỉ có status = Active, type = SYSTEM_DAYOFF và truyền transType = BUY","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-09-03"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 400
+1.2.Response:
+{
+    ""status"": 2,
+    ""code"": ""FX_BO_002"",
+    ""message"": ""Ngày thanh toán trùng với ngày nghỉ không được phép giao dịch"",
+    ""errors"": null,
+    ""traceId"": ""682459d90169e5b144054616939a505a"",
+    ""data"": null
+}
+2. Kiểm tra DB: 
+     SELECT * FROM CIMBACK.PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-09-03', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT', 'F-MBNT-MA') AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF')
+
+=> Tồn tại bản ghi",,,,,,,,,,
+,,NN33,"Kiểm tra trường hợp toDate trùng với ngày nghỉ có status = Active, type = SYSTEM_DAYOFF và truyền transType = SELL","Kiểm tra trường hợp toDate trùng với ngày nghỉ có status = Active, type = SYSTEM_DAYOFF và truyền transType = SELL","Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-09-03"",
+    ""transType"": ""SELL""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 2,
+    ""code"": ""FX_BO_002"",
+    ""message"": ""Ngày thanh toán trùng với ngày nghỉ không được phép giao dịch"",
+    ""errors"": null,
+    ""traceId"": ""682459d90169e5b144054616939a505a"",
+    ""data"": null
+}
+2. Kiểm tra DB: 
+     SELECT * FROM CIMBACK.PAR_PRODUCT_DAYOFF WHERE TRUNC(DAYOFF) = TO_DATE('2025-09-03', 'YYYY-MM-DD') AND STATUS = 'ACTIVE' AND product_code IN ('F-MBNT', 'F-MBNT-MA') AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF')
+
+=> Tồn tại bản ghi",,,,,,,,,,
+,,NN34,Kiểm tra trường hợp ngày thanh toán là ngày nghỉ có status=Inactive,Kiểm tra trường hợp ngày thanh toán là ngày nghỉ có status=Inactive,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-06-21"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 200
+1.2.Response:
+{
+    ""status"": 0,
+    ""code"": ""0"",
+    ""message"": ""SUCCESS"",
+    ""errors"": null,
+    ""traceId"": ""68245b80ddb57c839abbed03222361fd"",
+    ""data"": {
+        ""transactionType"": ""FORWARD""
+    }
+}
+2. Kiểm tra DB 
+SELECT * FROM CIMBACK.PAR_PRODUCT_DAYOFF WHERE STATUS = 'INACTIVE' AND TYPE IN ( 'PRODUCT_DAYOFF','SYSTEM_DAYOFF') AND TRUNC(DAYOFF) = TO_DATE('2025-06-21', 'YYYY-MM-DD') => tồn tại bản ghi",,,,,,,,,,
+,,NN35,Check timeout,Check timeout,"Đ/k 1: 
+  2.1.Header: type=1
+  2.2. Token : {token} lấy từ response api authen ở case ( trỏ đến link đường dẫn api)
+  2.3. user có quyền truy cập API (28980/Test@147258 - Role CB_QLKH)",,,Medium,,,,,"1. Nhập các tham số 
+1.1. Authorization: {Token}
+1.2. Method : POST
+1.3. Param: 
+{
+    ""toDate"": ""2025-08-11"",
+    ""transType"": ""BUY""
+}
+2. Nhấn send-->  Kiểm tra kết quả","1. Check api trả về:
+1.1.Status: 504 Gatewway Time-out
+1.2.Response:
+<html>
+
+<body>
+    <h1>504 Gateway Time-out</h1>
+    The server didn't respond in time.
+</body>
+
+</html>",,,,,,,,,,

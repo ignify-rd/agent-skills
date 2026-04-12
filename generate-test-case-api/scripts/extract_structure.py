@@ -9,8 +9,8 @@ No Google API required — runs entirely offline.
 
 Usage:
   python extract_structure.py
-  python extract_structure.py --template excel_template/template.xlsx
-  python extract_structure.py --output excel_template/structure.json
+  python extract_structure.py --template excel_template/api/template.xlsx
+  python extract_structure.py --output excel_template/api/structure.json
   python extract_structure.py --project-root /path/to/project
 
 Output (excel_template/structure.json):
@@ -108,6 +108,11 @@ LABEL_TO_KEY = {
     'expected result\n(kết quả mong muốn)': 'expectedResults',
     'priority':                     'priority',
     'bugid':                        'bugId',
+    # BIDV iBank2.0 format
+    'id':                           'externalId',
+    'name testcase':                'testCaseName',
+    'name testcase ':               'testCaseName',
+    'mã lỗi':                       'bugId',
 }
 
 GROUP_HEADER_LABELS = {
@@ -189,7 +194,13 @@ def build_column_mapping(row_values):
 
         if label == 'name':
             name_count += 1
-            key = 'testSuiteName' if name_count == 1 else 'testCaseName'
+            # If externalId is already mapped at a lower column, this 'Name' is
+            # the test case name (BIDV frontend format: External ID | Name | ...)
+            ext_id_col = mapping.get('externalId')
+            if name_count == 1 and (ext_id_col is None or col_idx < ext_id_col):
+                key = 'testSuiteName'
+            else:
+                key = 'testCaseName'
             if key not in mapping:
                 mapping[key] = col_idx
             continue
@@ -490,16 +501,16 @@ def main():
     parser = argparse.ArgumentParser(
         description='Extract template structure from a local .xlsx file to structure.json'
     )
-    parser.add_argument('--template', help='Path to .xlsx template file (default: excel_template/template.xlsx)')
-    parser.add_argument('--output', help='Output path for structure.json (default: excel_template/structure.json)')
+    parser.add_argument('--template', help='Path to .xlsx template file (default: excel_template/api/template.xlsx)')
+    parser.add_argument('--output', help='Output path for structure.json (default: excel_template/api/structure.json)')
     parser.add_argument('--sheet', help='Sheet index (1, 2, 3...) or sheet name (auto-detected if omitted)')
     parser.add_argument('--project-root', help='Explicit project root path (auto-detected if omitted)')
     args = parser.parse_args()
 
     project_root = find_project_root(args.project_root)
 
-    template_path = args.template or str(project_root / 'excel_template' / 'template.xlsx')
-    output_path = args.output or str(project_root / 'excel_template' / 'structure.json')
+    template_path = args.template or str(project_root / 'excel_template' / 'api' / 'template.xlsx')
+    output_path = args.output or str(project_root / 'excel_template' / 'api' / 'structure.json')
 
     # Parse sheet hint: try int first, then string
     sheet_hint = None

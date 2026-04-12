@@ -607,7 +607,7 @@ def main():
         description='Upload test cases to Google Sheets with full formatting'
     )
     parser.add_argument('test_case_name', help='Test case folder name (contains test-cases.json)')
-    parser.add_argument('--structure', help='Path to structure.json (default: excel_template/structure.json)')
+    parser.add_argument('--structure', help='Path to structure.json (default: excel_template/api/structure.json)')
     parser.add_argument('--data', help='Path to test-cases.json (default: <test-case-name>/test-cases.json)')
     parser.add_argument('--credentials', help='Path to credentials.json')
     parser.add_argument('--project-root', help='Explicit project root path')
@@ -619,7 +619,7 @@ def main():
     project_root = find_project_root(args.project_root)
 
     # Resolve paths
-    structure_path = args.structure or str(project_root / 'excel_template' / 'structure.json')
+    structure_path = args.structure or str(project_root / 'excel_template' / 'api' / 'structure.json')
     data_path = args.data or str(project_root / args.test_case_name / 'test-cases.json')
     credentials_path = find_credentials(args.credentials or str(project_root / 'credentials.json'))
 
