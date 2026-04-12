@@ -119,7 +119,12 @@ def find_credentials(provided_path=None):
 
 
 def _load_token(credentials_path):
-    """Load cached token and attach client_id/client_secret from credentials.json."""
+    """Load cached token.
+
+    client_id/client_secret are taken from token.json itself (saved at auth time).
+    Falls back to credentials.json only when token.json lacks them (legacy tokens).
+    This prevents mismatch when credentials.json changes (e.g. bundled fallback).
+    """
     if not TOKEN_PATH.exists():
         return None
 
@@ -132,16 +137,22 @@ def _load_token(credentials_path):
     if not refresh_token:
         return None
 
-    # Read client_id and client_secret from credentials.json
-    try:
-        with open(credentials_path, 'r', encoding='utf-8') as f:
-            cred_data = json.load(f)
-        installed = cred_data.get('installed', cred_data.get('web', {}))
-        client_id = installed.get('client_id')
-        client_secret = installed.get('client_secret')
-        token_uri = installed.get('token_uri', 'https://oauth2.googleapis.com/token')
-    except (json.JSONDecodeError, OSError, KeyError):
-        return None
+    # Prefer client_id/secret stored in the token itself (set at save time)
+    client_id = token_data.get('client_id')
+    client_secret = token_data.get('client_secret')
+    token_uri = token_data.get('token_uri', 'https://oauth2.googleapis.com/token')
+
+    # Fallback: read from credentials.json (legacy tokens that lack these fields)
+    if not client_id or not client_secret:
+        try:
+            with open(credentials_path, 'r', encoding='utf-8') as f:
+                cred_data = json.load(f)
+            installed = cred_data.get('installed', cred_data.get('web', {}))
+            client_id = client_id or installed.get('client_id')
+            client_secret = client_secret or installed.get('client_secret')
+            token_uri = token_uri or installed.get('token_uri', 'https://oauth2.googleapis.com/token')
+        except (json.JSONDecodeError, OSError, KeyError):
+            return None
 
     if not client_id or not client_secret:
         return None
@@ -171,12 +182,38 @@ def _save_token(creds):
     TOKEN_PATH.write_text(json.dumps(token_data, indent=2), encoding='utf-8')
 
 
+def _is_headless():
+    """Detect if running in a headless environment (no display/browser available).
+
+    Returns True if:
+    - GOOGLE_AUTH_HEADLESS=1 env var is set (force headless)
+    - On Linux/macOS with no DISPLAY env var
+    - DISPLAY is empty string
+    """
+    if os.environ.get('GOOGLE_AUTH_HEADLESS', '').strip() == '1':
+        return True
+    if sys.platform == 'win32':
+        return False
+    # Linux/macOS: check for DISPLAY (X11) or WAYLAND_DISPLAY
+    has_display = bool(os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'))
+    return not has_display
+
+
 def get_credentials(credentials_path):
     """Get valid OAuth credentials, refreshing or running auth flow as needed.
 
     1. Try loading cached token from ~/.config/test-genie/token.json
     2. If expired, refresh using refresh_token
-    3. If no token or refresh fails, run InstalledAppFlow (opens browser)
+    3. If no token or refresh fails, run InstalledAppFlow:
+       - With browser: run_local_server (opens browser automatically)
+       - Headless (no DISPLAY or GOOGLE_AUTH_HEADLESS=1): run_console (prints URL,
+         user opens it on any device, pastes back the auth code)
+
+    To force headless mode (e.g. SSH session on Ubuntu):
+        export GOOGLE_AUTH_HEADLESS=1
+
+    To reuse a token obtained on another machine, copy token.json to:
+        ~/.config/test-genie/token.json
 
     Args:
         credentials_path: Path to credentials.json (OAuth Desktop App type)
@@ -203,13 +240,24 @@ def get_credentials(credentials_path):
         print(json.dumps({
             "error": "First-time authentication requires google_auth_oauthlib. "
                      "Run: pip install google-auth-oauthlib"
-        }))
+        }), file=sys.stderr)
         sys.exit(1)
 
     flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
-    creds = flow.run_local_server(port=0, open_browser=True)
-    _save_token(creds)
 
+    if _is_headless():
+        # Headless mode: print auth URL, user opens it on any device and pastes code back
+        print(
+            "\n[Google Auth] Headless environment detected (no browser).\n"
+            "To authenticate, open the URL below on any device (phone, Windows, etc.),\n"
+            "complete the Google sign-in, then paste the authorization code here.\n",
+            file=sys.stderr
+        )
+        creds = flow.run_console()
+    else:
+        creds = flow.run_local_server(port=0, open_browser=True)
+
+    _save_token(creds)
     return creds
 
 
