@@ -28,6 +28,12 @@ model: inherit
         <correct>testSuiteName: "Kiểm tra trường slaName"  ← preserve from merged file</correct>
         <wrong>testSuiteName: "Kiểm tra Validate"          ← NEVER replace per-field names with parent heading</wrong>
     </rule>
+
+    <hard_stop id="skip_rerun_normalize">
+        <condition>If agent writes final output (Step 6) WITHOUT first running Step 4b</condition>
+        <consequence>VIOLATION: gap-fill cases will be placed at end of file instead of correct test-design order</consequence>
+        <recovery>MUST run Step 4b (re-normalize) BEFORE Step 5 and Step 6.</recovery>
+    </hard_stop>
 </guardrails>
 
 ---
@@ -57,7 +63,8 @@ model: inherit
             <script>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py \
   --test-design {TEST_DESIGN_FILE} \
   --test-cases {OUTPUT_DIR}/test-cases-merged.json \
-  --inventory {INVENTORY_FILE}</script>
+  --inventory {INVENTORY_FILE} \
+  --tc-context {TC_CONTEXT_FILE}</script>
         </action>
     </actions>
     <note>This script deterministically maps each test case to its correct ## section heading.
@@ -150,6 +157,20 @@ Gap Analysis:
     </gap_case_fields>
 </step>
 
+<step id="4b" name="Re-normalize after gap-fill (CRITICAL)">
+    <description>Re-run normalize_suites.py after gap-fill to correctly position new cases and maintain test-design order. KHÔNG BỎ QUA BƯỚC NÀY.</description>
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/normalize_suites.py \
+  --test-design {TEST_DESIGN_FILE} \
+  --test-cases {OUTPUT_DIR}/test-cases-merged.json \
+  --inventory {INVENTORY_FILE} \
+  --tc-context {TC_CONTEXT_FILE}</script>
+        </action>
+    </actions>
+    <note>Script overwrites test-cases-merged.json with correct ordering. Gap-fill cases will be placed at their correct positions from test-design rather than at the end.</note>
+</step>
+
 <step id="5" name="Apply project rules">
     <description>Apply all rules from PROJECT_RULES context</description>
     <actions>
@@ -187,6 +208,18 @@ Gap Analysis:
    Final total: {total}
 ```
     </completion_message>
+</step>
+
+<step id="6b" name="Assign sequential IDs">
+    <description>Run assign_lv_ids.py to assign sequential testcaseIds and recompute summary field.</description>
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/assign_lv_ids.py \
+  --file {OUTPUT_FILE} \
+  --test-design {TEST_DESIGN_FILE}</script>
+        </action>
+    </actions>
+    <note>If script fails → warn and CONTINUE (do not stop the flow)</note>
 </step>
 
 ---

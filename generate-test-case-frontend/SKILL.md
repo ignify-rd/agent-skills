@@ -208,7 +208,6 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                 <param name="SKILL_SCRIPTS">{SKILL_SCRIPTS}</param>
                 <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
-                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
@@ -263,7 +262,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 
     <batch_strategy>
         <rule>Extract screenType from summary (LIST | FORM | POPUP | DETAIL)</rule>
-        <rule>Group fields into batches of max 2 fields each: Batch 1: [F1, F2], Batch 2: [F3, F4], ... (⚠️ tối đa 2 fields/batch — KHÔNG dùng 3 để tránh mất cases ở field cuối)</rule>
+        <rule>Group fields into batches of max 3 fields each: Batch 1: [F1, F2, F3], Batch 2: [F4, F5, F6], ... (⚠️ tối đa 3 fields/batch)</rule>
         <rule>Detect FIELD_TYPES_NEEDED per batch: extract "type" values from fieldConstraints for each field in batch — used as FIELD_TYPES_NEEDED for tc-validate (comma-separated, e.g. "textbox,combobox")</rule>
         <rule>If fieldConstraints returns 0 items: skip Step 5b, proceed to Step 5c</rule>
     </batch_strategy>
@@ -461,7 +460,7 @@ else:
 
     <actions>
         <action type="bash">
-            <script>python $SKILL_SCRIPTS/upload_gsheet.py {OUTPUT_DIR_NAME} --project-root {PROJECT_ROOT}</script>
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/upload_gsheet.py {OUTPUT_DIR_NAME} --project-root {PROJECT_ROOT}</script>
             <note>
                 {OUTPUT_DIR_NAME} = tên thư mục chứa test-cases.json (ví dụ: "feature-1").
                 {PROJECT_ROOT} = thư mục gốc của project (chứa AGENTS.md, catalog/).

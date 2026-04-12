@@ -466,8 +466,7 @@ print('READY')
         <pattern>tc-context.json</pattern>
         <pattern>batch-*.json</pattern>
         <pattern>validate-batch-*.json</pattern>
-        <pattern>validate-batch-fc-*.json</pattern>
-        <pattern>validate-cases-*.json</pattern>
+        <pattern>validate-cases.json</pattern>
         <pattern>validate-cases-fc-*.json</pattern>
         <pattern>test-cases-merged.json</pattern>
         <pattern>.tc-validate-done</pattern>
