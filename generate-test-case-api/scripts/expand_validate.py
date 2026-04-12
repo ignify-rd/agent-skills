@@ -336,6 +336,19 @@ def _build_param_override(field: str, case: str, value, fc: dict, file_content_b
     else:
         actual_value = _REMOVE
 
+    # Sanitize: agent sometimes writes values with descriptive labels in parentheses,
+    # e.g. "1 (Chờ duyệt)", "0 (min boundary)", "-0.01 (nhỏ hơn min = 0)".
+    # These should be the raw numeric value, not a string with a label.
+    # Strip the label and coerce to int/float.
+    if isinstance(actual_value, str) and actual_value not in (_REMOVE, "", "MISSING_VALUE"):
+        m = re.match(r'^(-?[\d.]+)\s*\(', actual_value)
+        if m:
+            num_str = m.group(1)
+            try:
+                actual_value = int(num_str) if '.' not in num_str else float(num_str)
+            except ValueError:
+                pass  # leave as string if conversion fails
+
     # Wrap under "fileContent" key for fileContent fields
     if is_file_content:
         return {"fileContent": {field: actual_value}}
@@ -532,6 +545,11 @@ def _build_test_suite_name(field: str, ctx: dict, display_name: str = "") -> str
             result = result.replace(placeholder, label)
         # Final cleanup: remove any leftover {…} tokens
         result = _re.sub(r'\{[^}]+\}', '', result).strip()
+        # Normalize: if convention yields "Trường X" (missing "Kiểm tra" prefix),
+        # correct to "Kiểm tra trường X" to match output-format.md rule.
+        # This happens when testSuiteNameConvention = "Trường {fieldName}" in tc-context.
+        if result.lower().startswith('trường ') and not result.lower().startswith('kiểm tra'):
+            result = 'Kiểm tra trường ' + result[len('Trường '):]
         return result
     return f"Kiểm tra trường {label}"
 

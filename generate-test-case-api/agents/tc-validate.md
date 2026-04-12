@@ -33,6 +33,53 @@ model: inherit
         <rule>EXACTLY match testCaseName</rule>
     </rule>
 
+    <rule type="hard_constraint">
+        <field>value (in lightweight cases JSON)</field>
+        <rule>MUST be the raw test value — NEVER include descriptive labels in parentheses.</rule>
+        <examples>
+            BAD:  {"field": "currentStatus", "case": "= 1 (Chờ duyệt)", "value": "1 (Chờ duyệt)"}
+            BAD:  {"field": "totalSlaHours",  "case": "= 0 (min boundary)", "value": "0 (min boundary)"}
+            BAD:  {"field": "warningYellowPct", "case": "= -0.01 (nhỏ hơn min)", "value": "-0.01 (nhỏ hơn min = 0)"}
+            GOOD: {"field": "currentStatus", "case": "= 1 (Chờ duyệt)", "value": 1}
+            GOOD: {"field": "totalSlaHours",  "case": "= 0 (min boundary)", "value": 0}
+            GOOD: {"field": "warningYellowPct", "case": "= -0.01 (nhỏ hơn min)", "value": -0.01}
+        </examples>
+        <note>The label in "case" is fine for readability. The "value" must be the actual JSON value (integer, float, boolean, string, array, object).</note>
+    </rule>
+
+    <rule type="hard_constraint">
+        <field>step value ↔ testCaseName consistency</field>
+        <rule>The concrete value written in the step description MUST match exactly the value stated in testCaseName. Never truncate, approximate, or use a different value.</rule>
+        <examples>
+            BAD:  testCaseName = "...= \"2026-05-01\"" but step says effectiveDate = "2026-04-13"
+            BAD:  step says effectiveDate = "2026-04..." (date truncated with "...")
+            GOOD: testCaseName has "2026-05-01" AND step says effectiveDate = "2026-05-01"
+        </examples>
+    </rule>
+
+    <rule type="hard_constraint">
+        <field>expectedResult for boundary success cases</field>
+        <rule>Cases that are VALID (below max, at max, min boundary, valid enum) MUST include explicit "expectedResult" in the lightweight JSON. Do NOT leave expectedResult blank or rely on the script to auto-generate for success cases.</rule>
+        <examples>
+            BAD (missing expectedResult for success case):
+              {"field": "slaName", "case": "Truyền 99 ký tự", "value": "AA...99"}
+              {"field": "slaName", "case": "Truyền 100 ký tự (maxlength)", "value": "AA...100"}
+
+            GOOD (explicit expectedResult for success cases):
+              {"field": "slaName", "case": "Truyền 99 ký tự", "value": "AA...99",
+               "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"}
+              {"field": "slaName", "case": "Truyền 100 ký tự (maxlength)", "value": "AA...100",
+               "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"}
+        </examples>
+        <applies_to>
+            - String fields: "N ký tự" (below max), "maxlength" (at max boundary)
+            - Numeric fields: "min boundary", "min+1", "max boundary", "max-1"
+            - Enum fields: valid enum values (e.g., currentStatus = 0, 3)
+            - Date fields: valid date values (today, future)
+            - Cross-field: valid combinations (expiredDate >= effectiveDate)
+        </applies_to>
+    </rule>
+
     <rule type="batch_completeness">
         <description>ALL fields in batch (up to 5) must have FULL cases — same as field 1. Do NOT abbreviate.</description>
         <condition>If agent thinks "already covered enough"</condition>
@@ -107,6 +154,10 @@ Use this approach when test cases follow standard validation patterns (null, emp
           {"field": "slaName", "case": "Không truyền"},
           {"field": "slaName", "case": "Truyền null", "value": null},
           {"field": "slaName", "case": "Truyền chuỗi rỗng", "value": ""},
+          {"field": "slaName", "case": "Truyền 99 ký tự (dưới max)", "value": "AAA...99chars",
+           "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"},
+          {"field": "slaName", "case": "Truyền 100 ký tự (maxlength)", "value": "AAA...100chars",
+           "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"},
           {"field": "slaName", "case": "Truyền 101 ký tự (vượt max)", "value": "AAA...101chars"},
           {"field": "slaName", "case": "Boolean thay vì string", "value": true},
           {"field": "slaVersionId", "case": "String thay vì number", "value": "abc"},
@@ -115,11 +166,38 @@ Use this approach when test cases follow standard validation patterns (null, emp
           {"field": "slaVersionId", "case": "Array thay vì number", "value": [373]},
           {"field": "slaVersionId", "case": "SQL Injection", "value": "' OR '1'='1"},
           {"field": "slaVersionId", "case": "XSS", "value": "<script>alert('XSS')</script>"},
+          {"field": "currentStatus", "case": "= 0 (Dự thảo) — valid enum", "value": 0,
+           "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"},
+          {"field": "currentStatus", "case": "= 1 (Chờ duyệt) — invalid state", "value": 1},
+          {"field": "totalSlaHours", "case": "= 0 (min boundary)", "value": 0,
+           "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"},
+          {"field": "totalSlaHours", "case": "= 99 (max boundary)", "value": 99,
+           "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"},
           {"field": "effectiveDate", "case": "Sai định dạng", "value": "2025/01/01"},
-          {"field": "effectiveDate", "case": "Ngày không tồn tại", "value": "30/02/2025"}
+          {"field": "effectiveDate", "case": "Ngày không tồn tại", "value": "30/02/2025"},
+          {"field": "effectiveDate", "case": "Ngày tương lai hợp lệ = \"2026-05-01\"", "value": "2026-05-01",
+           "expectedResult": "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {\n}"}
         ]
         ```
     </examples>
+
+    <value_rules>
+        ⚠️ CRITICAL: "value" must be the RAW test value — NEVER include labels in parentheses.
+        - BAD:  "value": "1 (Chờ duyệt)"      → GOOD: "value": 1
+        - BAD:  "value": "0 (min boundary)"   → GOOD: "value": 0
+        - BAD:  "value": "-0.01 (nhỏ hơn min)"→ GOOD: "value": -0.01
+        The label belongs in "case" (for testCaseName), NOT in "value".
+    </value_rules>
+
+    <success_case_rules>
+        Cases expected to SUCCEED must include explicit "expectedResult". The script cannot
+        auto-detect success cases from case descriptions alone. Add "expectedResult" for:
+        - String boundary: "N-1 ký tự" (below max), "N ký tự (maxlength)" (at max) → success
+        - Numeric boundary: "min boundary", "max boundary", "min+1", "max-1" → success
+        - Valid enum values that the API accepts
+        - Valid date values (today, future within range)
+        - Cross-field valid combinations (e.g., expiredDate >= effectiveDate)
+    </success_case_rules>
 
     <case_description_rules>
         - "Không truyền" → field absent from body
