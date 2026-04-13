@@ -188,23 +188,30 @@ Navigate to Postman web and log in using credentials from `auth.json`.
 mcp__playwright__browser_navigate(url="https://web.postman.co")
 ```
 
-If already logged in (user avatar visible) → skip login steps.
+Wait 3–5 seconds for redirect. If login page appears:
 
-If login form visible:
+```js
+// browser_run_code — fill and submit login form
+async (page) => {
+  await page.getByRole('textbox', { name: 'Email or username' }).fill('{postman_email}');
+  await page.getByRole('textbox', { name: 'Password' }).fill('{postman_password}');
+  await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.waitForURL('**postman.co/**', { timeout: 20000 });
+  return page.url();
+}
 ```
-mcp__playwright__browser_type(ref="email input", text="{postman_email}")
-mcp__playwright__browser_type(ref="password input", text="{postman_password}")
-mcp__playwright__browser_click(ref="Sign In button")
-mcp__playwright__browser_wait_for(selector="[data-testid='user-avatar']", timeout=15000)
-```
+
+Wait 4 more seconds for Postman workspace to finish loading.
 
 If `cookie_file` is provided in auth.json and file exists, inject cookies instead:
 ```js
 // browser_run_code
 async (page) => {
-  const cookies = JSON.parse(fs.readFileSync(cookiePath, 'utf8'));
+  const fs = require('fs');
+  const cookies = JSON.parse(fs.readFileSync('{cookiePath}', 'utf8'));
   await page.context().addCookies(cookies);
   await page.reload();
+  await page.waitForTimeout(3000);
 }
 ```
 
@@ -212,19 +219,47 @@ async (page) => {
 
 **5a — Navigate to collection by name:**
 
-Take a snapshot of the sidebar. Search for `{collection_name}` in the sidebar.
-Click on it to open.
+Use `browser_run_code` to find and click the collection in the sidebar:
+```js
+async (page) => {
+  const items = page.locator('[role="treeitem"]');
+  const count = await items.count();
+  for (let i = 0; i < count; i++) {
+    const text = await items.nth(i).textContent();
+    if (text?.includes('{collection_name}')) {
+      await items.nth(i).click();
+      await page.waitForTimeout(1500);
+      return 'found';
+    }
+  }
+  return 'not_found';
+}
+```
 
-If not found → stop and ask user:
+If `not_found` → stop and ask user:
 ```
 Collection "{collection_name}" not found in sidebar. Please verify the name in auth.json or open it manually.
 ```
 
 **5b — Activate environment:**
 
-Click the environment selector (top-right dropdown). Select `{environment_name}`.
+```js
+// browser_run_code — activate environment by name
+async (page) => {
+  // Open env dropdown
+  await page.locator('[data-testid="environment-selector"]').click();
+  await page.waitForTimeout(1000);
+  // Click matching option
+  const option = page.locator('[data-testid="env-filter-select-dropdown__option"]')
+    .filter({ hasText: '{environment_name}' });
+  if (await option.count() === 0) return 'not_found';
+  await option.first().click();
+  await page.waitForTimeout(800);
+  return 'selected';
+}
+```
 
-If environment not found → warn user but continue (no environment = environment-less run).
+If `not_found` → warn user but continue (no environment = environment-less run).
 
 ### Step 6 — Auth: Call Login API first (if configured)
 
@@ -242,23 +277,44 @@ Cannot proceed without auth. Either:
 2. Clear "login_api_name" in auth.json if your API does not require auth.
 ```
 
-**6b — Execute Login request:**
-
-```
-mcp__playwright__browser_click(element="sidebar item matching {login_api_name}", ref="...")
-mcp__playwright__browser_click(element="Send button", ref="...")
-mcp__playwright__browser_wait_for(state="networkidle", timeout=15000)
-```
-
-**6c — Verify login success:**
-
-Run `browser_run_code` to fetch the login request and extract the token:
+**6b — Execute Login request and verify:**
 
 ```js
+// browser_run_code — click Login in sidebar, Send, wait for response
 async (page) => {
-  // Read active response status
-  const statusEl = document.querySelector('.response-meta-item__status:visible');
-  return statusEl ? statusEl.textContent.trim() : 'unknown';
+  // Find and click Login request in sidebar
+  const items = page.locator('[role="treeitem"]');
+  const count = await items.count();
+  for (let i = 0; i < count; i++) {
+    const text = await items.nth(i).textContent();
+    if (text?.trim().replace(/^(GET|POST|PUT|PATCH|DELETE)/, '').trim() === '{login_api_name}') {
+      await items.nth(i).click();
+      await page.waitForTimeout(1500);
+      break;
+    }
+  }
+
+  // Click Send
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+
+  // Wait for response status in ACTIVE tab (scope prevents hidden-tab match)
+  await page.locator('[data-testid="active-tab-content"] [data-testid="response-code"]')
+    .waitFor({ state: 'visible', timeout: 20000 });
+  await page.waitForTimeout(500);
+
+  // Read status code (scoped to active tab)
+  const statusCode = await page.locator('[data-testid="active-tab-content"] [data-testid="response-code"]')
+    .first().textContent();
+
+  // Read response body from active tab's response pane
+  const body = await page.evaluate(() => {
+    const activeContent = document.querySelector('[data-testid="active-tab-content"]');
+    if (!activeContent) return '';
+    const lines = [...activeContent.querySelectorAll('.response-viewer-pane .view-line')];
+    return lines.map(l => l.textContent).join('\n').trim().substring(0, 1000);
+  });
+
+  return JSON.stringify({ statusCode: parseInt(statusCode), body });
 }
 ```
 
@@ -267,141 +323,188 @@ If status is not 2xx → **STOP**:
 Login API returned {status}. Auth token not obtained. Check credentials in auth.json.
 ```
 
-**6d — Extract token and save to environment:**
+**6c — Token is set automatically:**
 
-```js
-async (page) => {
-  // Get response body text from active tab
-  const lines = [...document.querySelectorAll('.view-line')];
-  return lines.map(l => l.textContent).join('');
-}
-```
+If the collection's Tests script contains `pm.environment.set('{auth_variable}', ...)`, the token is set automatically. No further action needed.
 
-Parse JSON response, extract `{auth_variable}` value.
+If NOT automated → manually set via environment quick-look:
+- Click the eye icon next to the environment selector
+- Find `{auth_variable}` row → update Current Value with token from response body
+- Fallback paths if token key differs: `token`, `access_token`, `accessToken`, `data.token`
 
-If extraction fails → try common paths: `token`, `access_token`, `accessToken`, `data.token`.
+### Step 7 — Execute test cases via batch script (1 MCP call)
 
-Manually set in Postman environment via UI:
-```
-mcp__playwright__browser_click(element="environment quick-look icon")
-// Find {auth_variable} row, update its Current Value
-```
+Build the `cases` array from Step 1 data, then run **one** `browser_run_code` call.
 
-Or via `browser_run_code` using Postman SDK if available.
-
-### Step 7 — Case 1: Step-by-step (send all via sidebar, then read)
-
-**Phase A — Send all requests via sidebar clicks** (individual MCP calls):
-
-For each test case:
-```
-mcp__playwright__browser_click(element="sidebar item matching {testCaseName}", ref="...")
-mcp__playwright__browser_click(element="Send button", ref="...")
-mcp__playwright__browser_wait_for(state="networkidle", timeout=15000)
-```
-
-**Note:** All requests must have Authorization set to **"Inherit auth from parent"** — do not override per-request. The collection-level auth uses the token set in Step 6.
-
-This opens each request in its own tab and loads the response.
-
-**Phase B — Screenshot + read via batch script** (1 MCP call):
-
-After all requests are sent, run `browser_run_code` to loop through each tab, take 2 screenshots (request + response), and call `fetch()` for reliable data:
+Each test case captures **3 screenshots** in this order:
+1. `_params.png` — Params tab (request query/path params), taken **before** Send
+2. `_body.png` — Body tab (request body), taken **before** Send
+3. `_response.png` — Response pane clipped, taken **after** Send completes
 
 ```js
 async (page) => {
   const cases = [
-    // { name, method, url, headers, body, requestScreenshotPath, responseScreenshotPath, expectedStatus }
-    // requestScreenshotPath suffix: _params.png (GET) or _body.png (POST/PUT/PATCH/DELETE)
+    // Fill from Step 1 data — one object per pending test case:
+    // {
+    //   name: 'Login',
+    //   row: 18,
+    //   sanitizedName: 'Login',          // name with spaces/special chars → _
+    //   timestamp: '20260413_120000',    // yyyyMMdd_HHmmss, same for all cases in batch
+    //   screenshotDir: 'C:/path/to/screenshots',
+    //   expectedStatus: 200,             // parsed from Expected Result column
+    //   nameCol: 6, actualCol: 16, resultCol: 25
+    // }
   ];
+
   const results = [];
 
   for (const tc of cases) {
+    const paramsPath  = `${tc.screenshotDir}/${tc.sanitizedName}_${tc.timestamp}_params.png`;
+    const bodyPath    = `${tc.screenshotDir}/${tc.sanitizedName}_${tc.timestamp}_body.png`;
+    const responsePath = `${tc.screenshotDir}/${tc.sanitizedName}_${tc.timestamp}_response.png`;
+
     try {
-      const tab = page.getByRole('tab').filter({ hasText: tc.name.substring(0, 20) });
-      await tab.click();
-      await page.waitForTimeout(500);
+      // ── Step 1: Navigate to request via sidebar ──────────────────────────
+      // Sidebar items use role="treeitem"; text = "{METHOD}{name}" e.g. "POSTLogin"
+      const sidebarItem = page.locator('[role="treeitem"]')
+        .filter({ hasText: tc.name })
+        .first();
+      await sidebarItem.click();
+      await page.waitForTimeout(1500); // allow request panel to fully render
 
-      // Screenshot 1: Params tab (GET) or Body tab (other methods)
-      const isGet = tc.method.toUpperCase() === 'GET';
-      const requestTabSelector = isGet
-        ? 'button:has-text("Params"), [data-testid="params-tab"], [title="Params"]'
-        : 'button:has-text("Body"), [data-testid="body-tab"], [title="Body"]';
-      try {
-        await page.locator(requestTabSelector).first().click();
-        await page.waitForTimeout(300);
-      } catch (_) { /* tab may already be active */ }
-      await page.screenshot({ path: tc.requestScreenshotPath });
+      // Scope all request-tab clicks to active-tab-content to avoid duplicate
+      // selector error (Postman renders the tab strip twice in the DOM)
+      const reqPanel = page.locator('[data-testid="active-tab-content"]');
 
-      // Screenshot 2: Response tab
-      try {
-        await page.locator('button:has-text("Response"), [data-testid="response-tab"], [title="Response"]').first().click();
-        await page.waitForTimeout(300);
-      } catch (_) { /* tab may already be active */ }
-      await page.screenshot({ path: tc.responseScreenshotPath });
+      // ── Step 2: Screenshot 1 — PARAMS tab ────────────────────────────────
+      await reqPanel.locator('[data-testid="request-editor-tab--params"]').click();
+      // Wait until the tab's aria-selected flips to true
+      await page.waitForFunction(
+        () => !!document.querySelector('[data-testid="request-editor-tab--params"][aria-selected="true"]'),
+        { timeout: 5000 }
+      ).catch(() => {});
+      await page.waitForTimeout(800); // allow panel content to paint
+      await page.screenshot({ path: paramsPath });
 
-      const data = await page.evaluate(async ({ method, url, headers, body }) => {
-        try {
-          const opts = { method, headers };
-          if (body) opts.body = body;
-          const r = await fetch(url, opts);
-          const text = await r.text();
-          return { statusCode: r.status, body: text.substring(0, 500) };
-        } catch (e) {
-          return { statusCode: 0, body: e.message };
-        }
-      }, { method: tc.method, url: tc.url, headers: tc.headers || {}, body: tc.body || null });
+      // ── Step 3: Screenshot 2 — BODY tab ──────────────────────────────────
+      await reqPanel.locator('[data-testid="request-editor-tab--body"]').click();
+      // Wait for Monaco editor to appear (body editor uses Monaco)
+      await page.waitForFunction(
+        () => {
+          const m = document.querySelector('.monaco-editor.no-user-select');
+          return m && m.clientHeight > 0;
+        },
+        { timeout: 5000 }
+      ).catch(() => page.waitForTimeout(1000));
+      await page.waitForTimeout(800);
+      await page.screenshot({ path: bodyPath });
+
+      // ── Step 4: Send request ──────────────────────────────────────────────
+      // Send button: button[aria-label="Send"] (unique on page)
+      await page.getByRole('button', { name: 'Send', exact: true }).click();
+
+      // Wait for response status code in the ACTIVE tab only.
+      // IMPORTANT: scope to [data-testid="active-tab-content"] — each open Postman
+      // tab has its own hidden [data-testid="response-code"], causing waitForSelector
+      // to time out because it finds the hidden one first.
+      await page.locator('[data-testid="active-tab-content"] [data-testid="response-code"]')
+        .waitFor({ state: 'visible', timeout: 25000 });
+      await page.waitForTimeout(1000); // let response body fully render
+
+      // ── Step 5: Screenshot 3 — RESPONSE pane ─────────────────────────────
+      // Clip to the active response pane only
+      const responsePaneBox = await page.locator('[data-testid="active-tab-content"] .response-viewer-pane')
+        .first().boundingBox();
+      await page.screenshot({
+        path: responsePath,
+        clip: responsePaneBox || undefined
+      });
+
+      // ── Step 6: Read actual response data ────────────────────────────────
+      const rawStatus = await page.locator('[data-testid="active-tab-content"] [data-testid="response-code"]')
+        .first().textContent();
+      const statusCode = parseInt(rawStatus?.trim()) || 0;
+
+      // Read response body from Monaco in the ACTIVE tab's response pane
+      const responseBody = await page.evaluate(() => {
+        const activeContent = document.querySelector('[data-testid="active-tab-content"]');
+        if (!activeContent) return '';
+        const pane = activeContent.querySelector('.response-viewer-pane');
+        if (!pane) return '';
+        const lines = [...pane.querySelectorAll('.view-line')];
+        return lines.map(l => l.textContent).join('\n').trim().substring(0, 500);
+      });
 
       results.push({
-        name: tc.name,
-        statusCode: data.statusCode,
-        body: data.body,
-        requestScreenshot: tc.requestScreenshotPath,
-        responseScreenshot: tc.responseScreenshotPath,
-        error: ''
+        name:             tc.name,
+        row:              tc.row,
+        nameCol:          tc.nameCol,
+        actualCol:        tc.actualCol,
+        resultCol:        tc.resultCol,
+        statusCode:       statusCode,
+        responseBody:     responseBody || '(see screenshot)',
+        paramsScreenshot: paramsPath,
+        bodyScreenshot:   bodyPath,
+        responseScreenshot: responsePath,
+        error:            ''
       });
+
     } catch (err) {
       results.push({
-        name: tc.name,
-        statusCode: 0,
-        body: '',
-        requestScreenshot: tc.requestScreenshotPath,
-        responseScreenshot: tc.responseScreenshotPath,
-        error: err.message
+        name:             tc.name,
+        row:              tc.row,
+        nameCol:          tc.nameCol,
+        actualCol:        tc.actualCol,
+        resultCol:        tc.resultCol,
+        statusCode:       0,
+        responseBody:     '',
+        paramsScreenshot: paramsPath,
+        bodyScreenshot:   bodyPath,
+        responseScreenshot: responsePath,
+        error:            err.message
       });
     }
   }
+
   return JSON.stringify(results);
 }
 ```
 
-> **Why fetch() instead of DOM scraping:**
-> Postman web keeps all open tabs rendered in the DOM simultaneously.
-> `.response-meta-item__status` returns the first element found (may be a hidden tab).
-> `.view-line` (Monaco editor) accumulates text from ALL tabs, not just the active one.
-> `fetch()` via `page.evaluate()` always returns the exact HTTP response — no DOM ambiguity.
+> **Why sidebar navigation instead of tab-bar switching:**
+> Postman's top tab bar uses hashed CSS classes with no stable `data-testid`.
+> Clicking a sidebar item that is already open in a tab simply switches to that tab
+> (response is preserved). This is more reliable than tab-bar DOM matching.
+
+> **Why not `fetch()` for response data:**
+> `fetch()` from browser context is subject to CORS restrictions and bypasses
+> Postman's environment variable resolution. DOM scraping from `.response-viewer-pane`
+> reads exactly what Postman sent, including auth tokens resolved at runtime.
 
 **Screenshot path rules:**
-- Each test case produces **2 screenshots**:
-  - Request: `{screenshotDir}/{testCaseName_sanitized}_{yyyyMMdd_HHmmss}_params.png` (GET) or `..._body.png` (POST/PUT/PATCH/DELETE)
-  - Response: `{screenshotDir}/{testCaseName_sanitized}_{yyyyMMdd_HHmmss}_response.png`
-- `testCaseName_sanitized` = test case name with ALL spaces and special chars replaced by `_`
-- Timestamp generated at START of execution run, reused for all cases in that batch
-- **NEVER** use pre-existing files from a previous run
-- `screenshotDir` = `screenshots/` relative to the xlsx file location
+- Each test case produces **3 screenshots** — always, regardless of HTTP method:
+  - `{screenshotDir}/{sanitizedName}_{yyyyMMdd_HHmmss}_params.png`
+  - `{screenshotDir}/{sanitizedName}_{yyyyMMdd_HHmmss}_body.png`
+  - `{screenshotDir}/{sanitizedName}_{yyyyMMdd_HHmmss}_response.png`
+- `sanitizedName` = test case name with spaces and special chars replaced by `_`
+- Timestamp = same value for all cases in one execution run (generated at start)
+- `screenshotDir` = `screenshots/` relative to the xlsx file
+- **NEVER** reuse screenshot paths from a previous run
 
-### Step 8 — Execute batch (1 MCP call)
+### Step 8 — Execute batch
 
 ```
-mcp__playwright__browser_run_code(code="<script from Step 7 Phase B>")
+mcp__playwright__browser_run_code(code="<script from Step 7>")
 ```
 
-Parse returned JSON.
+Parse returned JSON array.
 
-**If script fails:** Check error message. Common fixes:
-- Tab selector not matching → use shorter prefix (first 10 chars of name) or index-based click
-- fetch() CORS blocked → fall back to reading from active tab DOM using `:visible` filter
-- Fix and retry once.
+**If script fails on a specific test case:** The error is captured per-case in `results[i].error` — execution continues for remaining cases. Only retry if the script itself crashes (not a per-case error).
+
+**If the whole script throws:** Check the error. Common fixes:
+- `strict mode violation` on tab locator → `reqPanel.locator(...)` scope is missing — ensure `[data-testid="active-tab-content"]` scoping
+- Sidebar item not found → verify the `tc.name` matches the treeitem text exactly (partial match required)
+- Response timeout (>25s) → check if Postman environment variables are set correctly
+- Fix and retry once. If it fails again → stop and report to user.
 
 ### Step 9 — Validate results
 
@@ -447,8 +550,8 @@ print('done')
 
 ### Step 11 — Embed screenshots into Evidence sheet
 
-3 columns: **A = Test Case ID**, **B = Params/Body Screenshot** (request), **C = Response Screenshot**.
-Each test case occupies 1 row with 2 embedded images side by side.
+**4 columns:** A = Test Case Name, B = Params screenshot, C = Body screenshot, D = Response screenshot.
+Each test case occupies 1 row with 3 embedded images side by side.
 
 ```bash
 python3 -X utf8 -c "
@@ -462,40 +565,52 @@ if 'Evidence' in wb.sheetnames:
     del wb['Evidence']
 ws_ev = wb.create_sheet('Evidence')
 
-ws_ev['A1'] = 'Test Case ID'
-ws_ev['B1'] = 'Params / Body'
-ws_ev['C1'] = 'Response'
+ws_ev['A1'] = 'Test Case Name'
+ws_ev['B1'] = 'Params'
+ws_ev['C1'] = 'Body'
+ws_ev['D1'] = 'Response'
 
 COL_A_WIDTH = 40
-IMG_WIDTH_PX = 600
-IMG_HEIGHT_PX = 350
+IMG_WIDTH_PX = 550
+IMG_HEIGHT_PX = 320
 ws_ev.column_dimensions['A'].width = COL_A_WIDTH
 ws_ev.column_dimensions['B'].width = IMG_WIDTH_PX / 7
 ws_ev.column_dimensions['C'].width = IMG_WIDTH_PX / 7
+ws_ev.column_dimensions['D'].width = IMG_WIDTH_PX / 7
 
 for i, item in enumerate(data, start=2):
     ws_ev.cell(row=i, column=1).value = item['name']
     ws_ev.row_dimensions[i].height = IMG_HEIGHT_PX * 0.75
 
-    # Column B — request screenshot (Params or Body)
-    req_path = item.get('requestScreenshot', '')
-    if req_path and os.path.exists(req_path):
-        img_req = XLImage(req_path)
-        img_req.width = IMG_WIDTH_PX
-        img_req.height = IMG_HEIGHT_PX
-        ws_ev.add_image(img_req, f'B{i}')
+    # Column B — Params screenshot
+    params_path = item.get('paramsScreenshot', '')
+    if params_path and os.path.exists(params_path):
+        img = XLImage(params_path)
+        img.width = IMG_WIDTH_PX
+        img.height = IMG_HEIGHT_PX
+        ws_ev.add_image(img, f'B{i}')
     else:
-        ws_ev.cell(row=i, column=2).value = 'Screenshot not captured'
+        ws_ev.cell(row=i, column=2).value = 'Not captured'
 
-    # Column C — response screenshot
+    # Column C — Body screenshot
+    body_path = item.get('bodyScreenshot', '')
+    if body_path and os.path.exists(body_path):
+        img = XLImage(body_path)
+        img.width = IMG_WIDTH_PX
+        img.height = IMG_HEIGHT_PX
+        ws_ev.add_image(img, f'C{i}')
+    else:
+        ws_ev.cell(row=i, column=3).value = 'Not captured'
+
+    # Column D — Response screenshot
     res_path = item.get('responseScreenshot', '')
     if res_path and os.path.exists(res_path):
-        img_res = XLImage(res_path)
-        img_res.width = IMG_WIDTH_PX
-        img_res.height = IMG_HEIGHT_PX
-        ws_ev.add_image(img_res, f'C{i}')
+        img = XLImage(res_path)
+        img.width = IMG_WIDTH_PX
+        img.height = IMG_HEIGHT_PX
+        ws_ev.add_image(img, f'D{i}')
     else:
-        ws_ev.cell(row=i, column=3).value = 'Screenshot not captured'
+        ws_ev.cell(row=i, column=4).value = 'Not captured'
 
 wb.save('PATH_TO_FILE.xlsx')
 print('done')
@@ -524,9 +639,9 @@ Evidence sheet: {'created' | 'updated'} with {n} screenshots
 
 ## Batching (> 15 cases)
 
-- Phase A (send via sidebar): send all requests first, up to 15 per batch
-- Phase B (read via batch script): 1 `browser_run_code` call per batch, click tabs + fetch()
-- Write all results in 1 Python call after all batches complete
+- Split into batches of up to 15 cases each
+- Each batch = 1 `browser_run_code` call with the Step 7 script
+- Collect all batch results, then write to xlsx in 1 Python call after all batches complete
 
 ---
 
@@ -554,8 +669,13 @@ Evidence sheet: {'created' | 'updated'} with {n} screenshots
 - **ALWAYS** close browser after completion.
 - **NEVER** use pre-existing screenshot files from previous runs when embedding Evidence.
 - **ALWAYS** verify screenshot file exists (`os.path.exists(path)`) before embedding.
-- Each test case produces **2 screenshots**: `..._params.png` (GET) or `..._body.png` (POST/PUT/PATCH/DELETE), and `..._response.png`.
-- Screenshot filenames: `{testCaseName}_{yyyyMMdd_HHmmss}_{params|body|response}.png` (no spaces, replace with `_`).
+- Each test case produces **3 screenshots** — always, all methods: `..._params.png`, `..._body.png`, `..._response.png`.
+- Screenshot filenames: `{sanitizedName}_{yyyyMMdd_HHmmss}_{params|body|response}.png` (spaces and special chars → `_`).
+- Screenshot tab clicks must be scoped to `[data-testid="active-tab-content"]` to avoid duplicate-element errors.
+- After clicking any request tab, wait for `aria-selected="true"` + 800ms before screenshotting — never use fixed 300ms.
+- After clicking Send, wait for `[data-testid="response-code"]` to appear (up to 25s) — never use `networkidle`.
+- Response screenshot must be clipped to `.response-viewer-pane` bounding box.
+- Navigate between test cases via sidebar `[role="treeitem"]` click — never via the requester tab bar.
 - **NEVER** write temp scripts to disk — use `python3 -c` inline only.
 - Save `.xlsx` only after ALL results collected (1 save operation).
 - All requests in Postman must use **"Inherit auth from parent"** — never set per-request Bearer tokens.
