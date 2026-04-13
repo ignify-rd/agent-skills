@@ -41,11 +41,7 @@ field.type → template function:
 
 - Kiểm tra giá trị mặc định
 
-    - Mặc định rỗng
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
+    - {placeholder ? "Hiển thị placeholder \"{placeholder}\"" : "Mặc định rỗng"}
 
 - Kiểm tra hiển thị icon X khi nhập 1 ký tự
 
@@ -151,7 +147,7 @@ field.type → template function:
 ```
 
 **Conditional sections:**
-- `placeholder` → sinh test placeholder (bỏ nếu null)
+- `placeholder` → kết quả "Kiểm tra giá trị mặc định" = `Hiển thị placeholder "{placeholder}"` (nếu null → "Mặc định rỗng")
 - `hasIconX` → sinh Icon X section (bỏ nếu false)
 - `searchDescription` → sinh "nhập 1 phần kí tự" test
 - `maxLength` → sinh 3 boundary tests (maxLen-1, maxLen, maxLen+1)
@@ -211,11 +207,7 @@ field.type → template function:
 
 - Kiểm tra giá trị mặc định
 
-    - Mặc định rỗng
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
+    - {placeholder ? "Hiển thị placeholder \"{placeholder}\"" : "Mặc định rỗng"}
 
 - Kiểm tra hiển thị icon x
 
@@ -385,11 +377,7 @@ field.type → template function:
 
 - Kiểm tra giá trị mặc định
 
-    - Mặc định rỗng
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
+    - {placeholder ? "Hiển thị placeholder \"{placeholder}\"" : "Mặc định rỗng"}
 
 {Nếu isRequired:}
 - Kiểm tra khi bỏ trống trường {fieldName}
@@ -448,11 +436,7 @@ field.type → template function:
 
 - Kiểm tra giá trị mặc định
 
-    - Mặc định rỗng
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
+    - {placeholder ? "Hiển thị placeholder \"{placeholder}\"" : "Mặc định rỗng"}
 
 - Kiểm tra hiển thị icon X khi nhập/chọn dữ liệu
 
@@ -772,11 +756,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 - Kiểm tra giá trị mặc định
 
-    - {defaultValueDesc || "Mặc định rỗng"}
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder || "dd/MM/yyyy"}"
+    - {defaultValueDesc || "Hiển thị placeholder \"" + (placeholder || "dd/MM/yyyy") + "\""}
 
 - Kiểm tra icon lịch
 
@@ -910,12 +890,9 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 - Kiểm tra giá trị mặc định
 
-    - {defaultValueDesc || "Mặc định rỗng cả 2 ô"}
-
-- Kiểm tra placeholder
-
-    - Từ ngày: placeholder "{fromPlaceholder || "dd/MM/yyyy"}"
-    - Đến ngày: placeholder "{toPlaceholder || "dd/MM/yyyy"}"
+    - {defaultValueDesc ||
+        "Từ ngày: Hiển thị placeholder \"" + (fromPlaceholder || "dd/MM/yyyy") + "\"" +
+        "\n    - Đến ngày: Hiển thị placeholder \"" + (toPlaceholder || "dd/MM/yyyy") + "\""}
 
 - Kiểm tra khi chọn ngày bắt đầu hợp lệ
 
@@ -1023,7 +1000,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 - Kiểm tra giá trị mặc định
 
-    - Mặc định rỗng
+    - {placeholder ? "Hiển thị placeholder \"{placeholder}\"" : "Mặc định rỗng"}
 
 - Kiểm tra hiển thị icon X khi nhập 1 ký tự
 
@@ -1032,10 +1009,6 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 - Kiểm tra hoạt động khi thực hiện thao tác xóa nhanh ký tự nhập
 
     - Clear data đã nhập ở textarea
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
 
 - Kiểm tra khi nhập kí tự là số
 
@@ -1141,11 +1114,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 - Kiểm tra giá trị mặc định
 
-    - {defaultValueDesc || "Mặc định rỗng"}
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
+    - {defaultValueDesc || (placeholder ? "Hiển thị placeholder \"" + placeholder + "\"" : "Mặc định rỗng")}
 
 - Kiểm tra khi nhập số nguyên dương
 
@@ -1451,11 +1420,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 - Kiểm tra giá trị mặc định
 
-    - Mặc định rỗng
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
+    - {placeholder ? "Hiển thị placeholder \"{placeholder}\"" : "Mặc định rỗng"}
 
 - Kiểm tra ẩn ký tự khi nhập
 
@@ -1578,11 +1543,7 @@ Sinh từ `buttonVisibilityRules[]` cho mỗi button.
 
 - Kiểm tra giá trị mặc định
 
-    - {defaultValueDesc || "Mặc định rỗng"}
-
-- Kiểm tra placeholder
-
-    - Hiển thị placeholder "{placeholder}"
+    - {defaultValueDesc || (placeholder ? "Hiển thị placeholder \"" + placeholder + "\"" : "Mặc định rỗng")}
 
 - Kiểm tra khi nhập giá trị và nhấn Enter
 
