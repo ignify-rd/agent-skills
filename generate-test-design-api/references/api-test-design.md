@@ -26,6 +26,14 @@ API test design sinh ra markdown mindmap gồm 3 section chính:
 
 - Status: 401
 
+### Kiểm tra nhập token không hợp lệ (sai token)
+
+- Status: 401
+
+### Kiểm tra nhập token hợp lệ
+
+- Status: 200
+
 ## Kiểm tra Endpoint & Method
 
 ### Kiểm tra nhập sai method ({WRONG_METHODS})
