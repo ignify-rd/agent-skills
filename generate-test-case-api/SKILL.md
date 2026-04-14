@@ -40,10 +40,16 @@ description: Generate API test cases from RSD/PTTK (or mindmap) and output to te
         <recovery>Use inventory.py script queries instead. Only sub-agents (tc-*) may read those files.</recovery>
     </hard_stop>
 
-    <hard_stop id="missing_inputs">
-        <condition>Required inputs missing (test design path, inventory path, output folder)</condition>
-        <consequence>STOP — ask user to run generate-test-design-api first</consequence>
-        <recovery>"Skill này yêu cầu file test design và inventory.json. Vui lòng chạy skill generate-test-design-api trước."</recovery>
+    <auto_invoke id="missing_design">
+        <condition>test-design-api.md hoặc inventory.json chưa có trong OUTPUT_DIR</condition>
+        <consequence>AUTO-INVOKE generate-test-design-api — không hỏi lại user, tự động thực thi ngay</consequence>
+        <recovery>Tìm generate-test-design-api/SKILL.md (sibling directory), đọc và thực thi toàn bộ workflow với cùng inputs của user, sau đó tiếp tục sinh test case.</recovery>
+    </auto_invoke>
+
+    <hard_stop id="missing_output_dir">
+        <condition>OUTPUT_DIR không được cung cấp và không thể suy luận từ context</condition>
+        <consequence>STOP — hỏi user đường dẫn thư mục output</consequence>
+        <recovery>"Vui lòng cung cấp đường dẫn thư mục output (ví dụ: feature-1/)"</recovery>
     </hard_stop>
 
     <hard_stop id="catalog_missing">
@@ -89,34 +95,90 @@ description: Generate API test cases from RSD/PTTK (or mindmap) and output to te
     </output>
 </step>
 
-<step id="0b" name="Validate Required Inputs">
-    <trigger>Always — before any other step</trigger>
+<step id="0b" name="Check & Auto-generate Test Design if Missing">
+    <trigger>Always — before any generation step</trigger>
 
     <required_inputs>
-        <input name="Test Design File" var="TEST_DESIGN_FILE" source="user" required="true">
-            <description>Path to test-design-api.md</description>
-            <example>feature-1/test-design-api.md</example>
-        </input>
-        <input name="Inventory File" var="INVENTORY_FILE" source="user" required="true">
-            <description>Path to inventory.json</description>
-            <example>feature-1/inventory.json</example>
-        </input>
-        <input name="Output Folder" var="OUTPUT_DIR" source="user" required="true">
-            <description>Output directory for generated files</description>
+        <input name="Output Folder" var="OUTPUT_DIR" source="user or context" required="true">
+            <description>Thư mục output chứa test design và test cases</description>
             <example>feature-1/</example>
+            <infer>Suy luận từ tên feature/folder user đề cập trong chat nếu không nói rõ</infer>
         </input>
     </required_inputs>
 
-    <derived_vars>
+    <derived_defaults>
+        <var name="TEST_DESIGN_FILE">{OUTPUT_DIR}/test-design-api.md</var>
+        <var name="INVENTORY_FILE">{OUTPUT_DIR}/inventory.json</var>
         <var name="OUTPUT_FILE">{OUTPUT_DIR}/test-cases.json</var>
-    </derived_vars>
+    </derived_defaults>
 
-    <guardrails>
-        <rule type="hard_stop">
-            <condition>Any required input missing</condition>
-            <action>NEVER scan folders or guess paths</action>
-        </rule>
-    </guardrails>
+    <actions>
+        <action type="bash" id="detect-design-files">
+            <script>python3 -X utf8 -c "
+import os
+td  = r'{OUTPUT_DIR}/test-design-api.md'
+inv = r'{OUTPUT_DIR}/inventory.json'
+ok  = os.path.exists(td) and os.path.getsize(td) > 10 \
+    and os.path.exists(inv) and os.path.getsize(inv) > 10
+print('FOUND' if ok else 'MISSING')
+"</script>
+            <stores>designStatus</stores>
+        </action>
+    </actions>
+
+    <branch condition="designStatus == FOUND">
+        <message>Test design đã có → tiến hành sinh test case.</message>
+        <proceed_to>Step 1</proceed_to>
+    </branch>
+
+    <branch condition="designStatus == MISSING">
+        <message>Test design chưa có. Đang tự động sinh test design trước (không cần xác nhận)...</message>
+
+        <action type="find_design_skill">
+            <script>python3 -X utf8 -c "
+import os
+
+def find_skill(name, start='.', max_depth=5):
+    current = os.path.abspath(start)
+    for _ in range(max_depth):
+        candidate = os.path.join(current, name, 'SKILL.md')
+        if os.path.exists(candidate):
+            return candidate
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return 'NOT_FOUND'
+
+print(find_skill('generate-test-design-api'))
+"</script>
+            <stores>DESIGN_SKILL_MD</stores>
+            <on_not_found>STOP — thông báo không tìm thấy generate-test-design-api/SKILL.md</on_not_found>
+        </action>
+
+        <action type="invoke_design_skill">
+            <description>
+                Đọc DESIGN_SKILL_MD và thực thi TOÀN BỘ workflow của generate-test-design-api.
+                KHÔNG hỏi lại user. Truyền nguyên inputs của user (RSD URL, Confluence link...) + OUTPUT_DIR = {OUTPUT_DIR}.
+                Thực thi như thể user vừa yêu cầu sinh test design cho cùng feature.
+            </description>
+            <steps>
+                <step>Read {DESIGN_SKILL_MD}</step>
+                <step>Execute all steps in generate-test-design-api/SKILL.md with current user inputs and OUTPUT_DIR = {OUTPUT_DIR}</step>
+                <step>Verify completion:
+python3 -X utf8 -c "
+import os, sys
+td  = r'{OUTPUT_DIR}/test-design-api.md'
+inv = r'{OUTPUT_DIR}/inventory.json'
+if not os.path.exists(td):  print('ERROR: test-design-api.md missing');  sys.exit(1)
+if not os.path.exists(inv): print('ERROR: inventory.json missing'); sys.exit(1)
+print('OK: design files ready')
+"</step>
+            </steps>
+        </action>
+
+        <proceed_to>Step 1</proceed_to>
+    </branch>
 </step>
 
 <step id="1" name="Resolve SKILL_SCRIPTS and SKILL_AGENTS paths">
