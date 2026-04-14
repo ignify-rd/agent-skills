@@ -476,6 +476,8 @@ def _extract_expected_result(block_lines: list[str], case_text: str = "") -> str
       - 1. Check api trả về:
         1.1.Status: 200
         1.2.Response: ...
+        SQL:
+        SELECT ...
     """
     if not block_lines:
         return ""
@@ -487,21 +489,40 @@ def _extract_expected_result(block_lines: list[str], case_text: str = "") -> str
     status_m = re.search(r"1\.1[.\s]*[Ss]tatus\s*:\s*(\d+)", text)
     status = status_m.group(1) if status_m else "200"
 
-    # Extract Response line
+    # Extract Response line (everything after 1.2.Response: up to next numbered step or end)
     resp_m = re.search(r"1\.2[.\s]*[Rr]esponse\s*:\s*(.+)", text, re.DOTALL)
     if resp_m:
         resp_text = resp_m.group(1).strip()
-        # Clean up trailing lines that are just more step numbering
-        resp_text = re.split(r"\n\s*\d+\.", resp_text)[0].strip()
-    else:
-        resp_text = ""
+        # Split off SQL block before stripping trailing step numbering
+        # SQL block starts with "SQL:" on its own line
+        sql_split = re.split(r"\n\s*SQL\s*:\s*\n?", resp_text, maxsplit=1, flags=re.IGNORECASE)
+        resp_json = sql_split[0].strip()
+        sql_block = sql_split[1].strip() if len(sql_split) > 1 else ""
 
-    if not resp_text and not status:
+        # Clean up trailing lines that are just more step numbering
+        resp_json = re.split(r"\n\s*\d+\.", resp_json)[0].strip()
+    else:
+        resp_json = ""
+        sql_block = ""
+
+    # Also check for SQL block outside of resp_m (directly in block_lines after response)
+    if not sql_block:
+        sql_m = re.search(r"\bSQL\s*:\s*\n(.+)", text, re.DOTALL | re.IGNORECASE)
+        if sql_m:
+            sql_block = sql_m.group(1).strip()
+
+    if not resp_json and not status:
         return ""
 
     result = f"1. Check api trả về:\n  1.1. Status: {status}"
-    if resp_text:
-        result += f"\n  1.2. Response: {resp_text}"
+    if resp_json:
+        result += f"\n  1.2. Response: {resp_json}"
+
+    if sql_block:
+        # Normalize indentation: strip common leading spaces
+        sql_lines = [line.rstrip() for line in sql_block.splitlines() if line.strip()]
+        result += "\n2. Kiểm tra DB:\n  2.1. Chạy SQL:\n  " + "\n  ".join(sql_lines)
+
     return result
 
 

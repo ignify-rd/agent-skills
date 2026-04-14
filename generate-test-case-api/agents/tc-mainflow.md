@@ -45,6 +45,21 @@ print('BARRIER OK')
     <rule type="checkpoint_destination">
         <description>All checkpoints go to STDOUT ONLY — NOT to batch file</description>
     </rule>
+
+    <rule type="hard_constraint" id="sql_in_expected_result">
+        <description>
+            When a test case in test design has a `SQL:` block after the Response JSON,
+            the generated `expectedResult` MUST include that SQL verbatim as step 2.
+            NEVER omit the SQL block. It is a DB verification step, not a comment.
+        </description>
+        <bad_example>
+            expectedResult = "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {...}"
+            ← WRONG: SQL block is missing
+        </bad_example>
+        <good_example>
+            expectedResult = "1. Check api trả về:\n  1.1. Status: 200\n  1.2. Response: {...}\n2. Kiểm tra DB:\n  2.1. Chạy SQL:\n  SELECT ID, ...\n  FROM TXN_CARD_REQUEST\n  WHERE ..."
+        </good_example>
+    </rule>
 </guardrails>
 
 ---
@@ -126,6 +141,20 @@ print('BARRIER OK')
         3. Trường `expectedResult`: PHẢI dùng `catalogStyle.expectedResultTemplate`.
            - Thay {STATUS} bằng HTTP status code
            - Thay {RESPONSE_JSON} bằng response JSON (multiline nếu responseJsonFormat="multiline")
+           - ⛔ CRITICAL — SQL block: Nếu test design có block `SQL:` sau response JSON, PHẢI copy verbatim vào expectedResult,
+             append sau response JSON với prefix "2. Kiểm tra DB:". KHÔNG bỏ qua SQL.
+             Ví dụ đúng:
+             ```
+             1. Check api trả về:
+               1.1. Status: 200
+               1.2. Response: {...}
+             2. Kiểm tra DB:
+               2.1. Chạy SQL:
+               SELECT ID, CREATED_BY, ...
+               FROM TXN_CARD_REQUEST
+               WHERE CIF_NO = 'CIF001'
+               ORDER BY CREATED_DATE DESC
+             ```
 
         4. Request body base: lấy từ `requestBody` trong tc-context.json, chỉnh sửa field cần test.
 

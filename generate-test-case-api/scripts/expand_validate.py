@@ -336,6 +336,16 @@ def _build_param_override(field: str, case: str, value, fc: dict, file_content_b
     else:
         actual_value = _REMOVE
 
+    # Sanitize: for security test cases, replace generic placeholders with actual payloads.
+    # Agent sometimes writes "test", "abc", etc. instead of the correct security payload.
+    _GENERIC_PLACEHOLDERS = {"test", "abc", "string", "value", "text", "sample", "foo", "bar"}
+    if isinstance(actual_value, str) and actual_value.lower() in _GENERIC_PLACEHOLDERS:
+        norm_lower_sec = _normalize_case(case).lower()
+        if any(w in norm_lower_sec for w in ["sql", "injection"]):
+            actual_value = "' OR '1'='1"
+        elif any(w in norm_lower_sec for w in ["xss", "script", "alert"]):
+            actual_value = "<script>alert(1)</script>"
+
     # Sanitize: agent sometimes writes values with descriptive labels in parentheses,
     # e.g. "1 (Chờ duyệt)", "0 (min boundary)", "-0.01 (nhỏ hơn min = 0)".
     # These should be the raw numeric value, not a string with a label.

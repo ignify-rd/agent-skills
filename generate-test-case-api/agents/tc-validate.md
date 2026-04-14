@@ -80,6 +80,19 @@ model: inherit
         </applies_to>
     </rule>
 
+    <rule type="hard_constraint" id="security_test_values">
+        <description>Security test cases MUST use the exact payloads below — NEVER use generic strings like "test", "abc", "string", or "value" for these cases.</description>
+        <mapping>
+            <case>SQL Injection</case>
+            <required_value>"' OR '1'='1"</required_value>
+        </mapping>
+        <mapping>
+            <case>XSS</case>
+            <required_value>"&lt;script&gt;alert(1)&lt;/script&gt;"</required_value>
+            <note>Write the raw tag in the JSON value — do NOT HTML-encode angle brackets in the JSON string.</note>
+        </mapping>
+    </rule>
+
     <rule type="batch_completeness">
         <description>ALL fields in batch (up to 5) must have FULL cases — same as field 1. Do NOT abbreviate.</description>
         <condition>If agent thinks "already covered enough"</condition>
@@ -210,8 +223,8 @@ Use this approach when test cases follow standard validation patterns (null, emp
         - "Sai định dạng" → field = "wrong-format"
         - "Ngày không tồn tại" → field = "30/02/2025"
         - "Ký tự đặc biệt" → field = "@#$%"
-        - "SQL Injection" → field = "' OR 1=1--"
-        - "XSS" → field = "&lt;script&gt;alert(1)&lt;/script&gt;"
+        - "SQL Injection" → field = "' OR '1'='1"
+        - "XSS" → field = "<script>alert(1)</script>"
         - "Unicode đặc biệt" → field = "中文"
         - Custom cases → describe in Vietnamese with explicit value
     </case_description_rules>
