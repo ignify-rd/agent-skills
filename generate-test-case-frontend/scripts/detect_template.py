@@ -116,6 +116,11 @@ LABEL_TO_KEY = {
     'name testcase':                'testCaseName',
     'name testcase ':               'testCaseName',
     'mã lỗi':                       'bugId',
+    # Test level column
+    'test level':                   'testLevel',
+    'test type':                    'testLevel',
+    'level':                        'testLevel',
+    'type':                         'testLevel',
 }
 
 # Labels that are group/section headers (row 1 of multi-row headers) — not column headers
@@ -258,6 +263,11 @@ def build_column_mapping(rows, header_row_1based):
     """
     Build column mapping from the header row.
     Returns dict: { jsonKey: colIndex (0-based) }
+
+    'name' column handling:
+      - 2 'name' columns: first = testSuiteName, second = testCaseName
+      - 1 'name' column: map to testSuiteName AND testCaseName (same column)
+        Exception: if externalId precedes it (BIDV format), map to testCaseName only
     """
     if not rows or header_row_1based > len(rows):
         return {}
@@ -265,6 +275,7 @@ def build_column_mapping(rows, header_row_1based):
     row = rows[header_row_1based - 1]
     mapping = {}
     name_count = 0
+    name_positions = []  # track all col indices where 'name' appears
 
     for col_idx, cell in enumerate(row):
         label = str(cell).strip().lower()
@@ -276,6 +287,7 @@ def build_column_mapping(rows, header_row_1based):
         # 'Name' is the test case name (BIDV frontend format: External ID | Name | ...)
         if label == 'name':
             name_count += 1
+            name_positions.append(col_idx)
             ext_id_col = mapping.get('externalId')
             if name_count == 1 and (ext_id_col is None or col_idx < ext_id_col):
                 key = 'testSuiteName'
@@ -288,6 +300,11 @@ def build_column_mapping(rows, header_row_1based):
         key = LABEL_TO_KEY.get(label)
         if key and key != '__name__' and key not in mapping:
             mapping[key] = col_idx
+
+    # If only 1 'name' column was found and it went to testSuiteName,
+    # also map testCaseName to the same column so writes don't silently drop.
+    if name_count == 1 and 'testSuiteName' in mapping and 'testCaseName' not in mapping:
+        mapping['testCaseName'] = mapping['testSuiteName']
 
     return mapping
 

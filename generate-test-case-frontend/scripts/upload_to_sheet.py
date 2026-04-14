@@ -218,6 +218,7 @@ def build_rows(test_cases, column_mapping, total_columns):
             'stepExecType':    tc.get('stepExecType', ''),
             'attachments':     tc.get('attachments', ''),
             'bugId':           tc.get('bugId', ''),
+            'testLevel':       tc.get('testLevel', ''),
         })
         rows.append(tc_row)
         test_case_count += 1
