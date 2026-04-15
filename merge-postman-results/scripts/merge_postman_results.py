@@ -418,7 +418,7 @@ def load_source(source_path: str) -> dict:
 FIELD_SYNONYMS = {
     "testCaseName": [
         "Name", "Test Case Name", "TestCase Name", "Tên test case",
-        "API Name", "testCaseName",
+        "API Name", "testCaseName", "Name Testcase ",
     ],
     "status": [
         "Status", "Trạng thái", "Kết quả", "Result",
@@ -923,6 +923,52 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
     not_found = []
     verdicts = {"PASS": 0, "FAIL": 0, "N/A": 0}
 
+    # Build reverse lookup: target ID value → source_results key
+    # We scan every column to find one whose values match source API names.
+    # The correct ID column may be the first column (A) or any other column
+    # depending on the sheet layout.
+    target_id_col = None
+    for scan_col_idx in range(0, ws.max_column):
+        vals = [rd.cell(row=row_idx, column=scan_col_idx + 1).value for row_idx in range(data_start_row, min(data_start_row + 10, ws.max_row + 1))]
+        matched_count = sum(1 for v in vals if v and str(v).strip() in source_results)
+        if matched_count >= 2:
+            target_id_col = scan_col_idx
+            print(f"      [match-hint] ID column found at col {scan_col_idx} (matched {matched_count} source keys)")
+            break
+
+    if target_id_col is None and ext_col is not None:
+        # Fall back to the configured externalId column
+        target_id_col = ext_col
+
+    # Rebuild ext_to_source_key with whichever column has more matches
+    def _build_lookup(col_idx):
+        lut = {}
+        for row_idx in range(data_start_row, ws.max_row + 1):
+            ext_val = rd.cell(row=row_idx, column=col_idx + 1).value
+            if ext_val:
+                key = str(ext_val).strip()
+                if key in source_results and key not in lut:
+                    lut[key] = key
+        return lut
+
+    if target_id_col is not None and ext_col is not None and ext_col != target_id_col:
+        # structure.json externalId col may be wrong for this sheet
+        orig_lut = _build_lookup(ext_col)
+        new_lut  = _build_lookup(target_id_col)
+        if len(orig_lut) >= len(new_lut):
+            print(f"      [match-hint] structure.json externalId col={ext_col} "
+                  f"({len(orig_lut)} matches) >= scanned col={target_id_col} "
+                  f"({len(new_lut)} matches) — using structure.json")
+            target_id_col = ext_col
+            ext_to_source_key = orig_lut
+        else:
+            print(f"      [match-hint] structure.json externalId col={ext_col} "
+                  f"({len(orig_lut)} matches) < scanned col={target_id_col} "
+                  f"({len(new_lut)} matches) — using scanned column")
+            ext_to_source_key = new_lut
+    else:
+        ext_to_source_key = _build_lookup(target_id_col or 0)
+
     for row_idx in range(data_start_row, ws.max_row + 1):
         tc_val = rd.cell(row=row_idx, column=tc_col + 1).value
         if tc_val is None:
@@ -931,16 +977,27 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
         if not tc_name:
             continue
 
-        if tc_name not in source_results:
-            not_found.append(tc_name)
-            continue
+        source_key = tc_name
+
+        # Primary match: tc_name matches source_results key directly
+        if source_key not in source_results:
+            # Fallback: try matching via scanned ID column (e.g. col A = "API1")
+            source_key = None
+            if target_id_col is not None:
+                id_val = rd.cell(row=row_idx, column=target_id_col + 1).value
+                if id_val:
+                    source_key = ext_to_source_key.get(str(id_val).strip())
+            if source_key is None:
+                not_found.append(tc_name)
+                continue
 
         matched += 1
-        data = source_results[tc_name]
+        data = source_results[source_key]
 
         # Store externalId for update_evidence_sheet filter
-        if ext_col is not None:
-            ext_id_val = rd.cell(row=row_idx, column=ext_col + 1).value
+        id_write_col = target_id_col if target_id_col is not None else ext_col
+        if id_write_col is not None:
+            ext_id_val = rd.cell(row=row_idx, column=id_write_col + 1).value
             if ext_id_val:
                 data["externalId"] = str(ext_id_val).strip()
 
@@ -954,7 +1011,8 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
         verdict, reason = evaluate_simple(expected_text, raw_actual)
 
         verdicts[verdict] = verdicts.get(verdict, 0) + 1
-        print(f"  [{verdict:7s}] {tc_name[:65]}")
+        display_name = source_key if source_key != tc_name else tc_name
+        print(f"  [{verdict:7s}] {display_name[:65]}")
 
         if dry_run:
             continue
@@ -1068,22 +1126,18 @@ def merge_results(
         print("\n[auto-fix] matched = 0 — scanning worksheet for correct header row ...")
         new_header, new_data_start, new_col_map = auto_detect_structure(ws_ro, structure)
 
-        changed = (
-            new_header != header_row
-            or new_data_start != data_start_row
-            or new_col_map.get("testCaseName") != col_map.get("testCaseName")
-        )
+        # Only adopt auto-detected values if they are actually better.
+        # We check whether testCaseName and externalId resolved to non-empty values
+        # in the new mapping (the original structure.json had ext_col=5 correct).
+        resolved_tc   = new_col_map.get("testCaseName") is not None
+        resolved_ext  = new_col_map.get("externalId") is not None
+        any_better    = resolved_tc or resolved_ext
 
-        if not changed:
-            print("[auto-fix] No better mapping found — check that API Name values match testCaseName column.")
-            print("[auto-fix] Trying externalId-based fallback matching ...")
-            matched, not_found, verdicts = _run_externalid_merge_loop(
-                ws, ws_ro, source_results, new_col_map, data_start_row, dry_run
-            )
-            if matched > 0:
-                col_map = new_col_map
-            header_row     = new_header
-            data_start_row = new_data_start
+        if not any_better:
+            print("[auto-fix] No better column mapping found — keeping original.")
+            new_col_map = col_map.copy()
+            new_header  = header_row
+            new_data_start = data_start_row
         else:
             if new_header != header_row:
                 print(f"[auto-fix] headerRow: {header_row} → {new_header}")
@@ -1099,19 +1153,20 @@ def merge_results(
             data_start_row = new_data_start
             col_map        = new_col_map
 
-            print(f"\n[auto-fix] Re-merging (rows {data_start_row}+) ...")
-            matched, not_found, verdicts = _run_merge_loop(
-                ws, source_results, col_map, data_start_row, dry_run, ws_readonly=ws_ro
-            )
+        # Re-merge with corrected mapping
+        print(f"\n[auto-fix] Re-merging (rows {data_start_row}+) ...")
+        matched, not_found, verdicts = _run_merge_loop(
+            ws, source_results, col_map, data_start_row, dry_run, ws_readonly=ws_ro
+        )
 
-            print()
-            print(f"  [auto-fix] Matched : {matched} / {len(source_results)}")
-            print(f"  PASS    : {verdicts.get('PASS', 0)}")
-            print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
-            print(f"  N/A     : {verdicts.get('N/A', 0)}")
-            if not_found:
-                print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
-                      + (" ..." if len(not_found) > 8 else ""))
+    print()
+    print(f"  Matched : {matched} / {len(source_results)}")
+    print(f"  PASS    : {verdicts.get('PASS', 0)}")
+    print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
+    print(f"  N/A     : {verdicts.get('N/A', 0)}")
+    if not_found:
+        print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
+              + (" ..." if len(not_found) > 8 else ""))
 
     if not dry_run:
         # Update Evidence sheet
