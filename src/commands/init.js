@@ -19,7 +19,7 @@ const SKILLS = [
   'execute-test-case-api',
   'execute-test-case-frontend',
   'rsd-generator',
-  'rsd-to-pttk'
+  'merge-postman-results'
 ];
 
 // Map AI name → subdirectory base (relative to cwd, or absolute for codex)

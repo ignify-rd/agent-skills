@@ -19,7 +19,7 @@
     "execute-test-case-frontend/",
     "confluence-assistant/",
     "rsd-generator/",
-    "rsd-to-pttk/"
+    "merge-postman-results/"
   ],
   "scripts": {
     "test": "node bin/test-genie.js --help && node bin/test-genie.js versions --help && node bin/test-genie.js init --help && node bin/test-genie.js update --help"
