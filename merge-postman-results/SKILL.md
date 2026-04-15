@@ -17,9 +17,9 @@ description: >
 Reads the auto-postman tool output (an `.xlsx` file + screenshots folder) and merges results
 into the target test case Excel file. For each matched test case it:
 
-1. Fills the **Actual Result** column: `Status: {code}\nResponse:\n{body}`
-2. Evaluates **Pass / Fail / Blocked** using Claude AI (comparing expected vs actual)
-3. Writes the verdict to the **Status** column
+1. Fills the **Actual Result** column with the raw response: `Status: {code}\nResponse:\n{body}`
+2. Evaluates **Pass / Fail / N/A** using Claude AI (comparing expected vs actual)
+3. Writes the verdict (`PASS`/`FAIL`/`N/A`) to the **Kết quả hiện tại** (status) column
 4. Replaces the **sample JSON** in the Expected Result with the real response JSON
    (the surrounding description text — "1. Check api trả về:", status line, etc. — stays untouched)
 5. Creates/updates the **"Evidence"** sheet with embedded screenshot images
@@ -67,10 +67,10 @@ The script uses only the fields it needs and ignores the rest (`templateFile`, `
 |-------|----------|---------|
 | `testCaseName` | yes | **Match key** — matched against `API Name` from source |
 | `expectedResults` | yes | AI reads for evaluation; JSON portion replaced with real response |
-| `actualResult` | yes | Filled with `Status: {code}\nResponse:\n{body}` |
+| `actualResult` | yes | Filled with raw response: `Status: {code}\nResponse:\n{body}` |
 | `headerRow` | yes | Which Excel row contains column headers |
 | `dataStartRow` | yes | First Excel row with test case data |
-| `status` | **optional** | Filled with `PASS` / `FAIL` / `BLOCKED`. If missing, auto-detected by scanning the header row for "Status", "Trạng thái", "Result", "Pass/Fail". |
+| `status` | **recommended** | Filled with `PASS` / `FAIL` / `N/A` verdict. Auto-detected by scanning the header row for "Status", "Trạng thái", "Kết quả hiện tại", "Result", "Pass/Fail". |
 
 > The script always uses the **first sheet** of the target xlsx. `sheetName` in structure.json is ignored.
 
@@ -97,7 +97,7 @@ Optional flags:
 2. **Validate structure.json**: check that `testCaseName`, `expectedResults`, `actualResult`
    are present. If missing, scan the target header row and suggest values.
 3. **Run the script**: use the command above
-4. **Report results**: matched count, PASS/FAIL/BLOCKED breakdown, unmatched test cases
+4. **Report results**: matched count, PASS/FAIL/N/A breakdown, unmatched test cases
 5. If many test cases are unmatched, compare API Name values between files to diagnose mismatches
 
 ## Evidence sheet

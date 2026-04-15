@@ -4,8 +4,10 @@
 merge_postman_results.py — Merge auto-postman API test results into a test case Excel file.
 
 Reads api_results_*.xlsx (auto-postman output), matches rows by test case name,
-fills Actual Result, evaluates Pass/Fail via Claude AI, replaces sample JSON in
-Expected Result with real response JSON, and embeds screenshots in an Evidence sheet.
+fills Actual Result with the raw response (Status + Response Body), evaluates
+Pass/Fail via Claude AI and writes the verdict to the "Kết quả hiện tại" (status)
+column, replaces sample JSON in Expected Result with real response JSON, and
+embeds screenshots in an Evidence sheet.
 
 Usage:
   python merge_postman_results.py \\
@@ -242,7 +244,7 @@ FIELD_SYNONYMS = {
     ],
     "status": [
         "Status", "Trạng thái", "Kết quả", "Result",
-        "Pass/Fail", "ExecutionStatus",
+        "Pass/Fail", "ExecutionStatus", "Kết quả hiện tại",
     ],
     "expectedResults": [
         "Expected Result", "Expected Results", "Expected",
@@ -426,10 +428,10 @@ def evaluate_simple(expected_text: str, actual_text: str):
     Rule-based evaluation: compare status codes extracted from both texts.
 
     Returns:
-        (verdict, reason)  — verdict is 'PASS', 'FAIL', or 'BLOCKED'
+        (verdict, reason)  — verdict is 'PASS', 'FAIL', or 'N/A'
     """
     if not actual_text or not actual_text.strip():
-        return "BLOCKED", "No actual result"
+        return "N/A", "No actual result"
 
     exp_status = _extract_status_code(expected_text)
     act_status = _extract_status_code(actual_text)
@@ -466,8 +468,8 @@ def evaluate_ai(expected_text: str, actual_text: str, api_key: str = None):
             "So sánh kết quả thực tế với kết quả mong đợi:\n"
             "- PASS: status code và cấu trúc/giá trị quan trọng của response khớp\n"
             "- FAIL: không khớp\n"
-            "- BLOCKED: không đủ dữ liệu để đánh giá\n\n"
-            "Trả lời theo đúng format: PASS|FAIL|BLOCKED - <lý do ngắn gọn, 1 dòng>"
+            "- N/A: không đủ dữ liệu để đánh giá\n\n"
+            "Trả lời theo đúng format: PASS|FAIL|N/A - <lý do ngắn gọn, 1 dòng>"
         )
 
         response = client.messages.create(
@@ -482,8 +484,8 @@ def evaluate_ai(expected_text: str, actual_text: str, api_key: str = None):
             return "PASS", text
         elif upper.startswith("FAIL"):
             return "FAIL", text
-        elif upper.startswith("BLOCKED"):
-            return "BLOCKED", text
+        elif upper.startswith("N/A"):
+            return "N/A", text
         else:
             # Claude responded with something else — treat as FAIL and include the note
             return "FAIL", text
@@ -616,7 +618,7 @@ def _verify_output(out_path: str, structure: dict, col_map: dict, data_start_row
     Re-open the saved file and verify key columns were written correctly.
 
     Checks:
-      - actualResult: how many rows have PASS/FAIL/BLOCKED as first word
+      - actualResult: how many rows have response content written
       - expectedResults: how many rows where JSON was replaced (contains '{')
       - Evidence sheet: row count vs image count
     """
@@ -629,11 +631,13 @@ def _verify_output(out_path: str, structure: dict, col_map: dict, data_start_row
     exp_col = col_map.get("expectedResults")
 
     actual_written = 0
-    verdict_counts = {"PASS": 0, "FAIL": 0, "BLOCKED": 0}
+    status_written = 0
+    verdict_counts = {"PASS": 0, "FAIL": 0, "N/A": 0}
     json_replaced   = 0
     blank_actual    = []
 
-    verdicts_set = {"PASS", "FAIL", "BLOCKED"}
+    verdicts_set = {"PASS", "FAIL", "N/A"}
+    sts_col_v = col_map.get("status")
 
     for row_idx in range(data_start_row, ws.max_row + 1):
         # Only check rows that should have been updated (non-empty testCaseName)
@@ -646,12 +650,18 @@ def _verify_output(out_path: str, structure: dict, col_map: dict, data_start_row
         if act_col is not None:
             cell_val = ws.cell(row=row_idx, column=act_col + 1).value
             text = str(cell_val or "").strip()
-            first_word = text.split("\n")[0].strip() if text else ""
-            if first_word in verdicts_set:
+            if text:
                 actual_written += 1
-                verdict_counts[first_word] = verdict_counts.get(first_word, 0) + 1
-            elif text:
-                blank_actual.append(row_idx)   # has value but no verdict prefix
+            else:
+                blank_actual.append(row_idx)
+
+        # Check status column for verdict
+        if sts_col_v is not None:
+            sts_val = ws.cell(row=row_idx, column=sts_col_v + 1).value
+            sts_text = str(sts_val or "").strip()
+            if sts_text in verdicts_set:
+                status_written += 1
+                verdict_counts[sts_text] = verdict_counts.get(sts_text, 0) + 1
 
         if exp_col is not None:
             exp_val = ws.cell(row=row_idx, column=exp_col + 1).value
@@ -672,6 +682,7 @@ def _verify_output(out_path: str, structure: dict, col_map: dict, data_start_row
         "ok":              ok,
         "expected_matched": expected_matched,
         "actual_written":  actual_written,
+        "status_written":  status_written,
         "verdict_counts":  verdict_counts,
         "json_replaced":   json_replaced,
         "evidence_rows":   ev_rows,
@@ -684,9 +695,10 @@ def _print_verify(v: dict):
     ok_mark = "✓" if v["ok"] else "✗"
     print(f"  {ok_mark} actualResult written : {v['actual_written']} / {v['expected_matched']}"
           + ("" if v["ok"] else "  ← MISMATCH"))
+    print(f"  ✓ status (Kết quả hiện tại) written : {v.get('status_written', 0)}")
     print(f"    PASS={v['verdict_counts'].get('PASS',0)}  "
           f"FAIL={v['verdict_counts'].get('FAIL',0)}  "
-          f"BLOCKED={v['verdict_counts'].get('BLOCKED',0)}")
+          f"N/A={v['verdict_counts'].get('N/A',0)}")
     print(f"  ✓ expectedResults with JSON : {v['json_replaced']} rows")
     ev_ok = v["evidence_images"] == v["evidence_rows"]
     ev_mark = "✓" if ev_ok else "✗"
@@ -764,7 +776,7 @@ def merge_results(
     print(f"[4/4] Merging results (rows {data_start_row}+) ...")
     matched = 0
     not_found = []
-    verdicts = {"PASS": 0, "FAIL": 0, "BLOCKED": 0}
+    verdicts = {"PASS": 0, "FAIL": 0, "N/A": 0}
 
     for row_idx in range(data_start_row, ws.max_row + 1):
         # Get test case name from the match-key column
@@ -810,10 +822,16 @@ def merge_results(
         if dry_run:
             continue
 
-        # Write actual result: verdict prefix + status + response body
+        # Write actual result: raw response (status code + response body)
         if act_col is not None:
             cell = ws.cell(row=row_idx, column=act_col + 1)
-            cell.value = f"{verdict}\n{raw_actual}"
+            cell.value = raw_actual
+            cell.alignment = _wrap_align()
+
+        # Write verdict (PASS/FAIL/N/A) to "Kết quả hiện tại" (status) column
+        if sts_col is not None:
+            cell = ws.cell(row=row_idx, column=sts_col + 1)
+            cell.value = verdict
             cell.alignment = _wrap_align()
 
         # Replace sample JSON in expected result with real response JSON
@@ -830,7 +848,7 @@ def merge_results(
     print(f"  Matched : {matched} / {len(source_results)}")
     print(f"  PASS    : {verdicts.get('PASS', 0)}")
     print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
-    print(f"  BLOCKED : {verdicts.get('BLOCKED', 0)}")
+    print(f"  N/A : {verdicts.get('N/A', 0)}")
     if not_found:
         print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
               + (" ..." if len(not_found) > 8 else ""))
@@ -871,7 +889,7 @@ def merge_results(
 
             matched   = 0
             not_found = []
-            verdicts  = {"PASS": 0, "FAIL": 0, "BLOCKED": 0}
+            verdicts  = {"PASS": 0, "FAIL": 0, "N/A": 0}
 
             print(f"\n[auto-fix] Re-merging (rows {data_start_row}+) ...")
             for row_idx in range(data_start_row, ws.max_row + 1):
@@ -915,7 +933,13 @@ def merge_results(
 
                 if act_col is not None:
                     cell = ws.cell(row=row_idx, column=act_col + 1)
-                    cell.value = f"{verdict}\n{raw_actual}"
+                    cell.value = raw_actual
+                    cell.alignment = _wrap_align()
+
+                # Write verdict to "Kết quả hiện tại" (status) column
+                if sts_col is not None:
+                    cell = ws.cell(row=row_idx, column=sts_col + 1)
+                    cell.value = verdict
                     cell.alignment = _wrap_align()
 
                 if exp_col is not None and data["response_body"]:
@@ -930,7 +954,7 @@ def merge_results(
             print(f"  [auto-fix] Matched : {matched} / {len(source_results)}")
             print(f"  PASS    : {verdicts.get('PASS', 0)}")
             print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
-            print(f"  BLOCKED : {verdicts.get('BLOCKED', 0)}")
+            print(f"  N/A : {verdicts.get('N/A', 0)}")
             if not_found:
                 print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
                       + (" ..." if len(not_found) > 8 else ""))
