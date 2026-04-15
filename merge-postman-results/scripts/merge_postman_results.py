@@ -223,7 +223,7 @@ def create_new_gsheet_from_xlsx(xlsx_path: str, title: str, creds) -> str:
 
     url = f"https://docs.google.com/spreadsheets/d/{new_spreadsheet_id}/edit"
     print(f"  Uploaded → {url}")
-    return url
+    return url, new_spreadsheet_id
 
 
 # ---------------------------------------------------------------------------
@@ -922,6 +922,7 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
     matched = 0
     not_found = []
     verdicts = {"PASS": 0, "FAIL": 0, "N/A": 0}
+    row_verdicts = {}  # {row_1based: verdict} for apply_cell_background_colors
 
     # Build reverse lookup: target ID value → source_results key
     # We scan every column to find one whose values match source API names.
@@ -1017,6 +1018,10 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
         if dry_run:
             continue
 
+        # Track per-row verdict for Google Sheets cell coloring after upload
+        if sts_col is not None:
+            row_verdicts[row_idx] = verdict
+
         # Write actual result: response JSON body
         if act_col is not None:
             cell = ws.cell(row=row_idx, column=act_col + 1)
@@ -1035,7 +1040,80 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
 
         _autofit_row_height(ws, row_idx, act_col)
 
-    return matched, not_found, verdicts
+    return matched, not_found, verdicts, row_verdicts
+
+
+def apply_cell_background_colors(spreadsheet_id: str, sheet_title: str,
+                                  sts_col_1based: int, row_verdicts: dict,
+                                  max_data_row: int, creds):
+    """
+    Apply background colors to status cells after upload to Google Sheets.
+
+    PASS → #b6d7a8 (green), FAIL → #f4cccc (red), N/A → white.
+    Uses Google Sheets API batchUpdate with repeatCell per cell for precision.
+    """
+    from googleapiclient.discovery import build
+
+    sheets = build("sheets", "v4", credentials=creds, cache_discovery=False)
+
+    # Resolve sheetId from title
+    meta = sheets.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+    ).execute()
+    sheet_id = None
+    for s in meta.get("sheets", []):
+        props = s.get("properties", {})
+        if props.get("title") == sheet_title:
+            sheet_id = props.get("sheetId")
+            break
+    if sheet_id is None:
+        print(f"  [color] Could not find sheet '{sheet_title}' — skipping background color")
+        return
+
+    color_map = {
+        "PASS": {"red": 0.714, "green": 0.843, "blue": 0.659},
+        "FAIL": {"red": 0.957, "green": 0.800, "blue": 0.800},
+        "N/A":  {"red": 1.0,  "green": 1.0,  "blue": 1.0},
+    }
+
+    # row_verdicts: {sheet_idx_0based: {row_1based: verdict}}
+    sheet_verdicts = row_verdicts.get(0, {})
+    if not sheet_verdicts:
+        print(f"  [color] No verdicts to color")
+        return
+
+    requests = []
+    for row_1based, verdict in sheet_verdicts.items():
+        if row_1based > max_data_row:
+            continue
+        color = color_map.get(verdict, color_map["N/A"])
+        requests.append({
+            "repeatCell": {
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": row_1based - 1,
+                    "endRowIndex": row_1based,
+                    "startColumnIndex": sts_col_1based - 1,
+                    "endColumnIndex": sts_col_1based,
+                },
+                "cell": {
+                    "userEnteredFormat": {
+                        "backgroundColor": color,
+                        "textFormat": {"bold": False},
+                    }
+                },
+                "fields": "userEnteredFormat(backgroundColor,textFormat)"
+            }
+        })
+
+    if requests:
+        for i in range(0, len(requests), 100):
+            chunk = requests[i:i+100]
+            sheets.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": chunk}
+            ).execute()
+        print(f"  [color] Applied background to {len(requests)} cells")
 
 
 def merge_results(
@@ -1108,7 +1186,7 @@ def merge_results(
 
     # --- Step 4: Merge ---
     print(f"[5/5] Merging results (rows {data_start_row}+) ...")
-    matched, not_found, verdicts = _run_merge_loop(
+    matched, not_found, verdicts, row_verdicts = _run_merge_loop(
         ws, source_results, col_map, data_start_row, dry_run, ws_readonly=ws_ro
     )
 
@@ -1155,9 +1233,13 @@ def merge_results(
 
         # Re-merge with corrected mapping
         print(f"\n[auto-fix] Re-merging (rows {data_start_row}+) ...")
-        matched, not_found, verdicts = _run_merge_loop(
+        matched2, not_found2, verdicts2, row_verdicts2 = _run_merge_loop(
             ws, source_results, col_map, data_start_row, dry_run, ws_readonly=ws_ro
         )
+        matched = matched2
+        not_found = not_found2
+        verdicts = verdicts2
+        row_verdicts = row_verdicts2
 
     print()
     print(f"  Matched : {matched} / {len(source_results)}")
@@ -1188,7 +1270,19 @@ def merge_results(
             f"Merged Results {time.strftime('%Y-%m-%d %H:%M:%S')}"
         )
         print(f"\n[Upload] Creating new Google Sheet: '{new_name}' ...")
-        sheet_url = create_new_gsheet_from_xlsx(merged_xlsx, new_name, creds)
+        sheet_url, spreadsheet_id = create_new_gsheet_from_xlsx(merged_xlsx, new_name, creds)
+
+        # Apply PASS/FAIL/N/A cell background colors after upload
+        if sts_col is not None:
+            sheet_title = ws.title
+            max_data_row = ws.max_row
+            apply_cell_background_colors(
+                spreadsheet_id, sheet_title,
+                sts_col + 1,  # convert 0-based to 1-based
+                {0: row_verdicts},
+                max_data_row, creds
+            )
+
         print(f"\nDone! → {sheet_url}")
     else:
         print("\n[dry-run] No changes written.")
