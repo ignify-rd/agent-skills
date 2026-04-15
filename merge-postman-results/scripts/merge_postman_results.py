@@ -4,22 +4,20 @@
 merge_postman_results.py — Merge auto-postman API test results into a Google Spreadsheet.
 
 Reads api_results_*.xlsx (auto-postman output), downloads the target Google Sheet as xlsx,
-fills Actual Result with the raw response (Status + Response Body), evaluates Pass/Fail
-via Claude AI and writes the verdict to the "Kết quả hiện tại" (status) column, replaces
-sample JSON in Expected Result with real response JSON, embeds screenshots in an Evidence
-sheet, and uploads the merged xlsx back to the Google Sheet.
+fills Actual Result with the response JSON body, evaluates Pass/Fail by comparing status
+codes and writes the verdict to the "Kết quả hiện tại" (status) column, replaces sample
+JSON in Expected Result with real response JSON, embeds screenshots in an Evidence sheet,
+and uploads the merged xlsx back to the Google Sheet.
 
 Usage:
   python merge_postman_results.py \
     --source api_results_20260415_091720.xlsx \
     --target "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit" \
     --structure structure.json \
-    [--api-key sk-ant-...] \
-    [--no-ai] \
     [--dry-run]
 
 Requirements:
-  pip install openpyxl pillow anthropic google-api-python-client google-auth google-auth-oauthlib
+  pip install openpyxl pillow google-api-python-client google-auth google-auth-oauthlib
 """
 
 import argparse
@@ -178,9 +176,11 @@ def upload_xlsx_to_gsheet(xlsx_path: str, spreadsheet_id: str, creds) -> str:
         resumable=True,
     )
 
+    # Convert to native Google Sheets format on upload
     drive.files().update(
         fileId=spreadsheet_id,
         media_body=media,
+        body={"mimeType": "application/vnd.google-apps.spreadsheet"},
     ).execute()
 
     url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
@@ -513,6 +513,18 @@ def _wrap_align():
     return Alignment(wrap_text=True, vertical="top")
 
 
+def _black_font():
+    """Return a Font with black color."""
+    from openpyxl.styles import Font
+    return Font(color="000000")
+
+
+def _white_fill():
+    """Return a PatternFill with white background."""
+    from openpyxl.styles import PatternFill
+    return PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+
+
 def _autofit_row_height(ws, row_idx: int, *col_indices):
     """Set row height based on the maximum line count across the given columns."""
     LINE_HEIGHT_PT = 15
@@ -559,50 +571,6 @@ def evaluate_simple(expected_text: str, actual_text: str):
     return "FAIL", "Cannot determine (no 3-digit status code found)"
 
 
-def evaluate_ai(expected_text: str, actual_text: str, api_key: str = None):
-    """Ask Claude to evaluate Pass / Fail."""
-    key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
-        print("  [warn] ANTHROPIC_API_KEY not set — falling back to simple evaluation",
-              file=sys.stderr)
-        return evaluate_simple(expected_text, actual_text)
-
-    try:
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=key)
-        prompt = (
-            "Bạn là QA engineer đang đánh giá kết quả test API.\n\n"
-            f"**Kết quả mong đợi (Expected Result):**\n{expected_text}\n\n"
-            f"**Kết quả thực tế (Actual Result):**\n{actual_text}\n\n"
-            "So sánh kết quả thực tế với kết quả mong đợi:\n"
-            "- PASS: status code và cấu trúc/giá trị quan trọng của response khớp\n"
-            "- FAIL: không khớp\n"
-            "- N/A: không đủ dữ liệu để đánh giá\n\n"
-            "Trả lời theo đúng format: PASS|FAIL|N/A - <lý do ngắn gọn, 1 dòng>"
-        )
-
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=150,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = response.content[0].text.strip()
-
-        upper = text.upper()
-        if upper.startswith("PASS"):
-            return "PASS", text
-        elif upper.startswith("FAIL"):
-            return "FAIL", text
-        elif upper.startswith("N/A"):
-            return "N/A", text
-        else:
-            return "FAIL", text
-
-    except Exception as exc:
-        print(f"  [warn] AI evaluation error: {exc} — falling back to simple", file=sys.stderr)
-        return evaluate_simple(expected_text, actual_text)
-
 
 # ---------------------------------------------------------------------------
 # Evidence sheet (embedded images in xlsx)
@@ -630,7 +598,10 @@ def update_evidence_sheet(wb, source_results: dict):
 
     row_num = 2
     for api_name, data in source_results.items():
-        display_id = data.get("externalId") or api_name
+        # Only include matched test cases (externalId is set during merge)
+        if "externalId" not in data:
+            continue
+        display_id = data["externalId"]
         ws[f"A{row_num}"] = display_id
         shot = data.get("screenshot")
 
@@ -810,17 +781,25 @@ def _print_verify(v: dict):
 # Main merge logic
 # ---------------------------------------------------------------------------
 
-def _run_merge_loop(ws, source_results, col_map, data_start_row, no_ai, api_key, dry_run):
+def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_readonly=None):
     """
     Core merge loop — matches source results to target rows and writes data.
 
+    Args:
+        ws:           Writable worksheet (may contain formulas as strings).
+        ws_readonly:  data_only worksheet for reading computed values (optional).
+                      When provided, cell values are read from ws_readonly but
+                      writes go to ws.  This handles formula columns correctly.
+
     Writes:
-      - actualResult column: raw response (Status + Response body)
+      - actualResult column: response JSON body from source
       - status column ("Kết quả hiện tại"): PASS / FAIL / N/A verdict
 
     Returns:
         (matched, not_found, verdicts)
     """
+    rd = ws_readonly or ws  # reader worksheet
+
     tc_col  = col_map.get("testCaseName")
     exp_col = col_map.get("expectedResults")
     act_col = col_map.get("actualResult")
@@ -831,10 +810,10 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, no_ai, api_key,
     verdicts = {"PASS": 0, "FAIL": 0, "N/A": 0}
 
     for row_idx in range(data_start_row, ws.max_row + 1):
-        tc_cell = ws.cell(row=row_idx, column=tc_col + 1)
-        if tc_cell.value is None:
+        tc_val = rd.cell(row=row_idx, column=tc_col + 1).value
+        if tc_val is None:
             continue
-        tc_name = str(tc_cell.value).strip()
+        tc_name = str(tc_val).strip()
         if not tc_name:
             continue
 
@@ -847,47 +826,42 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, no_ai, api_key,
 
         expected_text = ""
         if exp_col is not None:
-            exp_cell = ws.cell(row=row_idx, column=exp_col + 1)
-            expected_text = str(exp_cell.value or "")
+            exp_val = rd.cell(row=row_idx, column=exp_col + 1).value
+            expected_text = str(exp_val or "")
 
-        raw_actual = f"Status: {data['status_code']}\nResponse:\n{data['response_body']}"
+        raw_actual = data["response_body"]
 
-        if no_ai:
-            verdict, reason = evaluate_simple(expected_text, raw_actual)
-        else:
-            verdict, reason = evaluate_ai(expected_text, raw_actual, api_key)
+        verdict, reason = evaluate_simple(expected_text, raw_actual)
 
         verdicts[verdict] = verdicts.get(verdict, 0) + 1
         print(f"  [{verdict:7s}] {tc_name[:65]}")
 
         ext_id_col = col_map.get("externalId")
         if ext_id_col is not None:
-            ext_id_val = ws.cell(row=row_idx, column=ext_id_col + 1).value
+            ext_id_val = rd.cell(row=row_idx, column=ext_id_col + 1).value
             if ext_id_val:
                 data["externalId"] = str(ext_id_val).strip()
 
         if dry_run:
             continue
 
-        # Write actual result: raw response (status code + response body)
+        # Write actual result: response JSON body
         if act_col is not None:
             cell = ws.cell(row=row_idx, column=act_col + 1)
             cell.value = raw_actual
             cell.alignment = _wrap_align()
+            cell.font = _black_font()
+            cell.fill = _white_fill()
 
         # Write verdict (PASS/FAIL/N/A) to "Kết quả hiện tại" (status) column
         if sts_col is not None:
             cell = ws.cell(row=row_idx, column=sts_col + 1)
             cell.value = verdict
             cell.alignment = _wrap_align()
+            cell.font = _black_font()
+            cell.fill = _white_fill()
 
-        if exp_col is not None and data["response_body"]:
-            updated_expected = replace_json_in_expected(expected_text, data["response_body"])
-            cell = ws.cell(row=row_idx, column=exp_col + 1)
-            cell.value = updated_expected
-            cell.alignment = _wrap_align()
-
-        _autofit_row_height(ws, row_idx, act_col, exp_col)
+        _autofit_row_height(ws, row_idx, act_col)
 
     return matched, not_found, verdicts
 
@@ -896,8 +870,6 @@ def merge_results(
     source_path: str,
     target_url: str,
     structure_path: str,
-    api_key: str = None,
-    no_ai: bool = False,
     dry_run: bool = False,
     auto_fix: bool = True,
 ) -> dict:
@@ -928,9 +900,12 @@ def merge_results(
     print(f"[4/5] Loading target xlsx: {target_xlsx}")
     wb = openpyxl.load_workbook(target_xlsx)
     ws = wb.worksheets[0]
+    # Also open a read-only copy with data_only=True to resolve formula values
+    wb_ro = openpyxl.load_workbook(target_xlsx, data_only=True)
+    ws_ro = wb_ro.worksheets[0]
     print(f"      Sheet: '{ws.title}'")
 
-    col_map = detect_columns(ws, structure)
+    col_map = detect_columns(ws_ro, structure)
     header_row    = structure.get("headerRow", 1)
     data_start_row = structure.get("dataStartRow", header_row + 1)
 
@@ -961,7 +936,7 @@ def merge_results(
     # --- Step 4: Merge ---
     print(f"[5/5] Merging results (rows {data_start_row}+) ...")
     matched, not_found, verdicts = _run_merge_loop(
-        ws, source_results, col_map, data_start_row, no_ai, api_key, dry_run
+        ws, source_results, col_map, data_start_row, dry_run, ws_readonly=ws_ro
     )
 
     print()
@@ -976,7 +951,7 @@ def merge_results(
     # --- Auto-fix: if nothing matched, scan for the real header row ---
     if matched == 0 and auto_fix and len(source_results) > 0:
         print("\n[auto-fix] matched = 0 — scanning worksheet for correct header row ...")
-        new_header, new_data_start, new_col_map = auto_detect_structure(ws, structure)
+        new_header, new_data_start, new_col_map = auto_detect_structure(ws_ro, structure)
 
         changed = (
             new_header != header_row
@@ -1003,7 +978,7 @@ def merge_results(
 
             print(f"\n[auto-fix] Re-merging (rows {data_start_row}+) ...")
             matched, not_found, verdicts = _run_merge_loop(
-                ws, source_results, col_map, data_start_row, no_ai, api_key, dry_run
+                ws, source_results, col_map, data_start_row, dry_run, ws_readonly=ws_ro
             )
 
             print()
@@ -1061,8 +1036,6 @@ def main():
                         help="Google Sheets URL or spreadsheet ID")
     parser.add_argument("--structure", required=True,
                         help="Path to structure.json")
-    parser.add_argument("--api-key",   help="Anthropic API key (or ANTHROPIC_API_KEY env var)")
-    parser.add_argument("--no-ai",     action="store_true", help="Skip AI evaluation")
     parser.add_argument("--dry-run",   action="store_true",
                         help="Print what would happen without writing anything")
     args = parser.parse_args()
@@ -1072,8 +1045,6 @@ def main():
             source_path=args.source,
             target_url=args.target,
             structure_path=args.structure,
-            api_key=args.api_key,
-            no_ai=args.no_ai,
             dry_run=args.dry_run,
         )
         print()

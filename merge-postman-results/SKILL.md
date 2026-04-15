@@ -6,10 +6,10 @@ description: >
   into a Google Sheet — even if they phrase it as "cập nhật kết quả", "điền actual result",
   "đánh giá pass/fail", "upload evidence", or "import postman output".
   The skill runs a Python script to: download the Google Sheet as xlsx, match test cases by name,
-  fill the Actual Result column with raw response, evaluate Pass/Fail using Claude AI and write
-  the verdict to the "Kết quả hiện tại" (status) column, replace the sample JSON in Expected
-  Result with the real response JSON, embed screenshots into an "Evidence" sheet, and upload the
-  merged xlsx back to Google Sheets.
+  fill the Actual Result column with response JSON body, evaluate Pass/Fail by status code
+  comparison and write the verdict to the "Kết quả hiện tại" (status) column, replace the
+  sample JSON in Expected Result with the real response JSON, embed screenshots into an
+  "Evidence" sheet, and upload the merged xlsx back to Google Sheets.
 ---
 
 # Merge Postman Results into Google Spreadsheet
@@ -21,12 +21,12 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 
 1. **Downloads** the Google Sheet as `.xlsx` (preserving all formatting)
 2. **Matches** test cases by name between source and target
-3. Fills the **Actual Result** column with the raw response: `Status: {code}\nResponse:\n{body}`
-4. Evaluates **Pass / Fail / N/A** using Claude AI (comparing expected vs actual)
+3. Fills the **Actual Result** column with the response JSON body from source
+4. Evaluates **Pass / Fail / N/A** by comparing status codes (expected vs actual)
 5. Writes the verdict (`PASS`/`FAIL`/`N/A`) to the **Kết quả hiện tại** (status) column
 6. Replaces the **sample JSON** in Expected Result with the real response JSON
 7. Creates/updates the **"Evidence"** sheet with embedded screenshot images
-8. **Uploads** the merged `.xlsx` back to the Google Sheet
+8. **Uploads** the merged `.xlsx` back to the Google Sheet (converted to native Google Sheets format)
 
 ## Inputs the user must provide
 
@@ -57,8 +57,8 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 | Field | Required | Purpose |
 |-------|----------|---------|
 | `testCaseName` | yes | **Match key** — matched against `API Name` from source |
-| `expectedResults` | yes | AI reads for evaluation; JSON portion replaced with real response |
-| `actualResult` | yes | Filled with raw response: `Status: {code}\nResponse:\n{body}` |
+| `expectedResults` | yes | Status code compared for evaluation; JSON portion replaced with real response |
+| `actualResult` | yes | Filled with response JSON body from source |
 | `headerRow` | yes | Which row contains column headers |
 | `dataStartRow` | yes | First row with test case data |
 | `status` | **recommended** | Filled with `PASS` / `FAIL` / `N/A` verdict. Auto-detected by scanning the header row for "Status", "Trạng thái", "Kết quả hiện tại", "Result", "Pass/Fail". |
@@ -76,8 +76,6 @@ Optional flags:
 
 | Flag | Effect |
 |------|--------|
-| `--no-ai` | Use simple status-code comparison instead of Claude AI |
-| `--api-key KEY` | Anthropic API key (or set `ANTHROPIC_API_KEY` env var) |
 | `--dry-run` | Print what would happen without writing anything |
 
 ## Google Authentication
@@ -118,9 +116,6 @@ a `[No screenshot]` placeholder. Images are preserved when uploaded back to Goog
 **Test cases not matching**
 The `API Name` in source must exactly match the `testCaseName` column in the target.
 Use `--dry-run` to compare values.
-
-**AI evaluation not running**
-Set env var `ANTHROPIC_API_KEY` or pass `--api-key`.
 
 **Google auth error**
 Delete `~/google-sheets-mcp/dist/.gsheets-server-credentials.json` and re-run.
