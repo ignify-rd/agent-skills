@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-merge_postman_results.py — Merge auto-postman API test results into a Google Spreadsheet.
+merge_postman_results.py — Merge auto-postman API test results into a new Google Spreadsheet.
 
-Reads api_results_*.xlsx (auto-postman output), downloads the target Google Sheet as xlsx,
-fills Actual Result with the response JSON body, evaluates Pass/Fail by comparing status
-codes and writes the verdict to the "Kết quả hiện tại" (status) column, replaces sample
-JSON in Expected Result with real response JSON, embeds screenshots in an Evidence sheet,
-and uploads the merged xlsx back to the Google Sheet.
+Reads api_results_*.xlsx (auto-postman output), downloads the target Google Sheet as xlsx
+(used as a template — it is NOT modified), fills Actual Result with the response JSON body,
+evaluates Pass/Fail by comparing status codes and writes the verdict to the "Kết quả hiện tại"
+(status) column, embeds screenshots in an Evidence sheet, and creates a BRAND-NEW Google Sheet
+with the merged data.
 
 Usage:
   python merge_postman_results.py \
     --source api_results_20260415_091720.xlsx \
     --target "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit" \
     --structure structure.json \
+    [--name "My Merged Results 2026-04-15"] \
     [--dry-run]
 
 Requirements:
@@ -162,8 +163,8 @@ def upload_xlsx_to_gsheet(xlsx_path: str, spreadsheet_id: str, creds) -> str:
     """
     Upload merged .xlsx back to the Google Sheet, replacing its content.
 
-    Uses Drive API files.update with xlsx media body. Google auto-converts
-    the xlsx content into native Google Sheets format.
+    Uses Drive API files.update with xlsx media body. The body mimeType parameter
+    instructs Drive to convert the uploaded xlsx to native Google Sheets format.
     """
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
@@ -172,11 +173,10 @@ def upload_xlsx_to_gsheet(xlsx_path: str, spreadsheet_id: str, creds) -> str:
 
     media = MediaFileUpload(
         xlsx_path,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.document",
-        resumable=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        resumable=False,
     )
 
-    # Convert to native Google Sheets format on upload
     drive.files().update(
         fileId=spreadsheet_id,
         media_body=media,
@@ -184,6 +184,44 @@ def upload_xlsx_to_gsheet(xlsx_path: str, spreadsheet_id: str, creds) -> str:
     ).execute()
 
     url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+    print(f"  Uploaded → {url}")
+    return url
+
+
+def create_new_gsheet_from_xlsx(xlsx_path: str, title: str, creds) -> str:
+    """
+    Create a brand-new Google Sheet from the merged .xlsx file.
+
+    Uses Drive API files.create to make a fresh spreadsheet, then uploads the xlsx
+    into it (converted to native Google Sheets format). Returns the new spreadsheet URL.
+    """
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+
+    drive = build("drive", "v3", credentials=creds, cache_discovery=False)
+
+    # 1. Create empty spreadsheet with the given title
+    file_metadata = {
+        "name": title,
+        "mimeType": "application/vnd.google-apps.spreadsheet",
+    }
+    new_file = drive.files().create(body=file_metadata, fields="id").execute()
+    new_spreadsheet_id = new_file.get("id")
+    print(f"  Created new spreadsheet → ID: {new_spreadsheet_id}")
+
+    # 2. Upload xlsx into the new spreadsheet (Drive converts to native format)
+    media = MediaFileUpload(
+        xlsx_path,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        resumable=False,
+    )
+    drive.files().update(
+        fileId=new_spreadsheet_id,
+        media_body=media,
+        body={"mimeType": "application/vnd.google-apps.spreadsheet"},
+    ).execute()
+
+    url = f"https://docs.google.com/spreadsheets/d/{new_spreadsheet_id}/edit"
     print(f"  Uploaded → {url}")
     return url
 
@@ -408,12 +446,23 @@ def detect_columns(ws, structure: dict) -> dict:
 
     headers = [cell.value for cell in ws[header_row]]
 
+    # Also scan the row above the header for merged-cell labels
+    row_above = []
+    if header_row > 1:
+        row_above = [cell.value for cell in ws[header_row - 1]]
+
     for field, synonyms in FIELD_SYNONYMS.items():
         if field not in mapping:
             for col_idx, header_val in enumerate(headers):
                 if header_val in synonyms:
                     mapping[field] = col_idx
                     break
+            # If still not found, check the merged-cell row above
+            if field not in mapping:
+                for col_idx, header_val in enumerate(row_above):
+                    if header_val in synonyms:
+                        mapping[field] = col_idx
+                        break
 
     return mapping
 
@@ -465,43 +514,6 @@ def auto_detect_structure(ws, structure: dict) -> tuple:
 # ---------------------------------------------------------------------------
 # JSON replacement in expected result text
 # ---------------------------------------------------------------------------
-
-def _find_outermost_json(text: str):
-    """Find the first top-level JSON object { ... } in text."""
-    depth = 0
-    start = None
-    for i, ch in enumerate(text):
-        if ch == "{":
-            if depth == 0:
-                start = i
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0 and start is not None:
-                return start, i + 1
-    return None
-
-
-def replace_json_in_expected(expected_text: str, actual_body: str) -> str:
-    """Replace the sample JSON inside expected_text with the real response body."""
-    if not actual_body:
-        return expected_text
-
-    span = _find_outermost_json(expected_text)
-    if span is None:
-        return expected_text + "\n" + actual_body
-
-    start, end = span
-
-    clean = actual_body.replace("\xa0", " ").strip()
-    try:
-        obj = json.loads(clean)
-        formatted = json.dumps(obj, ensure_ascii=False, indent=2)
-    except (json.JSONDecodeError, ValueError):
-        formatted = clean
-
-    return expected_text[:start] + formatted + expected_text[end:]
-
 
 # ---------------------------------------------------------------------------
 # Cell formatting helpers
@@ -778,12 +790,113 @@ def _print_verify(v: dict):
 
 
 # ---------------------------------------------------------------------------
+# ExternalId-based fallback merge
+# ---------------------------------------------------------------------------
+
+def _run_externalid_merge_loop(ws, ws_ro, source_results, col_map, data_start_row, dry_run):
+    """
+    Fallback merge when name-based matching yields zero results.
+
+    Target has an 'externalId' column (e.g. "API1", "API2", ...) that matches
+    source API Name values exactly.  This function:
+      1. Collects target rows that have an externalId value (skip section headers).
+      2. Collects source results that are NOT "Login" or "New Request".
+      3. Zips them in order (positional match).
+      4. Writes verdict and externalId into source_results so update_evidence_sheet
+         can filter by it.
+    """
+    rd = ws_ro or ws
+
+    tc_col  = col_map.get("testCaseName")
+    exp_col = col_map.get("expectedResults")
+    act_col = col_map.get("actualResult")
+    sts_col = col_map.get("status")
+    ext_col = col_map.get("externalId")
+
+    verdicts = {"PASS": 0, "FAIL": 0, "N/A": 0}
+    matched  = 0
+
+    # Collect target rows that have an externalId (these are real test case rows)
+    target_rows = []
+    for row_idx in range(data_start_row, ws.max_row + 1):
+        ext_val = rd.cell(row=row_idx, column=ext_col + 1).value if ext_col is not None else None
+        if ext_val is None:
+            continue
+        ext_id = str(ext_val).strip()
+        if not ext_id:
+            continue
+        target_rows.append(row_idx)
+
+    # Collect source entries excluding Login and New Request
+    SKIP_NAMES = {"login", "new request"}
+    source_list = [
+        (name, data)
+        for name, data in source_results.items()
+        if name.lower().strip() not in SKIP_NAMES
+    ]
+
+    count = min(len(target_rows), len(source_list))
+    print(f"  [externalId fallback] {len(target_rows)} target rows × {len(source_list)} "
+          f"source entries → {count} positional matches")
+
+    for i in range(count):
+        target_row, (api_name, data) = target_rows[i], source_list[i]
+
+        matched += 1
+        data["externalId"] = api_name
+
+        expected_text = ""
+        if exp_col is not None:
+            exp_val = rd.cell(row=target_row, column=exp_col + 1).value
+            expected_text = str(exp_val or "")
+
+        raw_actual = data["response_body"]
+        verdict, reason = evaluate_simple(expected_text, raw_actual)
+        verdicts[verdict] = verdicts.get(verdict, 0) + 1
+
+        tc_val = rd.cell(row=target_row, column=tc_col + 1).value
+        tc_display = str(tc_val or api_name)[:65]
+        print(f"  [{verdict:7s}] {tc_display}")
+
+        if dry_run:
+            continue
+
+        if act_col is not None:
+            cell = ws.cell(row=target_row, column=act_col + 1)
+            cell.value = raw_actual
+            cell.alignment = _wrap_align()
+            cell.font = _black_font()
+            cell.fill = _white_fill()
+
+        if sts_col is not None:
+            cell = ws.cell(row=target_row, column=sts_col + 1)
+            cell.value = verdict
+            cell.alignment = _wrap_align()
+            cell.font = _black_font()
+            cell.fill = _white_fill()
+
+        _autofit_row_height(ws, target_row, act_col)
+
+    print()
+    print(f"  [externalId fallback] Matched : {matched} / {len(source_results)}")
+    print(f"  PASS    : {verdicts.get('PASS', 0)}")
+    print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
+    print(f"  N/A     : {verdicts.get('N/A', 0)}")
+
+    return matched, [], verdicts
+
+
+# ---------------------------------------------------------------------------
 # Main merge logic
 # ---------------------------------------------------------------------------
 
 def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_readonly=None):
     """
     Core merge loop — matches source results to target rows and writes data.
+
+    Matches target testCaseName against source_results keys.
+    On every successful match, stores `externalId` back into source_results[api_name]
+    so that update_evidence_sheet() can filter by it.
 
     Args:
         ws:           Writable worksheet (may contain formulas as strings).
@@ -804,6 +917,7 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
     exp_col = col_map.get("expectedResults")
     act_col = col_map.get("actualResult")
     sts_col = col_map.get("status")
+    ext_col = col_map.get("externalId")
 
     matched = 0
     not_found = []
@@ -824,6 +938,12 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
         matched += 1
         data = source_results[tc_name]
 
+        # Store externalId for update_evidence_sheet filter
+        if ext_col is not None:
+            ext_id_val = rd.cell(row=row_idx, column=ext_col + 1).value
+            if ext_id_val:
+                data["externalId"] = str(ext_id_val).strip()
+
         expected_text = ""
         if exp_col is not None:
             exp_val = rd.cell(row=row_idx, column=exp_col + 1).value
@@ -835,12 +955,6 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
 
         verdicts[verdict] = verdicts.get(verdict, 0) + 1
         print(f"  [{verdict:7s}] {tc_name[:65]}")
-
-        ext_id_col = col_map.get("externalId")
-        if ext_id_col is not None:
-            ext_id_val = rd.cell(row=row_idx, column=ext_id_col + 1).value
-            if ext_id_val:
-                data["externalId"] = str(ext_id_val).strip()
 
         if dry_run:
             continue
@@ -872,6 +986,7 @@ def merge_results(
     structure_path: str,
     dry_run: bool = False,
     auto_fix: bool = True,
+    new_spreadsheet_name: str = None,
 ) -> dict:
     import openpyxl
 
@@ -883,7 +998,7 @@ def merge_results(
     tmpdir = tempfile.mkdtemp(prefix="merge_postman_")
     target_xlsx = os.path.join(tmpdir, "target.xlsx")
 
-    print(f"[1/5] Downloading Google Sheet: {spreadsheet_id}")
+    print(f"[1/5] Downloading template Google Sheet: {spreadsheet_id}")
     download_gsheet_as_xlsx(spreadsheet_id, creds, target_xlsx)
 
     # --- Step 1: Load source ---
@@ -961,6 +1076,14 @@ def merge_results(
 
         if not changed:
             print("[auto-fix] No better mapping found — check that API Name values match testCaseName column.")
+            print("[auto-fix] Trying externalId-based fallback matching ...")
+            matched, not_found, verdicts = _run_externalid_merge_loop(
+                ws, ws_ro, source_results, new_col_map, data_start_row, dry_run
+            )
+            if matched > 0:
+                col_map = new_col_map
+            header_row     = new_header
+            data_start_row = new_data_start
         else:
             if new_header != header_row:
                 print(f"[auto-fix] headerRow: {header_row} → {new_header}")
@@ -1005,9 +1128,12 @@ def merge_results(
         verify = _verify_output(merged_xlsx, structure, col_map, data_start_row, matched)
         _print_verify(verify)
 
-        # Upload back to Google Sheets
-        print(f"\n[Upload] Uploading merged result to Google Sheet ...")
-        sheet_url = upload_xlsx_to_gsheet(merged_xlsx, spreadsheet_id, creds)
+        # Create brand-new Google Sheet (target is kept untouched)
+        new_name = new_spreadsheet_name or (
+            f"Merged Results {time.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        print(f"\n[Upload] Creating new Google Sheet: '{new_name}' ...")
+        sheet_url = create_new_gsheet_from_xlsx(merged_xlsx, new_name, creds)
         print(f"\nDone! → {sheet_url}")
     else:
         print("\n[dry-run] No changes written.")
@@ -1018,7 +1144,7 @@ def merge_results(
         "total_source": len(source_results),
         "verdicts": verdicts,
         "not_found": not_found,
-        "spreadsheet_url": f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
+        "spreadsheet_url": sheet_url,
     }
 
 
@@ -1033,11 +1159,13 @@ def main():
     parser.add_argument("--source",    required=True,
                         help="Path to api_results_*.xlsx (Postman output)")
     parser.add_argument("--target",    required=True,
-                        help="Google Sheets URL or spreadsheet ID")
+                        help="Google Sheets URL or spreadsheet ID (used as template, not overwritten)")
     parser.add_argument("--structure", required=True,
                         help="Path to structure.json")
     parser.add_argument("--dry-run",   action="store_true",
                         help="Print what would happen without writing anything")
+    parser.add_argument("--name",
+                        help="Name of the new Google Sheet to create (default: auto-generated)")
     args = parser.parse_args()
 
     try:
@@ -1046,6 +1174,7 @@ def main():
             target_url=args.target,
             structure_path=args.structure,
             dry_run=args.dry_run,
+            new_spreadsheet_name=args.name,
         )
         print()
         print(json.dumps(result, ensure_ascii=False, indent=2))

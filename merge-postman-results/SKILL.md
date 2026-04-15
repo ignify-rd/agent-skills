@@ -7,9 +7,8 @@ description: >
   "đánh giá pass/fail", "upload evidence", or "import postman output".
   The skill runs a Python script to: download the Google Sheet as xlsx, match test cases by name,
   fill the Actual Result column with response JSON body, evaluate Pass/Fail by status code
-  comparison and write the verdict to the "Kết quả hiện tại" (status) column, replace the
-  sample JSON in Expected Result with the real response JSON, embed screenshots into an
-  "Evidence" sheet, and upload the merged xlsx back to Google Sheets.
+  comparison and write the verdict to the "Kết quả hiện tại" (status) column,
+  embed screenshots into an "Evidence" sheet, and upload the merged xlsx back to Google Sheets.
 ---
 
 # Merge Postman Results into Google Spreadsheet
@@ -24,9 +23,8 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 3. Fills the **Actual Result** column with the response JSON body from source
 4. Evaluates **Pass / Fail / N/A** by comparing status codes (expected vs actual)
 5. Writes the verdict (`PASS`/`FAIL`/`N/A`) to the **Kết quả hiện tại** (status) column
-6. Replaces the **sample JSON** in Expected Result with the real response JSON
-7. Creates/updates the **"Evidence"** sheet with embedded screenshot images
-8. **Uploads** the merged `.xlsx` back to the Google Sheet (converted to native Google Sheets format)
+6. Creates/updates the **"Evidence"** sheet with embedded screenshot images
+7. **Uploads** the merged `.xlsx` back to the Google Sheet (converted to native Google Sheets format)
 
 ## Inputs the user must provide
 
@@ -57,7 +55,7 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 | Field | Required | Purpose |
 |-------|----------|---------|
 | `testCaseName` | yes | **Match key** — matched against `API Name` from source |
-| `expectedResults` | yes | Status code compared for evaluation; JSON portion replaced with real response |
+| `expectedResults` | yes | Status code compared for evaluation |
 | `actualResult` | yes | Filled with response JSON body from source |
 | `headerRow` | yes | Which row contains column headers |
 | `dataStartRow` | yes | First row with test case data |
