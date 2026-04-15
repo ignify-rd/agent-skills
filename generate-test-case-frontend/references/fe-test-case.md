@@ -132,6 +132,15 @@ Ví dụ SAI:
 
 ## R5: step
 
+> **⚠️ NAVIGATION STEPS — BẮT BUỘC VỚI MỌI TEST CASE:**
+> Mỗi test case PHẢI bắt đầu bằng `navigationSteps` từ tc-context.json — các bước điều hướng từ sidebar đến màn hình.
+> Các bước test cụ thể đến SAU navigationSteps, được đánh số tiếp theo (navigationStepCount + 1, + 2, ...).
+>
+> Ví dụ (navigationStepCount = 2):
+> - navigationSteps = `"1. Hover vào menu \"Thẻ\"\n2. Click \"Quản lý yêu cầu thẻ\""`
+> - Specific action: "Quan sát giao diện"
+> - → Full step: `"1. Hover vào menu \"Thẻ\"\n2. Click \"Quản lý yêu cầu thẻ\"\n3. Quan sát giao diện"`
+
 > **⚠️ CATALOG STYLE TUYỆT ĐỐI ƯU TIÊN — BẮT BUỘC:**
 > 1. Nếu catalog có step examples → **PHẢI** follow đúng cách viết (verbs, sentence structure, format, sentence length, numbered/prose style) của catalog. **KHÔNG áp dụng defaults bên dưới.**
 > 2. Lấy step format từ `catalogStyle.stepExample`, `catalogStyle.writingStyle`, `catalogStyle.stepVerbStyle` trong tc-context.json.
@@ -140,9 +149,11 @@ Ví dụ SAI:
 **Format mặc định (fallback — chỉ dùng khi catalog KHÔNG có examples):**
 
 ```
-1. {UI action 1}
-2. {UI action 2}
+{navigationSteps}
+{N+1}. {UI action 1}
+{N+2}. {UI action 2}
 ```
+(N = navigationStepCount)
 
 **Bộ động từ UI mặc định (fallback — override bằng catalogStyle.stepVerbStyle nếu có):**
 - `Click` — nhấn button, icon, link
@@ -154,17 +165,24 @@ Ví dụ SAI:
 - `Double-click` — nhấn đúp
 - `Hover` — di chuột qua element
 
-Ví dụ theo loại test:
-- **Điều hướng**: `"1. Quan sát màn hình sau khi điều hướng"`
-- **Bố cục**: `"1. Quan sát bố cục màn hình"`
-- **Dropdown**: `"1. Click vào dropdown list \"{tên}\"\n2. Quan sát danh sách hiển thị"`
-- **Chọn giá trị**: `"1. Click vào dropdown list \"{tên}\"\n2. Chọn giá trị \"{giá trị cụ thể}\""`
-- **Nhập ký tự**: `"1. Tại textbox \"{tên}\", nhập {N} ký tự\n2. Quan sát"`
-- **Icon X**: `"1. Nhập giá trị vào textbox \"{tên}\"\n2. Click icon X"`
-- **Tìm kiếm**: `"1. Nhập điều kiện tìm kiếm\n2. Click button \"Tìm kiếm\""`
-- **Phân trang**: `"1. Click button >\n2. Quan sát"` hoặc `"1. Chọn giá trị 10 từ dropdown phân trang"`
+Ví dụ theo loại test (navigationStepCount = 2, nên specific actions bắt đầu từ số 3):
+- **Điều hướng**: `"1. Hover vào menu \"...\"\n2. Click \"...\"\n3. Quan sát màn hình sau khi điều hướng"`
+- **Bố cục**: `"1. Hover vào menu \"...\"\n2. Click \"...\"\n3. Quan sát bố cục màn hình"`
+- **Dropdown**: `"1. Hover vào menu \"...\"\n2. Click \"...\"\n3. Click vào dropdown list \"{tên}\"\n4. Quan sát danh sách hiển thị"`
+- **Nhập ký tự**: `"1. Hover vào menu \"...\"\n2. Click \"...\"\n3. Tại textbox \"{tên}\", nhập {N} ký tự\n4. Quan sát"`
+- **Tìm kiếm**: `"1. Hover vào menu \"...\"\n2. Click \"...\"\n3. Nhập điều kiện tìm kiếm\n4. Click button \"Tìm kiếm\""`
+- **Phân trang**: `"1. Hover vào menu \"...\"\n2. Click \"...\"\n3. Click button >\n4. Quan sát"`
 
 ## R6: expectedResult
+
+> **⚠️ STEP NUMBER PREFIX — BẮT BUỘC VỚI MỌI TEST CASE:**
+> expectedResult PHẢI bắt đầu bằng "{N}. " — trong đó N = tổng số bước trong `step` field.
+> N = navigationStepCount + số bước test cụ thể.
+>
+> Ví dụ:
+> - 2 navigation steps + 1 specific step = 3 tổng → `"3. Điều hướng thành công đến màn hình..."`
+> - 2 navigation steps + 2 specific steps = 4 tổng → `"4. Hiển thị kết quả khớp điều kiện"`
+> - 2 navigation steps + 3 specific steps = 5 tổng → `"5. Hiển thị cảnh báo \"...\"`
 
 > **⚠️ CATALOG STYLE TUYỆT ĐỐI ƯU TIÊN — BẮT BUỘC:**
 > 1. Nếu catalog có expectedResult examples → **PHẢI** follow đúng cách viết (phrases, sentence length, detail level) của catalog. **KHÔNG áp dụng defaults bên dưới.**

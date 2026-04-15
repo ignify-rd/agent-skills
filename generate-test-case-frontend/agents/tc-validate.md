@@ -105,6 +105,9 @@ for f, n in counts.items():
         <field name="summary">Giống hệt `testCaseName`</field>
         <field name="preConditions">{preConditionsBase}</field>
         <field name="step">
+            ⚠️ BẮT BUỘC: PHẢI bắt đầu bằng navigationSteps từ tc-context.json.
+            Các bước test cụ thể đến SAU, đánh số tiếp từ (navigationStepCount + 1).
+            Format: "{navigationSteps}\n{N+1}. {specific action}\n{N+2}. ..."
             ⚠️ PHẢI follow catalogStyle từ tc-context.json VERBATIM:
             - Dùng catalogStyle.stepVerbStyle — KHÔNG tự dùng verbs khác không có trong catalog
             - Dùng catalogStyle.writingStyle để xác định format (numbered-steps / imperative-phrase / prose) và độ chi tiết
@@ -112,6 +115,9 @@ for f, n in counts.items():
             - KHÔNG viết "Send API"
         </field>
         <field name="expectedResult">
+            ⚠️ BẮT BUỘC: PHẢI thêm prefix "{N}. " — N = tổng số bước trong step field
+            (N = navigationStepCount + số bước test cụ thể).
+            VD: navigationStepCount=2, 2 specific steps → prefix "4. "
             ⚠️ PHẢI follow catalogStyle từ tc-context.json VERBATIM:
             - Dùng catalogStyle.expectedResultVerbStyle — KHÔNG tự thêm phrases không có trong catalog
             - Dùng catalogStyle.expectedResultExample để xác định độ chi tiết, cách diễn đạt error messages
