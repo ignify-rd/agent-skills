@@ -1,9 +1,160 @@
 ---
 name: execute-test-case-frontend
-description: Execute frontend/UI test cases from a local Excel (.xlsx) file using Playwright. Reads test rows, groups consecutive validation cases by page to reduce token usage, performs browser interactions, validates page state against descriptions, captures screenshots, and writes PASS/FAIL back to the .xlsx file. Triggers when user says "execute frontend test", "run FE test cases", "chạy test case frontend", or provides a path to an .xlsx file with frontend test data.
+description: Two-mode skill for executing frontend/UI test cases. Mode A (DOM Extraction): given a URL, extracts DOM, generates POM TypeScript + spec via LLM, runs with npx playwright test, self-heals up to 2 times, produces report. Triggers when user says "chay test frontend", "test form tai [url]", "execute test case frontend" with a URL. Mode B (xlsx): given a local .xlsx file, reads test rows, executes via Playwright MCP, writes PASS/FAIL back. Triggers when user provides an .xlsx file path.
 ---
 
 # Execute Test Case — Frontend
+
+This skill supports two modes:
+
+- **Mode A - DOM Extraction + POM Generation**: Provide a URL -- agent extracts DOM, generates TypeScript POM code, runs tests with `npx playwright test`, self-heals, and produces a Markdown report.
+- **Mode B - xlsx Execution**: Provide a `.xlsx` file -- agent reads test cases, executes via Playwright MCP, writes results back.
+
+**Trigger Mode A:** User says "chay test frontend", "test form tai [url]", "execute test case frontend [url]", or provides a URL with test request.
+**Trigger Mode B:** User provides a path to an `.xlsx` file.
+
+---
+
+# Mode A: DOM Extraction + POM Generation
+
+## Prerequisites
+
+```bash
+# Python playwright
+python3 -c "import playwright; print('ok')" || pip install playwright && playwright install chromium
+
+# Node.js + npx
+npx --version
+
+# @playwright/test
+npx playwright --version || npm install -D @playwright/test
+```
+
+If any check fails -- tell user what to install and stop.
+
+---
+
+## Workflow (6 steps)
+
+### Step 1 - DOM Extraction
+
+```bash
+python execute-test-case-frontend/scripts/extract_dom.py <url>
+# Output: agent-workspace/raw-dom.json
+```
+
+- Mở URL headless, cho den networkidle
+- Loc DOM: chi giu `form, input, select, textarea, button`
+- Giu cac attribute: `id, name, type, required, placeholder, minlength, maxlength, pattern, aria-label, data-testid`
+- Ghi ket qua ra `agent-workspace/raw-dom.json`
+
+Print: `[Step 1/6] Extracting DOM from {url}...`
+
+---
+
+### Step 2 - Agent tao test-data.json
+
+Doc `agent-workspace/raw-dom.json`. Thiet ke test cases nham vao validation.
+Tham khao `execute-test-case-frontend/AGENTS.md` de biet format va cac loai test bat buoc.
+
+```json
+[
+  {
+    "field": "email",
+    "selector": "input[name=email]",
+    "cases": [
+      { "label": "empty", "value": "", "expectError": true },
+      { "label": "invalid_format", "value": "notanemail", "expectError": true },
+      { "label": "valid", "value": "user@example.com", "expectError": false }
+    ]
+  }
+]
+```
+
+Ghi ra: `agent-workspace/test-data.json`
+
+Print: `[Step 2/6] Generating test data...`
+
+---
+
+### Step 3 - Agent tao code (POM + spec)
+
+Tham khao `execute-test-case-frontend/references/pom-patterns.md`.
+
+Tao dung 2 file:
+- `agent-workspace/pages/formPage.ts` - Page Object Model
+- `agent-workspace/tests/form-validate.spec.ts` - data-driven spec tu test-data.json
+
+Quy tac:
+- Chi dung CSS Selector hoac Playwright Role locator (KHONG dung XPath)
+- Assertion: tim element co class chua `error`, `invalid`, `alert`, `danger` hoac `aria-invalid=true`
+- Phai co cac test cases bat buoc: submit trong, sai dinh dang, boundary (minlength/maxlength), XSS co ban
+
+Print: `[Step 3/6] Generating POM code...`
+
+---
+
+### Step 4 - Thuc thi
+
+```bash
+python execute-test-case-frontend/scripts/run_tests.py agent-workspace/tests/form-validate.spec.ts
+# Output: agent-workspace/test-results/results.json
+```
+
+Print: `[Step 4/6] Running tests...`
+
+---
+
+### Step 5 - Self-healing (toi da 2 lan)
+
+Neu ket qua co loi syntax hoac locator fail:
+
+1. Doc `agent-workspace/test-results/results.json` lay error details
+2. Doc lai `agent-workspace/raw-dom.json` de tim dung selector
+3. Sua file loi (`formPage.ts` hoac `form-validate.spec.ts`)
+4. Chay lai Step 4
+
+```
+[Self-heal attempt 1/2] Fixing: locator 'input[name=email]' not found
+[Self-heal attempt 2/2] Fixing: syntax error at formPage.ts:23
+```
+
+Sau 2 lan van loi: bao loi cu the va dung lai.
+
+---
+
+### Step 6 - Bao cao
+
+```bash
+python execute-test-case-frontend/scripts/generate_report.py --url <tested-url>
+# Output: agent-workspace/test-results/report.md
+```
+
+Print: `[Step 6/6] Generating report...`
+
+Hien thi noi dung report.md cho user.
+
+---
+
+## Workspace layout
+
+```
+agent-workspace/
++-- raw-dom.json                 <- Step 1 output
++-- test-data.json               <- Step 2 output (agent-generated)
++-- pages/
+|   +-- formPage.ts              <- Step 3 output (agent-generated)
++-- tests/
+|   +-- form-validate.spec.ts    <- Step 3 output (agent-generated)
++-- test-results/
+    +-- results.json             <- Step 4 output
+    +-- report.md                <- Step 6 output
+    +-- screenshots/             <- Step 4 screenshots (on failure)
+```
+
+---
+
+# Mode B: xlsx Execution
 
 Reads frontend test cases from a local `.xlsx` file, executes each via Playwright browser, and writes results back.
 

@@ -23,6 +23,8 @@ Project-level overrides for test-genie skills.
 | Generate test design (Frontend) | `/generate-test-design-frontend` or say "sinh test design giao diện" |
 | Generate test cases (API) | `/generate-test-case-api` or say "sinh test case api" |
 | Generate test cases (Frontend) | `/generate-test-case-frontend` or say "sinh test case giao diện" |
+| Execute frontend tests from URL (DOM extraction) | say "chay test frontend [url]" or "test form tai [url]" |
+| Execute frontend tests from xlsx | say "chay test case frontend" or provide `.xlsx` file path |
 
 ---
 
