@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-merge_postman_results.py — Merge auto-postman API test results into a test case Excel file.
+merge_postman_results.py — Merge auto-postman API test results into a Google Spreadsheet.
 
-Reads api_results_*.xlsx (auto-postman output), matches rows by test case name,
-fills Actual Result with the raw response (Status + Response Body), evaluates
-Pass/Fail via Claude AI and writes the verdict to the "Kết quả hiện tại" (status)
-column, replaces sample JSON in Expected Result with real response JSON, and
-embeds screenshots in an Evidence sheet.
+Reads api_results_*.xlsx (auto-postman output), downloads the target Google Sheet as xlsx,
+fills Actual Result with the raw response (Status + Response Body), evaluates Pass/Fail
+via Claude AI and writes the verdict to the "Kết quả hiện tại" (status) column, replaces
+sample JSON in Expected Result with real response JSON, embeds screenshots in an Evidence
+sheet, and uploads the merged xlsx back to the Google Sheet.
 
 Usage:
-  python merge_postman_results.py \\
-    --source api_results_20260415_091720.xlsx \\
-    --target test_cases.xlsx \\
-    --structure structure.json \\
-    [--output result.xlsx] \\
-    [--api-key sk-ant-...] \\
-    [--no-ai] \\
+  python merge_postman_results.py \
+    --source api_results_20260415_091720.xlsx \
+    --target "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit" \
+    --structure structure.json \
+    [--api-key sk-ant-...] \
+    [--no-ai] \
     [--dry-run]
 
 Requirements:
-  pip install openpyxl pillow anthropic
+  pip install openpyxl pillow anthropic google-api-python-client google-auth google-auth-oauthlib
 """
 
 import argparse
@@ -28,6 +27,8 @@ import json
 import os
 import re
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 # Force UTF-8 output on Windows
@@ -35,6 +36,156 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+
+# ---------------------------------------------------------------------------
+# Google OAuth2 credentials
+# ---------------------------------------------------------------------------
+
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+
+CREDS_PATH = Path.home() / "google-sheets-mcp" / "dist" / ".gsheets-server-credentials.json"
+OAUTH_PATH = Path.home() / "google-sheets-mcp" / "dist" / "gcp-oauth.keys.json"
+
+
+def _save_credentials(creds):
+    """Save OAuth2 credentials back to MCP server's credential file."""
+    data = {
+        "access_token": creds.token,
+        "refresh_token": creds.refresh_token,
+        "scope": " ".join(creds.scopes or SCOPES),
+        "token_type": "Bearer",
+        "expiry_date": (
+            int(creds.expiry.timestamp() * 1000) if creds.expiry
+            else int(time.time() * 1000) + 3600000
+        ),
+    }
+    with open(CREDS_PATH, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"  [auth] Credentials saved to {CREDS_PATH}")
+
+
+def get_google_credentials(creds_path=None, oauth_path=None):
+    """
+    Load OAuth2 credentials with Sheets + Drive scope.
+
+    Reuses the MCP gsheets server's stored credentials. If the current token
+    doesn't have Drive scope, triggers a one-time browser re-authorization.
+    """
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+
+    cp = Path(creds_path) if creds_path else CREDS_PATH
+    op = Path(oauth_path) if oauth_path else OAUTH_PATH
+
+    if not op.exists():
+        raise FileNotFoundError(
+            f"OAuth client keys not found: {op}\n"
+            "Set up the gsheets MCP server first, or pass --oauth-keys."
+        )
+
+    with open(op) as f:
+        oauth_keys = json.load(f)["installed"]
+
+    creds = None
+
+    # Try loading stored credentials
+    if cp.exists():
+        with open(cp) as f:
+            stored = json.load(f)
+
+        creds = Credentials(
+            token=stored.get("access_token"),
+            refresh_token=stored.get("refresh_token"),
+            token_uri=oauth_keys["token_uri"],
+            client_id=oauth_keys["client_id"],
+            client_secret=oauth_keys["client_secret"],
+            scopes=SCOPES,
+        )
+
+        if creds.expired or not creds.valid:
+            try:
+                creds.refresh(Request())
+                _save_credentials(creds)
+            except Exception:
+                creds = None  # will re-auth below
+
+    # Verify Drive scope works
+    if creds and creds.valid:
+        try:
+            from googleapiclient.discovery import build
+            drive = build("drive", "v3", credentials=creds, cache_discovery=False)
+            drive.about().get(fields="user").execute()
+            return creds
+        except Exception:
+            print("  [auth] Current token lacks Drive scope — re-authorization needed.")
+            creds = None
+
+    # Re-authorize with full scopes (opens browser)
+    print("[auth] Opening browser for Google OAuth (Sheets + Drive) ...")
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    flow = InstalledAppFlow.from_client_secrets_file(str(op), SCOPES)
+    creds = flow.run_local_server(port=0)
+    _save_credentials(creds)
+    return creds
+
+
+def parse_spreadsheet_id(url_or_id: str) -> str:
+    """Extract spreadsheet ID from a Google Sheets URL or return as-is."""
+    m = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_or_id)
+    return m.group(1) if m else url_or_id
+
+
+# ---------------------------------------------------------------------------
+# Google Drive download / upload
+# ---------------------------------------------------------------------------
+
+def download_gsheet_as_xlsx(spreadsheet_id: str, creds, output_path: str):
+    """Download a Google Sheet as .xlsx via authenticated HTTP export."""
+    import urllib.request
+
+    export_url = (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=xlsx"
+    )
+    req = urllib.request.Request(export_url)
+    req.add_header("Authorization", f"Bearer {creds.token}")
+
+    with urllib.request.urlopen(req) as resp, open(output_path, "wb") as f:
+        f.write(resp.read())
+
+    size_kb = os.path.getsize(output_path) / 1024
+    print(f"  Downloaded → {output_path} ({size_kb:.0f} KB)")
+
+
+def upload_xlsx_to_gsheet(xlsx_path: str, spreadsheet_id: str, creds) -> str:
+    """
+    Upload merged .xlsx back to the Google Sheet, replacing its content.
+
+    Uses Drive API files.update with xlsx media body. Google auto-converts
+    the xlsx content into native Google Sheets format.
+    """
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+
+    drive = build("drive", "v3", credentials=creds, cache_discovery=False)
+
+    media = MediaFileUpload(
+        xlsx_path,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.document",
+        resumable=True,
+    )
+
+    drive.files().update(
+        fileId=spreadsheet_id,
+        media_body=media,
+    ).execute()
+
+    url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+    print(f"  Uploaded → {url}")
+    return url
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +219,6 @@ def _extract_embedded_images(xlsx_path: str, col_index: int = None) -> dict:
     with zipfile.ZipFile(xlsx_path) as zf:
         names = set(zf.namelist())
 
-        # Find all drawing files (support multiple sheets)
         drawing_files = sorted(
             n for n in names
             if n.startswith("xl/drawings/drawing") and n.endswith(".xml") and "_rels" not in n
@@ -81,18 +231,15 @@ def _extract_embedded_images(xlsx_path: str, col_index: int = None) -> dict:
             if rels_path not in names:
                 continue
 
-            # rId → media path  (e.g.  rId1 → xl/media/image1.png)
             rels_root = ET.fromstring(zf.read(rels_path).decode("utf-8"))
             rid_to_media = {}
             for rel in rels_root.findall(f"{{{NS_PKG}}}Relationship"):
                 rid    = rel.get("Id")
                 target = rel.get("Target", "")
                 if "media" in target:
-                    # target is like "../media/image1.png" — normalise to xl/media/...
                     media_path = "xl/media/" + target.rsplit("/", 1)[-1]
                     rid_to_media[rid] = media_path
 
-            # Parse anchors → (row, col, rId)
             drawing_root = ET.fromstring(zf.read(drawing_path).decode("utf-8"))
             anchor_types = [f"{{{NS_SD}}}oneCellAnchor", f"{{{NS_SD}}}twoCellAnchor"]
 
@@ -107,13 +254,12 @@ def _extract_embedded_images(xlsx_path: str, col_index: int = None) -> dict:
                     if col_el is None or row_el is None:
                         continue
 
-                    img_col = int(col_el.text)   # 0-based
-                    img_row = int(row_el.text)   # 0-based
+                    img_col = int(col_el.text)
+                    img_row = int(row_el.text)
 
                     if col_index is not None and img_col != col_index:
                         continue
 
-                    # Drill down to the blip embed rId
                     pic = anchor.find(f"{{{NS_SD}}}pic")
                     if pic is None:
                         continue
@@ -145,7 +291,6 @@ def load_source(source_path: str) -> dict:
 
     Supports two screenshot formats:
       - NEW: screenshots embedded directly as images in the xlsx drawing layer.
-             The Screenshot cell is empty; images are matched by row position.
       - OLD: Screenshot cell contains a relative file path to a .png file.
 
     Returns:
@@ -159,7 +304,6 @@ def load_source(source_path: str) -> dict:
     ws = wb.active
     source_dir = Path(source_path).parent
 
-    # Locate header row — first row that contains 'API Name'
     header_row_idx = None
     col_indices = {}
 
@@ -181,8 +325,6 @@ def load_source(source_path: str) -> dict:
     body_col   = col_indices.get("Response Body")
     shot_col   = col_indices.get("Screenshot")
 
-    # Pre-extract embedded images keyed by 0-based drawing row index.
-    # Drawing row 0 = Excel row 1, so: drawing_row = excel_row - 1.
     embedded = {}
     if shot_col is not None:
         embedded = _extract_embedded_images(source_path, col_index=shot_col)
@@ -200,17 +342,15 @@ def load_source(source_path: str) -> dict:
         if not name:
             continue
 
-        # --- Screenshot resolution (new embedded format takes priority) ---
-        drawing_row = excel_row - 1   # 0-based drawing coordinate
-        screenshot = embedded.get(drawing_row)  # bytes if embedded, else None
+        drawing_row = excel_row - 1
+        screenshot = embedded.get(drawing_row)
 
         if screenshot is None and shot_col is not None and row[shot_col]:
-            # Fallback: old format with file path in the cell
             raw = str(row[shot_col]).replace("\\", "/").strip()
             for candidate in [
-                source_dir / raw,          # e.g. results/screenshots/…
-                source_dir.parent / raw,   # e.g. auto-postman/screenshots/…
-                Path(raw),                 # absolute path
+                source_dir / raw,
+                source_dir.parent / raw,
+                Path(raw),
             ]:
                 if candidate.exists():
                     screenshot = str(candidate)
@@ -227,7 +367,7 @@ def load_source(source_path: str) -> dict:
                 if body_col is not None and row[body_col] is not None
                 else ""
             ),
-            "screenshot": screenshot,   # bytes | path string | None
+            "screenshot": screenshot,
         }
 
     return results
@@ -283,11 +423,8 @@ def auto_detect_structure(ws, structure: dict) -> tuple:
     Scan the entire worksheet to find the real header row and column mapping
     when the structure.json values appear to be wrong (e.g., matched = 0).
 
-    Strategy: look for a row that contains at least 2 known column name synonyms.
-
     Returns:
-        (header_row, data_start_row, col_map)  — all 1-based row numbers, 0-based col indices.
-        Returns the original values unchanged if no better row is found.
+        (header_row, data_start_row, col_map)
     """
     all_synonyms = {v: field for field, syns in FIELD_SYNONYMS.items() for v in syns}
 
@@ -309,21 +446,17 @@ def auto_detect_structure(ws, structure: dict) -> tuple:
             best_mapping = found
 
     if best_row is None:
-        # Nothing better found — return originals
         orig_header = structure.get("headerRow", 1)
         return orig_header, structure.get("dataStartRow", orig_header + 1), detect_columns(ws, structure)
 
-    # Merge with existing structure.json mapping (structure.json wins for fields not found by scan)
     existing = {k: int(v) for k, v in structure.get("columnMapping", {}).items()}
-    merged = {**existing, **best_mapping}   # scan result overrides for detected fields
+    merged = {**existing, **best_mapping}
 
-    # data_start_row: skip the row right after header if it looks like a suite/group header
     data_row = best_row + 1
-    first_data = [ws.cell(data_row, c + 1).value for c in range(min(ws.max_column, 5))]
     tc_col = merged.get("testCaseName")
     if tc_col is not None:
         tc_val = ws.cell(data_row, tc_col + 1).value
-        if not tc_val:                          # blank in name col → likely a group row
+        if not tc_val:
             data_row = best_row + 2
 
     return best_row, data_row, merged
@@ -334,12 +467,7 @@ def auto_detect_structure(ws, structure: dict) -> tuple:
 # ---------------------------------------------------------------------------
 
 def _find_outermost_json(text: str):
-    """
-    Find the first top-level JSON object { ... } in text.
-
-    Returns:
-        (start, end) indices or None
-    """
+    """Find the first top-level JSON object { ... } in text."""
     depth = 0
     start = None
     for i, ch in enumerate(text):
@@ -355,26 +483,16 @@ def _find_outermost_json(text: str):
 
 
 def replace_json_in_expected(expected_text: str, actual_body: str) -> str:
-    """
-    Replace the sample JSON object inside expected_text with the real response body.
-    Text outside the JSON block (descriptions, status lines) is preserved.
-
-    Example:
-        expected_text = "1. Check:\n 1.1. Status: 200\n 1.2. Response:\n{\"code\":0}"
-        actual_body   = '{"code":200,"message":"OK"}'
-        → "1. Check:\n 1.1. Status: 200\n 1.2. Response:\n{\n  \"code\": 200,\n  \"message\": \"OK\"\n}"
-    """
+    """Replace the sample JSON inside expected_text with the real response body."""
     if not actual_body:
         return expected_text
 
     span = _find_outermost_json(expected_text)
     if span is None:
-        # No JSON block found — append actual body after a separator
         return expected_text + "\n" + actual_body
 
     start, end = span
 
-    # Pretty-print actual body if it is valid JSON
     clean = actual_body.replace("\xa0", " ").strip()
     try:
         obj = json.loads(clean)
@@ -396,10 +514,7 @@ def _wrap_align():
 
 
 def _autofit_row_height(ws, row_idx: int, *col_indices):
-    """
-    Set row height based on the maximum line count across the given columns.
-    Each text line ≈ 15 pt. Minimum 15 pt, capped at 409 pt (Excel max).
-    """
+    """Set row height based on the maximum line count across the given columns."""
     LINE_HEIGHT_PT = 15
     max_lines = 1
     for col_idx in col_indices:
@@ -445,12 +560,7 @@ def evaluate_simple(expected_text: str, actual_text: str):
 
 
 def evaluate_ai(expected_text: str, actual_text: str, api_key: str = None):
-    """
-    Ask Claude to evaluate Pass / Fail by comparing expected vs actual results.
-
-    Returns:
-        (verdict, reason)
-    """
+    """Ask Claude to evaluate Pass / Fail."""
     key = api_key or os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         print("  [warn] ANTHROPIC_API_KEY not set — falling back to simple evaluation",
@@ -487,7 +597,6 @@ def evaluate_ai(expected_text: str, actual_text: str, api_key: str = None):
         elif upper.startswith("N/A"):
             return "N/A", text
         else:
-            # Claude responded with something else — treat as FAIL and include the note
             return "FAIL", text
 
     except Exception as exc:
@@ -496,20 +605,16 @@ def evaluate_ai(expected_text: str, actual_text: str, api_key: str = None):
 
 
 # ---------------------------------------------------------------------------
-# Evidence sheet
+# Evidence sheet (embedded images in xlsx)
 # ---------------------------------------------------------------------------
 
 def update_evidence_sheet(wb, source_results: dict):
     """
-    Create (or replace) the 'Evidence' sheet.
-
-    Layout:
-        Column A — ID (test case name)
-        Column B — Evidence (embedded screenshot, or placeholder text)
+    Create (or replace) the 'Evidence' sheet with embedded screenshot images.
 
     'screenshot' in source_results can be:
-        bytes      — image extracted from the source xlsx drawing layer (new format)
-        str        — absolute file path (old format)
+        bytes      — image extracted from the source xlsx drawing layer
+        str        — absolute file path
         None       — no screenshot available
     """
     SHEET_NAME = "Evidence"
@@ -517,7 +622,6 @@ def update_evidence_sheet(wb, source_results: dict):
     if SHEET_NAME in wb.sheetnames:
         del wb[SHEET_NAME]
 
-    # Always create Evidence as the second sheet (index 1)
     ws = wb.create_sheet(SHEET_NAME, index=1)
     ws["A1"] = "ID"
     ws["B1"] = "Evidence"
@@ -526,18 +630,15 @@ def update_evidence_sheet(wb, source_results: dict):
 
     row_num = 2
     for api_name, data in source_results.items():
-        # Use externalId if captured from target file, fallback to api_name
         display_id = data.get("externalId") or api_name
         ws[f"A{row_num}"] = display_id
         shot = data.get("screenshot")
 
         if isinstance(shot, (bytes, bytearray)) and shot:
-            # New format: embedded image bytes extracted from source xlsx
             ok = _embed_image_bytes(ws, row_num, "B", shot)
             if not ok:
                 ws[f"B{row_num}"] = "[Image embed failed]"
         elif isinstance(shot, str) and os.path.exists(shot):
-            # Old format: file path
             _embed_image_file(ws, row_num, "B", shot)
         else:
             ws[f"B{row_num}"] = "[No screenshot]"
@@ -546,7 +647,7 @@ def update_evidence_sheet(wb, source_results: dict):
 
 
 def _scale_dimensions(width: int, height: int, max_w: int = 700, max_h: int = 450):
-    """Return (w, h) scaled down to fit within max_w × max_h, preserving aspect ratio."""
+    """Return (w, h) scaled down to fit within max_w x max_h, preserving aspect ratio."""
     scale = min(max_w / max(width, 1), max_h / max(height, 1), 1.0)
     return int(width * scale), int(height * scale)
 
@@ -558,7 +659,7 @@ def _apply_image_to_cell(ws, img, row_num: int, col_letter: str):
     img.anchor = f"{col_letter}{row_num}"
     ws.add_image(img)
 
-    ws.row_dimensions[row_num].height = img.height / 1.33   # px → pt
+    ws.row_dimensions[row_num].height = img.height / 1.33
     col_idx = column_index_from_string(col_letter)
     ws.column_dimensions[get_column_letter(col_idx)].width = max(
         ws.column_dimensions[get_column_letter(col_idx)].width or 0,
@@ -567,10 +668,7 @@ def _apply_image_to_cell(ws, img, row_num: int, col_letter: str):
 
 
 def _embed_image_bytes(ws, row_num: int, col_letter: str, img_bytes: bytes) -> bool:
-    """
-    Embed raw image bytes into a cell.  Uses a BytesIO buffer — no temp file needed.
-    Returns True on success.
-    """
+    """Embed raw image bytes into a cell. Returns True on success."""
     try:
         import io
         from openpyxl.drawing.image import Image as XLImage
@@ -579,7 +677,6 @@ def _embed_image_bytes(ws, row_num: int, col_letter: str, img_bytes: bytes) -> b
         pil_img = PILImage.open(io.BytesIO(img_bytes))
         w, h = _scale_dimensions(pil_img.width, pil_img.height)
 
-        # openpyxl needs to know the format; save through a buffer
         buf = io.BytesIO()
         fmt = pil_img.format or "PNG"
         pil_img.save(buf, format=fmt)
@@ -619,6 +716,7 @@ def _verify_output(out_path: str, structure: dict, col_map: dict, data_start_row
 
     Checks:
       - actualResult: how many rows have response content written
+      - status: how many rows have PASS/FAIL/N/A verdict written
       - expectedResults: how many rows where JSON was replaced (contains '{')
       - Evidence sheet: row count vs image count
     """
@@ -640,7 +738,6 @@ def _verify_output(out_path: str, structure: dict, col_map: dict, data_start_row
     sts_col_v = col_map.get("status")
 
     for row_idx in range(data_start_row, ws.max_row + 1):
-        # Only check rows that should have been updated (non-empty testCaseName)
         tc_col = col_map.get("testCaseName")
         if tc_col is not None:
             tc_val = ws.cell(row=row_idx, column=tc_col + 1).value
@@ -668,12 +765,11 @@ def _verify_output(out_path: str, structure: dict, col_map: dict, data_start_row
             if exp_val and "{" in str(exp_val):
                 json_replaced += 1
 
-    # Evidence sheet
     ev_rows   = 0
     ev_images = 0
     if "Evidence" in wb.sheetnames:
         ev_ws = wb["Evidence"]
-        ev_rows   = max(ev_ws.max_row - 1, 0)   # minus header
+        ev_rows   = max(ev_ws.max_row - 1, 0)
         ev_images = len(ev_ws._images)
 
     ok = actual_written == expected_matched
@@ -705,7 +801,7 @@ def _print_verify(v: dict):
     print(f"  {ev_mark} Evidence sheet : {v['evidence_images']} images / {v['evidence_rows']} rows"
           + ("" if ev_ok else "  ← some images missing"))
     if v["blank_actual_rows"]:
-        print(f"  [warn] Rows with value but no verdict prefix: {v['blank_actual_rows']}")
+        print(f"  [warn] Rows with blank actual result: {v['blank_actual_rows']}")
     if not v["ok"] or not ev_ok:
         print("  → Check structure.json column mapping and re-run.")
 
@@ -714,72 +810,27 @@ def _print_verify(v: dict):
 # Main merge logic
 # ---------------------------------------------------------------------------
 
-def merge_results(
-    source_path: str,
-    target_path: str,
-    structure_path: str,
-    output_path: str = None,
-    api_key: str = None,
-    no_ai: bool = False,
-    dry_run: bool = False,
-    auto_fix: bool = True,
-) -> dict:
-    import openpyxl
+def _run_merge_loop(ws, source_results, col_map, data_start_row, no_ai, api_key, dry_run):
+    """
+    Core merge loop — matches source results to target rows and writes data.
 
-    print(f"[1/4] Loading source: {source_path}")
-    source_results = load_source(source_path)
-    print(f"      {len(source_results)} test results found")
+    Writes:
+      - actualResult column: raw response (Status + Response body)
+      - status column ("Kết quả hiện tại"): PASS / FAIL / N/A verdict
 
-    print(f"[2/4] Loading structure: {structure_path}")
-    with open(structure_path, "r", encoding="utf-8") as f:
-        structure = json.load(f)
-
-    print(f"[3/4] Loading target: {target_path}")
-    wb = openpyxl.load_workbook(target_path)
-
-    # Always use the first sheet for test case data
-    ws = wb.worksheets[0]
-    print(f"      Sheet: '{ws.title}'")
-
-    col_map = detect_columns(ws, structure)
-    header_row    = structure.get("headerRow", 1)
-    data_start_row = structure.get("dataStartRow", header_row + 1)
-
-    # Validate required columns
+    Returns:
+        (matched, not_found, verdicts)
+    """
     tc_col  = col_map.get("testCaseName")
     exp_col = col_map.get("expectedResults")
     act_col = col_map.get("actualResult")
     sts_col = col_map.get("status")
 
-    missing = [f for f, c in [("testCaseName", tc_col)] if c is None]
-    if missing:
-        raise ValueError(
-            f"Cannot find columns: {missing}. "
-            "Check structure.json columnMapping or target file header row."
-        )
-
-    print(f"      Column map: testCaseName={tc_col} status={sts_col} "
-          f"expectedResults={exp_col} actualResult={act_col}")
-    if sts_col is None:
-        print("      [warn] 'status' column not found — Pass/Fail will not be written. "
-              "Add 'status': <col_index> to columnMapping in structure.json.")
-
-    # Print a sample of what the testCaseName column contains (helps debug mismatches)
-    sample_names = []
-    for r in ws.iter_rows(min_row=data_start_row, max_row=data_start_row + 3, values_only=True):
-        if tc_col is not None and r[tc_col]:
-            sample_names.append(str(r[tc_col])[:60])
-    if sample_names:
-        print(f"      Sample testCaseName values (rows {data_start_row}+): {sample_names}")
-
-    # --- Process each data row ---
-    print(f"[4/4] Merging results (rows {data_start_row}+) ...")
     matched = 0
     not_found = []
     verdicts = {"PASS": 0, "FAIL": 0, "N/A": 0}
 
     for row_idx in range(data_start_row, ws.max_row + 1):
-        # Get test case name from the match-key column
         tc_cell = ws.cell(row=row_idx, column=tc_col + 1)
         if tc_cell.value is None:
             continue
@@ -794,16 +845,13 @@ def merge_results(
         matched += 1
         data = source_results[tc_name]
 
-        # Read existing expected result (needed for AI evaluation + JSON replacement)
         expected_text = ""
         if exp_col is not None:
             exp_cell = ws.cell(row=row_idx, column=exp_col + 1)
             expected_text = str(exp_cell.value or "")
 
-        # Build raw actual text (used for AI comparison)
         raw_actual = f"Status: {data['status_code']}\nResponse:\n{data['response_body']}"
 
-        # Evaluate Pass/Fail
         if no_ai:
             verdict, reason = evaluate_simple(expected_text, raw_actual)
         else:
@@ -812,7 +860,6 @@ def merge_results(
         verdicts[verdict] = verdicts.get(verdict, 0) + 1
         print(f"  [{verdict:7s}] {tc_name[:65]}")
 
-        # Read externalId from target row (used for Evidence sheet)
         ext_id_col = col_map.get("externalId")
         if ext_id_col is not None:
             ext_id_val = ws.cell(row=row_idx, column=ext_id_col + 1).value
@@ -834,21 +881,94 @@ def merge_results(
             cell.value = verdict
             cell.alignment = _wrap_align()
 
-        # Replace sample JSON in expected result with real response JSON
         if exp_col is not None and data["response_body"]:
             updated_expected = replace_json_in_expected(expected_text, data["response_body"])
             cell = ws.cell(row=row_idx, column=exp_col + 1)
             cell.value = updated_expected
             cell.alignment = _wrap_align()
 
-        # Auto-fit row height based on line count in actual result
         _autofit_row_height(ws, row_idx, act_col, exp_col)
+
+    return matched, not_found, verdicts
+
+
+def merge_results(
+    source_path: str,
+    target_url: str,
+    structure_path: str,
+    api_key: str = None,
+    no_ai: bool = False,
+    dry_run: bool = False,
+    auto_fix: bool = True,
+) -> dict:
+    import openpyxl
+
+    # --- Step 0: Google auth & download target ---
+    spreadsheet_id = parse_spreadsheet_id(target_url)
+    print(f"[0/5] Authenticating with Google ...")
+    creds = get_google_credentials()
+
+    tmpdir = tempfile.mkdtemp(prefix="merge_postman_")
+    target_xlsx = os.path.join(tmpdir, "target.xlsx")
+
+    print(f"[1/5] Downloading Google Sheet: {spreadsheet_id}")
+    download_gsheet_as_xlsx(spreadsheet_id, creds, target_xlsx)
+
+    # --- Step 1: Load source ---
+    print(f"[2/5] Loading source: {source_path}")
+    source_results = load_source(source_path)
+    print(f"      {len(source_results)} test results found")
+
+    # --- Step 2: Load structure ---
+    print(f"[3/5] Loading structure: {structure_path}")
+    with open(structure_path, "r", encoding="utf-8") as f:
+        structure = json.load(f)
+
+    # --- Step 3: Open downloaded target xlsx ---
+    print(f"[4/5] Loading target xlsx: {target_xlsx}")
+    wb = openpyxl.load_workbook(target_xlsx)
+    ws = wb.worksheets[0]
+    print(f"      Sheet: '{ws.title}'")
+
+    col_map = detect_columns(ws, structure)
+    header_row    = structure.get("headerRow", 1)
+    data_start_row = structure.get("dataStartRow", header_row + 1)
+
+    tc_col  = col_map.get("testCaseName")
+    exp_col = col_map.get("expectedResults")
+    act_col = col_map.get("actualResult")
+    sts_col = col_map.get("status")
+
+    missing = [f for f, c in [("testCaseName", tc_col)] if c is None]
+    if missing:
+        raise ValueError(
+            f"Cannot find columns: {missing}. "
+            "Check structure.json columnMapping or target file header row."
+        )
+
+    print(f"      Column map: testCaseName={tc_col} status={sts_col} "
+          f"expectedResults={exp_col} actualResult={act_col}")
+    if sts_col is None:
+        print("      [warn] 'status' column not found — Pass/Fail will not be written.")
+
+    sample_names = []
+    for r in ws.iter_rows(min_row=data_start_row, max_row=data_start_row + 3, values_only=True):
+        if tc_col is not None and r[tc_col]:
+            sample_names.append(str(r[tc_col])[:60])
+    if sample_names:
+        print(f"      Sample testCaseName values (rows {data_start_row}+): {sample_names}")
+
+    # --- Step 4: Merge ---
+    print(f"[5/5] Merging results (rows {data_start_row}+) ...")
+    matched, not_found, verdicts = _run_merge_loop(
+        ws, source_results, col_map, data_start_row, no_ai, api_key, dry_run
+    )
 
     print()
     print(f"  Matched : {matched} / {len(source_results)}")
     print(f"  PASS    : {verdicts.get('PASS', 0)}")
     print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
-    print(f"  N/A : {verdicts.get('N/A', 0)}")
+    print(f"  N/A     : {verdicts.get('N/A', 0)}")
     if not_found:
         print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
               + (" ..." if len(not_found) > 8 else ""))
@@ -867,7 +987,6 @@ def merge_results(
         if not changed:
             print("[auto-fix] No better mapping found — check that API Name values match testCaseName column.")
         else:
-            # Report what changed
             if new_header != header_row:
                 print(f"[auto-fix] headerRow: {header_row} → {new_header}")
             if new_data_start != data_start_row:
@@ -878,83 +997,20 @@ def merge_results(
                 if old_c != new_c:
                     print(f"[auto-fix] {field}: col {old_c} → {new_c}")
 
-            # Re-run the merge loop with corrected values
             header_row     = new_header
             data_start_row = new_data_start
             col_map        = new_col_map
-            tc_col  = col_map.get("testCaseName")
-            exp_col = col_map.get("expectedResults")
-            act_col = col_map.get("actualResult")
-            sts_col = col_map.get("status")
-
-            matched   = 0
-            not_found = []
-            verdicts  = {"PASS": 0, "FAIL": 0, "N/A": 0}
 
             print(f"\n[auto-fix] Re-merging (rows {data_start_row}+) ...")
-            for row_idx in range(data_start_row, ws.max_row + 1):
-                tc_cell = ws.cell(row=row_idx, column=tc_col + 1)
-                if tc_cell.value is None:
-                    continue
-                tc_name = str(tc_cell.value).strip()
-                if not tc_name:
-                    continue
-
-                if tc_name not in source_results:
-                    not_found.append(tc_name)
-                    continue
-
-                matched += 1
-                data = source_results[tc_name]
-
-                expected_text = ""
-                if exp_col is not None:
-                    exp_cell = ws.cell(row=row_idx, column=exp_col + 1)
-                    expected_text = str(exp_cell.value or "")
-
-                raw_actual = f"Status: {data['status_code']}\nResponse:\n{data['response_body']}"
-
-                if no_ai:
-                    verdict, reason = evaluate_simple(expected_text, raw_actual)
-                else:
-                    verdict, reason = evaluate_ai(expected_text, raw_actual, api_key)
-
-                verdicts[verdict] = verdicts.get(verdict, 0) + 1
-                print(f"  [{verdict:7s}] {tc_name[:65]}")
-
-                ext_id_col = col_map.get("externalId")
-                if ext_id_col is not None:
-                    ext_id_val = ws.cell(row=row_idx, column=ext_id_col + 1).value
-                    if ext_id_val:
-                        data["externalId"] = str(ext_id_val).strip()
-
-                if dry_run:
-                    continue
-
-                if act_col is not None:
-                    cell = ws.cell(row=row_idx, column=act_col + 1)
-                    cell.value = raw_actual
-                    cell.alignment = _wrap_align()
-
-                # Write verdict to "Kết quả hiện tại" (status) column
-                if sts_col is not None:
-                    cell = ws.cell(row=row_idx, column=sts_col + 1)
-                    cell.value = verdict
-                    cell.alignment = _wrap_align()
-
-                if exp_col is not None and data["response_body"]:
-                    updated_expected = replace_json_in_expected(expected_text, data["response_body"])
-                    cell = ws.cell(row=row_idx, column=exp_col + 1)
-                    cell.value = updated_expected
-                    cell.alignment = _wrap_align()
-
-                _autofit_row_height(ws, row_idx, act_col, exp_col)
+            matched, not_found, verdicts = _run_merge_loop(
+                ws, source_results, col_map, data_start_row, no_ai, api_key, dry_run
+            )
 
             print()
             print(f"  [auto-fix] Matched : {matched} / {len(source_results)}")
             print(f"  PASS    : {verdicts.get('PASS', 0)}")
             print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
-            print(f"  N/A : {verdicts.get('N/A', 0)}")
+            print(f"  N/A     : {verdicts.get('N/A', 0)}")
             if not_found:
                 print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
                       + (" ..." if len(not_found) > 8 else ""))
@@ -964,24 +1020,30 @@ def merge_results(
         print("\nUpdating Evidence sheet ...")
         update_evidence_sheet(wb, source_results)
 
-        out_path = output_path or target_path
-        wb.save(out_path)
-        print(f"Saved → {out_path}")
+        # Save merged xlsx locally
+        merged_xlsx = os.path.join(tmpdir, "merged.xlsx")
+        wb.save(merged_xlsx)
+        print(f"Saved locally → {merged_xlsx}")
 
-        # Verify output
+        # Verify before uploading
         print("\n[Verify] Re-reading saved file ...")
-        verify = _verify_output(out_path, structure, col_map, data_start_row, matched)
+        verify = _verify_output(merged_xlsx, structure, col_map, data_start_row, matched)
         _print_verify(verify)
+
+        # Upload back to Google Sheets
+        print(f"\n[Upload] Uploading merged result to Google Sheet ...")
+        sheet_url = upload_xlsx_to_gsheet(merged_xlsx, spreadsheet_id, creds)
+        print(f"\nDone! → {sheet_url}")
     else:
         print("\n[dry-run] No changes written.")
-        out_path = None
+        sheet_url = None
 
     return {
         "matched": matched,
         "total_source": len(source_results),
         "verdicts": verdicts,
         "not_found": not_found,
-        "output": out_path,
+        "spreadsheet_url": f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
     }
 
 
@@ -991,12 +1053,14 @@ def merge_results(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Merge auto-postman results into test case Excel file"
+        description="Merge auto-postman results into a Google Spreadsheet"
     )
-    parser.add_argument("--source",    required=True, help="Path to api_results_*.xlsx")
-    parser.add_argument("--target",    required=True, help="Path to test case xlsx")
-    parser.add_argument("--structure", required=True, help="Path to structure.json")
-    parser.add_argument("--output",    help="Output path (default: overwrite target)")
+    parser.add_argument("--source",    required=True,
+                        help="Path to api_results_*.xlsx (Postman output)")
+    parser.add_argument("--target",    required=True,
+                        help="Google Sheets URL or spreadsheet ID")
+    parser.add_argument("--structure", required=True,
+                        help="Path to structure.json")
     parser.add_argument("--api-key",   help="Anthropic API key (or ANTHROPIC_API_KEY env var)")
     parser.add_argument("--no-ai",     action="store_true", help="Skip AI evaluation")
     parser.add_argument("--dry-run",   action="store_true",
@@ -1006,9 +1070,8 @@ def main():
     try:
         result = merge_results(
             source_path=args.source,
-            target_path=args.target,
+            target_url=args.target,
             structure_path=args.structure,
-            output_path=args.output,
             api_key=args.api_key,
             no_ai=args.no_ai,
             dry_run=args.dry_run,
@@ -1017,6 +1080,8 @@ def main():
         print(json.dumps(result, ensure_ascii=False, indent=2))
     except Exception as exc:
         print(f"\n[error] {exc}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 
