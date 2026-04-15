@@ -1059,7 +1059,7 @@ class PostmanCollectionGenerator:
 
     def _generate_item(self, test_case: Dict[str, Any], base_url_variable: str) -> Dict[str, Any]:
         return {
-            "name": test_case.get("name", test_case.get("id", "Unnamed API")),
+            "name": test_case.get("id", test_case.get("name", "Unnamed API")),
             "event": self._generate_events(
                 prerequest_script=test_case.get("prerequest_script", []),
                 test_script=test_case.get("test_script", []),

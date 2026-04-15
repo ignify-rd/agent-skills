@@ -12,6 +12,8 @@
 - Keep request method and endpoint exactly as parsed from source or project rules.
 - Never invent unavailable auth tokens. Use profile defaults or variables only.
 - If parsing fails for a row, skip that row and report it.
+- **All items must be flat** — never group requests into folders. Every request goes directly into `collection.item[]`, never into a nested `item[]` inside a folder object.
+- **Request name must be the test case ID** (e.g. `TC-001`), not the test case name/title. Fall back to name only when ID is absent.
 
 ## Project Override Scope
 
