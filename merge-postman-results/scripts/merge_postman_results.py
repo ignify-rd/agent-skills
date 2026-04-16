@@ -4,9 +4,9 @@
 merge_postman_results.py — Merge auto-postman API test results into a new Google Spreadsheet.
 
 Reads api_results_*.xlsx (auto-postman output), downloads the target Google Sheet as xlsx
-(used as a template — it is NOT modified), fills Actual Result with the response JSON body,
+and modifies it. Fills Actual Result with the response JSON body,
 evaluates Pass/Fail by comparing status codes and writes the verdict to the "Kết quả hiện tại"
-(status) column, embeds screenshots in an Evidence sheet, and creates a BRAND-NEW Google Sheet
+(status) column, embeds screenshots in an Evidence sheet, and updates the target Google Sheet
 with the merged data.
 
 Usage:
@@ -14,7 +14,6 @@ Usage:
     --source api_results_20260415_091720.xlsx \
     --target "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit" \
     --structure structure.json \
-    [--name "My Merged Results 2026-04-15"] \
     [--dry-run]
 
 Requirements:
@@ -186,63 +185,6 @@ def upload_xlsx_to_gsheet(xlsx_path: str, spreadsheet_id: str, creds) -> str:
     url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
     print(f"  Uploaded → {url}")
     return url
-
-
-def create_new_gsheet_from_xlsx(xlsx_path: str, title: str, creds) -> str:
-    """
-    Create a brand-new Google Sheet from the merged .xlsx file.
-
-    Uses Drive API files.create to make a fresh spreadsheet, then uploads the xlsx
-    into it (converted to native Google Sheets format). Returns the new spreadsheet URL.
-    """
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaFileUpload
-
-    drive = build("drive", "v3", credentials=creds, cache_discovery=False)
-
-    # 1. Create empty spreadsheet with the given title
-    file_metadata = {
-        "name": title,
-        "mimeType": "application/vnd.google-apps.spreadsheet",
-    }
-    new_file = drive.files().create(body=file_metadata, fields="id").execute()
-    new_spreadsheet_id = new_file.get("id")
-    print(f"  Created new spreadsheet → ID: {new_spreadsheet_id}")
-
-    # 2. Upload xlsx into the new spreadsheet (Drive converts to native format)
-    media = MediaFileUpload(
-        xlsx_path,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        resumable=False,
-    )
-    drive.files().update(
-        fileId=new_spreadsheet_id,
-        media_body=media,
-        body={"mimeType": "application/vnd.google-apps.spreadsheet"},
-    ).execute()
-
-    url = f"https://docs.google.com/spreadsheets/d/{new_spreadsheet_id}/edit"
-    print(f"  Uploaded → {url}")
-    return url, new_spreadsheet_id
-
-
-def share_spreadsheet_public(spreadsheet_id: str, creds):
-    """
-    Make the spreadsheet publicly readable (anyone with the link can view).
-    Uses Drive API permissions.create with type=anyone.
-    """
-    from googleapiclient.discovery import build
-
-    drive = build("drive", "v3", credentials=creds, cache_discovery=False)
-    drive.permissions().create(
-        fileId=spreadsheet_id,
-        body={
-            "type": "anyone",
-            "role": "writer",
-        },
-        fields="id",
-    ).execute()
-    print(f"  Shared publicly (anyone with link can view) → https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit")
 
 
 # ---------------------------------------------------------------------------
@@ -1276,7 +1218,6 @@ def merge_results(
     structure_path: str,
     dry_run: bool = False,
     auto_fix: bool = True,
-    new_spreadsheet_name: str = None,
 ) -> dict:
     import openpyxl
 
@@ -1298,7 +1239,7 @@ def merge_results(
 
     # --- Step 2: Load structure ---
     print(f"[3/5] Loading structure: {structure_path}")
-    with open(structure_path, "r", encoding="utf-8") as f:
+    with open(structure_path, "r", encoding="utf-8-sig") as f:
         structure = json.load(f)
 
     # --- Step 3: Open downloaded target xlsx ---
@@ -1423,15 +1364,8 @@ def merge_results(
         verify = _verify_output(merged_xlsx, structure, col_map, data_start_row, matched)
         _print_verify(verify)
 
-        # Create brand-new Google Sheet (target is kept untouched)
-        new_name = new_spreadsheet_name or (
-            f"Merged Results {time.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-        print(f"\n[Upload] Creating new Google Sheet: '{new_name}' ...")
-        sheet_url, spreadsheet_id = create_new_gsheet_from_xlsx(merged_xlsx, new_name, creds)
-
-        # Share publicly
-        share_spreadsheet_public(spreadsheet_id, creds)
+        print(f"\n[Upload] Updating existing Google Sheet: {spreadsheet_id} ...")
+        sheet_url = upload_xlsx_to_gsheet(merged_xlsx, spreadsheet_id, creds)
 
         # Apply PASS/FAIL/N/A conditional formatting and validation after upload
         if sts_col is not None:
@@ -1608,13 +1542,11 @@ def main():
     parser.add_argument("--source",
                         help="Path to api_results_*.xlsx (Postman output)")
     parser.add_argument("--target",
-                        help="Google Sheets URL or spreadsheet ID (used as template, not overwritten)")
+                        help="Google Sheets URL or spreadsheet ID")
     parser.add_argument("--structure",
                         help="Path to structure.json")
     parser.add_argument("--dry-run",   action="store_true",
                         help="Print what would happen without writing anything")
-    parser.add_argument("--name",
-                        help="Name of the new Google Sheet to create (default: auto-generated)")
     args = parser.parse_args()
 
     # --detect mode: no auth needed for the script itself, just download
@@ -1633,7 +1565,6 @@ def main():
             target_url=args.target,
             structure_path=args.structure,
             dry_run=args.dry_run,
-            new_spreadsheet_name=args.name,
         )
         print()
         print(json.dumps(result, ensure_ascii=False, indent=2))
