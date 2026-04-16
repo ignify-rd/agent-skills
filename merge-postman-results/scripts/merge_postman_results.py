@@ -425,9 +425,22 @@ def load_source(source_path: str) -> dict:
                 else ""
             ),
             "screenshot": screenshot,
+            "_orig_name": name,          # preserve original for display
         }
 
+        norm_key = _normalize_api_key(name)
+        if norm_key != name and norm_key not in results:
+            results[norm_key] = results[name]
+
     return results
+
+
+def _normalize_api_key(name: str) -> str:
+    """
+    Normalize an API key so that 'API_1' and 'API1' compare equal.
+    Removes underscores, lowercases, and strips whitespace.
+    """
+    return name.replace("_", "").lower().strip()
 
 
 # ---------------------------------------------------------------------------
@@ -537,6 +550,36 @@ def auto_detect_structure(ws, structure: dict) -> tuple:
 # ---------------------------------------------------------------------------
 # Cell formatting helpers
 # ---------------------------------------------------------------------------
+
+def add_status_dropdown(ws, col_1based: int, first_data_row: int, last_data_row: int):
+    """
+    Apply a dropdown (data validation) to a column's data cells with three options:
+    PASS, FAIL, N/A.
+
+    Google Sheets will also enforce this after upload.
+    """
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    col_letter = ws.cell(row=first_data_row, column=col_1based).column_letter
+    formula = '"PASS,FAIL,N/A"'
+    dv = DataValidation(
+        type="list",
+        formula1=formula,
+        allow_blank=True,
+        showDropDown=False,       # False = show arrow in cell (not hidden)
+        showErrorMessage=True,
+        errorTitle="Giá trị không hợp lệ",
+        error='Chỉ chấp nhận: PASS, FAIL, N/A',
+        showInputMessage=True,
+        promptTitle="Kết quả",
+        prompt='Chọn: PASS, FAIL hoặc N/A',
+    )
+    # Apply from first data row to last row (or a generous max)
+    end_row = max(last_data_row, first_data_row + 500)
+    dv.sqref = f"{col_letter}{first_data_row}:{col_letter}{end_row}"
+    ws.add_data_validation(dv)
+    print(f"      Added PASS/FAIL/N/A dropdown → column {col_letter} (rows {first_data_row}+)")
+
 
 def _wrap_align():
     """Return an Alignment with wrap_text=True, top-aligned."""
@@ -961,14 +1004,18 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
         target_id_col = ext_col
 
     # Rebuild ext_to_source_key with whichever column has more matches
+    # Normalize when comparing so 'API_1' matches 'API1'
     def _build_lookup(col_idx):
         lut = {}
         for row_idx in range(data_start_row, ws.max_row + 1):
             ext_val = rd.cell(row=row_idx, column=col_idx + 1).value
             if ext_val:
                 key = str(ext_val).strip()
-                if key in source_results and key not in lut:
-                    lut[key] = key
+                norm_key = _normalize_api_key(key)
+                for k in (key, norm_key):
+                    if k in source_results and k not in lut:
+                        lut[key] = k
+                        break
         return lut
 
     if target_id_col is not None and ext_col is not None and ext_col != target_id_col:
@@ -1183,6 +1230,10 @@ def merge_results(
     exp_col = col_map.get("expectedResults")
     act_col = col_map.get("actualResult")
     sts_col = col_map.get("status")
+
+    # Add dropdown validation for status column (PASS / FAIL / N/A)
+    if sts_col is not None and not dry_run:
+        add_status_dropdown(ws, sts_col + 1, data_start_row, ws.max_row)
 
     missing = [f for f, c in [("testCaseName", tc_col)] if c is None]
     if missing:
