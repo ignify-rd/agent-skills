@@ -1298,6 +1298,137 @@ def merge_results(
 
 
 # ---------------------------------------------------------------------------
+# Structure auto-detection (standalone)
+# ---------------------------------------------------------------------------
+
+def detect_structure(target_url: str) -> dict:
+    """Download a Google Sheet and auto-detect its structure."""
+    spreadsheet_id = parse_spreadsheet_id(target_url)
+    print(f"Downloading template Google Sheet: {spreadsheet_id}", file=sys.stderr)
+    creds = get_google_credentials()
+    tmp = tempfile.mktemp(suffix=".xlsx")
+    download_gsheet_as_xlsx(spreadsheet_id, creds, tmp)
+
+    import openpyxl
+    wb = openpyxl.load_workbook(tmp, data_only=True)
+    ws = wb.worksheets[0]
+    print(f"  Sheet: '{ws.title}' ({ws.max_row} rows x {ws.max_column} cols)", file=sys.stderr)
+
+    # Step 1: find header row
+    # Look for the row that has "Name" + "External ID" or "Name" + "Expected Result" pattern
+    header_row = None
+    for r in range(1, min(ws.max_row, 40)):
+        vals = [ws.cell(r, c).value for c in range(1, ws.max_column + 1)]
+        has_name  = any(v and "Name" in str(v).strip() for v in vals)
+        has_extid = any(v and "External ID" in str(v).strip() for v in vals)
+        has_exp   = any(v and "Expected Result" in str(v).strip() for v in vals)
+        has_step  = any(v and "Step" in str(v).strip() for v in vals)
+        # Target: row with Name + External ID/Expected Result + Step
+        if has_name and has_extid and has_exp and has_step:
+            header_row = r
+            break
+    # Fallback: row with col A = "ID" or "External ID" + "Name" nearby
+    if header_row is None:
+        for r in range(1, min(ws.max_row, 30)):
+            v_a = ws.cell(r, 1).value
+            v_b = ws.cell(r, 2).value
+            if v_a and str(v_a).strip() in ("ID", "External ID") and v_b and "Name" in str(v_b):
+                header_row = r
+                break
+    # Fallback: look for "ID" in col A around rows 10-20
+    if header_row is None:
+        for r in range(10, min(ws.max_row, 30)):
+            val = ws.cell(r, 1).value
+            if val and str(val).strip() in ("ID", "External ID", "Id", "id"):
+                header_row = r
+                break
+    # Fallback: first row with "Name" in col B
+    if header_row is None:
+        for r in range(1, min(ws.max_row, 30)):
+            v_b = ws.cell(r, 2).value
+            if v_b and "Name" in str(v_b).strip():
+                header_row = r
+                break
+    if header_row is None:
+        header_row = 1
+
+    print(f"  Header row: {header_row}", file=sys.stderr)
+
+    # Step 2: scan headers — check header row and row above (for merged section labels)
+    headers = [ws.cell(header_row, c).value for c in range(1, ws.max_column + 1)]
+    row_above = []
+    if header_row > 1:
+        row_above = [ws.cell(header_row - 1, c).value for c in range(1, ws.max_column + 1)]
+
+    mapping = {}
+    for field, synonyms in FIELD_SYNONYMS.items():
+        for col_idx, header_val in enumerate(headers):
+            if header_val:
+                hv = str(header_val).strip()
+                if any(syn.strip() == hv for syn in synonyms):
+                    mapping[field] = col_idx
+                    break
+        if field not in mapping:
+            for col_idx, header_val in enumerate(row_above):
+                if header_val:
+                    hv = str(header_val).strip()
+                    if any(syn.strip() == hv for syn in synonyms):
+                        mapping[field] = col_idx
+                        print(f"  {field}: matched from row above at col {col_idx} ('{hv}')", file=sys.stderr)
+                        break
+
+    # Step 3: auto-detect externalId column
+    source_keys_fallback = {"API_1", "API_2", "API_3", "API1", "API2", "Login"}
+    id_col = mapping.get("externalId")
+    if id_col is not None:
+        sample_vals = [ws.cell(header_row + 1 + i, id_col + 1).value for i in range(5)]
+        sample_strs = [str(v).strip() for v in sample_vals if v]
+        if not any(v in source_keys_fallback or str(v).startswith("API") for v in sample_strs):
+            id_col = None
+
+    if id_col is None:
+        data_start = header_row + 1
+        for scan_col in range(0, ws.max_column):
+            vals = [ws.cell(r, scan_col + 1).value for r in range(data_start, min(data_start + 10, ws.max_row + 1))]
+            id_like = [v for v in vals if v and (str(v).strip() in source_keys_fallback or str(v).strip().startswith("API"))]
+            if len(id_like) >= 2:
+                id_col = scan_col
+                mapping["externalId"] = id_col
+                print(f"  externalId: auto-detected at col {id_col} ({id_like[0]!r}, ...)", file=sys.stderr)
+                break
+
+    if "externalId" not in mapping:
+        # Try col A as last resort
+        sample_vals = [ws.cell(header_row + 1 + i, 1).value for i in range(5)]
+        sample_strs = [str(v).strip() for v in sample_vals if v]
+        if any(v in source_keys_fallback or str(v).startswith("API") for v in sample_strs):
+            mapping["externalId"] = 0
+            print(f"  externalId: defaulting to col 0 (ID column)", file=sys.stderr)
+        else:
+            mapping["externalId"] = 0
+
+    # Step 4: detect dataStartRow
+    data_start_row = header_row + 1
+    ext_col = mapping.get("externalId", 0)
+    for r in range(header_row + 1, ws.max_row + 1):
+        val = ws.cell(r, ext_col + 1).value
+        if val and str(val).strip():
+            data_start_row = r
+            break
+
+    print(f"  dataStartRow: {data_start_row}", file=sys.stderr)
+    print(f"  Column mapping: {mapping}", file=sys.stderr)
+
+    structure = {
+        "headerRow": header_row,
+        "dataStartRow": data_start_row,
+        "columnMapping": {k: int(v) for k, v in mapping.items()}
+    }
+    os.unlink(tmp)
+    return structure
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 

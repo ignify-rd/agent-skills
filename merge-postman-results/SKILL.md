@@ -38,17 +38,19 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 
 ```json
 {
-  "headerRow": 14,
-  "dataStartRow": 15,
+  "headerRow": 10,
+  "dataStartRow": 13,
   "columnMapping": {
     "externalId":      0,
     "testCaseName":    1,
     "expectedResults": 6,
     "actualResult":    7,
-    "status":          9
+    "status":          11
   }
 }
 ```
+
+> **Note:** Column indices are **0-based** (0 = column A, 1 = column B, ...)
 
 **Fields used by this skill:**
 
@@ -60,6 +62,35 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 | `headerRow` | yes | Which row contains column headers |
 | `dataStartRow` | yes | First row with test case data |
 | `status` | **recommended** | Filled with `PASS` / `FAIL` / `N/A` verdict. Auto-detected by scanning the header row for "Status", "Trạng thái", "Kết quả hiện tại", "Result", "Pass/Fail". |
+
+## Auto-detect structure from a new Google Sheet
+
+If you don't have a `structure.json` for the target sheet, generate one automatically:
+
+```python
+# Via Python import (avoids argparse --source/--target requirement)
+python -c "
+import sys, json
+sys.path.insert(0, 'scripts')
+from merge_postman_results import detect_structure
+
+result = detect_structure('https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit')
+print(json.dumps(result, ensure_ascii=False, indent=2))
+" > structure.json
+```
+
+Or redirect stderr to keep stdout clean:
+
+```bash
+python merge_postman_results.py --detect "URL_SHEET" > structure.json 2>nul
+```
+
+The `detect_structure()` function:
+1. Downloads the Google Sheet as xlsx
+2. Scans rows 1-40 to find the header row (looks for "External ID" + "Name" + "Expected Result" + "Step")
+3. Matches columns using `FIELD_SYNONYMS` (checks header row and row above for merged-cell labels like "Kết quả hiện tại")
+4. Auto-detects the `externalId` column by scanning data rows for `API_1`, `API1`, `Login`, etc.
+5. Detects `dataStartRow` by finding the first row with a non-empty externalId
 
 ## How to run
 
@@ -93,11 +124,12 @@ to the same credential file, so the MCP server continues to work.
 
 ## Workflow when user asks to merge
 
-1. **Confirm inputs**: ask for source xlsx, target Google Sheet URL, structure.json paths
-2. **Validate structure.json**: check required fields exist
-3. **Run the script**: use the command above
-4. **Report results**: matched count, PASS/FAIL/N/A breakdown, unmatched test cases, Google Sheet URL
-5. If many test cases are unmatched, compare API Name values to diagnose mismatches
+1. **Ask for** source xlsx path and target Google Sheet URL
+2. **No structure.json?** → Run `detect_structure()` first to generate it (see section above), save to `structure.json`
+3. **Validate structure.json** if provided — check `headerRow`, `dataStartRow`, and `columnMapping` keys exist
+4. **Run the script**: `python scripts/merge_postman_results.py --source ... --target ... --structure ...`
+5. **Report results**: matched count, PASS/FAIL/N/A breakdown, unmatched test cases, Google Sheet URL
+6. If many test cases are unmatched, compare API Name values to diagnose mismatches
 
 ## Evidence sheet
 
