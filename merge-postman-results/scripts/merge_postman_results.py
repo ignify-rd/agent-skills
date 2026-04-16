@@ -238,7 +238,7 @@ def share_spreadsheet_public(spreadsheet_id: str, creds):
         fileId=spreadsheet_id,
         body={
             "type": "anyone",
-            "role": "reader",
+            "role": "writer",
         },
         fields="id",
     ).execute()
@@ -1109,14 +1109,12 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
     return matched, not_found, verdicts, row_verdicts
 
 
-def apply_cell_background_colors(spreadsheet_id: str, sheet_title: str,
-                                  sts_col_1based: int, row_verdicts: dict,
-                                  max_data_row: int, creds):
+def apply_conditional_formatting_sheets(spreadsheet_id: str, sheet_title: str,
+                                        sts_col_1based: int, first_data_row: int,
+                                        last_data_row: int, creds):
     """
-    Apply background colors to status cells after upload to Google Sheets.
-
-    PASS → #b6d7a8 (green), FAIL → #f4cccc (red), N/A → white.
-    Uses Google Sheets API batchUpdate with repeatCell per cell for precision.
+    Apply conditional formatting rules to the status column so the background color
+    changes dynamically based on the dropdown value (PASS/FAIL/N/A).
     """
     from googleapiclient.discovery import build
 
@@ -1133,53 +1131,143 @@ def apply_cell_background_colors(spreadsheet_id: str, sheet_title: str,
             sheet_id = props.get("sheetId")
             break
     if sheet_id is None:
-        print(f"  [color] Could not find sheet '{sheet_title}' — skipping background color")
+        print(f"  [color] Could not find sheet '{sheet_title}' — skipping conditional formatting")
         return
 
-    color_map = {
-        "PASS": {"red": 0.714, "green": 0.843, "blue": 0.659},
-        "FAIL": {"red": 0.957, "green": 0.800, "blue": 0.800},
-        "N/A":  {"red": 1.0,  "green": 1.0,  "blue": 1.0},
-    }
-
-    # row_verdicts: {sheet_idx_0based: {row_1based: verdict}}
-    sheet_verdicts = row_verdicts.get(0, {})
-    if not sheet_verdicts:
-        print(f"  [color] No verdicts to color")
-        return
+    end_row = max(last_data_row, first_data_row + 500)
+    ranges = [{
+        "sheetId": sheet_id,
+        "startRowIndex": first_data_row - 1,
+        "endRowIndex": end_row,
+        "startColumnIndex": sts_col_1based - 1,
+        "endColumnIndex": sts_col_1based,
+    }]
 
     requests = []
-    for row_1based, verdict in sheet_verdicts.items():
-        if row_1based > max_data_row:
-            continue
-        color = color_map.get(verdict, color_map["N/A"])
-        requests.append({
-            "repeatCell": {
-                "range": {
-                    "sheetId": sheet_id,
-                    "startRowIndex": row_1based - 1,
-                    "endRowIndex": row_1based,
-                    "startColumnIndex": sts_col_1based - 1,
-                    "endColumnIndex": sts_col_1based,
-                },
-                "cell": {
-                    "userEnteredFormat": {
-                        "backgroundColor": color,
-                        "textFormat": {"bold": False},
+
+    # Format for PASS
+    requests.append({
+        "addConditionalFormatRule": {
+            "rule": {
+                "ranges": ranges,
+                "booleanRule": {
+                    "condition": {
+                        "type": "TEXT_EQ",
+                        "values": [{"userEnteredValue": "PASS"}]
+                    },
+                    "format": {
+                        "backgroundColor": {"red": 0.714, "green": 0.843, "blue": 0.659},
+                        "textFormat": {"bold": False}
                     }
-                },
-                "fields": "userEnteredFormat(backgroundColor,textFormat)"
-            }
-        })
+                }
+            },
+            "index": 0
+        }
+    })
+
+    # Format for FAIL
+    requests.append({
+        "addConditionalFormatRule": {
+            "rule": {
+                "ranges": ranges,
+                "booleanRule": {
+                    "condition": {
+                        "type": "TEXT_EQ",
+                        "values": [{"userEnteredValue": "FAIL"}]
+                    },
+                    "format": {
+                        "backgroundColor": {"red": 0.957, "green": 0.800, "blue": 0.800},
+                        "textFormat": {"bold": False}
+                    }
+                }
+            },
+            "index": 1
+        }
+    })
+
+    # Format for N/A (White)
+    requests.append({
+        "addConditionalFormatRule": {
+            "rule": {
+                "ranges": ranges,
+                "booleanRule": {
+                    "condition": {
+                        "type": "TEXT_EQ",
+                        "values": [{"userEnteredValue": "N/A"}]
+                    },
+                    "format": {
+                        "backgroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
+                        "textFormat": {"bold": False}
+                    }
+                }
+            },
+            "index": 2
+        }
+    })
 
     if requests:
-        for i in range(0, len(requests), 100):
-            chunk = requests[i:i+100]
-            sheets.spreadsheets().batchUpdate(
-                spreadsheetId=spreadsheet_id,
-                body={"requests": chunk}
-            ).execute()
-        print(f"  [color] Applied background to {len(requests)} cells")
+        sheets.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"requests": requests}
+        ).execute()
+        print(f"  [color] Applied conditional formatting dynamically to column {sts_col_1based}")
+
+
+def add_status_dropdown_sheets(spreadsheet_id: str, sheet_title: str,
+                                sts_col_1based: int, first_data_row: int,
+                                last_data_row: int, creds):
+    """
+    Apply a dropdown (data validation) to the status column in Google Sheets.
+    Options: PASS, FAIL, N/A.
+    """
+    from googleapiclient.discovery import build
+
+    sheets = build("sheets", "v4", credentials=creds, cache_discovery=False)
+
+    # Resolve sheetId from title
+    meta = sheets.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+    ).execute()
+    sheet_id = None
+    for s in meta.get("sheets", []):
+        props = s.get("properties", {})
+        if props.get("title") == sheet_title:
+            sheet_id = props.get("sheetId")
+            break
+    if sheet_id is None:
+        print(f"  [dropdown] Could not find sheet '{sheet_title}' — skipping")
+        return
+
+    request = {
+        "setDataValidation": {
+            "range": {
+                "sheetId": sheet_id,
+                "startRowIndex": first_data_row - 1,
+                "endRowIndex": max(last_data_row, first_data_row + 500),
+                "startColumnIndex": sts_col_1based - 1,
+                "endColumnIndex": sts_col_1based,
+            },
+            "rule": {
+                "condition": {
+                    "type": "ONE_OF_LIST",
+                    "values": [
+                        {"userEnteredValue": "PASS"},
+                        {"userEnteredValue": "FAIL"},
+                        {"userEnteredValue": "N/A"},
+                    ],
+                },
+                "strict": True,
+                "showCustomUi": True,
+            },
+        }
+    }
+
+    response = sheets.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={"requests": [request]},
+    ).execute()
+    print(f"  [dropdown] Added PASS/FAIL/N/A dropdown → column {sts_col_1based} (rows {first_data_row}+)")
+    print(f"  [dropdown] API response: {response}")
 
 
 def merge_results(
@@ -1345,15 +1433,20 @@ def merge_results(
         # Share publicly
         share_spreadsheet_public(spreadsheet_id, creds)
 
-        # Apply PASS/FAIL/N/A cell background colors after upload
+        # Apply PASS/FAIL/N/A conditional formatting and validation after upload
         if sts_col is not None:
             sheet_title = ws.title
             max_data_row = ws.max_row
-            apply_cell_background_colors(
+            apply_conditional_formatting_sheets(
                 spreadsheet_id, sheet_title,
                 sts_col + 1,  # convert 0-based to 1-based
-                {0: row_verdicts},
-                max_data_row, creds
+                data_start_row, max_data_row, creds
+            )
+
+            add_status_dropdown_sheets(
+                spreadsheet_id, sheet_title,
+                sts_col + 1,  # 0-based → 1-based
+                data_start_row, max_data_row, creds
             )
 
         print(f"\nDone! → {sheet_url}")
@@ -1509,17 +1602,30 @@ def main():
     parser = argparse.ArgumentParser(
         description="Merge auto-postman results into a Google Spreadsheet"
     )
-    parser.add_argument("--source",    required=True,
+    parser.add_argument("--detect",
+                        help="Google Sheets URL to auto-detect structure from. "
+                             "Outputs structure.json to stdout.")
+    parser.add_argument("--source",
                         help="Path to api_results_*.xlsx (Postman output)")
-    parser.add_argument("--target",    required=True,
+    parser.add_argument("--target",
                         help="Google Sheets URL or spreadsheet ID (used as template, not overwritten)")
-    parser.add_argument("--structure", required=True,
+    parser.add_argument("--structure",
                         help="Path to structure.json")
     parser.add_argument("--dry-run",   action="store_true",
                         help="Print what would happen without writing anything")
     parser.add_argument("--name",
                         help="Name of the new Google Sheet to create (default: auto-generated)")
     args = parser.parse_args()
+
+    # --detect mode: no auth needed for the script itself, just download
+    if args.detect:
+        result = detect_structure(args.detect)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        sys.exit(0)
+
+    # Normal merge mode
+    if not args.source or not args.target or not args.structure:
+        parser.error("--source, --target, --structure are required (or use --detect)")
 
     try:
         result = merge_results(
