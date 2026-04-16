@@ -31,9 +31,29 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 
 | Input | Description |
 |-------|-------------|
-| **Source xlsx** | Auto-postman output, e.g. `api_results_20260415_091720.xlsx` |
+| **Source xlsx** | Auto-postman output, e.g. `api_results_20260415_091720.xlsx`. Can be **one or multiple files** — repeat `--source` for each. |
 | **Target Google Sheet** | Google Sheets URL, e.g. `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit` |
 | **structure.json** | Column mapping for the target file |
+
+### Getting source files from Jira attachments
+
+If the user provides a Jira task URL or ticket ID instead of a local path, download the attachments first:
+
+```python
+# 1. Get attachments from the Jira issue
+mcp__mcp-atlassian__jira_get_issue(issue_key="PROJECT-123")
+# Look for .xlsx attachments in the response (fields.attachment[])
+
+# 2. Download each attachment
+mcp__mcp-atlassian__jira_download_attachments(
+    issue_key="PROJECT-123",
+    attachment_ids=["<id from step 1>"],
+    download_dir="C:/Users/<user>/Downloads"
+)
+# This returns the local file path(s) — use those as --source values
+```
+
+Then run the merge with the downloaded path(s).
 
 ### structure.json format
 
@@ -95,12 +115,29 @@ The `detect_structure()` function:
 
 ## How to run
 
+Single source file:
+
 ```bash
 python scripts/merge_postman_results.py \
   --source "/path/to/api_results_20260415_091720.xlsx" \
   --target "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit" \
   --structure "path/to/structure.json"
 ```
+
+Multiple source files (repeat `--source` for each file):
+
+```bash
+python scripts/merge_postman_results.py \
+  --source "/path/to/api_results_file1.xlsx" \
+  --source "/path/to/api_results_file2.xlsx" \
+  --target "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit" \
+  --structure "path/to/structure.json"
+```
+
+When multiple source files are provided:
+- They are merged into a single result set before writing to target
+- If the same API name appears in more than one file, the **later file wins** (a warning is printed)
+- Evidence sheet entries are sorted by numeric API ID (API1 < API2 < ... < API102) regardless of file load order
 
 Optional flags:
 
@@ -125,12 +162,22 @@ to the same credential file, so the MCP server continues to work.
 
 ## Workflow when user asks to merge
 
-1. **Ask for** source xlsx path and target Google Sheet URL
-2. **No structure.json?** → Run `detect_structure()` first to generate it (see section above), save to `structure.json`
-3. **Validate structure.json** if provided — check `headerRow`, `dataStartRow`, and `columnMapping` keys exist
-4. **Run the script**: `python scripts/merge_postman_results.py --source ... --target ... --structure ...`
-5. **Report results**: matched count, PASS/FAIL/N/A breakdown, unmatched test cases, Google Sheet URL (already shared publicly)
-6. If many test cases are unmatched, compare API Name values to diagnose mismatches
+1. **Identify source file(s)**:
+   - If the user provides local file path(s) → use directly
+   - If the user provides a **Jira task URL or ticket ID** → download attachments first (see "Getting source files from Jira attachments" above)
+   - Multiple files are supported — collect all paths
+2. **Ask for** target Google Sheet URL if not provided
+3. **No structure.json?** → Run `detect_structure()` first to generate it (see section above), save to `structure.json`
+4. **Validate structure.json** if provided — check `headerRow`, `dataStartRow`, and `columnMapping` keys exist
+5. **Run the script** with one `--source` flag per file:
+   ```
+   python scripts/merge_postman_results.py \
+     --source "file1.xlsx" --source "file2.xlsx" \
+     --target "GOOGLE_SHEET_URL" \
+     --structure structure.json
+   ```
+6. **Report results**: matched count, PASS/FAIL/N/A breakdown, unmatched test cases, Google Sheet URL
+7. If many test cases are unmatched, compare API Name values to diagnose mismatches
 
 ## Evidence sheet
 
