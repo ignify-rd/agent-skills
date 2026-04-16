@@ -173,13 +173,14 @@ def upload_xlsx_to_gsheet(xlsx_path: str, spreadsheet_id: str, creds) -> str:
     media = MediaFileUpload(
         xlsx_path,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        resumable=False,
+        resumable=True,
     )
 
+    # Drive API v3: update file content only.
+    # resumable=True avoids the "Invalid MIME type" error from multipart uploads.
     drive.files().update(
         fileId=spreadsheet_id,
         media_body=media,
-        body={"mimeType": "application/vnd.google-apps.spreadsheet"},
     ).execute()
 
     url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
@@ -370,10 +371,6 @@ def load_source(source_path: str) -> dict:
             "_orig_name": name,          # preserve original for display
         }
 
-        norm_key = _normalize_api_key(name)
-        if norm_key != name and norm_key not in results:
-            results[norm_key] = results[name]
-
     return results
 
 
@@ -541,6 +538,14 @@ def _white_fill():
     return PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
 
+def _verdict_fill(verdict: str):
+    """Return a PatternFill matching the verdict: green=PASS, red=FAIL, white=N/A."""
+    from openpyxl.styles import PatternFill
+    colors = {"PASS": "B6D7A8", "FAIL": "F4CCCC"}
+    color = colors.get(verdict, "FFFFFF")
+    return PatternFill(start_color=color, end_color=color, fill_type="solid")
+
+
 def _autofit_row_height(ws, row_idx: int, *col_indices):
     """Set row height based on the maximum line count across the given columns."""
     LINE_HEIGHT_PT = 15
@@ -612,12 +617,27 @@ def update_evidence_sheet(wb, source_results: dict):
     ws.column_dimensions["A"].width = 55
     ws.column_dimensions["B"].width = 90
 
-    row_num = 2
+    # Collect all matched entries (tagged with externalId during merge), deduplicate
+    seen_ids = set()
+    matched_entries = []
     for api_name, data in source_results.items():
-        # Only include matched test cases (externalId is set during merge)
         if "externalId" not in data:
             continue
         display_id = data["externalId"]
+        if display_id in seen_ids:
+            continue
+        seen_ids.add(display_id)
+        matched_entries.append((display_id, data))
+
+    # Sort by numeric part so API1 < API2 < ... < API102 regardless of load order
+    def _ev_sort_key(entry):
+        m = re.search(r'\d+', entry[0])
+        return int(m.group()) if m else 0
+
+    matched_entries.sort(key=_ev_sort_key)
+
+    row_num = 2
+    for display_id, data in matched_entries:
         ws[f"A{row_num}"] = display_id
         shot = data.get("screenshot")
 
@@ -896,24 +916,25 @@ def _run_externalid_merge_loop(ws, ws_ro, source_results, col_map, data_start_ro
 
 def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_readonly=None):
     """
-    Core merge loop — matches source results to target rows and writes data.
+    Core merge loop — left-join: target rows are the driving table.
 
-    Matches target testCaseName against source_results keys.
-    On every successful match, stores `externalId` back into source_results[api_name]
-    so that update_evidence_sheet() can filter by it.
+    Join key: externalId column (col A by default).
+    - Rows without a valid externalId (sub-steps, section headers, empty rows)
+      are skipped silently — they are NOT test case rows.
+    - Rows with a valid externalId that has no match in source are kept as-is
+      (correct left-join behaviour: partial source files are supported).
 
     Args:
         ws:           Writable worksheet (may contain formulas as strings).
         ws_readonly:  data_only worksheet for reading computed values (optional).
-                      When provided, cell values are read from ws_readonly but
-                      writes go to ws.  This handles formula columns correctly.
 
     Writes:
       - actualResult column: response JSON body from source
       - status column ("Kết quả hiện tại"): PASS / FAIL / N/A verdict
 
     Returns:
-        (matched, not_found, verdicts)
+        (matched, not_found, verdicts, row_verdicts)
+        not_found is always [] — left-join misses are silent.
     """
     rd = ws_readonly or ws  # reader worksheet
 
@@ -923,128 +944,96 @@ def _run_merge_loop(ws, source_results, col_map, data_start_row, dry_run, ws_rea
     sts_col = col_map.get("status")
     ext_col = col_map.get("externalId")
 
-    matched = 0
-    not_found = []
-    verdicts = {"PASS": 0, "FAIL": 0, "N/A": 0}
-    row_verdicts = {}  # {row_1based: verdict} for apply_cell_background_colors
+    matched      = 0
+    not_found    = []   # kept for API compatibility; always empty in left-join mode
+    verdicts     = {"PASS": 0, "FAIL": 0, "N/A": 0}
+    row_verdicts = {}
 
-    # Build reverse lookup: target ID value → source_results key
-    # We scan every column to find one whose values match source API names.
-    # The correct ID column may be the first column (A) or any other column
-    # depending on the sheet layout.
-    target_id_col = None
-    for scan_col_idx in range(0, ws.max_column):
-        vals = [rd.cell(row=row_idx, column=scan_col_idx + 1).value for row_idx in range(data_start_row, min(data_start_row + 10, ws.max_row + 1))]
-        matched_count = sum(1 for v in vals if v and str(v).strip() in source_results)
-        if matched_count >= 2:
-            target_id_col = scan_col_idx
-            print(f"      [match-hint] ID column found at col {scan_col_idx} (matched {matched_count} source keys)")
-            break
+    if ext_col is None:
+        print("  [warn] externalId column not configured — cannot perform ID-based matching.")
+        return matched, not_found, verdicts, row_verdicts
 
-    if target_id_col is None and ext_col is not None:
-        # Fall back to the configured externalId column
-        target_id_col = ext_col
+    # Build lookup: target externalId value → source_results key
+    # Handles normalisation so 'API_1' matches 'API1', etc.
+    # Builds a reverse index from normalised source key → original source key once,
+    # then resolves each target ID through it — no aliases needed in source_results.
+    _norm_to_source = {_normalize_api_key(k): k for k in source_results}
 
-    # Rebuild ext_to_source_key with whichever column has more matches
-    # Normalize when comparing so 'API_1' matches 'API1'
     def _build_lookup(col_idx):
         lut = {}
         for row_idx in range(data_start_row, ws.max_row + 1):
             ext_val = rd.cell(row=row_idx, column=col_idx + 1).value
-            if ext_val:
-                key = str(ext_val).strip()
-                norm_key = _normalize_api_key(key)
-                for k in (key, norm_key):
-                    if k in source_results and k not in lut:
-                        lut[key] = k
-                        break
+            if not ext_val:
+                continue
+            key      = str(ext_val).strip()
+            norm_key = _normalize_api_key(key)
+            # Try exact match first, then normalised match
+            if key in source_results:
+                lut[key] = key
+            elif norm_key in _norm_to_source:
+                lut[key] = _norm_to_source[norm_key]
         return lut
 
-    if target_id_col is not None and ext_col is not None and ext_col != target_id_col:
-        # structure.json externalId col may be wrong for this sheet
-        orig_lut = _build_lookup(ext_col)
-        new_lut  = _build_lookup(target_id_col)
-        if len(orig_lut) >= len(new_lut):
-            print(f"      [match-hint] structure.json externalId col={ext_col} "
-                  f"({len(orig_lut)} matches) >= scanned col={target_id_col} "
-                  f"({len(new_lut)} matches) — using structure.json")
-            target_id_col = ext_col
-            ext_to_source_key = orig_lut
-        else:
-            print(f"      [match-hint] structure.json externalId col={ext_col} "
-                  f"({len(orig_lut)} matches) < scanned col={target_id_col} "
-                  f"({len(new_lut)} matches) — using scanned column")
-            ext_to_source_key = new_lut
-    else:
-        ext_to_source_key = _build_lookup(target_id_col or 0)
+    ext_to_source_key = _build_lookup(ext_col)
+    print(f"      [match] externalId col={ext_col}, {len(ext_to_source_key)} IDs matched to source")
 
     for row_idx in range(data_start_row, ws.max_row + 1):
-        tc_val = rd.cell(row=row_idx, column=tc_col + 1).value
-        if tc_val is None:
+        # --- Join key: externalId (col A) ---
+        # Only rows with a non-empty ID are test case rows.
+        # Sub-steps, section headers, and blank rows have no ID → skip silently.
+        id_val = rd.cell(row=row_idx, column=ext_col + 1).value
+        if not id_val:
             continue
-        tc_name = str(tc_val).strip()
-        if not tc_name:
+        ext_id = str(id_val).strip()
+        if not ext_id:
             continue
 
-        source_key = tc_name
-
-        # Primary match: tc_name matches source_results key directly
-        if source_key not in source_results:
-            # Fallback: try matching via scanned ID column (e.g. col A = "API1")
-            source_key = None
-            if target_id_col is not None:
-                id_val = rd.cell(row=row_idx, column=target_id_col + 1).value
-                if id_val:
-                    source_key = ext_to_source_key.get(str(id_val).strip())
-            if source_key is None:
-                not_found.append(tc_name)
-                continue
+        # Left-join: look up source result by ID
+        source_key = ext_to_source_key.get(ext_id)
+        if source_key is None:
+            # This API has no result in the current source file — keep row as-is.
+            continue
 
         matched += 1
         data = source_results[source_key]
+        data["externalId"] = ext_id  # tag for Evidence sheet
 
-        # Store externalId for update_evidence_sheet filter
-        id_write_col = target_id_col if target_id_col is not None else ext_col
-        if id_write_col is not None:
-            ext_id_val = rd.cell(row=row_idx, column=id_write_col + 1).value
-            if ext_id_val:
-                data["externalId"] = str(ext_id_val).strip()
+        # Build display name for logging
+        tc_display = ext_id
+        if tc_col is not None:
+            tc_val = rd.cell(row=row_idx, column=tc_col + 1).value
+            if tc_val:
+                tc_display = f"{ext_id} — {str(tc_val)[:50]}"
 
         expected_text = ""
         if exp_col is not None:
             exp_val = rd.cell(row=row_idx, column=exp_col + 1).value
             expected_text = str(exp_val or "")
 
-        raw_actual = data["response_body"]
-
-        verdict, reason = evaluate_simple(expected_text, raw_actual)
-
+        raw_actual      = data["response_body"]
+        verdict, _      = evaluate_simple(expected_text, raw_actual)
         verdicts[verdict] = verdicts.get(verdict, 0) + 1
-        display_name = source_key if source_key != tc_name else tc_name
-        print(f"  [{verdict:7s}] {display_name[:65]}")
+        print(f"  [{verdict:7s}] {tc_display[:70]}")
 
         if dry_run:
             continue
 
-        # Track per-row verdict for Google Sheets cell coloring after upload
         if sts_col is not None:
             row_verdicts[row_idx] = verdict
 
-        # Write actual result: response JSON body
         if act_col is not None:
-            cell = ws.cell(row=row_idx, column=act_col + 1)
-            cell.value = raw_actual
+            cell           = ws.cell(row=row_idx, column=act_col + 1)
+            cell.value     = raw_actual
             cell.alignment = _wrap_align()
-            cell.font = _black_font()
-            cell.fill = _white_fill()
+            cell.font      = _black_font()
+            cell.fill      = _white_fill()
 
-        # Write verdict (PASS/FAIL/N/A) to "Kết quả hiện tại" (status) column
         if sts_col is not None:
-            cell = ws.cell(row=row_idx, column=sts_col + 1)
-            cell.value = verdict
+            cell           = ws.cell(row=row_idx, column=sts_col + 1)
+            cell.value     = verdict
             cell.alignment = _wrap_align()
-            cell.font = _black_font()
-            cell.fill = _white_fill()
+            cell.font      = _black_font()
+            cell.fill      = _verdict_fill(verdict)
 
         _autofit_row_height(ws, row_idx, act_col)
 
@@ -1213,7 +1202,7 @@ def add_status_dropdown_sheets(spreadsheet_id: str, sheet_title: str,
 
 
 def merge_results(
-    source_path: str,
+    source_paths,           # str or list[str]
     target_url: str,
     structure_path: str,
     dry_run: bool = False,
@@ -1221,21 +1210,43 @@ def merge_results(
 ) -> dict:
     import openpyxl
 
-    # --- Step 0: Google auth & download target ---
-    spreadsheet_id = parse_spreadsheet_id(target_url)
-    print(f"[0/5] Authenticating with Google ...")
-    creds = get_google_credentials()
+    # Normalise source_paths to a list
+    if isinstance(source_paths, str):
+        source_paths = [source_paths]
 
-    tmpdir = tempfile.mkdtemp(prefix="merge_postman_")
-    target_xlsx = os.path.join(tmpdir, "target.xlsx")
+    # Detect local file vs Google Sheets URL
+    is_local = os.path.isfile(target_url) or (
+        not target_url.startswith("http") and target_url.endswith(".xlsx")
+    )
 
-    print(f"[1/5] Downloading template Google Sheet: {spreadsheet_id}")
-    download_gsheet_as_xlsx(spreadsheet_id, creds, target_xlsx)
+    tmpdir        = tempfile.mkdtemp(prefix="merge_postman_")
+    creds         = None
+    spreadsheet_id = None
 
-    # --- Step 1: Load source ---
-    print(f"[2/5] Loading source: {source_path}")
-    source_results = load_source(source_path)
-    print(f"      {len(source_results)} test results found")
+    if is_local:
+        target_xlsx = target_url
+        print(f"[0/5] Local target file detected — skipping Google auth")
+        print(f"[1/5] Using local target: {target_xlsx}")
+    else:
+        # --- Step 0: Google auth & download target ---
+        spreadsheet_id = parse_spreadsheet_id(target_url)
+        print(f"[0/5] Authenticating with Google ...")
+        creds = get_google_credentials()
+        target_xlsx = os.path.join(tmpdir, "target.xlsx")
+        print(f"[1/5] Downloading template Google Sheet: {spreadsheet_id}")
+        download_gsheet_as_xlsx(spreadsheet_id, creds, target_xlsx)
+
+    # --- Step 1: Load source(s) ---
+    print(f"[2/5] Loading source file(s): {source_paths}")
+    source_results = {}
+    for sp in source_paths:
+        partial = load_source(sp)
+        overlap = set(partial) & set(source_results)
+        if overlap:
+            print(f"      [warn] {len(overlap)} overlapping keys from {sp} — later file wins")
+        source_results.update(partial)
+    unique_count = len(source_results)
+    print(f"      {unique_count} test results loaded")
 
     # --- Step 2: Load structure ---
     print(f"[3/5] Loading structure: {structure_path}")
@@ -1289,15 +1300,6 @@ def merge_results(
         ws, source_results, col_map, data_start_row, dry_run, ws_readonly=ws_ro
     )
 
-    print()
-    print(f"  Matched : {matched} / {len(source_results)}")
-    print(f"  PASS    : {verdicts.get('PASS', 0)}")
-    print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
-    print(f"  N/A     : {verdicts.get('N/A', 0)}")
-    if not_found:
-        print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
-              + (" ..." if len(not_found) > 8 else ""))
-
     # --- Auto-fix: if nothing matched, scan for the real header row ---
     if matched == 0 and auto_fix and len(source_results) > 0:
         print("\n[auto-fix] matched = 0 — scanning worksheet for correct header row ...")
@@ -1341,49 +1343,61 @@ def merge_results(
         row_verdicts = row_verdicts2
 
     print()
-    print(f"  Matched : {matched} / {len(source_results)}")
+    print(f"  Matched : {matched} / {unique_count} source results")
     print(f"  PASS    : {verdicts.get('PASS', 0)}")
     print(f"  FAIL    : {verdicts.get('FAIL', 0)}")
     print(f"  N/A     : {verdicts.get('N/A', 0)}")
-    if not_found:
-        print(f"  Unmatched ({len(not_found)}): {not_found[:8]}"
-              + (" ..." if len(not_found) > 8 else ""))
 
     if not dry_run:
         # Update Evidence sheet
         print("\nUpdating Evidence sheet ...")
         update_evidence_sheet(wb, source_results)
 
-        # Save merged xlsx locally
-        merged_xlsx = os.path.join(tmpdir, "merged.xlsx")
+        # Determine output path
+        if is_local:
+            src = Path(target_xlsx)
+            merged_xlsx = str(src.parent / (src.stem + "_merged" + src.suffix))
+        else:
+            merged_xlsx = os.path.join(tmpdir, "merged.xlsx")
+
         wb.save(merged_xlsx)
         print(f"Saved locally → {merged_xlsx}")
 
-        # Verify before uploading
+        # Verify
         print("\n[Verify] Re-reading saved file ...")
         verify = _verify_output(merged_xlsx, structure, col_map, data_start_row, matched)
         _print_verify(verify)
 
-        print(f"\n[Upload] Updating existing Google Sheet: {spreadsheet_id} ...")
-        sheet_url = upload_xlsx_to_gsheet(merged_xlsx, spreadsheet_id, creds)
+        if is_local:
+            sheet_url = merged_xlsx
+            print(f"\nDone! → {merged_xlsx}")
+        else:
+            print(f"\n[Upload] Updating existing Google Sheet: {spreadsheet_id} ...")
+            sheet_url = upload_xlsx_to_gsheet(merged_xlsx, spreadsheet_id, creds)
 
-        # Apply PASS/FAIL/N/A conditional formatting and validation after upload
-        if sts_col is not None:
-            sheet_title = ws.title
-            max_data_row = ws.max_row
-            apply_conditional_formatting_sheets(
-                spreadsheet_id, sheet_title,
-                sts_col + 1,  # convert 0-based to 1-based
-                data_start_row, max_data_row, creds
-            )
+            # Apply PASS/FAIL/N/A conditional formatting and validation after upload
+            if sts_col is not None:
+                sheet_title  = ws.title
+                max_data_row = ws.max_row
+                try:
+                    apply_conditional_formatting_sheets(
+                        spreadsheet_id, sheet_title,
+                        sts_col + 1,  # convert 0-based to 1-based
+                        data_start_row, max_data_row, creds
+                    )
+                except Exception as exc:
+                    print(f"  [warn] Conditional formatting skipped: {exc}")
 
-            add_status_dropdown_sheets(
-                spreadsheet_id, sheet_title,
-                sts_col + 1,  # 0-based → 1-based
-                data_start_row, max_data_row, creds
-            )
+                try:
+                    add_status_dropdown_sheets(
+                        spreadsheet_id, sheet_title,
+                        sts_col + 1,  # 0-based → 1-based
+                        data_start_row, max_data_row, creds
+                    )
+                except Exception as exc:
+                    print(f"  [warn] Status dropdown skipped: {exc}")
 
-        print(f"\nDone! → {sheet_url}")
+            print(f"\nDone! → {sheet_url}")
     else:
         print("\n[dry-run] No changes written.")
         sheet_url = None
@@ -1540,7 +1554,9 @@ def main():
                         help="Google Sheets URL to auto-detect structure from. "
                              "Outputs structure.json to stdout.")
     parser.add_argument("--source",
-                        help="Path to api_results_*.xlsx (Postman output)")
+                        action="append", dest="sources", metavar="XLSX",
+                        help="Path to api_results_*.xlsx (Postman output). "
+                             "Repeat to merge multiple source files in one run.")
     parser.add_argument("--target",
                         help="Google Sheets URL or spreadsheet ID")
     parser.add_argument("--structure",
@@ -1556,12 +1572,12 @@ def main():
         sys.exit(0)
 
     # Normal merge mode
-    if not args.source or not args.target or not args.structure:
+    if not args.sources or not args.target or not args.structure:
         parser.error("--source, --target, --structure are required (or use --detect)")
 
     try:
         result = merge_results(
-            source_path=args.source,
+            source_paths=args.sources,
             target_url=args.target,
             structure_path=args.structure,
             dry_run=args.dry_run,
