@@ -103,6 +103,8 @@ Ví dụ đúng:
 - `"URL_Kiểm tra khi truyền sai url"`
 - `"Phân quyền_Kiểm tra user không có quyền"` ← expect 403/401
 - `"Phân quyền_Kiểm tra user có quyền"` ← expect 200 **(bắt buộc — PHẢI có)**
+- `"Kiểm tra token_Nhập sai token"` ← expect 401
+- `"Kiểm tra token_Nhập đúng token"` ← expect 200 **(bắt buộc — PHẢI có)**
 - `"regChannel_Bỏ trống field bắt buộc"`
 - `"regChannel_Truyền 101 ký tự"`
 
@@ -162,6 +164,8 @@ Ví dụ theo section:
 - **URL**: `"1. Nhập sai endpoint: /v1/fee/invalid-path\n2. Send API"`
 - **Phân quyền (no permission)**: `"1. Login với user không có quyền\n2. Send API"`
 - **Phân quyền (has permission)**: `"1. Login với user có quyền\n2. Send API"` ← **bắt buộc, luôn có**
+- **Token (nhập sai)**: `"1. Nhập sai token (invalid/expired token)\n2. Send API"`
+- **Token (nhập đúng)**: `"1. Nhập đúng token hợp lệ\n2. Send API"` ← **bắt buộc, luôn có**
 - **Validate (bỏ trống)**: `"1. Bỏ trống {field} (bắt buộc)\n2. Send API"`
 - **Validate (type error)**: `"1. Truyền {field} = true (boolean)\n2. Send API"`
 - **Validate (over max)**: `"1. Truyền {field} = 101 ký tự\n2. Send API"`

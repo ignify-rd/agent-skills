@@ -77,6 +77,14 @@ model: inherit
 
 <step id="4" name="Generate test cases">
     <description>For each section ## (BEFORE validate), generate test cases for all ### sub-headings</description>
+    
+    <mandatory_cases>
+        <section name="Kiểm tra token">
+            <case>Nhập sai token</case>
+            <case>Nhập đúng token</case>
+            <note>Bắt buộc phải generate 2 test case này cho phần Kiểm tra token</note>
+        </section>
+    </mandatory_cases>
 
     <field_mappings>
         <mapping>
