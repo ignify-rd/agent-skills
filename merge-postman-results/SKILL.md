@@ -25,6 +25,7 @@ Reads the auto-postman tool output (an `.xlsx` file) and merges results into the
 5. Writes the verdict (`PASS`/`FAIL`/`N/A`) to the **Kết quả hiện tại** (status) column
 6. Creates/updates the **"Evidence"** sheet with embedded screenshot images
 7. **Uploads** the merged `.xlsx` back to the Google Sheet (converted to native Google Sheets format)
+8. **Shares publicly** — anyone with the link can view the result spreadsheet
 
 ## Inputs the user must provide
 
@@ -128,7 +129,7 @@ to the same credential file, so the MCP server continues to work.
 2. **No structure.json?** → Run `detect_structure()` first to generate it (see section above), save to `structure.json`
 3. **Validate structure.json** if provided — check `headerRow`, `dataStartRow`, and `columnMapping` keys exist
 4. **Run the script**: `python scripts/merge_postman_results.py --source ... --target ... --structure ...`
-5. **Report results**: matched count, PASS/FAIL/N/A breakdown, unmatched test cases, Google Sheet URL
+5. **Report results**: matched count, PASS/FAIL/N/A breakdown, unmatched test cases, Google Sheet URL (already shared publicly)
 6. If many test cases are unmatched, compare API Name values to diagnose mismatches
 
 ## Evidence sheet

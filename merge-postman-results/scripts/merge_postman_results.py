@@ -226,6 +226,25 @@ def create_new_gsheet_from_xlsx(xlsx_path: str, title: str, creds) -> str:
     return url, new_spreadsheet_id
 
 
+def share_spreadsheet_public(spreadsheet_id: str, creds):
+    """
+    Make the spreadsheet publicly readable (anyone with the link can view).
+    Uses Drive API permissions.create with type=anyone.
+    """
+    from googleapiclient.discovery import build
+
+    drive = build("drive", "v3", credentials=creds, cache_discovery=False)
+    drive.permissions().create(
+        fileId=spreadsheet_id,
+        body={
+            "type": "anyone",
+            "role": "reader",
+        },
+        fields="id",
+    ).execute()
+    print(f"  Shared publicly (anyone with link can view) → https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit")
+
+
 # ---------------------------------------------------------------------------
 # Extract embedded images from xlsx drawing layer
 # ---------------------------------------------------------------------------
@@ -1271,6 +1290,9 @@ def merge_results(
         )
         print(f"\n[Upload] Creating new Google Sheet: '{new_name}' ...")
         sheet_url, spreadsheet_id = create_new_gsheet_from_xlsx(merged_xlsx, new_name, creds)
+
+        # Share publicly
+        share_spreadsheet_public(spreadsheet_id, creds)
 
         # Apply PASS/FAIL/N/A cell background colors after upload
         if sts_col is not None:
