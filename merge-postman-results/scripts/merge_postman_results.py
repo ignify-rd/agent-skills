@@ -1256,10 +1256,18 @@ def merge_results(
     # --- Step 3: Open downloaded target xlsx ---
     print(f"[4/5] Loading target xlsx: {target_xlsx}")
     wb = openpyxl.load_workbook(target_xlsx)
-    ws = wb.worksheets[0]
-    # Also open a read-only copy with data_only=True to resolve formula values
     wb_ro = openpyxl.load_workbook(target_xlsx, data_only=True)
-    ws_ro = wb_ro.worksheets[0]
+
+    # Select sheet by sheetName from structure.json (fallback to first sheet)
+    sheet_name_cfg = structure.get("sheetName", "")
+    if sheet_name_cfg and sheet_name_cfg in wb.sheetnames:
+        ws    = wb[sheet_name_cfg]
+        ws_ro = wb_ro[sheet_name_cfg]
+    else:
+        ws    = wb.worksheets[0]
+        ws_ro = wb_ro.worksheets[0]
+        if sheet_name_cfg:
+            print(f"      [warn] sheetName '{sheet_name_cfg}' not found — using first sheet '{ws.title}'")
     print(f"      Sheet: '{ws.title}'")
 
     col_map = detect_columns(ws_ro, structure)
@@ -1359,6 +1367,13 @@ def merge_results(
             merged_xlsx = str(src.parent / (src.stem + "_merged" + src.suffix))
         else:
             merged_xlsx = os.path.join(tmpdir, "merged.xlsx")
+
+        # Apply columnWidths from structure.json
+        col_widths = structure.get("columnWidths", [])
+        if col_widths:
+            from openpyxl.utils import get_column_letter
+            for i, width in enumerate(col_widths):
+                ws.column_dimensions[get_column_letter(i + 1)].width = width
 
         wb.save(merged_xlsx)
         print(f"Saved locally → {merged_xlsx}")
