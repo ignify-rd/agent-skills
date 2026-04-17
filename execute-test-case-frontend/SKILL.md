@@ -1,23 +1,13 @@
 ---
 name: execute-test-case-frontend
-description: Execute frontend/UI validate test cases from a Google Sheets URL or local Excel (.xlsx) file. Scans the live DOM, generates a Playwright script via LLM, executes batch per field group, writes PASS/FAIL + screenshots back to source. Only executes rows where Name contains "Validate". Triggers when user says "execute frontend test", "run FE test", "chạy test case frontend", or provides a Google Sheets URL / .xlsx path with frontend test data.
+description: Execute frontend validate test cases directly using Playwright MCP — no scripts generated. Claude reads cases from Google Sheets, navigates the browser, interacts with the main content area (ignoring sidebar/header), takes screenshots, and writes P/F/E back to the sheet. Triggers when user says "execute frontend test", "run FE test", "chạy test case frontend", or provides a Google Sheets URL with test data.
 ---
 
-# Execute Test Case — Frontend
+# Execute Test Case — Frontend (Playwright MCP)
 
-Reads validate test cases from **Google Sheets** (preferred) or local `.xlsx`, scans the live DOM, generates and runs a Playwright script per field group, writes results back.
+Claude drives the browser step-by-step using Playwright MCP tools. No Python script generation. Each test case is executed one-by-one with screenshot evidence.
 
-**Flow:** Read Cases → DOM Snapshot → Generate Script → Execute → Write Results
-
-**Scope:** Only rows where Name (col B) contains `"Validate"` / `"validate"`. All other rows are ignored.
-
----
-
-## Prerequisites
-
-- Playwright MCP configured
-- Google Sheets MCP configured (for Google Sheets input)
-- `openpyxl` installed (`pip show openpyxl`) — for xlsx input only
+**Scope:** Only rows where Name (col B) contains `"Validate"` and col I (Lần 1) is empty.
 
 ---
 
@@ -25,223 +15,261 @@ Reads validate test cases from **Google Sheets** (preferred) or local `.xlsx`, s
 
 | Parameter | Description |
 |-----------|-------------|
-| `url` | URL of the web page under test (required) |
-| `source` | Google Sheets URL **or** path to local `.xlsx` file |
+| `url` | URL of the page under test |
+| `spreadsheetId` | Google Sheets ID (from URL: `/d/{ID}/edit`) |
+| `sheetName` | Sheet tab name (default: first sheet) |
 
 ---
 
-## Column Layout (Google Sheets / Excel)
+## Column Layout
 
 | Col | Index | Field | Notes |
 |-----|-------|-------|-------|
-| A | 0 | External ID / Section | Empty or section header; skip non-FE rows |
-| B | 1 | Name | Test case name — filter: contains "Validate" AND starts with "FE_" |
-| C | 2 | PreConditions | Login steps / navigation preconditions |
+| A | 0 | External ID / Section | Section header or empty |
+| B | 1 | Name | Filter: starts with `FE_` AND contains `"Validate"` |
+| C | 2 | PreConditions | Login + navigation steps |
 | D | 3 | Importance | High / Medium / Low |
-| E | 4 | Steps | Natural language test steps |
-| F | 5 | Data test | Input data for the test (may be empty) |
-| G | 6 | Expected Result | Natural language expected outcome |
-| H | 7 | Actual Result | **Write:** observed behavior |
-| I | 8 | Lần 1 (Chrome) | **Write: P (pass) / F (fail) / E (error)** |
+| E | 4 | Steps | Test steps in Vietnamese |
+| F | 5 | Data test | Input value (may be empty) |
+| G | 6 | Expected Result | Expected behavior |
+| H | 7 | Actual Result | **Write:** observed result |
+| I | 8 | Lần 1 (Chrome) | **Write: P / F / E** |
 
-Pending = col I (Lần 1) is empty.
-Skip rows already having a value in col I.
+---
+
+## Main Screen Scope Rule
+
+**CRITICAL:** All interactions must target the **main content area only**, NOT sidebar or header.
+
+Before any interaction, identify the main content container:
+```
+mcp__playwright__browser_evaluate(function="() => {
+  // Find the main content area — try common patterns
+  const candidates = [
+    document.querySelector('main'),
+    document.querySelector('[role=\"main\"]'),
+    document.querySelector('.main-content'),
+    document.querySelector('.content-area'),
+    document.querySelector('.page-content'),
+    // Fallback: largest visible div that is NOT header/nav/aside
+    ...[...document.querySelectorAll('div')].filter(el => {
+      const tag = el.tagName.toLowerCase();
+      const r = el.getBoundingClientRect();
+      const isNav = el.closest('header,nav,aside,[role=navigation],[role=banner]');
+      return !isNav && r.width > 600 && r.height > 400;
+    }).sort((a,b) => b.getBoundingClientRect().height - a.getBoundingClientRect().height)
+  ].filter(Boolean);
+  const main = candidates[0];
+  return main ? {
+    tag: main.tagName,
+    id: main.id,
+    className: main.className?.split(' ').slice(0,4).join(' '),
+    rect: main.getBoundingClientRect()
+  } : null;
+}")
+```
+
+Use the identified main container selector for all subsequent `browser_evaluate` and `browser_click` calls. Never click elements inside `header`, `nav`, `aside`, or `[role=navigation]`.
 
 ---
 
 ## Workflow
 
-### Step 1 — Read test cases from source
-
-**If Google Sheets URL:**
+### Step 1 — Read test cases
 
 ```
-spreadsheetId = extract from URL (the long ID between /d/ and /edit)
-mcp__gsheets__read_all_from_sheet(spreadsheetId="{id}", sheetName="{sheetName}")
+mcp__gsheets__read_all_from_sheet(spreadsheetId="{id}", sheetName="{sheet}")
 ```
 
-Parse the returned rows. Filter:
-- Col B (index 1) starts with `"FE_"` AND contains `"Validate"` (case-insensitive)
-- Col I (index 8) is empty (not yet executed)
+Parse rows. Build list of pending validate cases:
+- `row[1]` starts with `"FE_"` AND contains `"validate"` (case-insensitive)
+- `row[8]` (col I) is empty/null
 
-**If .xlsx file:**
-
-```bash
-python3 -X utf8 -c "
-import openpyxl, json
-wb = openpyxl.load_workbook('PATH_TO_FILE.xlsx')
-ws = wb['TestCase'] if 'TestCase' in wb.sheetnames else wb[wb.sheetnames[0]]
-rows = []
-for i, row in enumerate(ws.iter_rows(min_row=1, values_only=True), start=1):
-    name = str(row[1] or '').strip()
-    if name.startswith('FE_') and 'validate' in name.lower():
-        done = row[8]  # col I
-        if not done:
-            rows.append({'row': i, 'name': name, 'precondition': str(row[2] or ''),
-                         'steps': str(row[4] or ''), 'data': str(row[5] or ''),
-                         'expected': str(row[6] or '')})
-print(json.dumps(rows, ensure_ascii=False))
-"
-```
+Extract field groups from name pattern: `FE_{N}_Kiểm tra Validate_{FIELD}_{subtest}`
 
 Print:
 ```
-Loaded {total} validate pending cases, {skipped} already executed / non-validate skipped
-```
-
----
-
-### Step 2 — Group by field
-
-Extract the field name from each test case name using the pattern:
-`FE_{N}_Kiểm tra Validate_{FIELD}_{subtest}`
-
-Group cases by `{FIELD}`. Each unique field = one execution group. Maintain row order.
-
-Print:
-```
-Validate groups:
-  Group 1: "{field}" — {n} cases
-  Group 2: "{field}" — {n} cases
+{total} validate pending cases across {n} field groups:
+  - {FIELD}: {n} cases
   ...
 ```
 
 ---
 
-### Step 3 — Navigate + handle precondition
+### Step 2 — Navigate and login
 
-For the **first group only** (or whenever the URL changes), execute the precondition from col C of the first test case. Common precondition pattern:
-- Login: extract credentials and login URL from the precondition text
-- Navigate to: extract the menu path (e.g. "Thẻ > Quản lý yêu cầu thẻ")
+```
+mcp__playwright__browser_navigate(url="{url}")
+```
 
-Navigate to the target `url` and execute any required precondition steps using Playwright MCP tools. If precondition fails, mark all cases in that group ERROR and skip.
+Read precondition from first test case (col C). Execute login steps if needed:
+- Extract credentials from precondition text (e.g. `account 28980/ Test@147258`)
+- Fill login form, click submit
+- Navigate to the target screen (follow menu path from precondition, e.g. "Thẻ > Quản lý yêu cầu thẻ")
 
-Reuse the same browser session across all groups — do NOT re-login between groups.
+**Do NOT re-login between test cases or groups.**
 
 ---
 
-### Step 4 — Scan DOM to extract form structure
+### Step 3 — Scan main content DOM (once per field group)
+
+After navigating to the target screen, scan ONLY the main content area:
 
 ```
 mcp__playwright__browser_evaluate(function="() => {
+  // Scope to main content only
+  const main = document.querySelector('main, [role=\"main\"], .main-content, .content-area')
+           || document.body;
   const fields = [];
-  document.querySelectorAll('input,select,textarea,button,[role=combobox],[role=listbox],[role=option],[role=textbox],[role=spinbutton]').forEach(el => {
+  main.querySelectorAll('input,select,textarea,[role=combobox],[role=textbox],[role=spinbutton],button').forEach(el => {
     const r = el.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0) return;
-    const e = {
+    if (r.width === 0 || r.height === 0) return;
+    // Skip elements inside header/nav/sidebar
+    if (el.closest('header,nav,aside,[role=navigation],[role=banner],[role=toolbar]')) return;
+    fields.push({
       tag: el.tagName.toLowerCase(),
       type: el.type || null,
       id: el.id || null,
-      name: el.name || null,
       placeholder: el.placeholder || null,
       ariaLabel: el.getAttribute('aria-label') || null,
       dataTestid: el.getAttribute('data-testid') || null,
       role: el.getAttribute('role') || null,
-      text: el.tagName === 'BUTTON' ? (el.textContent||'').trim().slice(0,60) : null,
-      className: el.className?.split(' ').slice(0,3).join(' ') || null
-    };
-    Object.keys(e).forEach(k => e[k] === null && delete e[k]);
-    fields.push(e);
+      text: (el.textContent||'').trim().slice(0,40) || null,
+      rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }
+    });
   });
-  return JSON.stringify(fields);
+  return JSON.stringify(fields.filter(f => Object.values(f).some(v => v !== null)));
 }")
 ```
 
----
-
-### Step 5 — Generate Playwright batch script (per group)
-
-Send this prompt to yourself (LLM) to generate a single `async (page) => {}` function for all cases in the group:
-
-```
-You are a Playwright test automation engineer writing a batch script.
-
-## DOM Structure (compact JSON)
-{DOM_SNAPSHOT_JSON}
-
-## Target URL
-{url}
-
-## Test Cases
-{TEST_CASES_JSON}
-Each case: { rowIndex, name, steps, data, expected, screenshotPath }
-
-## Script Requirements
-1. Generate a single `async (page) => { return JSON.stringify(results); }` function.
-2. Before each test case: navigate back to `{url}` if needed (only navigate if page URL has changed).
-3. Use most specific locator: id → aria-label → placeholder → data-testid → name → visible text.
-4. For textbox validation cases:
-   - Clear the field first, then type/paste the test data
-   - For "paste" cases: use page.evaluate to set clipboard then Ctrl+V
-   - For "emoji/XSS/SQL/unicode" blocked cases: verify field value stays empty after input
-5. For combobox cases: click to open, then click the desired option
-6. For date picker cases: click the field, type the date value
-7. After each test case action: await page.waitForTimeout(300)
-8. Screenshot after each case: await page.screenshot({ path: tc.screenshotPath, fullPage: false })
-9. Determine PASS/FAIL programmatically:
-   - "chặn không cho phép nhập" → PASS if field value unchanged / empty after typing
-   - "cho phép nhập" → PASS if field value equals typed text
-   - "hiển thị icon X" → PASS if clear button element is visible
-   - "clear data" → PASS if field value is empty after click
-   - "hiển thị thông báo lỗi" → PASS if error message element is visible
-   - "mặc định rỗng" → PASS if field value is empty
-   - "luôn hiển thị và enable" → PASS if element is visible and not disabled
-   - "placeholder" text → PASS if placeholder attribute matches expected text
-   - "mặc định" value → PASS if field/combobox shows the expected default value
-   - For combobox filter cases → PASS if grid/list updates (row count changes or items visible)
-10. Each result: { rowIndex, name, result: 'P'|'F'|'E', actual: string, error: string, screenshotPath }
-11. Try/catch per test case. Never throw; catch → result 'E' with error message.
-12. Output ONLY the code. No markdown. No explanation.
-```
+Use this snapshot to resolve locators for each test case in the group.
 
 ---
 
-### Step 6 — Execute the generated script
+### Step 4 — Execute each test case
+
+For each pending test case, in order:
+
+#### 4a. Interpret the test case
+
+From `name`, `steps`, `data`, `expected` — determine:
+- **Field to target**: from the field group name (e.g. `textbox "Tìm kiếm nhanh"`)
+- **Action**: type / paste / click / observe / select
+- **Input data**: from `data` column or implied by name (e.g. "emoji", "39 ký tự", "SQL injection")
+- **Verification**: from `expected` — what to check after the action
+
+#### 4b. Perform the action
+
+Use the appropriate Playwright MCP tool. Always scope to main content area.
+
+**For textbox — type input:**
+```
+mcp__playwright__browser_click(element="...", ref="...")   # focus the field
+mcp__playwright__browser_type(text="{data}")
+```
+
+**For textbox — paste input:**
+```
+mcp__playwright__browser_evaluate(function="() => {
+  const el = document.querySelector('{selector_in_main}');
+  el.focus();
+  // Set clipboard
+  return navigator.clipboard.writeText('{data}').then(() => 'ok').catch(e => e.message);
+}")
+mcp__playwright__browser_press_key(key="Control+v")
+```
+
+**For textbox — clear then retype:**
+```
+mcp__playwright__browser_triple_click → then type new value
+```
+Or use:
+```
+mcp__playwright__browser_evaluate(function="() => { const el = ...; el.value = ''; el.dispatchEvent(new Event('input')); }")
+mcp__playwright__browser_type(text="{data}")
+```
+
+**For combobox — select option:**
+```
+mcp__playwright__browser_click(element="combobox {field_name}")
+mcp__playwright__browser_click(element="option {value}")
+```
+
+**For date picker — type date:**
+```
+mcp__playwright__browser_click(element="date input {field_name}")
+mcp__playwright__browser_type(text="{dd/mm/yyyy}")
+mcp__playwright__browser_press_key(key="Tab")
+```
+
+**For observe only (no action):**
+Proceed directly to verification + screenshot.
+
+#### 4c. Wait briefly
 
 ```
-mcp__playwright__browser_run_code(code="{GENERATED_SCRIPT}")
+mcp__playwright__browser_wait_for(time=500)
 ```
 
-Parse returned JSON. If entire script fails: mark all cases in group as `E: "Batch script error: {detail}"`.
+#### 4d. Verify result
+
+Use `browser_evaluate` scoped to main content to check the expected outcome:
+
+| Expected pattern | Verification |
+|-----------------|--------------|
+| `chặn không cho phép nhập` | field value === '' or === original value |
+| `cho phép nhập` | field value === typed text |
+| `hiển thị icon X / xóa nhanh` | clear-button element visible in main area |
+| `Clear data` | field value === '' after click |
+| `hiển thị thông báo lỗi` | error message element visible in main area |
+| `mặc định rỗng` | field value === '' |
+| `luôn hiển thị và enable` | element visible AND not disabled |
+| `placeholder` text match | element.placeholder === expected text |
+| `mặc định` value | combobox text/value === expected default |
+| `lưới hiển thị` / filter result | table row count > 0 OR specific items visible |
+
+```
+mcp__playwright__browser_evaluate(function="() => {
+  const main = document.querySelector('main,[role=\"main\"],.main-content') || document.body;
+  // Run specific check based on test case
+  ...
+  return { pass: true/false, actual: '...' };
+}")
+```
+
+#### 4e. Take screenshot
+
+```
+mcp__playwright__browser_take_screenshot(filename="{safe_name}_{timestamp}.png")
+```
+
+Screenshot captures full page visible area. Note the returned file path.
+
+#### 4f. Determine verdict and write to sheet
+
+```
+mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row_1indexed}, col=9, value="P")  # or F or E
+mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row_1indexed}, col=8, value="{actual_observed}")
+```
+
+Print per case:
+```
+  [{idx}/{total}] {name_short}
+    Action: {action}  →  Actual: {actual}  →  {P/F/E}
+```
 
 ---
 
-### Step 7 — Repeat Steps 4-6 for remaining groups
+### Step 5 — Reset field between test cases
+
+After each test case that modifies a field, reset it to empty state before the next case:
+- **Textbox**: clear value + trigger input event
+- **Combobox**: click X (clear) button if visible, otherwise select default "Tất cả"
+- **Date picker**: click X button or clear manually
 
 ---
 
-### Step 8 — Write results back to source
-
-**If Google Sheets:**
-
-For each result, update 2 cells:
-```
-mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row+1}, col=9, value="{P|F|E}")    # col I = Lần 1
-mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row+1}, col=8, value="{actual}")   # col H = Actual Result
-```
-
-Note: rows in gsheets MCP are 1-indexed. Add 1 to the 0-indexed row from step 1.
-
-**If xlsx:**
-
-```bash
-python3 -X utf8 -c "
-import openpyxl, json
-data = json.loads('''RESULTS_JSON''')
-wb = openpyxl.load_workbook('PATH_TO_FILE.xlsx')
-ws = wb['TestCase'] if 'TestCase' in wb.sheetnames else wb[wb.sheetnames[0]]
-for item in data:
-    row = item['row']
-    ws.cell(row=row, column=9).value = item['result']      # col I
-    ws.cell(row=row, column=8).value = item.get('actual', '')  # col H
-wb.save('PATH_TO_FILE.xlsx')
-print('done')
-"
-```
-
----
-
-### Step 9 — Close browser and print summary
+### Step 6 — Close browser and print summary
 
 ```
 mcp__playwright__browser_close()
@@ -254,43 +282,42 @@ PASS  (P)      : {n}
 FAIL  (F)      : {n}
 ERROR (E)      : {n}
 
-Groups executed: {n}
-Results written to: {source}
-Screenshots: {screenshotDir}/
+Results written to Google Sheets: {spreadsheetId}
 ```
 
 ---
 
-## Screenshot path rules
+## Locator Priority (within main content only)
 
-- Format: `{screenshotDir}/{safe_name}_{yyyyMMdd_HHmmss}.png`
-- `screenshotDir` = `screenshots/` relative to xlsx, or `C:/Users/{user}/Downloads/screenshots/` for Google Sheets
-- `safe_name` = test case name with spaces/special chars replaced by `_`, truncated to 60 chars
-- Timestamp generated at START of run, reused for all cases
+1. `data-testid` attribute
+2. `aria-label` attribute  
+3. `placeholder` attribute (for text inputs)
+4. `id` attribute
+5. Visible text content (for buttons/options)
+6. Position/rect (fallback — use bounding box from DOM snapshot)
+
+**Never** use locators that match elements in `header`, `nav`, `aside`, or `[role=navigation]`.
 
 ---
 
-## Error Classification
+## Error Handling
 
-| Condition | Result | Note |
-|-----------|--------|------|
-| Precondition failed | E | Skip group, mark all cases ERROR |
-| Locator not found | E | Continue to next case |
-| Batch script error | E | Mark all in group, continue to next group |
-| Field blocked input as expected | P | |
-| Field allowed input as expected | P | |
-| Behavior did not match expected | F | |
+| Situation | Action |
+|-----------|--------|
+| Login fails | Stop, report to user |
+| Element not found in main area | Mark E, `"Element not found: {field}"`, continue |
+| Action has no effect (field still empty when should allow) | Mark F |
+| Unexpected dialog/popup | Dismiss, then retry once |
+| Entire group fails | Mark all in group E, continue to next group |
 
 ---
 
 ## Guardrails
 
-- **NEVER** modify cols A-G (read-only).
-- **ONLY** write to col H (Actual Result) and col I (Lần 1 / Chrome result).
+- **NEVER** modify col A–G (read only).
+- **ONLY** write to col H (Actual) and col I (Lần 1).
 - **NEVER** re-execute rows where col I already has a value.
-- **NEVER** write results for non-Validate cases.
-- **ALWAYS** close browser after all groups finish.
-- **DO NOT** re-login between groups — reuse the browser session.
-- Save all results in 1 batch write (not cell-by-cell for xlsx).
-- For Google Sheets: use `mcp__gsheets__edit_cell` per cell (no batch option).
-- Stop and ask user if: source not found, login fails, same batch script error repeats 2+ times for same group.
+- **NEVER** interact with sidebar, header, or navigation elements.
+- **DO NOT** re-login between groups — reuse the session.
+- **ALWAYS** reset fields between test cases to avoid state bleed.
+- Stop and ask user if: login fails, main content area cannot be identified, same error repeats 3+ times.
