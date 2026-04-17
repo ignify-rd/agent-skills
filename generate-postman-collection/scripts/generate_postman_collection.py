@@ -447,8 +447,26 @@ def to_query_string_value(value: Any) -> str:
     return str(value)
 
 
+def _strip_curl_blocks(text: str) -> str:
+    """Remove curl command sections from step text to prevent false mutation extraction."""
+    lines = text.splitlines()
+    result: List[str] = []
+    in_curl = False
+    for line in lines:
+        stripped = line.strip()
+        if re.match(r"(?i)^\s*curl\b", line):
+            in_curl = True
+        if in_curl:
+            continues = stripped.endswith("\\")
+            if not continues:
+                in_curl = False
+            continue  # always skip curl block lines
+        result.append(line)
+    return "\n".join(result)
+
+
 def _extract_step_mutations(step_text: str) -> Tuple[Dict[str, Any], Set[str]]:
-    text = str(step_text or "")
+    text = _strip_curl_blocks(str(step_text or ""))
     if not text.strip():
         return {}, set()
 
@@ -470,6 +488,9 @@ def _extract_step_mutations(step_text: str) -> Tuple[Dict[str, Any], Set[str]]:
                 continue
             lowered = key.lower()
             if lowered in {"endpoint", "header", "headers", "params", "body"}:
+                continue
+            # Skip HTTP header names (e.g. Content-Type, Authorization, Accept)
+            if re.match(r"^[A-Za-z]+-[A-Za-z]", key):
                 continue
             assignments[key] = parse_loose_scalar(value_raw)
 
@@ -517,6 +538,57 @@ def _apply_mutations_to_kv_items(items: List[Dict[str, Any]], step_text: str) ->
         result.append({"key": key, "value": to_query_string_value(value), "type": "text"})
 
     return result
+
+
+def extract_param_block_from_step(step_text: str) -> Any:
+    """Extract complete JSON body block that follows a Param:/Body: marker in step text.
+
+    Vietnamese test templates typically write the full request body after markers like
+    '1.3. Param:' or 'Body:' rather than storing it in a dedicated Body column.
+    This function finds and parses that block so nested objects and arrays are preserved.
+    """
+    if not step_text:
+        return None
+
+    param_pattern = re.compile(
+        r"(?i)(?:^\s*\d+\.\d*\s*\.?\s*)?(?:param|body|request\s*body|tham\s*s[oố])\s*:[ \t]*\n?",
+        re.MULTILINE
+    )
+    for match in param_pattern.finditer(step_text):
+        after = step_text[match.end():]
+        brace_pos = after.find("{")
+        if brace_pos < 0:
+            continue
+        # Only allow whitespace between marker and opening brace
+        between = after[:brace_pos]
+        if between.strip() and not re.match(r"^\s*$", between):
+            continue
+        candidate = after[brace_pos:]
+        # Walk through characters counting depth to find the complete JSON object
+        depth = 0
+        in_str = False
+        esc = False
+        for i, ch in enumerate(candidate):
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    parsed = safe_json_loads(candidate[: i + 1])
+                    if isinstance(parsed, (dict, list)):
+                        return parsed
+                    break
+    return None
 
 
 def apply_step_body_mutations(base_body: Any, step_text: str) -> Any:
@@ -990,7 +1062,15 @@ def build_test_case(
     body = parse_body(raw_body)
     if not body and baseline_context.get("body"):
         body = baseline_context["body"]
-    body = apply_step_body_mutations(body, str(raw_step_text or ""))
+
+    # Try to extract a complete JSON body block from the Step text (e.g. after "Param:").
+    # This takes priority over line-by-line mutations because Vietnamese test templates
+    # write the full body after a "Param:" marker — mutations would flatten nested objects.
+    step_param_body = extract_param_block_from_step(str(raw_step_text or ""))
+    if step_param_body is not None:
+        body = step_param_body
+    else:
+        body = apply_step_body_mutations(body, str(raw_step_text or ""))
     expected_status = parse_expected_status(raw_expected_status, int(defaults.get("expected_status", 200)))
     query_params = parse_query_params(raw_query_params) if raw_query_params else {}
     if not query_params and isinstance(baseline_context.get("query_params"), dict):
