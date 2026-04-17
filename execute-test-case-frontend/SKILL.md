@@ -1,24 +1,23 @@
 ---
 name: execute-test-case-frontend
-description: Execute frontend/UI test cases from a local Excel (.xlsx) file using a DOM Snapshot + Generate-then-Execute approach. Reads only "Kiem tra validate" test cases, scans the live DOM to extract form structure, generates a Playwright script via LLM, executes it in one batch per Test Suite group, and writes PASS/FAIL/ERROR results with screenshots back to the .xlsx file. Triggers when user says "execute frontend test", "run FE test cases", "chay test case frontend", or provides a path to an .xlsx file with frontend test data.
+description: Execute frontend/UI validate test cases from a Google Sheets URL or local Excel (.xlsx) file. Scans the live DOM, generates a Playwright script via LLM, executes batch per field group, writes PASS/FAIL + screenshots back to source. Only executes rows where Name contains "Validate". Triggers when user says "execute frontend test", "run FE test", "chạy test case frontend", or provides a Google Sheets URL / .xlsx path with frontend test data.
 ---
 
-# Execute Test Case - Frontend
+# Execute Test Case — Frontend
 
-Reads frontend validation test cases from a local `.xlsx` file, scans the live DOM of the target page, generates a Playwright script for each Test Suite group, executes the batch, and writes results back.
+Reads validate test cases from **Google Sheets** (preferred) or local `.xlsx`, scans the live DOM, generates and runs a Playwright script per field group, writes results back.
 
-**Flow:** DOM Snapshot -> Generate Script -> Execute -> Write Excel Results
+**Flow:** Read Cases → DOM Snapshot → Generate Script → Execute → Write Results
 
-**Scope:** Only test cases belonging to group **"Kiem tra validate"**. Cases in **"Kiem tra chuc nang"** are ignored entirely (no result written, no execution).
+**Scope:** Only rows where Name (col B) contains `"Validate"` / `"validate"`. All other rows are ignored.
 
 ---
 
 ## Prerequisites
 
-- **Playwright MCP** configured
-- `openpyxl` installed (`pip show openpyxl`)
-- Local `.xlsx` file accessible
-- Sheet tab: `TestCase` (or first sheet if not found)
+- Playwright MCP configured
+- Google Sheets MCP configured (for Google Sheets input)
+- `openpyxl` installed (`pip show openpyxl`) — for xlsx input only
 
 ---
 
@@ -26,111 +25,110 @@ Reads frontend validation test cases from a local `.xlsx` file, scans the live D
 
 | Parameter | Description |
 |-----------|-------------|
-| `url` | URL of the web page to test (top-level required input) |
-| `file` | Path to the Excel file containing test cases (.xlsx) |
-
-> `url` is a required top-level parameter, not read from column D. Column D (Precondition) may still contain complex pre-actions (e.g., login before navigating to the form).
+| `url` | URL of the web page under test (required) |
+| `source` | Google Sheets URL **or** path to local `.xlsx` file |
 
 ---
 
-## Column Layout
+## Column Layout (Google Sheets / Excel)
 
-| Col | Field | Notes |
-|-----|-------|-------|
-| A | Test Suite | Suite grouping (also used to identify test type) |
-| B | Test Case ID | e.g. `FE-001` |
-| C | Title | Short description |
-| D | Precondition | Complex pre-actions in natural language (optional) |
-| E | Steps | Natural language description of actions for this test case |
-| F | Assertions | Natural language description of expected results |
-| G | Result | **Agent writes: PASS / FAIL / ERROR** |
-| H | Error Message | **Agent writes** |
-| I | Screenshot | **Agent writes: file path** |
-| J | Executed At | **Agent writes: ISO 8601** |
+| Col | Index | Field | Notes |
+|-----|-------|-------|-------|
+| A | 0 | External ID / Section | Empty or section header; skip non-FE rows |
+| B | 1 | Name | Test case name — filter: contains "Validate" AND starts with "FE_" |
+| C | 2 | PreConditions | Login steps / navigation preconditions |
+| D | 3 | Importance | High / Medium / Low |
+| E | 4 | Steps | Natural language test steps |
+| F | 5 | Data test | Input data for the test (may be empty) |
+| G | 6 | Expected Result | Natural language expected outcome |
+| H | 7 | Actual Result | **Write:** observed behavior |
+| I | 8 | Lần 1 (Chrome) | **Write: P (pass) / F (fail) / E (error)** |
 
-Skip rows where column B (Test Case ID) is empty.
-Pending = column G empty.
-
----
-
-## Temp File Rules
-
-**NEVER** write helper/temp scripts to disk. Use `python3 -X utf8 -c "..."` inline only.
+Pending = col I (Lần 1) is empty.
+Skip rows already having a value in col I.
 
 ---
 
 ## Workflow
 
-### Step 1 - Read test cases from Excel
+### Step 1 — Read test cases from source
+
+**If Google Sheets URL:**
+
+```
+spreadsheetId = extract from URL (the long ID between /d/ and /edit)
+mcp__gsheets__read_all_from_sheet(spreadsheetId="{id}", sheetName="{sheetName}")
+```
+
+Parse the returned rows. Filter:
+- Col B (index 1) starts with `"FE_"` AND contains `"Validate"` (case-insensitive)
+- Col I (index 8) is empty (not yet executed)
+
+**If .xlsx file:**
 
 ```bash
 python3 -X utf8 -c "
 import openpyxl, json
 wb = openpyxl.load_workbook('PATH_TO_FILE.xlsx')
-sheetName = 'TestCase' if 'TestCase' in wb.sheetnames else wb.sheetnames[0]
-ws = wb[sheetName]
-results = []
-for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-    testId = row[1]   # col B
-    if not testId or not isinstance(testId, str):
-        continue
-    results.append({
-        'row': i,
-        'suite': str(row[0] or ''),
-        'id': testId,
-        'title': str(row[2] or ''),
-        'precondition': str(row[3] or ''),
-        'steps': str(row[4] or ''),
-        'assertions': str(row[5] or ''),
-        'status': row[6]
-    })
-print(json.dumps(results, ensure_ascii=False))
+ws = wb['TestCase'] if 'TestCase' in wb.sheetnames else wb[wb.sheetnames[0]]
+rows = []
+for i, row in enumerate(ws.iter_rows(min_row=1, values_only=True), start=1):
+    name = str(row[1] or '').strip()
+    if name.startswith('FE_') and 'validate' in name.lower():
+        done = row[8]  # col I
+        if not done:
+            rows.append({'row': i, 'name': name, 'precondition': str(row[2] or ''),
+                         'steps': str(row[4] or ''), 'data': str(row[5] or ''),
+                         'expected': str(row[6] or '')})
+print(json.dumps(rows, ensure_ascii=False))
 "
 ```
 
-**Filter criteria (apply both conditions simultaneously):**
-- Column G is empty (not yet executed).
-- Test Suite (column A) indicates **"Kiem tra validate"** type. Common signals: Suite name contains "validate", "validation", "Kiem tra validate", or "Validate". Do **NOT** execute rows whose Suite belongs to "Kiem tra chuc nang" / "chuc nang" / "functional".
+Print:
+```
+Loaded {total} validate pending cases, {skipped} already executed / non-validate skipped
+```
+
+---
+
+### Step 2 — Group by field
+
+Extract the field name from each test case name using the pattern:
+`FE_{N}_Kiểm tra Validate_{FIELD}_{subtest}`
+
+Group cases by `{FIELD}`. Each unique field = one execution group. Maintain row order.
 
 Print:
 ```
-Loaded {total} test cases: {pending_validate} validate pending, {skipped_functional} functional skipped, {done} already executed
-```
-
-### Step 2 - Group validate cases by Test Suite
-
-Group the filtered validate test cases by their Test Suite (column A). Each unique suite value = one execution group. Maintain the sheet row order within each group.
-
-Print grouping summary:
-```
 Validate groups:
-  Group 1: "{suiteName}" - {n} cases (rows {start}-{end})
-  Group 2: "{suiteName}" - {n} cases (rows {start}-{end})
+  Group 1: "{field}" — {n} cases
+  Group 2: "{field}" — {n} cases
   ...
 ```
 
 ---
 
-### Step 3 - Scan DOM to extract form structure (per group)
+### Step 3 — Navigate + handle precondition
 
-For each group:
+For the **first group only** (or whenever the URL changes), execute the precondition from col C of the first test case. Common precondition pattern:
+- Login: extract credentials and login URL from the precondition text
+- Navigate to: extract the menu path (e.g. "Thẻ > Quản lý yêu cầu thẻ")
 
-**3a. Navigate to the target URL:**
+Navigate to the target `url` and execute any required precondition steps using Playwright MCP tools. If precondition fails, mark all cases in that group ERROR and skip.
+
+Reuse the same browser session across all groups — do NOT re-login between groups.
+
+---
+
+### Step 4 — Scan DOM to extract form structure
+
 ```
-mcp__playwright__browser_navigate(url="{url}")
-```
-
-If the group's Precondition column (col D) contains complex pre-actions (natural language), execute them using the appropriate Playwright MCP tools before scanning DOM. If precondition fails, mark ALL cases in this group as ERROR: `"Precondition failed: {detail}"` and skip the group.
-
-**3b. Extract Accessibility Tree + form structure:**
-
-```
-mcp__playwright__browser_evaluate(function="async () => {
+mcp__playwright__browser_evaluate(function="() => {
   const fields = [];
-  const selectors = ['form', 'input', 'select', 'textarea', 'button',
-    '[role=combobox]', '[role=listbox]', '[role=option]', '[role=textbox]'];
-  document.querySelectorAll(selectors.join(',')).forEach(el => {
-    const entry = {
+  document.querySelectorAll('input,select,textarea,button,[role=combobox],[role=listbox],[role=option],[role=textbox],[role=spinbutton]').forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+    const e = {
       tag: el.tagName.toLowerCase(),
       type: el.type || null,
       id: el.id || null,
@@ -139,214 +137,160 @@ mcp__playwright__browser_evaluate(function="async () => {
       ariaLabel: el.getAttribute('aria-label') || null,
       dataTestid: el.getAttribute('data-testid') || null,
       role: el.getAttribute('role') || null,
-      textContent: el.tagName === 'BUTTON' ? (el.textContent || '').trim().slice(0, 60) : null
+      text: el.tagName === 'BUTTON' ? (el.textContent||'').trim().slice(0,60) : null,
+      className: el.className?.split(' ').slice(0,3).join(' ') || null
     };
-    // Remove null keys
-    Object.keys(entry).forEach(k => entry[k] === null && delete entry[k]);
-    fields.push(entry);
+    Object.keys(e).forEach(k => e[k] === null && delete e[k]);
+    fields.push(e);
   });
   return JSON.stringify(fields);
 }")
 ```
 
-The result is a compact JSON describing all interactive elements on the page. This is the **DOM snapshot** used in the next step.
-
 ---
 
-### Step 4 - Generate Playwright script via LLM
+### Step 5 — Generate Playwright batch script (per group)
 
-Send the following prompt to the LLM (yourself) to generate a single Playwright async script for all cases in this group:
-
----
-
-**Prompt template:**
+Send this prompt to yourself (LLM) to generate a single `async (page) => {}` function for all cases in the group:
 
 ```
-You are a Playwright test automation engineer. Given the DOM structure and a list of validation test cases, generate a single JavaScript async function that runs all test cases and returns a results array.
+You are a Playwright test automation engineer writing a batch script.
 
 ## DOM Structure (compact JSON)
 {DOM_SNAPSHOT_JSON}
 
-## Test Cases to automate
+## Target URL
+{url}
+
+## Test Cases
 {TEST_CASES_JSON}
-(Each test case: { id, title, steps (natural language), assertions (natural language), screenshotPath })
+Each case: { rowIndex, name, steps, data, expected, screenshotPath }
 
-## Requirements
-1. Generate a single `async (page) => { ... return JSON.stringify(results); }` function.
-2. For each test case, navigate back to `{url}` before running it.
-3. Use the most specific locator available from the DOM: prefer `id` -> `aria-label` -> `placeholder` -> `data-testid` -> `name`.
-4. For dropdown/combobox/select components: click to open first, then fill or select option.
-5. For multiselect components: click to open, then click each desired option.
-6. After all steps for a test case, call `await page.waitForLoadState('networkidle').catch(() => {})` OR `await page.waitForTimeout(300)` before taking a screenshot.
-7. Take a screenshot with `await page.screenshot({ path: tc.screenshotPath })` after each test case.
-8. Each test case result must be pushed to `results` as `{ id, result: 'PASS'|'FAIL'|'ERROR', error: '', screenshotPath }`.
-9. If a locator cannot be resolved from the DOM, push `{ id, result: 'ERROR', error: 'Locator not found: {field_name}', screenshotPath }` and continue - do NOT throw.
-10. Wrap each test case in a try/catch. Catch -> result ERROR with error message.
-11. Output ONLY the code block. No explanation, no markdown wrapper.
-
-## Output format
-A single self-contained `async (page) => { ... }` function ready to pass to `browser_run_code`.
+## Script Requirements
+1. Generate a single `async (page) => { return JSON.stringify(results); }` function.
+2. Before each test case: navigate back to `{url}` if needed (only navigate if page URL has changed).
+3. Use most specific locator: id → aria-label → placeholder → data-testid → name → visible text.
+4. For textbox validation cases:
+   - Clear the field first, then type/paste the test data
+   - For "paste" cases: use page.evaluate to set clipboard then Ctrl+V
+   - For "emoji/XSS/SQL/unicode" blocked cases: verify field value stays empty after input
+5. For combobox cases: click to open, then click the desired option
+6. For date picker cases: click the field, type the date value
+7. After each test case action: await page.waitForTimeout(300)
+8. Screenshot after each case: await page.screenshot({ path: tc.screenshotPath, fullPage: false })
+9. Determine PASS/FAIL programmatically:
+   - "chặn không cho phép nhập" → PASS if field value unchanged / empty after typing
+   - "cho phép nhập" → PASS if field value equals typed text
+   - "hiển thị icon X" → PASS if clear button element is visible
+   - "clear data" → PASS if field value is empty after click
+   - "hiển thị thông báo lỗi" → PASS if error message element is visible
+   - "mặc định rỗng" → PASS if field value is empty
+   - "luôn hiển thị và enable" → PASS if element is visible and not disabled
+   - "placeholder" text → PASS if placeholder attribute matches expected text
+   - "mặc định" value → PASS if field/combobox shows the expected default value
+   - For combobox filter cases → PASS if grid/list updates (row count changes or items visible)
+10. Each result: { rowIndex, name, result: 'P'|'F'|'E', actual: string, error: string, screenshotPath }
+11. Try/catch per test case. Never throw; catch → result 'E' with error message.
+12. Output ONLY the code. No markdown. No explanation.
 ```
 
 ---
 
-The LLM (you) must produce the complete Playwright script for the entire group.
-
----
-
-### Step 5 - Execute the generated script
+### Step 6 — Execute the generated script
 
 ```
 mcp__playwright__browser_run_code(code="{GENERATED_SCRIPT}")
 ```
 
-Parse the returned JSON string into a results array:
-```json
-[
-  { "id": "FE-001", "result": "PASS", "error": "", "screenshotPath": "screenshots/FE-001_20240101_120000.png" },
-  { "id": "FE-002", "result": "FAIL", "error": "Expected visible: .error-msg", "screenshotPath": "screenshots/FE-002_20240101_120000.png" }
-]
+Parse returned JSON. If entire script fails: mark all cases in group as `E: "Batch script error: {detail}"`.
+
+---
+
+### Step 7 — Repeat Steps 4-6 for remaining groups
+
+---
+
+### Step 8 — Write results back to source
+
+**If Google Sheets:**
+
+For each result, update 2 cells:
+```
+mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row+1}, col=9, value="{P|F|E}")    # col I = Lần 1
+mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row+1}, col=8, value="{actual}")   # col H = Actual Result
 ```
 
-**If script execution fails entirely** (syntax error or unhandled exception): mark all cases in this group as `ERROR: "Batch script error: {detail}"`.
+Note: rows in gsheets MCP are 1-indexed. Add 1 to the 0-indexed row from step 1.
 
----
-
-### Step 6 - Repeat Steps 3-5 for each remaining validate group
-
-Iterate over all groups. After all groups are done, proceed to write results.
-
----
-
-### Step 7 - Write results to Excel
-
-After all groups complete, write all results in a single Python call:
+**If xlsx:**
 
 ```bash
 python3 -X utf8 -c "
 import openpyxl, json
-from datetime import datetime
-
 data = json.loads('''RESULTS_JSON''')
 wb = openpyxl.load_workbook('PATH_TO_FILE.xlsx')
-sheetName = 'TestCase' if 'TestCase' in wb.sheetnames else wb.sheetnames[0]
-ws = wb[sheetName]
-
-now = datetime.now().isoformat()
+ws = wb['TestCase'] if 'TestCase' in wb.sheetnames else wb[wb.sheetnames[0]]
 for item in data:
     row = item['row']
-    ws.cell(row=row, column=7).value = item['result']           # col G
-    ws.cell(row=row, column=8).value = item.get('error', '')    # col H
-    ws.cell(row=row, column=9).value = item.get('screenshotPath', '')  # col I
-    ws.cell(row=row, column=10).value = now                     # col J
-
+    ws.cell(row=row, column=9).value = item['result']      # col I
+    ws.cell(row=row, column=8).value = item.get('actual', '')  # col H
 wb.save('PATH_TO_FILE.xlsx')
 print('done')
 "
 ```
 
-### Step 8 - Embed screenshots into Evidence sheet
+---
 
-```bash
-python3 -X utf8 -c "
-import openpyxl, os, json
-from openpyxl.drawing.image import Image as XLImage
+### Step 9 — Close browser and print summary
 
-data = json.loads('''RESULTS_JSON''')
-wb = openpyxl.load_workbook('PATH_TO_FILE.xlsx')
-
-if 'Evidence' in wb.sheetnames:
-    del wb['Evidence']
-ws_ev = wb.create_sheet('Evidence')
-
-ws_ev['A1'] = 'Test Case ID'
-ws_ev['B1'] = 'Screenshot'
-
-IMG_WIDTH_PX = 800
-IMG_HEIGHT_PX = 450
-ws_ev.column_dimensions['A'].width = 30
-ws_ev.column_dimensions['B'].width = IMG_WIDTH_PX / 7
-
-for i, item in enumerate(data, start=2):
-    ws_ev.cell(row=i, column=1).value = item['id']
-    screenshotPath = item.get('screenshotPath', '')
-    if not screenshotPath or not os.path.exists(screenshotPath):
-        ws_ev.cell(row=i, column=2).value = 'Screenshot not captured'
-        continue
-    img = XLImage(screenshotPath)
-    img.width = IMG_WIDTH_PX
-    img.height = IMG_HEIGHT_PX
-    ws_ev.row_dimensions[i].height = IMG_HEIGHT_PX * 0.75
-    ws_ev.add_image(img, f'B{i}')
-
-wb.save('PATH_TO_FILE.xlsx')
-print('done')
-"
-```
-
-### Step 9 - Close browser and print summary
-
-Close browser:
 ```
 mcp__playwright__browser_close()
 ```
 
-Print:
 ```
-=== Frontend Test Summary ===
-Total validate cases run: {n}
-PASS:   {n}
-FAIL:   {n}
-ERROR:  {n}
+=== Frontend Validate Test Summary ===
+Total executed : {n}
+PASS  (P)      : {n}
+FAIL  (F)      : {n}
+ERROR (E)      : {n}
 
-Groups executed: {n} validate groups
-Functional cases skipped: {n}
-
-Results written to: {filePath}
-Evidence sheet: updated with {n} screenshots
+Groups executed: {n}
+Results written to: {source}
+Screenshots: {screenshotDir}/
 ```
 
 ---
 
 ## Screenshot path rules
 
-- Format: `{screenshotDir}/{testId}_{yyyyMMdd_HHmmss}.png`
-- `screenshotDir` = `screenshots/` relative to the xlsx file location
-- Timestamp generated at START of execution run, reused for all cases in the run
-- Replace spaces and special chars in test ID with `_`
+- Format: `{screenshotDir}/{safe_name}_{yyyyMMdd_HHmmss}.png`
+- `screenshotDir` = `screenshots/` relative to xlsx, or `C:/Users/{user}/Downloads/screenshots/` for Google Sheets
+- `safe_name` = test case name with spaces/special chars replaced by `_`, truncated to 60 chars
+- Timestamp generated at START of run, reused for all cases
 
 ---
 
 ## Error Classification
 
-| Condition | Result | Message |
-|-----------|--------|---------|
-| TestCase sheet not found | STOP | `Sheet "TestCase" not found` |
-| Precondition failed | ERROR | `Precondition failed: {detail}` |
-| Locator not found in DOM | ERROR | `Locator not found: {field_name}` |
-| Batch script error | ERROR | `Batch script error: {detail}` |
-| Assertion failed | FAIL | `{assertionType} failed on "{selector}" - {detail}` |
-| All passed | PASS | (empty) |
+| Condition | Result | Note |
+|-----------|--------|------|
+| Precondition failed | E | Skip group, mark all cases ERROR |
+| Locator not found | E | Continue to next case |
+| Batch script error | E | Mark all in group, continue to next group |
+| Field blocked input as expected | P | |
+| Field allowed input as expected | P | |
+| Behavior did not match expected | F | |
 
 ---
 
 ## Guardrails
 
-- **NEVER** modify columns A-F.
-- **NEVER** write results for "Kiem tra chuc nang" cases.
-- **NEVER** skip writing results for executed validate cases.
-- **NEVER** re-execute rows with Result already set unless instructed.
+- **NEVER** modify cols A-G (read-only).
+- **ONLY** write to col H (Actual Result) and col I (Lần 1 / Chrome result).
+- **NEVER** re-execute rows where col I already has a value.
+- **NEVER** write results for non-Validate cases.
 - **ALWAYS** close browser after all groups finish.
-- **NEVER** write temp scripts to disk.
-- Save `.xlsx` only after ALL results collected (1 save operation).
-- Do not stop the entire batch if one test case's locator is not found - mark it ERROR and continue.
-
----
-
-## Anti-loop
-
-Stop and ask user if:
-- TestCase sheet not found in file
-- Column B (Test Case ID) not found in file
-- Same batch script error occurs 2+ times in a row for the same group
-- Screenshot embed fails for all cases
+- **DO NOT** re-login between groups — reuse the browser session.
+- Save all results in 1 batch write (not cell-by-cell for xlsx).
+- For Google Sheets: use `mcp__gsheets__edit_cell` per cell (no batch option).
+- Stop and ask user if: source not found, login fails, same batch script error repeats 2+ times for same group.
