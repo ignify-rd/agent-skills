@@ -1438,6 +1438,80 @@ class PostmanCollectionGenerator:
         output_path.write_text(json.dumps(collection, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def verify_collection(collection: Dict[str, Any], expected_test_cases: List[Dict[str, Any]]) -> List[str]:
+    """Verify the generated collection matches expected test cases.
+
+    Returns a list of issue strings; empty list means PASS.
+    """
+    issues: List[str] = []
+
+    schema = collection.get("info", {}).get("schema", "")
+    if "v2.1.0" not in schema:
+        issues.append(f"Invalid schema version: {schema!r}")
+
+    items = collection.get("item", [])
+
+    # Check all items are flat (no nested folder items)
+    for i, item in enumerate(items):
+        if isinstance(item.get("item"), list):
+            issues.append(f"Item[{i}] '{item.get('name', '?')}' is a folder — all requests must be flat")
+
+    # Build lookup: item name → item
+    item_by_name: Dict[str, Dict[str, Any]] = {}
+    for item in items:
+        name = str(item.get("name", "")).strip()
+        if name:
+            item_by_name[name] = item
+
+    # Check count
+    if len(items) != len(expected_test_cases):
+        issues.append(
+            f"Item count mismatch: collection has {len(items)} items, expected {len(expected_test_cases)}"
+        )
+
+    # Check each expected test case exists and is correct in the collection
+    for tc in expected_test_cases:
+        tc_id = str(tc.get("id", "")).strip()
+        tc_method = str(tc.get("method", "")).upper()
+        tc_endpoint = str(tc.get("endpoint", "")).strip()
+
+        item = item_by_name.get(tc_id)
+        if item is None:
+            issues.append(f"Missing item for test case '{tc_id}'")
+            continue
+
+        request = item.get("request", {})
+
+        # Verify method
+        item_method = str(request.get("method", "")).upper()
+        if item_method != tc_method:
+            issues.append(f"[{tc_id}] Method mismatch: expected {tc_method!r}, got {item_method!r}")
+
+        # Verify endpoint appears in url.raw
+        url_obj = request.get("url", {})
+        url_raw = str(url_obj.get("raw", "") if isinstance(url_obj, dict) else url_obj)
+        endpoint_path = tc_endpoint.split("?", 1)[0]
+        if endpoint_path and endpoint_path not in url_raw:
+            issues.append(f"[{tc_id}] Endpoint {endpoint_path!r} not found in url.raw {url_raw!r}")
+
+        # Verify auth structure exists
+        if not request.get("auth"):
+            issues.append(f"[{tc_id}] Missing auth block in request")
+
+        # Verify test event exists with status assertion
+        events = item.get("event", [])
+        test_events = [e for e in events if e.get("listen") == "test"]
+        if not test_events:
+            issues.append(f"[{tc_id}] Missing test event (status assertion)")
+        else:
+            exec_lines = test_events[0].get("script", {}).get("exec", [])
+            exec_text = "\n".join(str(x) for x in exec_lines)
+            if "pm.response.to.have.status" not in exec_text:
+                issues.append(f"[{tc_id}] Test event missing status assertion")
+
+    return issues
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate Postman collection from CSV/JSON input.")
     parser.add_argument("--input", default="", help="Input test cases file (.csv or .json), or Google Sheet URL")
@@ -1598,6 +1672,14 @@ def main() -> int:
     logger.info("Items: %s | Skipped: %s | Salvaged: %s", len(test_cases), len(skipped), salvaged_count)
     if skipped:
         logger.warning("Skipped rows:\n- %s", "\n- ".join(skipped[:20]))
+
+    issues = verify_collection(collection, test_cases)
+    if issues:
+        logger.error("VERIFICATION FAILED — %d issue(s):", len(issues))
+        for issue in issues:
+            logger.error("  %s", issue)
+        return 1
+    logger.info("VERIFICATION PASSED — all %d requests present and structurally correct.", len(test_cases))
     return 0
 
 

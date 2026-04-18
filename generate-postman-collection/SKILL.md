@@ -137,7 +137,34 @@ Default profile template:
 
 ## Validation
 
-After generation:
+The generation script runs automated verification immediately after writing the output file.
 
-- Verify collection has expected request count.
-- Spot-check auth, headers, URL paths, and request body mode in Postman UI.
+**Automated checks (built into `generate_postman_collection.py`):**
+
+| Check | What it verifies |
+|---|---|
+| Schema version | `info.schema` contains `v2.1.0` |
+| Item count | `collection.item` count == expected test case count |
+| Flat structure | No item contains a nested `item[]` (no folders) |
+| ID presence | Every test case ID appears as a request name |
+| Method accuracy | Each request method matches the source test case |
+| Endpoint in URL | `url.raw` contains the test case endpoint path |
+| Auth block | Each request has an `auth` object |
+| Status assertion | Each test event includes `pm.response.to.have.status(...)` |
+
+**Exit behavior:**
+
+- Exit code `0` — verification passed, collection is complete and correct.
+- Exit code `1` — one or more checks failed; issues are logged as `ERROR` lines before the process exits.
+
+**When verification fails:**
+
+1. Read the `ERROR` lines — each one names the test case ID and the exact mismatch.
+2. Fix the profile (wrong alias, bad regex extractor, missing `base_url_variable`) or the input data.
+3. Re-run generation. Verification re-runs automatically.
+
+**Post-generation spot-checks (manual, in Postman UI):**
+
+- Auth token variable matches environment variable name.
+- Body mode (`raw` / `formdata` / `urlencoded`) is correct for the API type.
+- Query params appear in the URL for GET requests.
