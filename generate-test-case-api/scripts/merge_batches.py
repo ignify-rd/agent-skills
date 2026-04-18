@@ -49,6 +49,30 @@ if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
 _REMOVE_SENTINEL = "__REMOVE__"
 
 
+def _apply_nested(result: dict, dotted_key: str, value) -> None:
+    """Set or remove a value at a dot-notation path inside result.
+
+    Example: _apply_nested(result, "page.pageSize", 10)
+      navigates to result["page"] (creating it if absent) and sets ["pageSize"] = 10.
+    If value is _REMOVE_SENTINEL, removes the leaf key instead.
+
+    Note: only simple dot-notation paths are supported (e.g. "page.pageSize").
+    Array notation keys such as "orders[].field" or "orders[0].field" are NOT
+    supported -- keys containing "[" will be set as literal dict keys.
+    """
+    parts = dotted_key.split(".")
+    obj = result
+    for part in parts[:-1]:
+        if part not in obj or not isinstance(obj[part], dict):
+            obj[part] = {}
+        obj = obj[part]
+    leaf = parts[-1]
+    if value == _REMOVE_SENTINEL:
+        obj.pop(leaf, None)
+    else:
+        obj[leaf] = value
+
+
 def _apply_override(base_params: dict, param_override: dict) -> dict:
     """Apply paramOverride to a copy of baseParams. Returns modified body dict.
 
@@ -56,12 +80,15 @@ def _apply_override(base_params: dict, param_override: dict) -> dict:
       - "__REMOVE__" → delete key from body
       - null/other   → set key to that value
       - "fileContent" key is skipped (handled separately for file-upload APIs)
+      - dot-notation keys (e.g. "page.pageSize") are resolved into nested dicts
     """
     result = copy.deepcopy(base_params)
     for key, value in param_override.items():
         if key == "fileContent":
             continue
-        if value == _REMOVE_SENTINEL:
+        if "." in key:
+            _apply_nested(result, key, value)
+        elif value == _REMOVE_SENTINEL:
             result.pop(key, None)
         else:
             result[key] = value

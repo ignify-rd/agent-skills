@@ -448,9 +448,30 @@ print('READY')
     </completion_criteria>
 </step>
 
+<step id="5d" name="Inject SQL blocks into batch-3.json (deterministic)" type="script">
+    <description>
+        Extract SQL: blocks from test-design-api.md and inject verbatim into
+        expectedResult of matching batch-3.json test cases. Runs AFTER tc-mainflow,
+        BEFORE tc-verify, so tc-verify gap-fill also sees complete expectedResults.
+    </description>
+    <trigger>After Step 5c completes and batch-3.json exists</trigger>
+
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/inject_sql.py \
+  --test-design "{TEST_DESIGN_FILE}" \
+  --batch       "{OUTPUT_DIR}/batch-3.json"</script>
+        </action>
+    </actions>
+
+    <on_fail>
+        <action>Print warning and CONTINUE -- do not stop the flow</action>
+    </on_fail>
+</step>
+
 <step id="6" name="Spawn tc-verify" type="sequential">
     <description>Gap analysis, dedup, and final output</description>
-    <trigger>After Step 5c</trigger>
+    <trigger>After Step 5d</trigger>
 
     <actions>
         <action type="read_agent_instructions">

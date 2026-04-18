@@ -65,25 +65,27 @@ model: inherit
     <rule>Split screenPath by " > " thành danh sách parts (trim whitespace)</rule>
     <rule>Tất cả parts TRỪ phần cuối → bước "Hover vào menu \"{part}\""</rule>
     <rule>Part cuối cùng → bước "Click \"{part}\""</rule>
+    <rule>Sau tất cả navigation steps, thêm bước `{N+1}. Kiểm tra giao diện màn hình`</rule>
     <rule>Nếu catalogStyle.stepVerbStyle có verbs navigation cụ thể → dùng verbs đó thay cho "Hover"/"Click"</rule>
     <rule>Đánh số thứ tự từ 1</rule>
+    <rule>navigationStepCount = tổng số bước (navigation steps + 1 bước "Kiểm tra giao diện màn hình")</rule>
 
     <example label="2-level">
         screenPath: "Thẻ > Quản lý yêu cầu thẻ"
-        → navigationSteps: "1. Hover vào menu \"Thẻ\"\n2. Click \"Quản lý yêu cầu thẻ\""
-        → navigationStepCount: 2
+        → navigationSteps: "1. Hover vào menu \"Thẻ\"\n2. Click \"Quản lý yêu cầu thẻ\"\n3. Kiểm tra giao diện màn hình"
+        → navigationStepCount: 3
     </example>
 
     <example label="1-level">
         screenPath: "Quản lý yêu cầu thẻ"
-        → navigationSteps: "1. Click \"Quản lý yêu cầu thẻ\""
-        → navigationStepCount: 1
+        → navigationSteps: "1. Click \"Quản lý yêu cầu thẻ\"\n2. Kiểm tra giao diện màn hình"
+        → navigationStepCount: 2
     </example>
 
     <example label="3-level">
         screenPath: "Quản lý > Cấu hình > SLA"
-        → navigationSteps: "1. Hover vào menu \"Quản lý\"\n2. Hover vào menu \"Cấu hình\"\n3. Click \"SLA\""
-        → navigationStepCount: 3
+        → navigationSteps: "1. Hover vào menu \"Quản lý\"\n2. Hover vào menu \"Cấu hình\"\n3. Click \"SLA\"\n4. Kiểm tra giao diện màn hình"
+        → navigationStepCount: 4
     </example>
 </step>
 
@@ -153,8 +155,8 @@ model: inherit
   "screenPath": "...",
   "screenType": "LIST|FORM|POPUP|DETAIL",
   "systemName": "...",
-  "navigationSteps": "1. Hover vào menu \"...\"\n2. Click \"...\"",
-  "navigationStepCount": 2,
+  "navigationSteps": "1. Hover vào menu \"...\"\n2. Click \"...\"\n3. Kiểm tra giao diện màn hình",
+  "navigationStepCount": 3,
   "preConditionsBase": "...",
   "catalogStyle": {
     "testSuiteNameConvention": "...",

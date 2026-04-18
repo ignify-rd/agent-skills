@@ -487,9 +487,28 @@ else:
     </completion_criteria>
 </step>
 
+<step id="5c.5" name="Inject SQL into batch-3 (deterministic)">
+    <trigger>After Step 5c — batch-3.json exists</trigger>
+
+    <actions>
+        <action type="bash">
+            <script>python3 -X utf8 {SKILL_SCRIPTS}/inject_sql.py \
+                --test-design {TEST_DESIGN_FILE} \
+                --batch {OUTPUT_DIR}/batch-3.json
+            </script>
+        </action>
+    </actions>
+
+    <on_failure>Print warning and CONTINUE — do not stop workflow</on_failure>
+
+    <note>Script chi copy SQL tu test-design-frontend.md — KHONG tu sinh SQL.
+    Neu test design chua co SQL cho mot heading → skip heading do, khong inject placeholder.
+    Chi inject vao ## Kiem tra chuc nang — khong bao gio inject vao ## Kiem tra Validate.</note>
+</step>
+
 <step id="6" name="Spawn tc-verify" type="sequential">
     <description>Gap analysis, dedup, and final output</description>
-    <trigger>After Step 5c (and Step 5d if spawned)</trigger>
+    <trigger>After Step 5c.5 (and Step 5d if spawned)</trigger>
 
     <actions>
         <action type="read_agent_instructions">

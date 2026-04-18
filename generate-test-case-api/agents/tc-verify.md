@@ -155,6 +155,19 @@ Gap Analysis:
         <field name="summary">EXACTLY match testCaseName</field>
         <field name="preConditions">preConditionsBase from tc-context.json</field>
     </gap_case_fields>
+
+    <sql_preservation_rule>
+        <description>
+            Step 5d (inject_sql.py) runs BEFORE tc-verify and injects SQL blocks into
+            expectedResult of batch-3.json test cases. When gap-fill rewrites or appends
+            to expectedResult for "Kiem tra chuc nang" cases, PRESERVE any existing
+            "2. Kiem tra DB:" block already present -- do NOT strip or overwrite it.
+            If a gap-fill case for "Kiem tra chuc nang" needs an expectedResult and the
+            test-design has a SQL: block for that heading, copy the SQL block from the
+            test-design and include it in the gap-fill expectedResult using the same format:
+            "2. Kiem tra DB:\n  2.1. Chay SQL:\n  {sql_text}"
+        </description>
+    </sql_preservation_rule>
 </step>
 
 <step id="4b" name="Re-normalize after gap-fill (CRITICAL)">

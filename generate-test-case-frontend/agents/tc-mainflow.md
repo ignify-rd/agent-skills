@@ -132,7 +132,7 @@ print('READY: validate batches confirmed complete')
         <field name="expectedResult">
             ⚠️ BẮT BUỘC: PHẢI thêm prefix "{N}. " — N = tổng số bước trong step field
             (N = navigationStepCount + số bước test cụ thể).
-            VD: navigationStepCount=2, 2 specific steps → prefix "4. "
+            VD: navigationStepCount=3, 2 specific steps → prefix "5. "
             ⚠️ PHẢI follow catalogStyle từ tc-context.json VERBATIM:
             - Dùng catalogStyle.expectedResultVerbStyle — KHÔNG tự thêm phrases không có trong catalog
             - Dùng catalogStyle.expectedResultExample để xác định độ chi tiết, cách diễn đạt

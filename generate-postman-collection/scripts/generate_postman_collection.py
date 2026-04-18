@@ -241,13 +241,31 @@ def parse_headers(value: Any) -> Dict[str, str]:
         line = part.strip()
         if not line:
             continue
+        # Handle cURL --header/-H format: extract actual header from quoted value
+        if re.match(r"^-[Hh]\b|^--header\b", line):
+            m = re.search(r"['\"]([^'\"]+)['\"]", line)
+            if m:
+                content = m.group(1).strip()
+                if ":" in content:
+                    k, v = content.split(":", 1)
+                    key_clean = k.strip()
+                    if re.match(r"^[A-Za-z][A-Za-z0-9\-]*$", key_clean):
+                        out[key_clean] = v.strip()
+            continue
+        # Skip bullet list precondition lines (e.g. - MENU_CODE: ...)
+        if line.startswith("- "):
+            continue
         if ":" in line:
             key, val = line.split(":", 1)
         elif "=" in line:
             key, val = line.split("=", 1)
         else:
             continue
-        out[key.strip()] = val.strip()
+        key_clean = key.strip()
+        # Only include entries whose key is a valid HTTP header name (alphanumeric + dash)
+        if not re.match(r"^[A-Za-z][A-Za-z0-9\-]*$", key_clean):
+            continue
+        out[key_clean] = val.strip()
     return out
 
 
@@ -448,7 +466,12 @@ def to_query_string_value(value: Any) -> str:
 
 
 def _strip_curl_blocks(text: str) -> str:
-    """Remove curl command sections from step text to prevent false mutation extraction."""
+    """Remove curl command sections from step text to prevent false mutation extraction.
+
+    Strips:
+    - Multi-line curl blocks (from 'curl ' line until the last continuation line)
+    - Standalone cURL flag lines starting with '--' (e.g. --header, --data)
+    """
     lines = text.splitlines()
     result: List[str] = []
     in_curl = False
@@ -461,6 +484,9 @@ def _strip_curl_blocks(text: str) -> str:
             if not continues:
                 in_curl = False
             continue  # always skip curl block lines
+        # Skip standalone cURL flags (e.g. --header 'channel: IBANK2' \)
+        if stripped.startswith("--"):
+            continue
         result.append(line)
     return "\n".join(result)
 
@@ -485,6 +511,12 @@ def _extract_step_mutations(step_text: str) -> Tuple[Dict[str, Any], Set[str]]:
             if not key:
                 continue
             if re.match(r"^\d+\.$", key):
+                continue
+            # Skip cURL flags (e.g. --header, --data)
+            if key.startswith("--"):
+                continue
+            # Skip bullet list preconditions (e.g. - KEY: ...)
+            if key == "-":
                 continue
             lowered = key.lower()
             if lowered in {"endpoint", "header", "headers", "params", "body"}:

@@ -17,11 +17,14 @@ model: inherit
             <action>Load template references</action>
             <action>Generate grid/pagination/function/timeout content</action>
             <action>Append to OUTPUT_FILE</action>
+            <action>Check Jira attachments for DB document (tai lieu DB rieng ngoai PTTK va RSD)</action>
+            <action>Read DB document content to extract SQL queries verbatim</action>
         </permitted>
 
         <forbidden>
             <action>Overwrite existing content in OUTPUT_FILE</action>
             <action>Read RSD/PTTK directly</action>
+            <action>Auto-generate SQL placeholders — SQL PHAI lay tu tai lieu DB that su</action>
         </forbidden>
     </boundary>
 </role_definition>
@@ -62,6 +65,36 @@ print('BARRIER OK')
         <action>DỪNG NGAY, báo lỗi cho orchestrator</action>
         <constraint>KHÔNG tiếp tục dù bất kỳ lý do gì</constraint>
     </on_fail>
+</step>
+
+<step id="0.5" name="Load DB document for SQL injection (LIST screens only)">
+    <condition>Thuc hien khi SCREEN_TYPE == LIST (xac dinh sau barrier check tu inventory hoac SCREEN_TYPE context)</condition>
+
+    <description>
+        Tai lieu DB (ngoai PTTK va RSD) chua cac SQL SELECT dung de kiem tra chuc nang tim kiem.
+        Bu^o'c nay tim va tai tai lieu DB de su dung trong Step 4 (Function > LIST).
+    </description>
+
+    <check_order>
+        <check id="1">Neu DB_DOC_CONTENT duoc truyen vao context → su dung luon, bo qua check Jira.</check>
+        <check id="2">Neu DB_DOC_PATH duoc truyen vao context → doc file do.</check>
+        <check id="3">Neu khong co gi trong context → kiem tra Jira attachments:
+            - Lay danh sach attachments tu Jira issue tuong ung (dung mcp__mcp-atlassian__ tools)
+            - Tim file co ten chua "DB" hoac "database" hoac co duoi .pdf/.docx (ngoai file RSD/PTTK)
+            - Doc noi dung file do neu tim thay
+        </check>
+        <check id="4">Neu khong tim thay tai lieu DB → in CANH BAO va TIEP TUC (KHONG dung workflow):
+            "WARNING: Khong tim thay tai lieu DB — SQL blocks se bi bo qua trong ## Kiem tra chuc nang.
+            inject_sql.py se khong co gi de copy vao test cases. Vui long cung cap tai lieu DB."
+        </check>
+    </check_order>
+
+    <stores>DB_DOC_CONTENT — noi dung tai lieu DB (hoac "NOT_FOUND")</stores>
+
+    <guardrail>
+        TUYET DOI KHONG tu sinh SQL. Neu khong co tai lieu DB → de trong SQL block, KHONG dien placeholder.
+        Chi copy SQL verbatim tu tai lieu DB that su.
+    </guardrail>
 </step>
 
 <step id="1" name="Load rules">
@@ -126,6 +159,45 @@ print('BARRIER OK')
             <case>Clear filter</case>
             <case>Export (nếu có)</case>
             <case>Thêm mới → navigate to FORM</case>
+
+            <sql_requirement>
+                **BẮT BUỘC — SQL block dưới mỗi ### heading trong ## Kiểm tra chức năng:**
+
+                Sau khi viết xong các bullet test cases dưới mỗi `### heading`, BẮT BUỘC thêm SQL block
+                nếu DB_DOC_CONTENT != "NOT_FOUND":
+
+                ```sql
+                {SQL SELECT từ DB_DOC_CONTENT tương ứng với chức năng tìm kiếm của heading này}
+                ```
+
+                **Quy tắc lấy SQL:**
+                - SQL PHẢI copy verbatim từ DB_DOC_CONTENT — KHÔNG tự sinh, KHÔNG paraphrase
+                - Tìm SQL phù hợp với chức năng của `### heading` (VD: heading "Tìm kiếm theo Loại yêu cầu"
+                  → tìm SQL SELECT có WHERE clause liên quan đến request_type / loại yêu cầu)
+                - Nếu DB_DOC_CONTENT có nhiều SQL → chọn SQL phù hợp nhất với heading đó
+                - Nếu KHÔNG tìm được SQL phù hợp trong DB_DOC_CONTENT → KHÔNG thêm SQL block,
+                  in cảnh báo: "WARNING: Khong tim thay SQL cho heading '{heading}' trong tai lieu DB"
+                - Nếu DB_DOC_CONTENT == "NOT_FOUND" → KHÔNG thêm SQL block, KHÔNG thêm placeholder
+            </sql_requirement>
+
+            <format_example>
+                Ví dụ đúng cho một ### heading có SQL:
+
+                ### Tìm kiếm theo Loại yêu cầu
+                - Tìm kiếm thành công khi chọn loại yêu cầu hợp lệ
+                - Tìm kiếm không có kết quả khi loại yêu cầu không khớp
+
+                ```sql
+                SELECT * FROM TXN_CARD_REQUEST WHERE request_type = :requestType
+                ```
+
+                Ví dụ đúng cho một ### heading KHÔNG có SQL:
+
+                ### Tìm kiếm kết hợp nhiều điều kiện
+                - Tìm kiếm thành công với 2 điều kiện kết hợp
+                - Tìm kiếm không có kết quả với 3 điều kiện kết hợp
+                (không có SQL block nếu không tìm được SQL phù hợp trong tài liệu DB)
+            </format_example>
         </screen_context>
 
         <screen_context name="FORM / POPUP">
@@ -203,6 +275,17 @@ print('BARRIER OK')
         <param name="OUTPUT_FILE" type="path" required="true"/>
         <param name="CATALOG_SAMPLE" type="string" default="none"/>
         <param name="PROJECT_RULES" type="string" default="none"/>
+        <param name="SCREEN_TYPE" type="string" default="LIST">
+            Loai man hinh: LIST | FORM | DETAIL — lay tu inventory._meta.screenType hoac truyen tu orchestrator.
+            Step 0.5 chi chay khi SCREEN_TYPE == LIST.
+        </param>
+        <param name="DB_DOC_CONTENT" type="string" default="NOT_FOUND">
+            Noi dung tai lieu DB (trich tu file dinh kem Jira). Neu chua co → agent tu kiem tra Jira.
+            KHONG tu sinh SQL neu khong co tai lieu nay.
+        </param>
+        <param name="JIRA_ISSUE_KEY" type="string" default="none">
+            Key Jira issue hien tai (VD: CARD4-914) — dung de lay attachments neu DB_DOC_CONTENT chua duoc truyen.
+        </param>
     </parameters>
 </task_context>
 

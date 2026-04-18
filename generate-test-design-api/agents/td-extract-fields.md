@@ -448,6 +448,7 @@ model: inherit
     </structure>
 
     <critical_rules>
+        <rule>Write PURE JSON to file — KHÔNG bọc trong markdown code fences (không có ` ```json ` hay ` ``` `). File phải chứa raw JSON bắt đầu bằng `{`.</rule>
         <rule>EVERY field in fieldConstraints MUST have rsdConstraints object</rule>
         <rule>When MultipartFile detected + PTTK has file template section → fileContentFields MUST be populated with ALL fields from template</rule>
         <rule>Do NOT write errorCodes, businessRules, modes, dbOperations, externalServices, statusTransitions — those belong to td-extract-logic</rule>

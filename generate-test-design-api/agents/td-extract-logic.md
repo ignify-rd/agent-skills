@@ -192,6 +192,7 @@ model: inherit
     </structure>
 
     <critical_rules>
+        <rule>Write PURE JSON to file — KHÔNG bọc trong markdown code fences (không có ` ```json ` hay ` ``` `). File phải chứa raw JSON bắt đầu bằng `{`.</rule>
         <rule>Do NOT write fieldConstraints, requestSchema, responseSchema, testData — those belong to td-extract-fields</rule>
     </critical_rules>
 </step>
