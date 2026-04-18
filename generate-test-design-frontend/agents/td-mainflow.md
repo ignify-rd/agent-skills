@@ -154,11 +154,31 @@ print('BARRIER OK')
     <section name="Function">
 
         <screen_context name="LIST">
-            <case>Search/filter: mỗi search field → tìm kiếm có kết quả + không có kết quả</case>
+            <case>Search/filter: mỗi search field — sinh bullet test case theo loại field (xem naming_rules và format_example bên dưới)</case>
             <case>Search kết hợp nhiều fields</case>
             <case>Clear filter</case>
             <case>Export (nếu có)</case>
-            <case>Thêm mới → navigate to FORM</case>
+            <case>Thêm mới — navigate to FORM</case>
+
+            <naming_rules>
+                ⚠️ BẮT BUỘC — Tên bullet (test case name) chỉ mô tả INPUT: truyền gì, giá trị nào.
+                KHÔNG được đưa kết quả mong đợi vào tên bullet.
+
+                ĐÚNG:
+                - Kiểm tra truyền {tên_field} có giá trị = {giá_trị}
+                - Kiểm tra khi nhập {tên_field} tồn tại
+                - Kiểm tra khi nhập {tên_field} không tồn tại
+
+                SAI — TUYỆT ĐỐI KHÔNG viết:
+                - Kiểm tra {field} = [{value}] → có kết quả        ← SAI (dùng → và [])
+                - Kiểm tra {field} = [{value}] → không có kết quả  ← SAI (dùng → và [])
+                - Tìm kiếm thành công khi chọn {value}             ← SAI (đưa "thành công" vào tên)
+
+                Quy tắc cho từng loại field:
+                - Textbox (freetext): "Kiểm tra khi nhập {tên_field} tồn tại" / "... không tồn tại"
+                - Dropdown/Combobox có giá trị enum cố định: mỗi giá trị enum = 1 bullet riêng, format: "Kiểm tra truyền {tên_field} có giá trị = {enum_value}"
+                - DateRange: "Kiểm tra tìm kiếm theo {tên_field} với khoảng thời gian hợp lệ" / "... không có kết quả"
+            </naming_rules>
 
             <sql_requirement>
                 **BẮT BUỘC — SQL block dưới mỗi ### heading trong ## Kiểm tra chức năng:**
@@ -173,30 +193,44 @@ print('BARRIER OK')
                 **Quy tắc lấy SQL:**
                 - SQL PHẢI copy verbatim từ DB_DOC_CONTENT — KHÔNG tự sinh, KHÔNG paraphrase
                 - Tìm SQL phù hợp với chức năng của `### heading` (VD: heading "Tìm kiếm theo Loại yêu cầu"
-                  → tìm SQL SELECT có WHERE clause liên quan đến request_type / loại yêu cầu)
-                - Nếu DB_DOC_CONTENT có nhiều SQL → chọn SQL phù hợp nhất với heading đó
-                - Nếu KHÔNG tìm được SQL phù hợp trong DB_DOC_CONTENT → KHÔNG thêm SQL block,
+                  — tìm SQL SELECT có WHERE clause liên quan đến request_type / loại yêu cầu)
+                - Nếu DB_DOC_CONTENT có nhiều SQL — chọn SQL phù hợp nhất với heading đó
+                - Nếu KHÔNG tìm được SQL phù hợp trong DB_DOC_CONTENT — KHÔNG thêm SQL block,
                   in cảnh báo: "WARNING: Khong tim thay SQL cho heading '{heading}' trong tai lieu DB"
-                - Nếu DB_DOC_CONTENT == "NOT_FOUND" → KHÔNG thêm SQL block, KHÔNG thêm placeholder
+                - Nếu DB_DOC_CONTENT == "NOT_FOUND" — KHÔNG thêm SQL block, KHÔNG thêm placeholder
             </sql_requirement>
 
             <format_example>
-                Ví dụ đúng cho một ### heading có SQL:
+                VÍ DỤ ĐÚNG — Dropdown có enum cố định (VD: requestType = ACTIVATE_CARD, UNLOCK_TRANS, ...):
 
                 ### Tìm kiếm theo Loại yêu cầu
-                - Tìm kiếm thành công khi chọn loại yêu cầu hợp lệ
-                - Tìm kiếm không có kết quả khi loại yêu cầu không khớp
+                - Kiểm tra truyền requestType có giá trị = ACTIVATE_CARD
+                - Kiểm tra truyền requestType có giá trị = UNLOCK_TRANS
+                - Kiểm tra truyền requestType có giá trị = CARD_CREDIT_PAYMENT
+                - Kiểm tra truyền requestType có giá trị = BLOCK_CARD
 
                 ```sql
-                SELECT * FROM TXN_CARD_REQUEST WHERE request_type = :requestType
+                SELECT * FROM TXN_CARD_REQUEST WHERE REQUEST_TYPE = :requestType
                 ```
 
-                Ví dụ đúng cho một ### heading KHÔNG có SQL:
+                VÍ DỤ ĐÚNG — Textbox freetext:
+
+                ### Tìm kiếm theo Mã giao dịch
+                - Kiểm tra khi nhập mã giao dịch tồn tại
+                - Kiểm tra khi nhập mã giao dịch không tồn tại
+
+                VÍ DỤ SAI — KHÔNG được viết như này:
+
+                ### Tìm kiếm theo Loại yêu cầu
+                - Kiểm tra requestType = [ACTIVATE_CARD] → có kết quả       ← SAI
+                - Kiểm tra requestType = [ACTIVATE_CARD] → không có kết quả ← SAI
+                - Tìm kiếm thành công khi chọn loại yêu cầu hợp lệ          ← SAI (không rõ giá trị nào)
+
+                VÍ DỤ ĐÚNG — Heading KHÔNG có SQL:
 
                 ### Tìm kiếm kết hợp nhiều điều kiện
-                - Tìm kiếm thành công với 2 điều kiện kết hợp
-                - Tìm kiếm không có kết quả với 3 điều kiện kết hợp
-                (không có SQL block nếu không tìm được SQL phù hợp trong tài liệu DB)
+                - Kiểm tra tìm kiếm khi kết hợp 2 điều kiện có kết quả
+                - Kiểm tra tìm kiếm khi kết hợp 2 điều kiện không có kết quả
             </format_example>
         </screen_context>
 

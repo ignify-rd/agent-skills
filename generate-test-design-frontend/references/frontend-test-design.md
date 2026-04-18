@@ -491,13 +491,20 @@ Nội dung thay đổi tùy **screenType**:
 
 ### Kiểm tra khi click button "Tìm kiếm"
 
-#### {Field 1}
+#### {Field 1} — Textbox (freetext)
 - Kiểm tra khi nhập {field 1} tồn tại
     - Hiển thị thông tin match + SQL
 - Kiểm tra khi nhập {field 1} không tồn tại
     - Danh sách rỗng
 - Kiểm tra khi nhập 1 phần {field 1}
     - Hiển thị kết quả chứa + SQL LIKE
+
+#### {Field 2} — Dropdown/Combobox có giá trị enum cố định
+⚠️ Mỗi giá trị enum = 1 bullet riêng. KHÔNG dùng `[value]` hay `→` trong tên bullet.
+- Kiểm tra truyền {field 2} có giá trị = {enum_value_1}
+    - Hiển thị danh sách bản ghi có {field 2} = {enum_value_1} + SQL
+- Kiểm tra truyền {field 2} có giá trị = {enum_value_2}
+    - Hiển thị danh sách bản ghi có {field 2} = {enum_value_2} + SQL
 
 #### {Field 2}
 ...
