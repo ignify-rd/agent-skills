@@ -249,7 +249,8 @@ async (page) => {
   const screenshotsDir = 'D:/path/from/prepare/screenshots';
   const locatorMap = {
     // fieldGroup or case id -> stable selector from the DOM scan
-    // "Textbox: Tên": "[data-testid=\"customer-name\"]"
+    // "Textbox: Tên": "[data-testid=\"customer-name\"]",
+    // __mainSelector: ".main-content"  // used by triggerValidation to scope button search
   };
 
   const results = [];
@@ -273,24 +274,73 @@ async (page) => {
   }
 
   async function setValue(selector, value) {
+    const isNav = await page.evaluate((selector) => {
+      const el = document.querySelector(selector);
+      return el?.closest('header,nav,aside,[role="navigation"],[role="banner"],[role="toolbar"]') != null;
+    }, selector);
+    if (isNav) throw new Error(`Refusing to edit navigation element: ${selector}`);
+
+    if (value === '' || value === null || value === undefined) {
+      // Clear field via native setter
+      await page.evaluate((selector) => {
+        const el = document.querySelector(selector);
+        if (!el) return;
+        if ('value' in el) {
+          const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+          const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+          setter ? setter.call(el, '') : (el.value = '');
+          el.dispatchEvent(new InputEvent('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          el.dispatchEvent(new Event('blur', { bubbles: true }));
+        } else {
+          el.textContent = '';
+        }
+      }, selector);
+      return;
+    }
+
+    // Use keyboard.insertText for full Unicode/Vietnamese diacritics support.
+    // Triple-click selects all existing text before typing.
+    const field = page.locator(selector).first();
+    await field.click({ clickCount: 3 });
+    await page.keyboard.insertText(`${value}`);
+
+    // Dispatch extra events so React/Vue controlled inputs pick up the new value.
     await page.evaluate(({ selector, value }) => {
       const el = document.querySelector(selector);
-      if (!el) throw new Error(`Element not found: ${selector}`);
-      if (el.closest('header,nav,aside,[role="navigation"],[role="banner"],[role="toolbar"]')) {
-        throw new Error(`Refusing to edit navigation element: ${selector}`);
-      }
-      el.focus();
-      if ('value' in el) {
-        const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-        setter ? setter.call(el, value) : (el.value = value);
-      } else {
-        el.textContent = value;
-      }
+      if (!el) return;
       el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
-      el.dispatchEvent(new Event('blur', { bubbles: true }));
-    }, { selector, value });
+    }, { selector, value: `${value}` });
+  }
+
+  // After entering a value, trigger validation by clicking a submit/search/apply
+  // button inside the form if one is visible, otherwise press Tab.
+  async function triggerValidation(mainSelector) {
+    const submitTexts = ['Search','Tìm kiếm','Apply','Filter','Lọc','OK','Lưu','Save','Xác nhận','Confirm','Submit','Gửi'];
+    const scope = mainSelector || 'main,[role="main"],.main-content,.content-area,.page-content,body';
+
+    // 1. type="submit" or type="button" submit inside a <form>
+    const formSubmit = page.locator(`${scope} form button[type="submit"], ${scope} form input[type="submit"]`).first();
+    if (await formSubmit.isVisible().catch(() => false)) {
+      await formSubmit.click();
+      await sleep(400);
+      return;
+    }
+
+    // 2. named action buttons
+    for (const text of submitTexts) {
+      const btn = page.locator(`${scope} button`).filter({ hasText: new RegExp(`^${text}$`, 'i') }).first();
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click();
+        await sleep(400);
+        return;
+      }
+    }
+
+    // 3. Fallback: Tab to move focus away and trigger blur/validation
+    await page.keyboard.press('Tab');
+    await sleep(200);
   }
 
   async function readField(selector) {
@@ -337,7 +387,10 @@ async (page) => {
       const actionText = `${tc.steps || ''} ${tc.name || ''}`.toLowerCase();
       if (!/observe|quan sát|quan sat|kiểm tra hiển thị|kiem tra hien thi/.test(actionText)) {
         await setValue(selector, `${tc.data || ''}`);
-        await sleep(250);
+        await sleep(150);
+        // Always trigger validation: click submit/search/apply button if present, else Tab
+        await triggerValidation(locatorMap.__mainSelector || null);
+        await sleep(300);
       }
 
       const check = await verify(tc, selector);
