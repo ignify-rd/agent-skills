@@ -1,323 +1,469 @@
 ---
 name: execute-test-case-frontend
-description: Execute frontend validate test cases directly using Playwright MCP — no scripts generated. Claude reads cases from Google Sheets, navigates the browser, interacts with the main content area (ignoring sidebar/header), takes screenshots, and writes P/F/E back to the sheet. Triggers when user says "execute frontend test", "run FE test", "chạy test case frontend", or provides a Google Sheets URL with test data.
+description: Execute frontend validation test cases from a Google Sheets URL or local Excel file using Playwright MCP with minimal browser steps. Downloads/copies the input into a local .xlsx run folder, filters only "Kiểm tra validate" cases, runs cases in browser batches through browser_run_code, captures screenshots, and writes P/F/E plus evidence into one Excel result workbook. Use when the user asks to run FE/frontend test cases, "chạy test case frontend", execute only validate cases, or make frontend execution work like auto-postman.
 ---
 
-# Execute Test Case — Frontend (Playwright MCP)
+# Execute Test Case - Frontend Validate
 
-Claude drives the browser step-by-step using Playwright MCP tools. No Python script generation. Each test case is executed one-by-one with screenshot evidence.
+Run frontend validate cases like `auto-postman`: prepare local Excel input, execute browser work through Playwright MCP, then write all results into one Excel workbook with an Evidence sheet.
 
-**Scope:** Only rows where Name (col B) contains `"Validate"` and col I (Lần 1) is empty.
+**Core rule:** Playwright MCP does browser work only. Sheet download/filtering and result writing are handled by `scripts/frontend_validate_excel.py`.
 
----
-
-## Input Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `url` | URL of the page under test |
-| `spreadsheetId` | Google Sheets ID (from URL: `/d/{ID}/edit`) |
-| `sheetName` | Sheet tab name (default: first sheet) |
+**Goal:** few MCP calls, fast execution, no accidental clicks outside the target screen.
 
 ---
 
-## Column Layout
+## Required Inputs
 
-| Col | Index | Field | Notes |
-|-----|-------|-------|-------|
-| A | 0 | External ID / Section | Section header or empty |
-| B | 1 | Name | Filter: starts with `FE_` AND contains `"Validate"` |
-| C | 2 | PreConditions | Login + navigation steps |
-| D | 3 | Importance | High / Medium / Low |
-| E | 4 | Steps | Test steps in Vietnamese |
-| F | 5 | Data test | Input value (may be empty) |
-| G | 6 | Expected Result | Expected behavior |
-| H | 7 | Actual Result | **Write:** observed result |
-| I | 8 | Lần 1 (Chrome) | **Write: P / F / E** |
+- `url`: application page under test.
+- One input source:
+  - Google Sheets URL, or
+  - local `.xlsx` path, or
+  - `values-json` exported from Sheets MCP when direct Google export is not allowed.
+- Optional `sheetName`: defaults to `TestCase`, otherwise first worksheet.
 
----
+Prerequisite for the helper:
 
-## Main Screen Scope Rule
-
-**CRITICAL:** All interactions must target the **main content area only**, NOT sidebar or header.
-
-Before any interaction, identify the main content container:
-```
-mcp__playwright__browser_evaluate(function="() => {
-  // Find the main content area — try common patterns
-  const candidates = [
-    document.querySelector('main'),
-    document.querySelector('[role=\"main\"]'),
-    document.querySelector('.main-content'),
-    document.querySelector('.content-area'),
-    document.querySelector('.page-content'),
-    // Fallback: largest visible div that is NOT header/nav/aside
-    ...[...document.querySelectorAll('div')].filter(el => {
-      const tag = el.tagName.toLowerCase();
-      const r = el.getBoundingClientRect();
-      const isNav = el.closest('header,nav,aside,[role=navigation],[role=banner]');
-      return !isNav && r.width > 600 && r.height > 400;
-    }).sort((a,b) => b.getBoundingClientRect().height - a.getBoundingClientRect().height)
-  ].filter(Boolean);
-  const main = candidates[0];
-  return main ? {
-    tag: main.tagName,
-    id: main.id,
-    className: main.className?.split(' ').slice(0,4).join(' '),
-    rect: main.getBoundingClientRect()
-  } : null;
-}")
+```powershell
+pip install openpyxl Pillow
 ```
 
-Use the identified main container selector for all subsequent `browser_evaluate` and `browser_click` calls. Never click elements inside `header`, `nav`, `aside`, or `[role=navigation]`.
+Playwright MCP on Windows must have a writable output directory. If MCP errors with
+`EPERM: operation not permitted, mkdir 'C:\Windows\System32\.playwright-mcp'`,
+update `C:\Users\<user>\.codex\config.toml`:
+
+```toml
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest", "--viewport-size", "1920,1080", "--output-dir", "D:\\Code\\agent-skills\\frontend_validate_runs\\mcp-output"]
+```
+
+Restart Codex Desktop or the thread after changing MCP config; existing MCP
+transports do not reliably reload server args.
+
+---
+
+## Expected Columns
+
+The helper detects headers dynamically. Standard layout:
+
+| Col | Field | Use |
+|-----|-------|-----|
+| B | Name | test case name |
+| C | PreConditions | login/navigation hints |
+| D | Importance | priority |
+| E | Steps | action instructions |
+| F | Data test | input value |
+| G | Expected Result | verification target |
+| H | Actual Result | written by finalize |
+| I | Lần 1 (Chrome) | written as `P` / `F` / `E` |
+
+If `Screenshot`, `Error`, or `Executed At` columns do not exist, the helper appends them in the result workbook only.
 
 ---
 
 ## Workflow
 
-### Step 1 — Read test cases
+### 1. Prepare Excel Run
 
-```
-mcp__gsheets__read_all_from_sheet(spreadsheetId="{id}", sheetName="{sheet}")
-```
+Use the bundled helper. Do not read the full Google Sheet through MCP unless export fails.
 
-Parse rows. Build list of pending validate cases:
-- `row[1]` starts with `"FE_"` AND contains `"validate"` (case-insensitive)
-- `row[8]` (col I) is empty/null
+Google Sheets input:
 
-Extract field groups from name pattern: `FE_{N}_Kiểm tra Validate_{FIELD}_{subtest}`
-
-Print:
-```
-{total} validate pending cases across {n} field groups:
-  - {FIELD}: {n} cases
-  ...
+```powershell
+python -X utf8 D:\Code\agent-skills\execute-test-case-frontend\scripts\frontend_validate_excel.py prepare --sheet-url "SHEET_URL" --sheet-name "TestCase"
 ```
 
----
+Local Excel input:
 
-### Step 2 — Navigate and login
-
-```
-mcp__playwright__browser_navigate(url="{url}")
+```powershell
+python -X utf8 D:\Code\agent-skills\execute-test-case-frontend\scripts\frontend_validate_excel.py prepare --xlsx "D:\path\input.xlsx" --sheet-name "TestCase"
 ```
 
-Read precondition from first test case (col C). Execute login steps if needed:
-- Extract credentials from precondition text (e.g. `account 28980/ Test@147258`)
-- Fill login form, click submit
-- Navigate to the target screen (follow menu path from precondition, e.g. "Thẻ > Quản lý yêu cầu thẻ")
+The command prints JSON:
 
-**Do NOT re-login between test cases or groups.**
-
----
-
-### Step 3 — Scan main content DOM (once per field group)
-
-After navigating to the target screen, scan ONLY the main content area:
-
+```json
+{
+  "runDir": "...",
+  "inputWorkbook": "...\\input.xlsx",
+  "resultWorkbook": "...\\frontend_validate_results_YYYYMMDD_HHMMSS.xlsx",
+  "casesFile": "...\\cases.json",
+  "screenshotsDir": "...\\screenshots",
+  "caseCount": 12,
+  "groups": {
+    "Textbox: Tên": 5
+  }
+}
 ```
-mcp__playwright__browser_evaluate(function="() => {
-  // Scope to main content only
-  const main = document.querySelector('main, [role=\"main\"], .main-content, .content-area')
-           || document.body;
-  const fields = [];
-  main.querySelectorAll('input,select,textarea,[role=combobox],[role=textbox],[role=spinbutton],button').forEach(el => {
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0) return;
-    // Skip elements inside header/nav/sidebar
-    if (el.closest('header,nav,aside,[role=navigation],[role=banner],[role=toolbar]')) return;
-    fields.push({
-      tag: el.tagName.toLowerCase(),
-      type: el.type || null,
-      id: el.id || null,
-      placeholder: el.placeholder || null,
-      ariaLabel: el.getAttribute('aria-label') || null,
-      dataTestid: el.getAttribute('data-testid') || null,
-      role: el.getAttribute('role') || null,
-      text: (el.textContent||'').trim().slice(0,40) || null,
-      rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }
-    });
+
+Proceed only when `caseCount > 0`. The helper filters:
+
+- rows under the `Kiểm tra validate` section, including field sub-suites below it;
+- rows whose name contains `Validate`;
+- pending rows only. Empty, `PENDING`, `chưa chạy`, or `not run` count as pending. Existing `P/F/E/PASS/FAIL/ERROR` rows are skipped unless `--include-done` is passed.
+
+If Google export fails because the sheet is private, get values with Sheets MCP and save them as a 2D JSON array, then run:
+
+```powershell
+python -X utf8 D:\Code\agent-skills\execute-test-case-frontend\scripts\frontend_validate_excel.py prepare --values-json "D:\path\values.json" --sheet-name "TestCase"
+```
+
+### 2. Load Cases
+
+Read `cases.json`. Each case has:
+
+```json
+{
+  "id": "r18",
+  "row": 18,
+  "suite": "Kiểm tra validate",
+  "fieldGroup": "Textbox: Tên",
+  "name": "...",
+  "preconditions": "...",
+  "steps": "...",
+  "data": "...",
+  "expected": "...",
+  "safeName": "18_case_name"
+}
+```
+
+Use `fieldGroup`, `steps`, `data`, and `expected` to build the browser batch.
+
+### 3. Navigate And Login Once
+
+Use Playwright MCP:
+
+1. `browser_navigate` to `url`.
+2. Login only if the application requires it. Extract account hints from the first case precondition if present.
+3. Navigate to the target screen once.
+4. Do not re-login between cases or field groups.
+
+For login/navigation discovery, normal MCP actions are acceptable. After the target screen is open, switch to `browser_run_code` batches.
+
+### 4. Discover Main Content And Locators
+
+Run one `browser_run_code` scan on the target screen. Scope every candidate to main content and exclude navigation chrome.
+
+```js
+async (page) => {
+  const data = await page.evaluate(() => {
+    const bad = 'header,nav,aside,[role="navigation"],[role="banner"],[role="toolbar"]';
+    const visible = (el) => {
+      const r = el.getBoundingClientRect();
+      const s = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';
+    };
+    const mains = [
+      document.querySelector('main'),
+      document.querySelector('[role="main"]'),
+      document.querySelector('.main-content'),
+      document.querySelector('.content-area'),
+      document.querySelector('.page-content'),
+      ...[...document.querySelectorAll('section,div')]
+        .filter(el => visible(el) && !el.closest(bad))
+        .sort((a, b) => {
+          const ar = a.getBoundingClientRect();
+          const br = b.getBoundingClientRect();
+          return (br.width * br.height) - (ar.width * ar.height);
+        })
+    ].filter(Boolean);
+    const main = mains[0];
+    if (!main) return { error: 'Main content not found' };
+
+    const cssPath = (el) => {
+      if (el.id) return `#${CSS.escape(el.id)}`;
+      const parts = [];
+      for (let n = el; n && n.nodeType === 1 && n !== document.body; n = n.parentElement) {
+        let part = n.tagName.toLowerCase();
+        if (n.classList.length) part += '.' + [...n.classList].slice(0, 2).map(CSS.escape).join('.');
+        const parent = n.parentElement;
+        if (parent) {
+          const same = [...parent.children].filter(c => c.tagName === n.tagName);
+          if (same.length > 1) part += `:nth-of-type(${same.indexOf(n) + 1})`;
+        }
+        parts.unshift(part);
+      }
+      return parts.join(' > ');
+    };
+
+    const controls = [...main.querySelectorAll('input,textarea,select,button,[role="combobox"],[role="textbox"],[contenteditable="true"]')]
+      .filter(el => visible(el) && !el.closest(bad))
+      .map(el => {
+        const label = el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null;
+        const r = el.getBoundingClientRect();
+        return {
+          selector: cssPath(el),
+          tag: el.tagName.toLowerCase(),
+          type: el.getAttribute('type') || '',
+          role: el.getAttribute('role') || '',
+          text: (el.innerText || el.textContent || '').trim().slice(0, 80),
+          label: (label?.innerText || '').trim(),
+          placeholder: el.getAttribute('placeholder') || '',
+          ariaLabel: el.getAttribute('aria-label') || '',
+          testId: el.getAttribute('data-testid') || '',
+          disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true',
+          rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }
+        };
+      });
+    return { mainSelector: cssPath(main), controls };
   });
-  return JSON.stringify(fields.filter(f => Object.values(f).some(v => v !== null)));
-}")
+  return JSON.stringify(data);
+}
 ```
 
-Use this snapshot to resolve locators for each test case in the group.
+Create a locator map from this scan. Prefer, in order:
 
----
+1. `data-testid`
+2. associated `label`
+3. `aria-label`
+4. `placeholder`
+5. stable `id`
+6. exact visible button/option text
 
-### Step 4 — Execute each test case
+Never use viewport coordinates as a locator. If a target is missing or ambiguous, mark that case `E` instead of guessing.
 
-For each pending test case, in order:
+### 5. Execute Cases In Batches
 
-#### 4a. Interpret the test case
+Use one `browser_run_code` call per screen or per field group. Keep batches around 10-20 cases if the page is fragile; otherwise one batch is fine.
 
-From `name`, `steps`, `data`, `expected` — determine:
-- **Field to target**: from the field group name (e.g. `textbox "Tìm kiếm nhanh"`)
-- **Action**: type / paste / click / observe / select
-- **Input data**: from `data` column or implied by name (e.g. "emoji", "39 ký tự", "SQL injection")
-- **Verification**: from `expected` — what to check after the action
+Result objects must match this shape so the helper can write Excel:
 
-#### 4b. Perform the action
-
-Use the appropriate Playwright MCP tool. Always scope to main content area.
-
-**For textbox — type input:**
-```
-mcp__playwright__browser_click(element="...", ref="...")   # focus the field
-mcp__playwright__browser_type(text="{data}")
-```
-
-**For textbox — paste input:**
-```
-mcp__playwright__browser_evaluate(function="() => {
-  const el = document.querySelector('{selector_in_main}');
-  el.focus();
-  // Set clipboard
-  return navigator.clipboard.writeText('{data}').then(() => 'ok').catch(e => e.message);
-}")
-mcp__playwright__browser_press_key(key="Control+v")
+```json
+{
+  "id": "r18",
+  "row": 18,
+  "verdict": "P",
+  "actual": "Observed validation message ...",
+  "screenshot": "D:\\...\\screenshots\\18_case.png",
+  "error": ""
+}
 ```
 
-**For textbox — clear then retype:**
+Batch runner pattern:
+
+```js
+async (page) => {
+  const cases = [
+    // paste selected cases from cases.json
+  ];
+  const screenshotsDir = 'D:/path/from/prepare/screenshots';
+  const locatorMap = {
+    // fieldGroup or case id -> stable selector from the DOM scan
+    // "Textbox: Tên": "[data-testid=\"customer-name\"]"
+  };
+
+  const results = [];
+  const bad = 'header,nav,aside,[role="navigation"],[role="banner"],[role="toolbar"]';
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  async function safeLocator(selector, label) {
+    const loc = page.locator(selector);
+    const count = await loc.count();
+    const visible = [];
+    for (let i = 0; i < count; i++) {
+      const item = loc.nth(i);
+      const ok = await item.isVisible().catch(() => false)
+        && await item.evaluate((el, bad) => !el.closest(bad), bad).catch(() => false);
+      if (ok) visible.push(item);
+    }
+    if (visible.length !== 1) {
+      throw new Error(`${label}: expected 1 visible element, found ${visible.length}`);
+    }
+    return visible[0];
+  }
+
+  async function setValue(selector, value) {
+    await page.evaluate(({ selector, value }) => {
+      const el = document.querySelector(selector);
+      if (!el) throw new Error(`Element not found: ${selector}`);
+      if (el.closest('header,nav,aside,[role="navigation"],[role="banner"],[role="toolbar"]')) {
+        throw new Error(`Refusing to edit navigation element: ${selector}`);
+      }
+      el.focus();
+      if ('value' in el) {
+        const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        setter ? setter.call(el, value) : (el.value = value);
+      } else {
+        el.textContent = value;
+      }
+      el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true }));
+    }, { selector, value });
+  }
+
+  async function readField(selector) {
+    return page.evaluate((selector) => {
+      const el = document.querySelector(selector);
+      if (!el) return '';
+      return 'value' in el ? el.value : (el.textContent || '').trim();
+    }, selector);
+  }
+
+  async function verify(tc, selector) {
+    const value = await readField(selector);
+    const expected = `${tc.expected || ''}`.toLowerCase();
+    const errors = await page.locator('main, [role="main"], .main-content, .content-area')
+      .locator('.error,.invalid,.ant-form-item-explain-error,[role="alert"],.text-danger')
+      .allTextContents()
+      .catch(() => []);
+    const errorText = errors.map(t => t.trim()).filter(Boolean).join(' | ');
+
+    if (/không cho phép nhập|khong cho phep nhap|không nhập được|khong nhap duoc/.test(expected)) {
+      return { pass: !value || value !== `${tc.data || ''}`, actual: `Value after input: "${value}"` };
+    }
+    if (/cho phép nhập|cho phep nhap/.test(expected)) {
+      return { pass: value === `${tc.data || ''}`, actual: `Value after input: "${value}"` };
+    }
+    if (/thông báo lỗi|thong bao loi|message lỗi|message loi|required|bắt buộc|bat buoc/.test(expected)) {
+      return { pass: !!errorText, actual: errorText || 'No validation error visible' };
+    }
+    if (/mặc định rỗng|mac dinh rong|clear data|xóa|xoa/.test(expected)) {
+      return { pass: !value, actual: `Value: "${value}"` };
+    }
+    return { pass: true, actual: errorText || `Value: "${value}"` };
+  }
+
+  for (const tc of cases) {
+    const screenshot = `${screenshotsDir}/${tc.safeName}.png`;
+    try {
+      const selector = locatorMap[tc.id] || locatorMap[tc.fieldGroup];
+      if (!selector) throw new Error(`No locator mapped for ${tc.fieldGroup || tc.id}`);
+
+      const field = await safeLocator(selector, tc.fieldGroup || tc.name);
+      await field.scrollIntoViewIfNeeded();
+
+      const actionText = `${tc.steps || ''} ${tc.name || ''}`.toLowerCase();
+      if (!/observe|quan sát|quan sat|kiểm tra hiển thị|kiem tra hien thi/.test(actionText)) {
+        await setValue(selector, `${tc.data || ''}`);
+        await sleep(250);
+      }
+
+      const check = await verify(tc, selector);
+      await page.screenshot({ path: screenshot, fullPage: false });
+      results.push({
+        id: tc.id,
+        row: tc.row,
+        verdict: check.pass ? 'P' : 'F',
+        actual: check.actual,
+        screenshot,
+        error: ''
+      });
+
+      await setValue(selector, '');
+      await sleep(100);
+    } catch (err) {
+      await page.screenshot({ path: screenshot, fullPage: false }).catch(() => {});
+      results.push({
+        id: tc.id,
+        row: tc.row,
+        verdict: 'E',
+        actual: err.message,
+        screenshot,
+        error: err.message
+      });
+    }
+  }
+  return JSON.stringify(results);
+}
 ```
-mcp__playwright__browser_triple_click → then type new value
-```
-Or use:
-```
-mcp__playwright__browser_evaluate(function="() => { const el = ...; el.value = ''; el.dispatchEvent(new Event('input')); }")
-mcp__playwright__browser_type(text="{data}")
-```
 
-**For combobox — select option:**
-```
-mcp__playwright__browser_click(element="combobox {field_name}")
-mcp__playwright__browser_click(element="option {value}")
-```
+Adapt the action and verify functions to the application. Keep the safety invariants:
 
-**For date picker — type date:**
-```
-mcp__playwright__browser_click(element="date input {field_name}")
-mcp__playwright__browser_type(text="{dd/mm/yyyy}")
-mcp__playwright__browser_press_key(key="Tab")
+- scope to main content;
+- require exactly one visible target;
+- never click by coordinates;
+- never click sidebar/header/navigation;
+- mark `E` on ambiguous selectors.
+
+### 6. Finalize Excel
+
+Save the JSON returned by `browser_run_code` or pass it directly, then finalize:
+
+```powershell
+python -X utf8 D:\Code\agent-skills\execute-test-case-frontend\scripts\frontend_validate_excel.py finalize --run-dir "RUN_DIR" --results-file "D:\path\results.json"
 ```
 
-**For observe only (no action):**
-Proceed directly to verification + screenshot.
+or:
 
-#### 4c. Wait briefly
-
-```
-mcp__playwright__browser_wait_for(time=500)
+```powershell
+python -X utf8 D:\Code\agent-skills\execute-test-case-frontend\scripts\frontend_validate_excel.py finalize --run-dir "RUN_DIR" --results-json "JSON_RETURNED_BY_BROWSER_RUN_CODE"
 ```
 
-#### 4d. Verify result
+The helper writes:
 
-Use `browser_evaluate` scoped to main content to check the expected outcome:
+- `Actual Result`
+- `Lần 1 (Chrome)` as `P` / `F` / `E`
+- `Screenshot`
+- `Error`
+- `Executed At`
+- `Summary` sheet
+- `Evidence` sheet with embedded screenshots when image files exist
 
-| Expected pattern | Verification |
-|-----------------|--------------|
-| `chặn không cho phép nhập` | field value === '' or === original value |
-| `cho phép nhập` | field value === typed text |
-| `hiển thị icon X / xóa nhanh` | clear-button element visible in main area |
-| `Clear data` | field value === '' after click |
-| `hiển thị thông báo lỗi` | error message element visible in main area |
-| `mặc định rỗng` | field value === '' |
-| `luôn hiển thị và enable` | element visible AND not disabled |
-| `placeholder` text match | element.placeholder === expected text |
-| `mặc định` value | combobox text/value === expected default |
-| `lưới hiển thị` / filter result | table row count > 0 OR specific items visible |
+Then close the browser:
 
-```
-mcp__playwright__browser_evaluate(function="() => {
-  const main = document.querySelector('main,[role=\"main\"],.main-content') || document.body;
-  // Run specific check based on test case
-  ...
-  return { pass: true/false, actual: '...' };
-}")
-```
-
-#### 4e. Take screenshot
-
-```
-mcp__playwright__browser_take_screenshot(filename="{safe_name}_{timestamp}.png")
-```
-
-Screenshot captures full page visible area. Note the returned file path.
-
-#### 4f. Determine verdict and write to sheet
-
-```
-mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row_1indexed}, col=9, value="P")  # or F or E
-mcp__gsheets__edit_cell(spreadsheetId="{id}", sheetName="{sheet}", row={row_1indexed}, col=8, value="{actual_observed}")
-```
-
-Print per case:
-```
-  [{idx}/{total}] {name_short}
-    Action: {action}  →  Actual: {actual}  →  {P/F/E}
-```
-
----
-
-### Step 5 — Reset field between test cases
-
-After each test case that modifies a field, reset it to empty state before the next case:
-- **Textbox**: clear value + trigger input event
-- **Combobox**: click X (clear) button if visible, otherwise select default "Tất cả"
-- **Date picker**: click X button or clear manually
-
----
-
-### Step 6 — Close browser and print summary
-
-```
+```text
 mcp__playwright__browser_close()
 ```
 
+---
+
+## Result Semantics
+
+| Verdict | Meaning |
+|---------|---------|
+| `P` | observed behavior matches expected result |
+| `F` | browser action succeeded but observed behavior does not match expected result |
+| `E` | automation error, missing/ambiguous element, login/navigation failure, or script exception |
+
+Do not write back to the source Google Sheet. The result workbook is the source of truth for this execution run.
+
+---
+
+## Speed Rules
+
+- Download/copy the sheet once.
+- Read `cases.json` once.
+- Login once.
+- Scan main DOM once per screen or field group.
+- Run cases with `browser_run_code` batches, not one MCP click/type call per step.
+- Save Excel once at the end.
+- Capture one screenshot per case unless the user asks for more evidence.
+
+---
+
+## Anti-Misclick Rules
+
+- Identify a main content selector before executing tests.
+- Exclude `header`, `nav`, `aside`, `[role="navigation"]`, `[role="banner"]`, and `[role="toolbar"]`.
+- Prefer stable semantic locators over CSS shape or position.
+- Require exactly one visible target before editing/clicking.
+- Use DOM value setters for text inputs when possible; dispatch `input`, `change`, and `blur` events.
+- For combobox/date picker/button flows, click only exact visible options inside main content.
+- If the UI opens a modal, re-scope to the modal body only while the modal is active.
+- If the same selector matches multiple visible elements, mark the case `E` and continue.
+
+---
+
+## When To Stop
+
+Stop and report instead of continuing when:
+
+- login fails;
+- target screen cannot be reached;
+- main content cannot be identified;
+- more than three consecutive cases fail from the same selector or navigation issue;
+- the helper returns zero validate cases but the user expected cases.
+
+Final response should include:
+
+```text
+Total selected: N
+Executed: N
+PASS: N
+FAIL: N
+ERROR: N
+Result workbook: ...
+Evidence screenshots: ...
 ```
-=== Frontend Validate Test Summary ===
-Total executed : {n}
-PASS  (P)      : {n}
-FAIL  (F)      : {n}
-ERROR (E)      : {n}
-
-Results written to Google Sheets: {spreadsheetId}
-```
-
----
-
-## Locator Priority (within main content only)
-
-1. `data-testid` attribute
-2. `aria-label` attribute  
-3. `placeholder` attribute (for text inputs)
-4. `id` attribute
-5. Visible text content (for buttons/options)
-6. Position/rect (fallback — use bounding box from DOM snapshot)
-
-**Never** use locators that match elements in `header`, `nav`, `aside`, or `[role=navigation]`.
-
----
-
-## Error Handling
-
-| Situation | Action |
-|-----------|--------|
-| Login fails | Stop, report to user |
-| Element not found in main area | Mark E, `"Element not found: {field}"`, continue |
-| Action has no effect (field still empty when should allow) | Mark F |
-| Unexpected dialog/popup | Dismiss, then retry once |
-| Entire group fails | Mark all in group E, continue to next group |
-
----
-
-## Guardrails
-
-- **NEVER** modify col A–G (read only).
-- **ONLY** write to col H (Actual) and col I (Lần 1).
-- **NEVER** re-execute rows where col I already has a value.
-- **NEVER** interact with sidebar, header, or navigation elements.
-- **DO NOT** re-login between groups — reuse the session.
-- **ALWAYS** reset fields between test cases to avoid state bleed.
-- Stop and ask user if: login fails, main content area cannot be identified, same error repeats 3+ times.
