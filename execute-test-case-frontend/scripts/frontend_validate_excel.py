@@ -695,22 +695,16 @@ def add_evidence_sheet(wb, evidence_rows: list[dict[str, Any]]) -> None:
                 ws.cell(row=idx, column=7).value = f"{screenshot}\nEmbed error: {exc}"
 
 
-def finalize_run(args: argparse.Namespace) -> dict[str, Any]:
-    run_dir = Path(args.run_dir).resolve()
-    run_path = run_dir / "run.json"
-    if not run_path.exists():
-        raise FileNotFoundError(run_path)
-    run = json.loads(run_path.read_text(encoding="utf-8"))
-    cases = json.loads(Path(run["casesFile"]).read_text(encoding="utf-8"))
-    cases_by_id = {case["id"]: case for case in cases}
-    cases_by_row = {int(case["row"]): case for case in cases}
-    results = load_results(args)
-
-    wb = openpyxl.load_workbook(run["resultWorkbook"])
-    ws = wb[run["sheetName"]]
-    cols = run["columns"]
+def write_results_to_workbook(
+    ws,
+    cols: dict[str, int],
+    cases_by_id: dict[str, dict],
+    cases_by_row: dict[int, dict],
+    results: list[dict[str, Any]],
+) -> tuple[dict[str, int], list[dict[str, Any]]]:
+    """Write result rows into the workbook sheet. Returns (counts, evidence_rows)."""
     executed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    counts = {"P": 0, "F": 0, "E": 0}
+    counts: dict[str, int] = {"P": 0, "F": 0, "E": 0}
     evidence_rows: list[dict[str, Any]] = []
 
     for result in results:
@@ -760,6 +754,60 @@ def finalize_run(args: argparse.Namespace) -> dict[str, Any]:
                 "screenshot": screenshot,
             }
         )
+
+    return counts, evidence_rows
+
+
+def incremental_save(args: argparse.Namespace) -> dict[str, Any]:
+    """Write partial results to workbook WITHOUT Summary/Evidence sheets.
+
+    Safe to call multiple times — overwrites the same cells each time.
+    Use this after each group to persist results incrementally.
+    """
+    run_dir = Path(args.run_dir).resolve()
+    run_path = run_dir / "run.json"
+    if not run_path.exists():
+        raise FileNotFoundError(run_path)
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    cases = json.loads(Path(run["casesFile"]).read_text(encoding="utf-8"))
+    cases_by_id = {case["id"]: case for case in cases}
+    cases_by_row = {int(case["row"]): case for case in cases}
+    results = load_results(args)
+
+    wb = openpyxl.load_workbook(run["resultWorkbook"])
+    ws = wb[run["sheetName"]]
+    cols = run["columns"]
+
+    counts, _ = write_results_to_workbook(ws, cols, cases_by_id, cases_by_row, results)
+    wb.save(run["resultWorkbook"])
+
+    return {
+        "resultWorkbook": run["resultWorkbook"],
+        "rowsWritten": sum(counts.values()),
+        "pass": counts.get("P", 0),
+        "fail": counts.get("F", 0),
+        "error": counts.get("E", 0),
+    }
+
+
+def finalize_run(args: argparse.Namespace) -> dict[str, Any]:
+    run_dir = Path(args.run_dir).resolve()
+    run_path = run_dir / "run.json"
+    if not run_path.exists():
+        raise FileNotFoundError(run_path)
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    cases = json.loads(Path(run["casesFile"]).read_text(encoding="utf-8"))
+    cases_by_id = {case["id"]: case for case in cases}
+    cases_by_row = {int(case["row"]): case for case in cases}
+    results = load_results(args)
+
+    wb = openpyxl.load_workbook(run["resultWorkbook"])
+    ws = wb[run["sheetName"]]
+    cols = run["columns"]
+
+    counts, evidence_rows = write_results_to_workbook(
+        ws, cols, cases_by_id, cases_by_row, results
+    )
 
     ensure_summary_sheet(wb, run, counts, len(results))
     add_evidence_sheet(wb, evidence_rows)
@@ -812,17 +860,25 @@ def main() -> None:
         help="Include cases that already have P/F/E or another result value",
     )
 
-    p_finalize = sub.add_parser("finalize", help="Write MCP execution results to workbook")
+    p_incremental = sub.add_parser("incremental", help="Write partial results (no Summary/Evidence sheets)")
+    p_incremental.add_argument("--run-dir", required=True, help="Run directory from prepare")
+    incr_source = p_incremental.add_mutually_exclusive_group()
+    incr_source.add_argument("--results-file", help="JSON file with results array")
+    incr_source.add_argument("--results-json", help="Raw JSON results array")
+
+    p_finalize = sub.add_parser("finalize", help="Write MCP execution results to workbook with Summary/Evidence")
     p_finalize.add_argument("--run-dir", required=True, help="Run directory from prepare")
     result_source = p_finalize.add_mutually_exclusive_group()
-    result_source.add_argument("--results-file", help="JSON file returned by browser_run_code")
-    result_source.add_argument("--results-json", help="Raw JSON returned by browser_run_code")
+    result_source.add_argument("--results-file", help="JSON file with results array")
+    result_source.add_argument("--results-json", help="Raw JSON results array")
 
     args = parser.parse_args()
     try:
         if args.command == "prepare":
             run = create_run(args)
             print_run_summary(run)
+        elif args.command == "incremental":
+            print(json.dumps(incremental_save(args), ensure_ascii=False, indent=2))
         elif args.command == "finalize":
             print(json.dumps(finalize_run(args), ensure_ascii=False, indent=2))
     except Exception as exc:
