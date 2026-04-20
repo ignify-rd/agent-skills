@@ -20,6 +20,7 @@ model: inherit
 
     <rule type="wording_priority">
         <priority_1>CATALOG_SAMPLE wording if provided</priority_1>
+        <note>Nếu CATALOG_SAMPLE != 'none': dùng Read tool để đọc file tại đường dẫn CATALOG_SAMPLE với limit=80 trước khi dùng làm wording reference.</note>
         <priority_2>Base template</priority_2>
     </rule>
 </guardrails>
@@ -129,7 +130,7 @@ Common: Method ✓ URL ✓ Authorization ✓
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_FILE" type="path" required="true"/>
-        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="CATALOG_SAMPLE" type="filepath" default="none">Path to catalog-sample.md — dùng Read(CATALOG_SAMPLE, limit=80) để lấy wording reference. KHÔNG phải nội dung inline.</param>
         <param name="PROJECT_RULES" type="string" default="none"/>
     </parameters>
 </task_context>

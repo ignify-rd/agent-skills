@@ -307,7 +307,7 @@ print('BARRIER OK')
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_FILE" type="path" required="true"/>
-        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="CATALOG_SAMPLE" type="filepath" default="none">Path to catalog-sample.md — dùng Read(CATALOG_SAMPLE, limit=80) nếu != 'none'. KHÔNG phải nội dung inline.</param>
         <param name="PROJECT_RULES" type="string" default="none"/>
         <param name="SCREEN_TYPE" type="string" default="LIST">
             Loai man hinh: LIST | FORM | DETAIL — lay tu inventory._meta.screenType hoac truyen tu orchestrator.

@@ -60,6 +60,7 @@ print('BARRIER OK')
 
     <rule type="catalog_scope">
         <description>CATALOG_SAMPLE dùng để tham khảo format response/wording ONLY. TUYỆT ĐỐI KHÔNG đọc catalog để suy ra modes, flows, hay business logic. Nguồn duy nhất cho modes/businessRules là INVENTORY_FILE.</description>
+        <note>Nếu CATALOG_SAMPLE != 'none': đọc Read(CATALOG_SAMPLE, limit=80) để lấy wording style.</note>
     </rule>
 
     <rule type="scope_boundary" id="field_value_vs_processing_flow">
@@ -526,7 +527,7 @@ Missing → THÊM ngay
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_FILE" type="path" required="true"/>
-        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="CATALOG_SAMPLE" type="filepath" default="none">Path to catalog-sample.md — dùng Read(CATALOG_SAMPLE, limit=80) để lấy wording reference. KHÔNG phải nội dung inline.</param>
         <param name="PROJECT_RULES" type="string" default="none"/>
     </parameters>
 </task_context>

@@ -229,9 +229,10 @@ model: inherit
   --keys success,error</script>
         </action>
 
-        <action type="read" condition="If CATALOG_SAMPLE provided">
+        <action type="read" condition="If CATALOG_SAMPLE != 'none'">
             <file>{CATALOG_SAMPLE}</file>
-            <purpose>Use as wording reference</purpose>
+            <limit>80</limit>
+            <purpose>Use as wording reference — CATALOG_SAMPLE là file path, đọc 80 dòng đầu là đủ để học wording style</purpose>
         </action>
     </actions>
 

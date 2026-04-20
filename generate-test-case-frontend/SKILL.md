@@ -237,11 +237,11 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 
     <catalog_reading_rules>
         <rule condition="catalog_count <= 3">
-            <action>Read ALL catalog files completely (no line limit)</action>
+            <action>Select up to 3 most relevant files — dùng Read tool với limit=80 cho mỗi file</action>
         </rule>
         <rule condition="catalog_count > 3">
             <action>Select 3 most relevant files (by name, screen type, same business group, similar UI structure)</action>
-            <action>Read complete content of all 3 files</action>
+            <action>Dùng Read tool với limit=80 cho mỗi file — KHÔNG đọc toàn bộ file</action>
         </rule>
         <rule condition="no_relevant_files">
             <action>Read first 2–3 files in the list (50 lines each)</action>
@@ -249,10 +249,15 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     </catalog_reading_rules>
 
     <output>
-        <var name="CATALOG_SAMPLE">Concatenated catalog file contents for sub-agent reference</var>
+        <var name="CATALOG_SAMPLE">{OUTPUT_DIR}/catalog-sample.md — FILE PATH (không phải nội dung inline). Sau khi đọc catalog với limit=80, ghi toàn bộ nội dung đọc được vào file này bằng Write tool.</var>
     </output>
 
-    <note>Catalog = highest priority source for wording. Always pass CATALOG_SAMPLE to sub-agents. Do NOT use default templates as wording source.</note>
+    <note>
+        Catalog = highest priority source for wording.
+        ⚠️ CATALOG_SAMPLE = FILE PATH đến {OUTPUT_DIR}/catalog-sample.md, KHÔNG phải nội dung text.
+        Sau khi đọc catalog (limit=80/file): ghi vào catalog-sample.md bằng Write tool.
+        Truyền file path cho sub-agents — sub-agents tự đọc Read(CATALOG_SAMPLE, limit=80) khi cần.
+    </note>
 </step>
 
 <step id="3" name="Spawn tc-context" type="sequential">
@@ -296,7 +301,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                 <param name="TC_CONTEXT_FILE">{OUTPUT_DIR}/tc-context.json</param>
                 <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
-                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
@@ -354,7 +359,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                 <param name="BATCH_NUMBER">{N}</param>
                 <param name="FIELD_BATCH">[{fieldName}:{fieldType}, ...]</param>
                 <param name="FIELD_TYPES_NEEDED">"{comma-separated field types for --section}"</param>
-                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
@@ -368,7 +373,7 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
                 <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
                 <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
-                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
@@ -436,7 +441,7 @@ print('READY')
                 <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
                 <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
-                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
@@ -476,7 +481,7 @@ else:
                 <param name="TEST_DESIGN_FILE">{TEST_DESIGN_FILE}</param>
                 <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
-                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>
@@ -524,7 +529,7 @@ else:
                 <param name="INVENTORY_FILE">{INVENTORY_FILE}</param>
                 <param name="OUTPUT_DIR">{OUTPUT_DIR}</param>
                 <param name="OUTPUT_FILE">{OUTPUT_FILE}</param>
-                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE — nội dung raw từ catalog files đã đọc ở Step 2}</param>
+                <param name="CATALOG_SAMPLE">{CATALOG_SAMPLE}</param>
                 <param name="PROJECT_RULES">{projectRules or "none"}</param>
             </context>
         </action>

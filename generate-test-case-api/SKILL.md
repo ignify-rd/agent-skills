@@ -237,11 +237,11 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 
     <catalog_reading_rules>
         <rule condition="catalog_count <= 3">
-            <action>Read ALL catalog files completely (no line limit)</action>
+            <action>Select up to 3 most relevant files — dùng Read tool với limit=80 cho mỗi file</action>
         </rule>
         <rule condition="catalog_count > 3">
             <action>Select 3 most relevant files (by name, title, same business group, same HTTP method, similar structure)</action>
-            <action>Read complete content of all 3 files</action>
+            <action>Dùng Read tool với limit=80 cho mỗi file — KHÔNG đọc toàn bộ file</action>
         </rule>
         <rule condition="no_relevant_files">
             <action>Read first file in the list</action>
@@ -249,10 +249,10 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
     </catalog_reading_rules>
 
     <output>
-        <var name="CATALOG_SAMPLE">Concatenated catalog file contents for sub-agent reference</var>
+        <var name="CATALOG_SAMPLE">Wording reference — orchestrator dùng nội dung đọc được (limit=80/file) để tham khảo style. Không truyền cho sub-agents (tc-* agents dùng catalogStyle từ tc-context.json).</var>
     </output>
 
-    <note>Catalog = highest priority source for wording. Always use CATALOG_SAMPLE for sub-agents. Do NOT use default templates as wording source.</note>
+    <note>Catalog = highest priority source for wording. Orchestrator đọc catalog với limit=80/file làm wording reference. tc-* sub-agents lấy catalogStyle từ tc-context.json (do tc-context agent extract sẵn).</note>
 </step>
 
 <step id="3" name="Spawn tc-context" type="sequential">

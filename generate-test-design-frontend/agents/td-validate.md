@@ -86,8 +86,9 @@ model: inherit
         <purpose>Get fieldConstraints for fields in this batch</purpose>
     </read>
 
-    <read>
+    <read condition="CATALOG_SAMPLE != 'none'">
         <file>{CATALOG_SAMPLE}</file>
+        <limit>80</limit>
         <purpose>Wording reference (if provided)</purpose>
     </read>
 </step>
@@ -250,7 +251,7 @@ model: inherit
             <description>Comma-separated types for --section parameter</description>
             <example>textbox,combobox,datepicker</example>
         </param>
-        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="CATALOG_SAMPLE" type="filepath" default="none">Path to catalog-sample.md — dùng Read(CATALOG_SAMPLE, limit=80). KHÔNG phải nội dung inline.</param>
         <param name="PROJECT_RULES" type="string" default="none"/>
     </parameters>
 </task_context>

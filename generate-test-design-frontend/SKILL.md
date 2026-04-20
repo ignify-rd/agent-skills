@@ -221,12 +221,22 @@ python3 $SKILL_SCRIPTS/search.py --list --domain frontend
 
     <output>
         <var name="CATALOG_SAMPLE">
-            Dùng Read tool để đọc **50 dòng đầu + 50 dòng cuối** của file được chọn.
-            Nếu file &lt; 100 dòng → đọc toàn bộ. In nội dung ra cho sub-agents dùng.
+            Dùng Read tool để đọc **50 dòng đầu + 50 dòng cuối** của file được chọn (hoặc toàn bộ nếu &lt; 100 dòng).
+            Ghi nội dung đã đọc vào {OUTPUT_DIR}/catalog-sample.md (xem catalog_file_write bên dưới).
+            CATALOG_SAMPLE = {OUTPUT_DIR}/catalog-sample.md — FILE PATH, KHÔNG phải nội dung inline.
         </var>
     </output>
 
-    <note>Catalog = nguồn WORDING cao nhất. Luôn dùng CATALOG_SAMPLE (từ Step 3) cho sub-agents, KHÔNG dùng template mặc định.</note>
+    <catalog_file_write>
+        Sau khi đọc catalog: ghi toàn bộ nội dung đã đọc vào {OUTPUT_DIR}/catalog-sample.md
+        dùng Write tool. BẮT BUỘC thực hiện trước khi spawn bất kỳ sub-agent nào.
+    </catalog_file_write>
+
+    <note>
+        Catalog = nguồn WORDING cao nhất. Luôn truyền CATALOG_SAMPLE (file path) cho sub-agents.
+        ⚠️ CATALOG_SAMPLE = FILE PATH đến catalog-sample.md, KHÔNG phải nội dung text inline.
+        Sub-agents tự đọc Read(CATALOG_SAMPLE, limit=80) khi cần wording reference.
+    </note>
 </step>
 
 <step id="3b" name="Sao chép nội dung RSD/PTTK (BC1 — BẮT BUỘC)">

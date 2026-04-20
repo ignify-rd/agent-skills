@@ -202,22 +202,31 @@ for root, dirs, files in os.walk(skill_dir, topdown=True):
 
     <catalog_reading_rules>
         <rule condition="catalog_count <= 3">
-            <action>Read ALL catalog files completely (no line limit)</action>
+            <action>Select up to 3 most relevant files — dùng Read tool với limit=80 cho mỗi file (đủ để học wording style)</action>
         </rule>
         <rule condition="catalog_count > 3">
             <action>Select 3 most relevant files (by name, title, same business group, same HTTP method)</action>
-            <action>Read complete content of all 3 files</action>
+            <action>Dùng Read tool với limit=80 cho mỗi file — KHÔNG đọc toàn bộ file</action>
         </rule>
         <rule condition="no_relevant_files">
-            <action>Read first file in the list</action>
+            <action>Read first file in the list, limit=80</action>
         </rule>
     </catalog_reading_rules>
 
+    <catalog_file_write>
+        Sau khi đọc catalog (với limit=80/file): ghi toàn bộ nội dung đã đọc vào {OUTPUT_DIR}/catalog-sample.md
+        dùng Write tool. Đây là bước BẮT BUỘC trước khi spawn bất kỳ sub-agent nào.
+    </catalog_file_write>
+
     <output>
-        <var name="CATALOG_SAMPLE">Concatenated catalog file contents for sub-agent reference</var>
+        <var name="CATALOG_SAMPLE">{OUTPUT_DIR}/catalog-sample.md — FILE PATH (không phải nội dung inline)</var>
     </output>
 
-    <note>Catalog = highest priority source for wording. Always use CATALOG_SAMPLE for sub-agents.</note>
+    <note>
+        ⚠️ CRITICAL: CATALOG_SAMPLE = FILE PATH đến catalog-sample.md, KHÔNG phải nội dung text.
+        Không inject nội dung catalog trực tiếp vào sub-agent prompt.
+        Sub-agents sẽ tự đọc Read(CATALOG_SAMPLE, limit=80) khi cần wording reference.
+    </note>
 </step>
 
 <step id="4" name="Spawn td-extract-logic + td-extract-fields (PARALLEL)" type="parallel">

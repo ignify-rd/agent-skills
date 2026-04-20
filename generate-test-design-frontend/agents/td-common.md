@@ -68,6 +68,7 @@ model: inherit
             <roles>Nếu permissions[] có dữ liệu → dùng role names từ inventory</roles>
             <default>login user không có quyền + login user có quyền {role}</default>
             <wording>from CATALOG_SAMPLE if provided</wording>
+            <catalog_note>Nếu CATALOG_SAMPLE != 'none': đọc Read(CATALOG_SAMPLE, limit=80) để lấy wording style trước khi dùng.</catalog_note>
         </fill>
 </phase>
 
@@ -109,7 +110,7 @@ model: inherit
         <param name="SKILL_SCRIPTS" type="path" required="true"/>
         <param name="INVENTORY_FILE" type="path" required="true"/>
         <param name="OUTPUT_FILE" type="path" required="true"/>
-        <param name="CATALOG_SAMPLE" type="string" default="none"/>
+        <param name="CATALOG_SAMPLE" type="filepath" default="none">Path to catalog-sample.md — dùng Read(CATALOG_SAMPLE, limit=80) nếu != 'none'. KHÔNG phải nội dung inline.</param>
         <param name="PROJECT_RULES" type="string" default="none"/>
     </parameters>
 </task_context>
