@@ -14,14 +14,28 @@ Sinh một tài liệu RSD (Requirement Specification Document) mới trên Conf
 - User cung cấp link Confluence (URD, RSD tham chiếu), link Figma, ảnh mockup, hoặc ghi chú yêu cầu nghiệp vụ riêng.
 - Output: page Confluence mới hoàn chỉnh, kèm link.
 
+## Quy tắc bất biến (đọc trước khi làm bất cứ điều gì)
+
+**CLONE task KHÔNG có nghĩa là task đã xong.** Nếu Jira task được gắn nhãn "CLONE" hoặc tìm thấy trang Confluence cũ có nội dung tương tự → đó là tài liệu NGUỒN để copy từ, không phải output. Vẫn phải tạo page Confluence mới và chuyển Jira về "Done" chỉ sau khi page mới đã được tạo thành công.
+
+**Không bao giờ chuyển Jira sang "Done" trước khi page Confluence mới được tạo và link được trả về cho user.**
+
 ## Nguyên tắc cốt lõi (đọc kỹ trước khi làm)
 
 RSD **không phải là sáng tác**. Nó là tài liệu có cấu trúc cố định, nội dung phải **truy nguồn** được từ input user cung cấp. Năm nguyên tắc:
 
 0. **Publish luôn — không draft.** Output phải là tài liệu hoàn chỉnh, publish trực tiếp lên Confluence. Không tạo file draft local. Khai thác tối đa mọi resource user cung cấp trước khi hỏi thêm. Bảng Phiên bản tài liệu dùng "Dự thảo" cho lần tạo đầu (theo convention thực tế của các dự án).
 
-1. **Copy nguyên văn — không viết lại, chỉ viết thêm phần thiếu.** Mọi thông tin đã có trong tài liệu đính kèm, page nguồn, hoặc page Confluence trong Description/links → **copy nguyên văn vào đúng section tương ứng, không paraphrase, không tóm tắt, không viết lại**. Chỉ viết mới những phần thực sự chưa có thông tin. Nếu thông tin nào thực sự chưa xác định được: **để trống cell đó** — KHÔNG điền placeholder như `Chờ xác nhận từ BA`, KHÔNG ghi `[Cần xác nhận]`. Ghi lại danh sách nội bộ để hỏi user trong chat sau khi upload.
-2. **Ưu tiên tham chiếu hơn copy-paste.** Khi có page Confluence đã mô tả sẵn (RSD cấp 1, bảng trạng thái, API spec...), link sang đó thay vì paste lại. Các RSD APP thường chỉ viết Section 4 (mô tả màn hình) còn lại tham chiếu sang RSD WEB.
+1. **Copy nguyên văn — không viết lại, không rút gọn, không sáng tác.** Mọi thông tin đã có trong tài liệu đính kèm, page nguồn, hoặc page Confluence trong Description/links → **copy nguyên văn vào đúng section tương ứng**. Các vi phạm bị cấm tuyệt đối:
+   - **KHÔNG paraphrase, tóm tắt, hay viết lại** nội dung từ tài liệu nguồn
+   - **KHÔNG rút gọn danh sách** — nếu nguồn có 13 API thì phải copy đủ 13, không được bỏ bớt thành 9
+   - **KHÔNG thêm item mới không có trong nguồn** — cấm sáng tác thêm API, bước xử lý, vai trò, hay bất kỳ thông tin nào
+   - **KHÔNG format lại bảng phức tạp thành bảng đơn giản hơn** — copy nguyên cấu trúc bảng từ nguồn
+   - **KHÔNG chèn link "Tham chiếu tại..."** vào Section 2, 3, 5 khi nội dung đó ĐÃ có trong tài liệu nguồn — phải copy thẳng vào
+   
+   Chỉ viết mới những phần thực sự chưa có thông tin. Nếu thông tin nào thực sự chưa xác định được: **để trống cell đó** — KHÔNG điền placeholder như `Chờ xác nhận từ BA`, KHÔNG ghi `[Cần xác nhận]`. Ghi lại danh sách nội bộ để hỏi user trong chat sau khi upload.
+
+2. **Ưu tiên tham chiếu hơn copy-paste — chỉ áp dụng khi tài liệu nguồn CÓ LINK sang page khác.** Khi page nguồn (RSD cũ, Luồng xử lý...) bản thân nó đã link sang một page Confluence khác (RSD cấp 1, bảng trạng thái, API spec...) → link sang page đó thay vì paste lại nội dung. Nguyên tắc này **KHÔNG áp dụng** khi nội dung đó là nội dung inline trong tài liệu nguồn — trường hợp đó phải copy. Các RSD APP thường chỉ viết Section 4 (mô tả màn hình) còn lại tham chiếu sang RSD WEB.
 3. **Tuân thủ template Việt hoá — dùng Confluence Storage Format (XHTML), không dùng Markdown.** Toàn bộ heading, label bảng, từ khoá phải khớp chính xác template. Quy tắc heading và bảng:
    - **Heading section 1–5**: dùng `<h2>`, không cần anchor. Ví dụ: `<h2>1. Đặc tả/Tóm tắt usecase</h2>`. Confluence tự tạo anchor từ heading text.
    - **Heading sub-section** (1.1, 1.2, 2.1, ...): dùng `<h3>`. Ví dụ: `<h3>1.1. Sơ đồ Usecase</h3>`
@@ -69,6 +83,10 @@ ls ./screenshots/ 2>/dev/null || ls /tmp/rsd-screenshots/ 2>/dev/null
 Nếu có file ảnh → đây là nguồn ảnh chính cho Section 4a. Nếu ảnh nằm trong thư mục có khoảng trắng hoặc ký tự đặc biệt, copy sang `/tmp/rsd-screenshots/` trước khi dùng. Không cần user đính kèm lại hay cung cấp thêm nguồn nào khác.
 
 - **Figma link**: `mcp__plugin_figma_figma__get_design_context` (lấy element-level) + `get_screenshot` cho từng state cần mô tả (default, empty, error, dropdown mở...). Parse URL: `figma.com/design/{fileKey}/...?node-id={nodeId}` — convert `-` thành `:` trong nodeId. Tải ảnh về `./screenshots/`.
+- **Ảnh đính kèm trên trang Confluence nguồn** — **KHÔNG dùng curl với Basic Auth** (sẽ nhận file 0 bytes). Thay vào đó dùng MCP theo thứ tự ưu tiên:
+  1. `mcp__mcp-atlassian__confluence_download_attachment(page_id="...", attachment_id="...", download_dir="./screenshots/")` — lấy `attachment_id` bằng cách gọi `confluence_get_attachments(page_id="...")` trước
+  2. Hoặc `mcp__mcp-atlassian__confluence_download_content_attachments(page_id="...", download_dir="./screenshots/")` để tải hết tất cả ảnh trong page một lượt
+  3. Nếu ảnh có trong Jira ticket kèm theo: dùng `mcp__mcp-atlassian__jira_download_attachments(issue_key="...", download_dir="./screenshots/")`
 - **Ảnh đính kèm trong conversation** — không giả định format. Kiểm tra thực tế và xử lý:
   - **Local file path**: `cp "<path>" "./screenshots/screen-01-default.png"`
   - **Base64 string**: `echo "<base64>" | base64 -d > "./screenshots/screen-01-default.png"`
@@ -236,6 +254,16 @@ Các section trong storage format:
 
 Trong suốt quá trình: nếu thông tin **có thể suy luận hợp lý từ context hoặc lấy được từ page nguồn** → điền trực tiếp. Nếu không thể xác định → **để trống cell** (`<td><p> </p></td>`), ghi nội bộ để hỏi user trong chat. KHÔNG điền placeholder như `Chờ xác nhận từ BA` hay `[Cần xác nhận]` — để trống thì rõ ràng hơn.
 
+### Bước 3b — Kiểm tra tính toàn vẹn dữ liệu trước khi upload
+
+Trước khi upload, tự kiểm tra lại nội dung đã sinh:
+
+- **Section 2.1 (danh sách API/luồng)**: Đếm số lượng API/bước trong tài liệu nguồn, đếm số lượng trong nội dung vừa sinh → phải khớp chính xác. Nếu lệch → đọc lại nguồn và bổ sung đủ trước khi tiếp tục.
+- **Section 5 (logic xử lý)**: Kiểm tra cấu trúc bảng có khớp với nguồn không (số cột, số nhóm dòng). Nếu nguồn có nhiều sub-table/block → phải copy đủ, không gộp.
+- **Mọi section copy từ nguồn**: Nếu phát hiện mình đã tóm tắt, format lại, hay bỏ bớt bất kỳ nội dung nào → phải làm lại section đó với nội dung gốc nguyên văn.
+
+Nếu phát hiện sai lệch mà không thể đọc lại nguồn (token limit, page mất...): **comment trên Jira báo rõ phần nào không thể xác minh**, không upload tài liệu chứa nội dung chưa được xác nhận là khớp 100%.
+
 ### Bước 4 — Tổng hợp checklist và hỏi user trước khi upload
 
 Nếu có thông tin chưa xác định được (cell để trống, section không có nguồn): ghi lại danh sách nội bộ. Trước khi upload, **hỏi user** về những phần này — đặc biệt nếu có thông tin mới không có trong page nguồn mà bot muốn thêm vào:
@@ -313,7 +341,13 @@ Nếu không có section nào để trống thì bỏ phần đó đi — chỉ 
 ## Xử lý lỗi thường gặp
 
 - **Figma MCP trả quá nhiều dữ liệu cho 1 node lớn**: thu hẹp bằng cách truyền đúng nodeId của từng màn con, không lấy node cha.
-- **Confluence page quá lớn khi đọc URD**: tool lưu ra file; đọc theo offset/limit, grep heading trước để tìm section cần thiết thay vì đọc toàn bộ.
+- **Confluence page quá lớn (token limit exceeded, >50KB)**: KHÔNG cố đọc toàn bộ page vào bộ nhớ. Chiến lược xử lý theo thứ tự:
+  1. Gọi `confluence_get_page` → nếu bị lỗi token limit, tool sẽ lưu nội dung ra file tạm (ví dụ `/tmp/confluence_page_<id>.txt`)
+  2. Dùng bash để grep heading trước: `grep -n "<h[23]>" /tmp/confluence_page_<id>.txt | head -50` → xác định offset của từng section
+  3. Đọc từng section cần thiết bằng `sed -n '<start>,<end>p' /tmp/confluence_page_<id>.txt > /tmp/section_<name>.txt`
+  4. Đọc file tạm đó bằng Read tool với `offset` và `limit` thích hợp
+  5. **KHÔNG viết script Python để xử lý** — dùng bash sed/grep là đủ và nhanh hơn
+  6. Khi copy nội dung section: vẫn phải copy đủ tất cả dòng, không bỏ bớt do page lớn
 - **Upload fail do size**: nếu content >100KB thì tạo page rỗng trước rồi update — xem `references/confluence-upload.md`.
 - **Ảnh không hiện sau upload**: kiểm tra `ri:filename` trong `<ac:image>` khớp chính xác tên file attach (case-sensitive).
 - **Dòng image placeholder bị bỏ**: KHÔNG được bỏ `<p><em>(Ảnh: chưa có - cần bổ sung)</em></p>` — mỗi caption phải có `<ac:image>` hoặc placeholder ngay bên dưới.
