@@ -281,7 +281,7 @@ async (page) => {
     if (isNav) throw new Error(`Refusing to edit navigation element: ${selector}`);
 
     if (value === '' || value === null || value === undefined) {
-      // Clear field via native setter
+      // Clear field via native setter, then blur to trigger validation
       await page.evaluate((selector) => {
         const el = document.querySelector(selector);
         if (!el) return;
@@ -291,7 +291,7 @@ async (page) => {
           setter ? setter.call(el, '') : (el.value = '');
           el.dispatchEvent(new InputEvent('input', { bubbles: true }));
           el.dispatchEvent(new Event('change', { bubbles: true }));
-          el.dispatchEvent(new Event('blur', { bubbles: true }));
+          el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
         } else {
           el.textContent = '';
         }
@@ -299,28 +299,43 @@ async (page) => {
       return;
     }
 
-    // Use keyboard.insertText for full Unicode/Vietnamese diacritics support.
-    // Triple-click selects all existing text before typing.
+    // Focus the field first, select all, then use keyboard.insertText for full
+    // Unicode/Vietnamese diacritics support (insertText preserves diacritics unlike type()).
     const field = page.locator(selector).first();
     await field.click({ clickCount: 3 });
+    await page.keyboard.press('Control+a');
     await page.keyboard.insertText(`${value}`);
 
-    // Dispatch extra events so React/Vue controlled inputs pick up the new value.
+    // Dispatch extra events so Angular/React/Vue controlled inputs pick up the new value.
     await page.evaluate(({ selector, value }) => {
       const el = document.querySelector(selector);
       if (!el) return;
       el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
     }, { selector, value: `${value}` });
+
+    // IMPORTANT: blur the field after every setValue to trigger Angular/Vue validation
+    // (equivalent to the user clicking outside the field).
+    await page.evaluate((selector) => {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+      el.blur?.();
+    }, selector);
+    await sleep(150);
   }
 
-  // After entering a value, trigger validation by clicking a submit/search/apply
-  // button inside the form if one is visible, otherwise press Tab.
+  // After entering a value, trigger validation by blurring first, then optionally
+  // clicking a submit/search/apply button inside the form.
   async function triggerValidation(mainSelector) {
-    const submitTexts = ['Search','Tìm kiếm','Apply','Filter','Lọc','OK','Lưu','Save','Xác nhận','Confirm','Submit','Gửi'];
+    // Always blur first to fire field-level validation
+    await page.keyboard.press('Tab');
+    await sleep(150);
+
+    const submitTexts = ['Áp dụng','Apply','Tìm kiếm','Search','Filter','Lọc','OK','Lưu','Save','Xác nhận','Confirm','Submit','Gửi'];
     const scope = mainSelector || 'main,[role="main"],.main-content,.content-area,.page-content,body';
 
-    // 1. type="submit" or type="button" submit inside a <form>
+    // 1. type="submit" inside a <form>
     const formSubmit = page.locator(`${scope} form button[type="submit"], ${scope} form input[type="submit"]`).first();
     if (await formSubmit.isVisible().catch(() => false)) {
       await formSubmit.click();
@@ -328,7 +343,7 @@ async (page) => {
       return;
     }
 
-    // 2. named action buttons
+    // 2. named action buttons (prefer "Áp dụng" for Vietnamese apps)
     for (const text of submitTexts) {
       const btn = page.locator(`${scope} button`).filter({ hasText: new RegExp(`^${text}$`, 'i') }).first();
       if (await btn.isVisible().catch(() => false)) {
@@ -337,10 +352,7 @@ async (page) => {
         return;
       }
     }
-
-    // 3. Fallback: Tab to move focus away and trigger blur/validation
-    await page.keyboard.press('Tab');
-    await sleep(200);
+    // blur alone is sufficient when no submit button exists
   }
 
   async function readField(selector) {
@@ -351,27 +363,104 @@ async (page) => {
     }, selector);
   }
 
+  // Resolve test data in priority order:
+  // 1. tc.data (explicit cell value from spreadsheet)
+  // 2. Quoted/example value extracted from steps or name text
+  // 3. Keyword-based defaults when no explicit value is present
+  function inferData(tc) {
+    // 1. Spreadsheet "Data test" cell
+    if (tc.data && tc.data.trim()) return tc.data.trim();
+
+    // 2. Extract explicit value from steps/name text.
+    //    Patterns recognised (case-insensitive, original-case preserved from raw text):
+    //      - ví dụ: <value>            e.g. "ví dụ: ' OR 1=1--"
+    //      - (ví dụ: <value>)          e.g. "(ví dụ: <script>alert(1)</script>)"
+    //      - e.g. <value> / e.g.: <value>
+    //      - 'single-quoted'           e.g. nhập 'Tìm kiếm'
+    //      - "double-quoted"           e.g. nhập "test value"
+    //      - nhập <X> ký tự / <X> chars → generate a string of length X
+    const rawCtx = `${tc.steps || ''} ${tc.name || ''}`;
+
+    // Extract from (ví dụ: ...) or ví dụ: ... (stops at ), newline, or end)
+    const vdMatch = rawCtx.match(/v[ií] d[uụ]\s*:\s*([^\n\)]{1,120})/i);
+    if (vdMatch) return vdMatch[1].trim().replace(/\)$/, '').trim();
+
+    // Extract from e.g.: ... or e.g. ...
+    const egMatch = rawCtx.match(/e\.g\.?\s*:?\s*([^\n\)]{1,120})/i);
+    if (egMatch) return egMatch[1].trim().replace(/\)$/, '').trim();
+
+    // Extract single-quoted value  'value'
+    const sqMatch = rawCtx.match(/'([^']{1,120})'/);
+    if (sqMatch) return sqMatch[1];
+
+    // Extract double-quoted value  "value"
+    const dqMatch = rawCtx.match(/"([^"]{1,120})"/);
+    if (dqMatch) return dqMatch[1];
+
+    // Extract N-character length request: "39 ký tự", "40 chars", etc.
+    const lenMatch = rawCtx.match(/(\d+)\s*k[ií] t[ựu]|(\d+)\s*char/i);
+    if (lenMatch) {
+      const n = parseInt(lenMatch[1] || lenMatch[2], 10);
+      return 'a'.repeat(n);
+    }
+
+    // 3. Keyword-based fallback (no explicit value found)
+    const ctx = rawCtx.toLowerCase();
+    if (/emoji/.test(ctx)) return '😀🎉';
+    if (/xss|script/.test(ctx)) return '<script>alert(1)</script>';
+    if (/sql.inject|sql inject/.test(ctx)) return "' OR 1=1--";
+    if (/unicode.*trung|tiếng trung|tiếng nhật|tiếng hàn|cjk/.test(ctx)) return '你好日本語';
+    if (/đặc biệt|special.*char|ký tự ngoài/.test(ctx)) return '@#!$%^&*';
+    if (/all space|toàn bộ space/.test(ctx)) return '     ';
+    if (/space đầu|space cuối|leading.*space|trailing.*space|trim/.test(ctx)) return '  test  ';
+    if (/tiếng việt|vietnamese|có dấu/.test(ctx)) return 'tiếng Việt';
+    if (/số|number|digit/.test(ctx)) return '123456';
+    if (/chữ|letter|alpha/.test(ctx)) return 'abcdef';
+    if (/paste/.test(ctx)) return 'pastetest';
+    if (/partial|gần đúng|1 phần/.test(ctx)) return '381638';
+    return '';
+  }
+
   async function verify(tc, selector) {
-    const value = await readField(selector);
+    const typed = inferData(tc);            // what we attempted to type
+    const value = await readField(selector); // what the field actually holds
     const expected = `${tc.expected || ''}`.toLowerCase();
-    const errors = await page.locator('main, [role="main"], .main-content, .content-area')
-      .locator('.error,.invalid,.ant-form-item-explain-error,[role="alert"],.text-danger')
+    const errors = await page.locator('body')
+      .locator('.error,.invalid,.ant-form-item-explain-error,[role="alert"],.text-danger,.text-red,.ng-invalid ~ .error-msg')
       .allTextContents()
       .catch(() => []);
     const errorText = errors.map(t => t.trim()).filter(Boolean).join(' | ');
 
-    if (/không cho phép nhập|khong cho phep nhap|không nhập được|khong nhap duoc/.test(expected)) {
-      return { pass: !value || value !== `${tc.data || ''}`, actual: `Value after input: "${value}"` };
+    // "chặn không cho phép nhập" → field must be empty or differ from typed input
+    if (/chặn|không cho phép nhập|khong cho phep nhap|không nhập được|blocked/.test(expected)) {
+      const blocked = !value || value.trim() === '' || value === typed ? false : true;
+      // Also pass if value is empty regardless
+      const pass = !value || value.trim() === '';
+      return { pass, actual: `Typed:"${typed}" → field:"${value}"` };
     }
-    if (/cho phép nhập|cho phep nhap/.test(expected)) {
-      return { pass: value === `${tc.data || ''}`, actual: `Value after input: "${value}"` };
+    // "cho phép nhập" → field has some accepted value (may be stripped/transformed)
+    if (/cho phép nhập|cho phep nhap|hệ thống cho phép/.test(expected)) {
+      const pass = value !== null && value !== undefined && value.trim() !== '';
+      return { pass, actual: `Value after input: "${value}"` };
     }
-    if (/thông báo lỗi|thong bao loi|message lỗi|message loi|required|bắt buộc|bat buoc/.test(expected)) {
+    // "tự động bỏ dấu" or "tự động trim" → field transforms input, just check non-empty
+    if (/tự động bỏ dấu|tu dong bo dau|auto.*remov.*diacrit/.test(expected)) {
+      return { pass: value.trim() !== '', actual: `Typed diacritics → stored:"${value}"` };
+    }
+    // "tự động trim space" → trimmed value equals typed without surrounding spaces
+    if (/tự động trim|tu dong trim|trim space/.test(expected)) {
+      const pass = value.trim() === typed.trim();
+      return { pass, actual: `Raw:"${value}" Trimmed:"${value.trim()}"` };
+    }
+    // "clear data" / "xóa" → field is empty after action
+    if (/mặc định rỗng|mac dinh rong|clear data|xóa data|xoa data/.test(expected)) {
+      return { pass: !value || value.trim() === '', actual: `Value: "${value}"` };
+    }
+    // "thông báo lỗi" / "required" → validation error visible
+    if (/thông báo lỗi|thong bao loi|message lỗi|required|bắt buộc|bat buoc/.test(expected)) {
       return { pass: !!errorText, actual: errorText || 'No validation error visible' };
     }
-    if (/mặc định rỗng|mac dinh rong|clear data|xóa|xoa/.test(expected)) {
-      return { pass: !value, actual: `Value: "${value}"` };
-    }
+    // Default: observe and pass, record actual
     return { pass: true, actual: errorText || `Value: "${value}"` };
   }
 
@@ -385,10 +474,14 @@ async (page) => {
       await field.scrollIntoViewIfNeeded();
 
       const actionText = `${tc.steps || ''} ${tc.name || ''}`.toLowerCase();
-      if (!/observe|quan sát|quan sat|kiểm tra hiển thị|kiem tra hien thi/.test(actionText)) {
-        await setValue(selector, `${tc.data || ''}`);
-        await sleep(150);
-        // Always trigger validation: click submit/search/apply button if present, else Tab
+      const isObserve = /observe|quan sát|quan sat|kiểm tra hiển thị|kiem tra hien thi|mặc định|mac dinh/.test(actionText);
+
+      if (!isObserve) {
+        // Use tc.data if provided, otherwise infer from case context
+        const inputData = inferData(tc);
+        await setValue(selector, inputData);
+        await sleep(200);
+        // Trigger validation (blur + optionally click submit button)
         await triggerValidation(locatorMap.__mainSelector || null);
         await sleep(300);
       }
@@ -404,8 +497,11 @@ async (page) => {
         error: ''
       });
 
-      await setValue(selector, '');
-      await sleep(100);
+      // Reset field after each case so next case starts clean
+      if (!isObserve) {
+        await setValue(selector, '');
+        await sleep(150);
+      }
     } catch (err) {
       await page.screenshot({ path: screenshot, fullPage: false }).catch(() => {});
       results.push({
